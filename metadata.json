@@ -1,0 +1,6 @@
+{
+  "name": "TIYA",
+  "description": "Mobile-first Bengali-default voice AI assistant powered by Gemini Live API.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
