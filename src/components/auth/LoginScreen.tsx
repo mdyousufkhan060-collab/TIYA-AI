@@ -7,9 +7,12 @@ type AuthTab = 'signin' | 'signup';
 
 export const LoginScreen: React.FC = () => {
   const [tab, setTab] = useState<AuthTab>('signin');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorBn, setErrorBn] = useState('');
@@ -43,7 +46,26 @@ export const LoginScreen: React.FC = () => {
     setInfoBn('');
 
     const trimmedEmail = email.trim();
-    if (!trimmedEmail || !password) {
+    const trimmedName = name.trim();
+
+    if (tab === 'signup') {
+      if (!trimmedName) {
+        setErrorBn('অনুগ্রহ করে আপনার নাম লিখুন।');
+        return;
+      }
+      if (!trimmedEmail || !password || !confirmPassword) {
+        setErrorBn('অনুগ্রহ করে সবগুলো ঘর পূরণ করুন।');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorBn('Passwords do not match (দুটো পাসওয়ার্ড মিলছে না)');
+        return;
+      }
+      if (password.length < 6) {
+        setErrorBn('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে। (Minimum 6 characters)');
+        return;
+      }
+    } else if (!trimmedEmail || !password) {
       setErrorBn('অনুগ্রহ করে ইমেইল এবং পাসওয়ার্ড দিন।');
       return;
     }
@@ -64,14 +86,13 @@ export const LoginScreen: React.FC = () => {
           password,
           options: {
             emailRedirectTo: window.location.origin,
+            data: { full_name: trimmedName },
           },
         });
         if (error) {
           setErrorBn(mapAuthErrorToBengali(error.message));
         } else if (!data.session) {
-          setInfoBn(
-            'অ্যাকাউন্ট তৈরি হয়েছে! আপনার ইমেইলে পাঠানো কনফার্মেশন লিংকে ক্লিক করে Sign In করুন।',
-          );
+          setInfoBn('Check your email to confirm your account');
         }
       }
     } catch (err: unknown) {
@@ -83,32 +104,32 @@ export const LoginScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col justify-center px-4 py-4">
-      <div className="mx-auto w-full space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col justify-center px-3.5 py-2">
+      <div className="mx-auto w-full space-y-2.5">
         {/* Compact Brand Header */}
         <div className="flex flex-col items-center text-center">
-          <div className="mb-2.5 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 via-cyan-500 to-slate-800 shadow-md shadow-teal-500/20">
+          <div className="mb-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 via-cyan-500 to-slate-800 shadow-md shadow-teal-500/20">
             <span className="flex items-center gap-0.5" aria-hidden="true">
-              <span className="h-2 w-0.5 rounded-full bg-white/90" />
-              <span className="h-3.5 w-0.5 rounded-full bg-white/95" />
-              <span className="h-2 w-0.5 rounded-full bg-white/90" />
+              <span className="h-1.5 w-0.5 rounded-full bg-white/90" />
+              <span className="h-3 w-0.5 rounded-full bg-white/95" />
+              <span className="h-1.5 w-0.5 rounded-full bg-white/90" />
             </span>
           </div>
-          <h1 className="font-display text-lg font-bold tracking-[0.2em] text-slate-900 dark:text-[#F4F5F7]">
+          <h1 className="font-display text-base font-bold tracking-[0.2em] text-slate-900 dark:text-[#F4F5F7]">
             TIYA
           </h1>
-          <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 truncate text-[10px] text-slate-500 dark:text-slate-400">
             Sign in to continue to your voice assistant
           </p>
         </div>
 
         {/* Compact Settings-style Auth Card */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-white/[0.08] dark:bg-[#11151E]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-white/[0.08] dark:bg-[#11151E]">
           {/* SIGN IN / CREATE ACCOUNT Tabs */}
           <div
             role="tablist"
             aria-label="Authentication mode"
-            className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-[#090B10]"
+            className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-0.5 dark:bg-[#090B10]"
           >
             <button
               type="button"
@@ -119,7 +140,7 @@ export const LoginScreen: React.FC = () => {
                 setErrorBn('');
                 setInfoBn('');
               }}
-              className={`min-h-[36px] rounded-lg text-[11px] font-semibold tracking-wide transition-colors ${
+              className={`min-h-[30px] rounded-lg text-[10px] font-semibold tracking-wide transition-colors ${
                 tab === 'signin'
                   ? 'bg-white text-slate-900 shadow-sm dark:bg-[#1A202E] dark:text-white'
                   : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
@@ -137,7 +158,7 @@ export const LoginScreen: React.FC = () => {
                 setErrorBn('');
                 setInfoBn('');
               }}
-              className={`min-h-[36px] rounded-lg text-[11px] font-semibold tracking-wide transition-colors ${
+              className={`min-h-[30px] rounded-lg text-[10px] font-semibold tracking-wide transition-colors ${
                 tab === 'signup'
                   ? 'bg-white text-slate-900 shadow-sm dark:bg-[#1A202E] dark:text-white'
                   : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
@@ -147,11 +168,32 @@ export const LoginScreen: React.FC = () => {
             </button>
           </div>
 
-          <form onSubmit={handleEmailSubmit} className="mt-3 space-y-2.5">
+          <form onSubmit={handleEmailSubmit} className="mt-2 space-y-1.5" noValidate>
+            {tab === 'signup' && (
+              <div>
+                <label
+                  htmlFor="login-name-input"
+                  className="block text-[9.5px] font-semibold tracking-wider text-slate-500 dark:text-slate-400"
+                >
+                  NAME
+                </label>
+                <input
+                  id="login-name-input"
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  autoComplete="name"
+                  className="mt-0.5 h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-[#090B10] dark:text-white"
+                />
+              </div>
+            )}
+
             <div>
               <label
                 htmlFor="login-email-input"
-                className="block text-[10px] font-semibold tracking-wider text-slate-500 dark:text-slate-400"
+                className="block text-[9.5px] font-semibold tracking-wider text-slate-500 dark:text-slate-400"
               >
                 EMAIL
               </label>
@@ -163,44 +205,75 @@ export const LoginScreen: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
                 autoComplete="email"
-                className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-[#090B10] dark:text-white"
+                className="mt-0.5 h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-[#090B10] dark:text-white"
               />
             </div>
 
             <div>
               <label
                 htmlFor="login-password-input"
-                className="block text-[10px] font-semibold tracking-wider text-slate-500 dark:text-slate-400"
+                className="block text-[9.5px] font-semibold tracking-wider text-slate-500 dark:text-slate-400"
               >
                 PASSWORD
               </label>
-              <div className="mt-1 flex items-center gap-1.5">
+              <div className="relative mt-0.5">
                 <input
                   id="login-password-input"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder={tab === 'signup' ? 'Min 6 characters' : '••••••••'}
                   autoComplete={tab === 'signin' ? 'current-password' : 'new-password'}
-                  className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-[#090B10] dark:text-white"
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-2.5 pr-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-[#090B10] dark:text-white"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
+                  className="absolute inset-y-0 right-0 flex w-9 items-center justify-center rounded-r-lg text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>
+
+            {tab === 'signup' && (
+              <div>
+                <label
+                  htmlFor="login-confirm-password-input"
+                  className="block text-[9.5px] font-semibold tracking-wider text-slate-500 dark:text-slate-400"
+                >
+                  CONFIRM PASSWORD
+                </label>
+                <div className="relative mt-0.5">
+                  <input
+                    id="login-confirm-password-input"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    autoComplete="new-password"
+                    className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-2.5 pr-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-[#090B10] dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    className="absolute inset-y-0 right-0 flex w-9 items-center justify-center rounded-r-lg text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {errorBn && (
               <p
                 role="alert"
                 data-testid="auth-error-message"
-                className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-[11px] leading-snug text-rose-600 dark:text-rose-300"
+                className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[10.5px] leading-snug text-rose-600 dark:text-rose-300"
               >
                 {errorBn}
               </p>
@@ -209,19 +282,20 @@ export const LoginScreen: React.FC = () => {
             {infoBn && (
               <p
                 role="status"
-                className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-[11px] leading-snug text-teal-700 dark:text-teal-300"
+                data-testid="auth-info-message"
+                className="rounded-lg border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-[10.5px] leading-snug text-teal-700 dark:text-teal-300"
               >
                 {infoBn}
               </p>
             )}
 
-            {/* One row: [SIGN IN / CREATE ACCOUNT] on left, [G Google] on right */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            {/* Bottom of card: [SIGN IN / CREATE ACCOUNT] on left, [G Google] on right */}
+            <div className="grid grid-cols-2 gap-2 pt-1.5">
               <button
                 type="submit"
                 disabled={loading || googleLoading}
                 data-testid="auth-submit-button"
-                className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-3 text-xs font-semibold tracking-wide text-white transition-colors hover:bg-teal-500 disabled:opacity-60 active:scale-[0.98] whitespace-nowrap"
+                className="flex h-9 items-center justify-center gap-1.5 rounded-lg bg-teal-600 px-2.5 text-[11px] font-semibold tracking-wide text-white transition-colors hover:bg-teal-500 disabled:opacity-60 active:scale-[0.98] whitespace-nowrap"
               >
                 {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 <span>{tab === 'signin' ? 'SIGN IN' : 'CREATE ACCOUNT'}</span>
@@ -232,7 +306,7 @@ export const LoginScreen: React.FC = () => {
                 onClick={handleGoogleSignIn}
                 disabled={googleLoading || loading}
                 data-testid="google-signin-button"
-                className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 transition-colors hover:bg-slate-100 disabled:opacity-60 active:scale-[0.98] dark:border-white/10 dark:bg-[#1A202E] dark:text-white dark:hover:bg-white/[0.1] whitespace-nowrap"
+                className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-semibold text-slate-900 transition-colors hover:bg-slate-100 disabled:opacity-60 active:scale-[0.98] dark:border-white/10 dark:bg-[#1A202E] dark:text-white dark:hover:bg-white/[0.1] whitespace-nowrap"
               >
                 {googleLoading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -261,10 +335,6 @@ export const LoginScreen: React.FC = () => {
             </div>
           </form>
         </div>
-
-        <p className="text-center text-[10px] text-slate-400 dark:text-slate-500">
-          Your session stays active until you sign out.
-        </p>
       </div>
     </div>
   );
