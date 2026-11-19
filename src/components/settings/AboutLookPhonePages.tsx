@@ -8,45 +8,107 @@ interface AboutPageProps {
   settings: TiyaSettings;
   voiceState: VoiceState;
   hasSession: boolean;
+  isAdmin?: boolean;
+  canUseWithoutKey?: boolean;
   subpage: string | null;
   onSelectSubpage: (subpage: string | null) => void;
+  onOpenConnections?: () => void;
   onBack: () => void;
+}
+
+type CheckState = 'idle' | 'checking' | 'ok' | 'error' | 'none';
+
+async function testGeminiKey(key: string): Promise<{ ok: boolean; detail: string }> {
+  try {
+    const res = await fetch('/api/gemini/test-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-gemini-api-key': key },
+      body: '{}',
+    });
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; label?: string; detail?: string };
+    if (res.ok && data.ok) return { ok: true, detail: 'Key works.' };
+    return { ok: false, detail: data.detail || data.label || `HTTP ${res.status}` };
+  } catch {
+    return { ok: false, detail: 'Network error.' };
+  }
+}
+
+async function testGroqKey(key: string): Promise<{ ok: boolean; detail: string }> {
+  try {
+    const res = await fetch('/api/providers/test-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'groq', apiKey: key }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; label?: string; detail?: string };
+    if (res.ok && data.ok) return { ok: true, detail: 'Key works.' };
+    return { ok: false, detail: data.detail || data.label || `HTTP ${res.status}` };
+  } catch {
+    return { ok: false, detail: 'Network error.' };
+  }
 }
 
 export const AboutGuidePage: React.FC<AboutPageProps> = ({
   settings,
   voiceState,
   hasSession,
+  isAdmin = false,
+  canUseWithoutKey = false,
   subpage,
   onSelectSubpage,
+  onOpenConnections,
   onBack,
 }) => {
   const [micState, setMicState] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
-  const [serverOk, setServerOk] = useState<'checking' | 'ok' | 'down'>('checking');
+  const [gemini, setGemini] = useState<{ state: CheckState; detail: string }>({ state: 'idle', detail: '' });
+  const [groq, setGroq] = useState<{ state: CheckState; detail: string }>({ state: 'idle', detail: '' });
+  const [running, setRunning] = useState(false);
 
-  const runHealthCheck = async () => {
-    setServerOk('checking');
-    try {
-      const res = await fetch('/api/health');
-      setServerOk(res.ok ? 'ok' : 'down');
-    } catch {
-      setServerOk('down');
-    }
+  const geminiKey = (settings.apiKey || '').trim();
+  const groqKey = (settings.providerConnections?.groq?.apiKey || '').trim();
 
+  const readMic = async () => {
     try {
       if (navigator.permissions?.query) {
         const perm = await navigator.permissions.query({ name: 'microphone' as PermissionName });
         setMicState(perm.state);
+        return;
       }
     } catch {
-      setMicState('unknown');
+      /* ignore */
     }
+    setMicState('unknown');
+  };
+
+  const askMic = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      setMicState('granted');
+    } catch {
+      setMicState('denied');
+    }
+  };
+
+  const runHealthCheck = async () => {
+    setRunning(true);
+    setGemini({ state: geminiKey ? 'checking' : 'none', detail: '' });
+    setGroq({ state: groqKey ? 'checking' : 'none', detail: '' });
+    await readMic();
+    const [g, q] = await Promise.all([
+      geminiKey ? testGeminiKey(geminiKey) : Promise.resolve(null),
+      groqKey ? testGroqKey(groqKey) : Promise.resolve(null),
+    ]);
+    if (g) setGemini({ state: g.ok ? 'ok' : 'error', detail: g.ok ? '' : g.detail });
+    if (q) setGroq({ state: q.ok ? 'ok' : 'error', detail: q.ok ? '' : q.detail });
+    setRunning(false);
   };
 
   useEffect(() => {
     if (subpage === 'health_check') {
       runHealthCheck();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subpage]);
 
   const bars = [
@@ -54,47 +116,59 @@ export const AboutGuidePage: React.FC<AboutPageProps> = ({
       num: '01',
       id: 'health_check',
       title: 'HEALTH CHECK',
-      value: settings.connectionStatus === 'ready' ? 'READY' : 'CHECK',
+      value: canUseWithoutKey || settings.connectionStatus === 'ready' ? 'READY' : 'CHECK',
     },
-    { num: '02', id: 'app_info', title: 'APP INFO', value: 'TIYA Mobile' },
-    { num: '03', id: 'developer', title: 'DEVELOPER', value: 'MD YOUSUF KHAN', locked: true },
-    { num: '04', id: 'how_to_use', title: 'HOW TO USE' },
-    { num: '05', id: 'help_contact', title: 'HELP & CONTACT' },
+    { num: '02', id: 'how_to_use', title: 'HOW TO USE' },
+    { num: '03', id: 'app_info', title: 'ABOUT TIYA', value: 'v1.0' },
   ];
 
-  // Support legacy/alias subpage names seamlessly
+  // Old bar ids (developer, help_contact, about_tiya, contact_help) now live inside ABOUT TIYA
   const resolvedSubpage =
-    subpage === 'about_tiya'
+    subpage === 'about_tiya' || subpage === 'developer' || subpage === 'help_contact' || subpage === 'contact_help'
       ? 'app_info'
-      : subpage === 'contact_help'
-        ? 'help_contact'
-        : subpage;
+      : subpage;
 
   const activeBar = bars.find((b) => b.id === resolvedSubpage);
 
   if (resolvedSubpage === 'health_check') {
-    const keyText =
-      settings.connectionStatus === 'ready'
-        ? 'READY'
-        : settings.connectionStatus === 'error'
-          ? 'ERROR'
-          : settings.apiKey.trim()
-            ? 'SAVED'
-            : 'NO KEY';
-    const voiceText =
-      serverOk === 'checking'
-        ? 'CHECKING...'
-        : serverOk === 'ok'
-          ? `ONLINE (${voiceState.toUpperCase()})`
-          : 'UNREACHABLE';
-    const micText =
+    const keyRow = (state: CheckState, hasKey: boolean) => {
+      if (state === 'checking') return { value: 'CHECKING...', ok: true };
+      if (state === 'ok') return { value: 'READY', ok: true };
+      if (state === 'error') return { value: 'ERROR', ok: false };
+      if (!hasKey && canUseWithoutKey) return { value: isAdmin ? 'ADMIN · SERVER' : 'PREMIUM · SERVER', ok: true };
+      return { value: 'NO KEY', ok: false };
+    };
+    const g = keyRow(gemini.state, Boolean(geminiKey));
+    const q = keyRow(groq.state, Boolean(groqKey));
+
+    const voiceReady = gemini.state === 'ok' || (!geminiKey && canUseWithoutKey);
+    const voiceRow = running
+      ? { value: 'CHECKING...', ok: true }
+      : voiceReady
+        ? { value: voiceState === 'idle' ? 'READY' : voiceState.toUpperCase(), ok: true }
+        : { value: 'NEEDS GEMINI KEY', ok: false };
+
+    const micRow =
       micState === 'granted'
-        ? 'ALLOWED'
+        ? { value: 'ALLOWED', ok: true }
         : micState === 'denied'
-          ? 'BLOCKED'
-          : micState === 'prompt'
-            ? 'ASK ON USE'
-            : 'UNKNOWN';
+          ? { value: 'BLOCKED', ok: false }
+          : { value: 'TAP TO ALLOW', ok: false };
+
+    const rows: Array<{ label: string; value: string; ok: boolean; detail?: string; onClick?: () => void }> = [
+      { label: 'GEMINI KEY', ...g, detail: gemini.detail, onClick: g.ok ? undefined : onOpenConnections },
+      { label: 'GROQ KEY', ...q, detail: groq.detail, onClick: q.ok ? undefined : onOpenConnections },
+      { label: 'VOICE', ...voiceRow, onClick: voiceRow.ok ? undefined : onOpenConnections },
+      { label: 'MICROPHONE', ...micRow, onClick: micRow.ok ? undefined : askMic },
+      { label: 'ACCOUNT', value: hasSession ? (isAdmin ? 'ADMIN' : 'SIGNED IN') : 'SIGNED OUT', ok: hasSession },
+    ];
+
+    const hint =
+      micState === 'denied'
+        ? 'Microphone is blocked. Open browser site settings for tiya-ai.vercel.app and allow Microphone.'
+        : rows.some((r) => !r.ok && r.label !== 'MICROPHONE')
+          ? 'Tap a yellow row to fix it.'
+          : '';
 
     return (
       <SettingsShell
@@ -107,31 +181,35 @@ export const AboutGuidePage: React.FC<AboutPageProps> = ({
             aria-label="Re-run health check"
             className="flex h-9 w-9 items-center justify-center rounded-xl text-teal-400 hover:bg-white/[0.06]"
           >
-            <RefreshCw className={`h-4 w-4 ${serverOk === 'checking' ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${running ? 'animate-spin' : ''}`} />
           </button>
         }
       >
         <div className="space-y-1.5">
-          {[
-            { label: 'GEMINI API KEY', value: keyText, ok: settings.connectionStatus === 'ready' },
-            { label: 'VOICE SERVER', value: voiceText, ok: serverOk === 'ok' },
-            { label: 'MICROPHONE', value: micText, ok: micState === 'granted' },
-            { label: 'ACCOUNT SESSION', value: hasSession ? 'CONNECTED' : 'SIGNED OUT', ok: hasSession },
-          ].map((row) => (
-            <div
+          {rows.map((row) => (
+            <button
+              type="button"
               key={row.label}
-              className="flex h-11 items-center justify-between rounded-xl border border-white/[0.08] bg-[#11151E] px-3.5 text-xs"
+              onClick={row.onClick}
+              disabled={!row.onClick}
+              className="block w-full rounded-xl border border-white/[0.08] bg-[#11151E] px-3.5 py-3 text-left text-xs disabled:cursor-default"
             >
-              <span className="font-semibold text-slate-200">{row.label}</span>
-              <span
-                className={`font-mono-code text-[11px] font-semibold ${
-                  row.ok ? 'text-teal-400' : 'text-amber-400'
-                }`}
-              >
-                {row.value}
-              </span>
-            </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-200">{row.label}</span>
+                <span
+                  className={`font-mono-code text-[11px] font-semibold ${
+                    row.ok ? 'text-teal-400' : 'text-amber-400'
+                  }`}
+                >
+                  {row.value}
+                </span>
+              </div>
+              {row.detail ? (
+                <p className="mt-1 text-[10px] leading-snug text-slate-400">{row.detail}</p>
+              ) : null}
+            </button>
           ))}
+          {hint ? <p className="px-1 pt-1 text-[11px] text-slate-400">{hint}</p> : null}
         </div>
       </SettingsShell>
     );
@@ -139,22 +217,17 @@ export const AboutGuidePage: React.FC<AboutPageProps> = ({
 
   if (activeBar) {
     const contentMap: Record<string, string[]> = {
-      app_info: [
-        'TIYA is a mobile-only real-time Bengali & multilingual voice and chat assistant.',
-        'Supports live voice calls, text chat, female voice previews, memory recall, and confirmed Android phone actions.',
-      ],
-      developer: [
-        'Developer: MD YOUSUF KHAN',
-        'Designed and built for fast mobile-first voice and chat interaction.',
-      ],
       how_to_use: [
-        '1. Open 02 CONNECTIONS and save your Gemini or Groq API key.',
-        '2. Tap the voice switch on Home to start talking live with TIYA.',
-        '3. Use voice or chat commands to open any setting, e.g. "ভয়েস সেটিং খোলো" or "ফোন কন্ট্রোল খোলো".',
+        '1. Talk: tap the round button at the bottom of Home and speak. Tap STOP to end.',
+        '2. Chat: open CHAT and type, or tap the mic to speak your message.',
+        '3. Open settings by voice: "ভয়েস সেটিং খোলো", "কানেকশন খোলো".',
+        '4. Phone actions: "মাকে কল দাও", "হোয়াটসঅ্যাপে রাকিবকে মেসেজ দাও". TIYA always asks before it acts.',
+        '5. Not working? Run HEALTH CHECK and fix the yellow rows.',
       ],
-      help_contact: [
-        'Developer: MD YOUSUF KHAN',
-        'If voice or chat does not respond, run 01 ABOUT & GUIDE > HEALTH CHECK and verify your API key in 02 CONNECTIONS.',
+      app_info: [
+        'TIYA is a mobile-only Bengali voice and chat assistant.',
+        'Live voice, text chat, memory, and phone actions that always ask before acting.',
+        'Help: if voice or chat stops, run HEALTH CHECK first.',
       ],
     };
 
@@ -163,24 +236,24 @@ export const AboutGuidePage: React.FC<AboutPageProps> = ({
     return (
       <SettingsShell title={activeBar.title} onBack={() => onSelectSubpage(null)}>
         <div className="space-y-2.5 rounded-2xl border border-white/[0.08] bg-[#11151E] p-4">
-          {activeBar.id === 'developer' && (
-            <div className="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
-              <span className="font-display text-sm font-bold text-white">
-                MD YOUSUF KHAN
-              </span>
-              <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                <Lock className="h-3.5 w-3.5" />
-                <span>Locked</span>
-              </span>
-            </div>
-          )}
-
           {lines.map((line, i) => (
             <p key={i} className="text-xs leading-relaxed text-slate-200">
               {line}
             </p>
           ))}
         </div>
+        {activeBar.id === 'app_info' && (
+          <div className="mt-2 flex items-center justify-between rounded-2xl border border-white/[0.08] bg-[#11151E] px-4 py-3">
+            <div>
+              <p className="text-[10px] font-semibold tracking-wider text-slate-400">DEVELOPER</p>
+              <p className="font-display text-sm font-bold text-white">MD YOUSUF KHAN</p>
+            </div>
+            <span className="flex items-center gap-1 text-[11px] text-slate-400">
+              <Lock className="h-3.5 w-3.5" />
+              <span>Locked</span>
+            </span>
+          </div>
+        )}
       </SettingsShell>
     );
   }
@@ -194,7 +267,6 @@ export const AboutGuidePage: React.FC<AboutPageProps> = ({
             badge={bar.num}
             title={bar.title}
             value={bar.value}
-            locked={bar.locked}
             onClick={() => onSelectSubpage(bar.id)}
             testId={`about-bar-${bar.id}`}
           />

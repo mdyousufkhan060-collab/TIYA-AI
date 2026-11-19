@@ -1052,8 +1052,11 @@ export default function App() {
                 settings={settings}
                 voiceState={voiceState}
                 hasSession={Boolean(session)}
+                isAdmin={isAdmin}
+                canUseWithoutKey={isAdmin || isProfilePremium(profile)}
                 subpage={settingsSubpage}
                 onSelectSubpage={handleSelectSettingsSubpage}
+                onOpenConnections={() => handleOpenSettingsPage('connections')}
                 onBack={() => {
                   setSettingsPage('hub');
                   setSettingsSubpage(null);
