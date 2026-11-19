@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChatMessage, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
+import { ChatMessage, MemoryItem, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
 import {
   base64Pcm16ToFloat32,
   computeRmsEnergy,
@@ -8,25 +8,33 @@ import {
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { ReplyUsageDecision } from '../utils/authErrors';
 import { buildTiyaSystemPrompt } from '../utils/prompts';
+import { appendErrorLog } from '../utils/storage';
+import { NavigationCommand, parseNavigationCommand } from '../utils/tiyaNavigation';
 
 interface UseTiyaLiveVoiceOptions {
   settings: TiyaSettings;
   messages: ChatMessage[];
+  memories?: MemoryItem[];
   userAge?: number | null;
   checkReplyUsage?: () => Promise<ReplyUsageDecision>;
   onAppendVoiceMessage: (role: 'user' | 'assistant', text: string, action?: PhoneAction) => void;
   onUpdateLastVoiceMessage: (role: 'user' | 'assistant', text: string) => void;
   onPhoneAction: (action: PhoneAction) => void;
+  onNavigate?: (cmd: NavigationCommand) => void;
+  onRequestLatestMotivation?: () => Promise<{ title?: string | null; body: string } | null>;
 }
 
 export function useTiyaLiveVoice({
   settings,
   messages,
+  memories = [],
   userAge,
   checkReplyUsage,
   onAppendVoiceMessage,
   onUpdateLastVoiceMessage,
   onPhoneAction,
+  onNavigate,
+  onRequestLatestMotivation,
 }: UseTiyaLiveVoiceOptions) {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [errorLabel, setErrorLabel] = useState<string>('');
@@ -38,6 +46,8 @@ export function useTiyaLiveVoice({
   settingsRef.current = settings;
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
+  const memoriesRef = useRef(memories);
+  memoriesRef.current = memories;
   const userAgeRef = useRef(userAge);
   userAgeRef.current = userAge;
   const checkReplyUsageRef = useRef(checkReplyUsage);
@@ -59,16 +69,21 @@ export function useTiyaLiveVoice({
   const currentAssistantTurnRef = useRef<string>('');
   const hasStartedUserBubbleRef = useRef<boolean>(false);
   const hasStartedAssistantBubbleRef = useRef<boolean>(false);
+  const lastNavHandledRef = useRef<string>('');
 
   const callbacksRef = useRef({
     onAppendVoiceMessage,
     onUpdateLastVoiceMessage,
     onPhoneAction,
+    onNavigate,
+    onRequestLatestMotivation,
   });
   callbacksRef.current = {
     onAppendVoiceMessage,
     onUpdateLastVoiceMessage,
     onPhoneAction,
+    onNavigate,
+    onRequestLatestMotivation,
   };
 
   // Sync live volume changes to GainNode immediately
@@ -177,6 +192,10 @@ export function useTiyaLiveVoice({
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.playbackRate.value = settingsRef.current.speechSpeed || 1.0;
+    const pitchRatio = settingsRef.current.pitch || 1.0;
+    if (typeof source.detune !== 'undefined' && pitchRatio !== 1.0) {
+      source.detune.value = (pitchRatio - 1.0) * 1200;
+    }
     source.connect(gainNode);
 
     const now = ctx.currentTime;
@@ -282,14 +301,17 @@ export function useTiyaLiveVoice({
         messagesRef.current,
         'voice',
         userAgeRef.current,
+        memoriesRef.current,
       );
+      const primaryModel =
+        settingsRef.current.customLiveModel.trim() || settingsRef.current.selectedLiveModel;
       const fallbackModels = settingsRef.current.availableLiveModels.map((m) => m.id);
 
       ws.send(
         JSON.stringify({
           type: 'start',
           apiKey,
-          model: settingsRef.current.selectedLiveModel,
+          model: primaryModel,
           fallbackModels,
           autoFallback: settingsRef.current.autoFallback,
           voiceName: settingsRef.current.voiceName,
@@ -308,6 +330,9 @@ export function useTiyaLiveVoice({
           label?: string;
           detail?: string;
           action?: PhoneAction;
+          command?: NavigationCommand;
+          callId?: string;
+          name?: string;
         };
 
         if (msg.type === 'ready') {
@@ -329,7 +354,8 @@ export function useTiyaLiveVoice({
           processor.onaudioprocess = (audioEvent) => {
             if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
             const channelData = audioEvent.inputBuffer.getChannelData(0);
-            const rms = computeRmsEnergy(channelData);
+            const sensitivity = settingsRef.current.micListening?.sensitivity ?? 1.0;
+            const rms = computeRmsEnergy(channelData) * sensitivity;
             if (voiceStateRef.current === 'listening') {
               setAudioLevel(Math.min(1, rms * 6));
             }
@@ -357,6 +383,11 @@ export function useTiyaLiveVoice({
             }
           } else {
             callbacksRef.current.onUpdateLastVoiceMessage('user', currentUserTurnRef.current);
+          }
+          const navCmd = parseNavigationCommand(currentUserTurnRef.current);
+          if (navCmd && lastNavHandledRef.current !== currentUserTurnRef.current.trim()) {
+            lastNavHandledRef.current = currentUserTurnRef.current.trim();
+            callbacksRef.current.onNavigate?.(navCmd);
           }
           if (voiceStateRef.current === 'listening') {
             setVoiceState('thinking');
@@ -388,15 +419,44 @@ export function useTiyaLiveVoice({
           hasStartedAssistantBubbleRef.current = false;
           currentUserTurnRef.current = '';
           currentAssistantTurnRef.current = '';
+          lastNavHandledRef.current = '';
           if (activeSourcesRef.current.size === 0) {
             setVoiceState('listening');
           }
         } else if (msg.type === 'phone_action' && msg.action) {
           callbacksRef.current.onPhoneAction(msg.action);
+        } else if (msg.type === 'navigate' && msg.command) {
+          callbacksRef.current.onNavigate?.(msg.command);
+        } else if (msg.type === 'request_latest_motivation' && msg.callId) {
+          const callId = msg.callId;
+          const fnName = msg.name || 'get_latest_motivation';
+          void (async () => {
+            let post: { title?: string | null; body: string } | null = null;
+            try {
+              if (callbacksRef.current.onRequestLatestMotivation) {
+                post = await callbacksRef.current.onRequestLatestMotivation();
+              }
+            } catch {
+              post = null;
+            }
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              wsRef.current.send(
+                JSON.stringify({
+                  type: 'motivation_response',
+                  callId,
+                  name: fnName,
+                  post,
+                }),
+              );
+            }
+          })();
         } else if (msg.type === 'error') {
           cleanupResources();
-          setErrorLabel(msg.label || 'Connection failed');
-          setErrorDetail(msg.detail || 'Unable to keep Gemini Live session open.');
+          const lbl = msg.label || 'Connection failed';
+          const dtl = msg.detail || 'Unable to keep Gemini Live session open.';
+          appendErrorLog('voice', lbl, dtl);
+          setErrorLabel(lbl);
+          setErrorDetail(dtl);
           setVoiceState('error');
         } else if (msg.type === 'closed') {
           cleanupResources();
@@ -409,6 +469,7 @@ export function useTiyaLiveVoice({
 
     ws.onerror = () => {
       cleanupResources();
+      appendErrorLog('voice', 'Connection failed', 'WebSocket connection to TIYA voice server failed.');
       setErrorLabel('Connection failed');
       setErrorDetail('WebSocket connection to TIYA voice server failed.');
       setVoiceState('error');
@@ -417,6 +478,7 @@ export function useTiyaLiveVoice({
     ws.onclose = () => {
       if (voiceStateRef.current === 'connecting') {
         cleanupResources();
+        appendErrorLog('voice', 'Connection failed', 'Voice connection closed before ready.');
         setErrorLabel('Connection failed');
         setErrorDetail('Voice connection closed before ready.');
         setVoiceState('error');

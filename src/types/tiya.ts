@@ -1,7 +1,23 @@
-export type Personality = 'Normal' | 'Friendly' | 'Caring' | 'Funny' | 'Teacher';
+export type Personality =
+  | 'Normal'
+  | 'Friendly'
+  | 'Professional'
+  | 'Funny'
+  | 'Companion'
+  | 'GF Mode'
+  | 'Teacher'
+  | 'Developer'
+  | 'Hungry'
+  | 'Nautanki'
+  | 'Caring'
+  | 'Custom';
+
+export type AffectionLevel = 'Off' | 'Low' | 'Medium' | 'High' | 'Very affectionate';
+
 export type ResponseStyle = 'Short' | 'Normal' | 'Detailed';
 export type LanguageOption = 'Bengali' | 'English' | 'Urdu' | 'Hindi' | 'Arabic';
 export type ThemeMode = 'dark' | 'light';
+export type OrbStyle = 'Classic' | 'Pulse' | 'Wave';
 
 export type FemaleVoiceId = 'Zephyr' | 'Kore' | 'Aoede' | 'Leda';
 
@@ -16,6 +32,37 @@ export const FEMALE_VOICES: FemaleVoiceInfo[] = [
   { id: 'Leda', label: 'Leda', tone: 'Youthful, warm & friendly female' },
   { id: 'Kore', label: 'Kore', tone: 'Calm, gentle female' },
   { id: 'Aoede', label: 'Aoede', tone: 'Melodic, expressive female' },
+];
+
+export const ALL_PERSONALITIES: Personality[] = [
+  'Normal',
+  'Friendly',
+  'Professional',
+  'Funny',
+  'Companion',
+  'GF Mode',
+  'Teacher',
+  'Developer',
+  'Hungry',
+  'Nautanki',
+  'Caring',
+  'Custom',
+];
+
+export const AFFECTION_LEVELS: AffectionLevel[] = [
+  'Off',
+  'Low',
+  'Medium',
+  'High',
+  'Very affectionate',
+];
+
+export const ADULT_ONLY_PERSONALITIES: Personality[] = ['GF Mode', 'Companion'];
+
+export const TTS_MODELS: Array<{ id: string; label: string }> = [
+  { id: 'gemini-3.8-flash-lite-tts', label: 'Gemini 3.8 Flash Lite TTS' },
+  { id: 'gemini-2.5-flash-preview-tts', label: 'Gemini 2.5 Flash TTS' },
+  { id: 'gemini-2.5-pro-preview-tts', label: 'Gemini 2.5 Pro TTS' },
 ];
 
 export interface LiveModelInfo {
@@ -38,6 +85,39 @@ export const DEFAULT_LIVE_MODELS: LiveModelInfo[] = [
     description: 'Real-time voice with deeper reasoning and async tool calls',
   },
 ];
+
+export type ProviderId = 'gemini' | 'groq' | 'openrouter' | 'github' | 'openai';
+
+export interface ProviderConnection {
+  apiKey: string;
+  status: ConnectionStatus;
+  message: string;
+}
+
+export interface MicListeningSettings {
+  sensitivity: number; // 0.25 to 2.0
+  backgroundCall: boolean;
+  floatingCall: boolean;
+  listenOnOpen: boolean;
+  alwaysListening: boolean;
+  smartListening: boolean;
+  nativeMic: boolean;
+  voiceDebug: boolean;
+}
+
+export interface MemoryItem {
+  id: string;
+  text: string;
+  createdAt: number;
+}
+
+export interface ErrorLogEntry {
+  id: string;
+  timestamp: number;
+  source: 'voice' | 'chat' | 'connections' | 'system';
+  label: string;
+  detail: string;
+}
 
 export type PhoneAction =
   | { action: 'open_app'; app: string }
@@ -76,11 +156,11 @@ export type SettingsPageId =
   | 'hub'
   | 'about'
   | 'connections'
-  | 'live_model'
   | 'voice_language'
-  | 'chats_memory'
-  | 'look_feel'
   | 'phone_control'
+  | 'chats_memory'
+  | 'premium'
+  | 'privacy_controls'
   | 'my_account';
 
 export interface UserProfile {
@@ -108,6 +188,15 @@ export interface NotificationItem {
   created_at: string;
 }
 
+export interface MotivationPost {
+  id: string;
+  title: string | null;
+  body: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AdminStats {
   total: number;
   premium: number;
@@ -123,19 +212,32 @@ export interface TiyaSettings {
   apiKey: string;
   connectionStatus: ConnectionStatus;
   connectionMessage: string;
+  providerConnections: Record<Exclude<ProviderId, 'gemini'>, ProviderConnection>;
   selectedLiveModel: string;
+  customLiveModel: string;
   autoFallback: boolean;
   availableLiveModels: LiveModelInfo[];
+  chatModelOverride: string;
+  availableChatModels: LiveModelInfo[];
+  ttsModel: string;
+  voiceModel: string;
   assistantName: string;
   yourName: string;
   personality: Personality;
+  customPersonalityPrompt: string;
+  affection: AffectionLevel;
   language: LanguageOption;
   responseStyle: ResponseStyle;
   voiceName: FemaleVoiceId;
   speechSpeed: number; // 0.75 to 1.35
   volume: number; // 0 to 1
+  pitch: number; // 0.75 to 1.25
+  micListening: MicListeningSettings;
   theme: ThemeMode;
+  orbStyle: OrbStyle;
   reduceMotion: boolean;
+  tiyaAlive: boolean;
+  approximateLocation: boolean;
 }
 
 export interface TiyaNativeResult {

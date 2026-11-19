@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import {
   ChatMessage,
+  ErrorLogEntry,
   MainTab,
+  MemoryItem,
+  MotivationPost,
   NotificationItem,
   PhoneAction,
   SettingsPageId,
@@ -11,10 +14,16 @@ import {
   UserProfile,
 } from './types/tiya';
 import {
+  appendErrorLog,
   clearAllChatsStorage,
+  clearErrorLog,
+  groupMessagesIntoChatSessions,
   loadChats,
+  loadErrorLog,
+  loadMemories,
   loadSettings,
   saveChats,
+  saveMemories,
   saveSettings,
 } from './utils/storage';
 import {
@@ -30,6 +39,16 @@ import {
   extractActionFromText,
   getConfirmationPromptText,
 } from './utils/phoneActions';
+import {
+  NavigationCommand,
+  parseNavigationCommand,
+  validateNavigateToolArgs,
+} from './utils/tiyaNavigation';
+import {
+  formatMotivationReplyBn,
+  hasBengaliScript,
+  isMotivationRequest,
+} from './utils/motivation';
 import { useTiyaLiveVoice } from './hooks/useTiyaLiveVoice';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { AgeCheckScreen } from './components/auth/AgeCheckScreen';
@@ -38,17 +57,18 @@ import { ChatScreen } from './components/ChatScreen';
 import { BottomNav } from './components/BottomNav';
 import { NotificationsSheet } from './components/NotificationsSheet';
 import { AdminScreen } from './components/admin/AdminScreen';
+import { MotivationScreen } from './components/admin/MotivationScreen';
 import { SettingsHub } from './components/settings/SettingsHub';
 import { ConnectionsPage } from './components/settings/ConnectionsPage';
-import { LiveModelPage } from './components/settings/LiveModelPage';
 import { VoiceLanguagePage } from './components/settings/VoiceLanguagePage';
 import { ChatsMemoryPage } from './components/settings/ChatsMemoryPage';
+import { PremiumPage } from './components/settings/PremiumPage';
 import { MyAccountPage } from './components/settings/MyAccountPage';
 import {
   AboutGuidePage,
-  LookFeelPage,
   PhoneControlPage,
 } from './components/settings/AboutLookPhonePages';
+import { PrivacyControlsPage } from './components/settings/DeveloperPrivacyPages';
 
 function makeId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -60,9 +80,27 @@ function makeId(): string {
 export default function App() {
   const [settings, setSettings] = useState<TiyaSettings>(() => loadSettings());
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadChats());
+  const [memories, setMemories] = useState<MemoryItem[]>(() => loadMemories());
+  const [errorLog, setErrorLog] = useState<ErrorLogEntry[]>(() => loadErrorLog());
   const [activeTab, setActiveTab] = useState<MainTab>('home');
   const [settingsPage, setSettingsPage] = useState<SettingsPageId>('hub');
+  const [settingsSubpage, setSettingsSubpage] = useState<string | null>(null);
   const [showAdminScreen, setShowAdminScreen] = useState(false);
+  const [showMotivationScreen, setShowMotivationScreen] = useState(false);
+
+  const navHistoryRef = useRef<
+    Array<{ tab: MainTab; page: SettingsPageId; subpage: string | null }>
+  >([]);
+  const navStateRef = useRef({
+    tab: activeTab,
+    page: settingsPage,
+    subpage: settingsSubpage,
+  });
+  navStateRef.current = {
+    tab: activeTab,
+    page: settingsPage,
+    subpage: settingsSubpage,
+  };
 
   // Supabase Auth & Account State
   const [authReady, setAuthReady] = useState(false);
@@ -81,19 +119,24 @@ export default function App() {
   const [chatError, setChatError] = useState('');
   const [actionLinks, setActionLinks] = useState<Record<string, string>>({});
 
-  // Sync theme to <html>
+  const autoStartedListenRef = useRef(false);
+
+  // Keep dark theme permanently fixed
   useEffect(() => {
     const root = document.documentElement;
-    if (settings.theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    root.classList.add('dark');
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) {
-      metaTheme.setAttribute('content', settings.theme === 'dark' ? '#090B10' : '#F8FAFC');
+      metaTheme.setAttribute('content', '#090B10');
     }
-  }, [settings.theme]);
+  }, []);
+
+  // Refresh error log when entering Admin Panel or Settings
+  useEffect(() => {
+    if (activeTab === 'settings' || showAdminScreen) {
+      setErrorLog(loadErrorLog());
+    }
+  }, [activeTab, settingsPage, settingsSubpage, showAdminScreen]);
 
   // Restore persisted Supabase session & listen to auth changes
   useEffect(() => {
@@ -205,6 +248,53 @@ export default function App() {
     });
   }, []);
 
+  const navigateTo = useCallback(
+    (tab: MainTab, page: SettingsPageId = 'hub', subpage: string | null = null) => {
+      const cur = navStateRef.current;
+      if (cur.tab !== tab || cur.page !== page || cur.subpage !== subpage) {
+        navHistoryRef.current = [...navHistoryRef.current.slice(-24), cur];
+      }
+      setActiveTab(tab);
+      setSettingsPage(page);
+      setSettingsSubpage(subpage);
+    },
+    [],
+  );
+
+  const handleNavigateBack = useCallback(() => {
+    const cur = navStateRef.current;
+    if (cur.tab === 'settings' && cur.subpage) {
+      setSettingsSubpage(null);
+      return;
+    }
+    if (cur.tab === 'settings' && cur.page !== 'hub') {
+      setSettingsPage('hub');
+      setSettingsSubpage(null);
+      return;
+    }
+    const prev = navHistoryRef.current.pop();
+    if (prev) {
+      setActiveTab(prev.tab);
+      setSettingsPage(prev.page);
+      setSettingsSubpage(prev.subpage);
+      return;
+    }
+    setActiveTab('home');
+    setSettingsPage('hub');
+    setSettingsSubpage(null);
+  }, []);
+
+  const handleNavigateCommand = useCallback(
+    (cmd: NavigationCommand) => {
+      if (cmd.type === 'back') {
+        handleNavigateBack();
+        return;
+      }
+      navigateTo(cmd.tab, cmd.page || 'hub', cmd.subpage ?? null);
+    },
+    [handleNavigateBack, navigateTo],
+  );
+
   const handleAppendVoiceMessage = useCallback(
     (role: 'user' | 'assistant', text: string, action?: PhoneAction) => {
       const { cleanText, action: parsedAction } = extractActionFromText(text);
@@ -262,6 +352,22 @@ export default function App() {
     [updateMessages],
   );
 
+  const fetchLatestPublishedMotivation = useCallback(async (): Promise<MotivationPost | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('motivations')
+        .select('id, title, body, is_published, created_at, updated_at')
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error || !Array.isArray(data) || data.length === 0) return null;
+      return data[0] as MotivationPost;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const {
     voiceState,
     errorLabel,
@@ -273,12 +379,51 @@ export default function App() {
   } = useTiyaLiveVoice({
     settings,
     messages,
+    memories,
     userAge,
     checkReplyUsage,
     onAppendVoiceMessage: handleAppendVoiceMessage,
     onUpdateLastVoiceMessage: handleUpdateLastVoiceMessage,
     onPhoneAction: handleLivePhoneAction,
+    onNavigate: handleNavigateCommand,
+    onRequestLatestMotivation: fetchLatestPublishedMotivation,
   });
+
+  // Sync voice errors into state error log
+  useEffect(() => {
+    if (voiceState === 'error') {
+      setErrorLog(loadErrorLog());
+    }
+  }, [voiceState]);
+
+  // Listen when app opens (if enabled and ready)
+  useEffect(() => {
+    if (
+      authReady &&
+      session?.user &&
+      profileLoaded &&
+      effectiveBirthYear !== null &&
+      !autoStartedListenRef.current
+    ) {
+      autoStartedListenRef.current = true;
+      if (
+        settings.micListening.listenOnOpen &&
+        settings.apiKey.trim() &&
+        voiceState === 'idle'
+      ) {
+        toggleVoice();
+      }
+    }
+  }, [
+    authReady,
+    effectiveBirthYear,
+    profileLoaded,
+    session?.user,
+    settings.apiKey,
+    settings.micListening.listenOnOpen,
+    toggleVoice,
+    voiceState,
+  ]);
 
   const handleConfirmAction = useCallback(
     async (msgId: string, action: PhoneAction) => {
@@ -327,9 +472,124 @@ export default function App() {
     [sendActionFeedbackToLive, updateMessages],
   );
 
+  const deliverMotivationInChat = useCallback(
+    async (post: MotivationPost | null): Promise<string> => {
+      if (!post || !post.body?.trim()) {
+        return formatMotivationReplyBn(null);
+      }
+
+      const key = settings.apiKey.trim();
+      if (hasBengaliScript(post.body) || !key) {
+        return formatMotivationReplyBn(post);
+      }
+
+      try {
+        const systemInstruction = buildTiyaSystemPrompt(
+          settings,
+          messages,
+          'chat',
+          userAge,
+          memories,
+        );
+        const titlePart = (post.title || '').trim()
+          ? `Title: ${post.title?.trim()}\n`
+          : '';
+        const res = await fetch('/api/gemini/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-gemini-api-key': key,
+          },
+          body: JSON.stringify({
+            message: `Read and deliver the following motivational post naturally to the user in Bengali. Keep the meaning faithful and warm:\n${titlePart}Message: ${post.body.trim()}`,
+            history: [],
+            systemInstruction,
+            model: settings.chatModelOverride.trim() || undefined,
+          }),
+        });
+        const data = (await res.json()) as { ok?: boolean; text?: string };
+        if (res.ok && data.ok && data.text?.trim()) {
+          return data.text.trim();
+        }
+      } catch {
+        // Fallback to direct formatted Bengali response
+      }
+
+      return formatMotivationReplyBn(post);
+    },
+    [memories, messages, settings, userAge],
+  );
+
   const handleSendChat = useCallback(
     async (text: string) => {
       setChatError('');
+
+      // Check deterministic navigation commands first (works offline/without wasting reply quota)
+      const navCmd = parseNavigationCommand(text);
+      if (navCmd) {
+        const userMsg: ChatMessage = {
+          id: makeId(),
+          role: 'user',
+          text,
+          timestamp: Date.now(),
+          source: 'chat',
+        };
+        const confirmMsg: ChatMessage = {
+          id: makeId(),
+          role: 'assistant',
+          text: navCmd.confirmBn,
+          timestamp: Date.now() + 1,
+          source: 'chat',
+        };
+        updateMessages((prev) => [...prev, userMsg, confirmMsg]);
+        handleNavigateCommand(navCmd);
+        return;
+      }
+
+      // Handle motivation requests directly from published motivations in Supabase
+      if (isMotivationRequest(text)) {
+        const userMsg: ChatMessage = {
+          id: makeId(),
+          role: 'user',
+          text,
+          timestamp: Date.now(),
+          source: 'chat',
+        };
+        updateMessages((prev) => [...prev, userMsg]);
+        setIsSendingChat(true);
+        try {
+          const usageDecision = await checkReplyUsage();
+          if (!usageDecision.allowed) {
+            updateMessages((prev) => [
+              ...prev,
+              {
+                id: makeId(),
+                role: 'assistant',
+                text: usageDecision.messageBn || 'আজকের লিমিট শেষ',
+                timestamp: Date.now(),
+                source: 'chat',
+              },
+            ]);
+            return;
+          }
+          const latestPost = await fetchLatestPublishedMotivation();
+          const replyText = await deliverMotivationInChat(latestPost);
+          updateMessages((prev) => [
+            ...prev,
+            {
+              id: makeId(),
+              role: 'assistant',
+              text: replyText,
+              timestamp: Date.now(),
+              source: 'chat',
+            },
+          ]);
+        } finally {
+          setIsSendingChat(false);
+        }
+        return;
+      }
+
       const key = settings.apiKey.trim();
       if (!key) {
         setChatError('No API key. Add your Gemini API key in Settings > Connections.');
@@ -372,6 +632,7 @@ export default function App() {
           messages,
           'chat',
           userAge,
+          memories,
         );
         const res = await fetch('/api/gemini/chat', {
           method: 'POST',
@@ -383,6 +644,7 @@ export default function App() {
             message: text,
             history: historySnapshot,
             systemInstruction,
+            model: settings.chatModelOverride.trim() || undefined,
           }),
         });
 
@@ -390,12 +652,38 @@ export default function App() {
           ok?: boolean;
           text?: string;
           action?: PhoneAction | null;
+          navigate?: unknown;
+          needsMotivation?: boolean;
           label?: string;
           detail?: string;
         };
 
         if (!res.ok || !data.ok) {
-          setChatError(data.label ? `${data.label}: ${data.detail || ''}` : 'Chat request failed.');
+          const errTitle = data.label || 'CHAT_ERROR';
+          const errDetail = data.detail || 'Chat request failed.';
+          setChatError(`${errTitle}: ${errDetail}`);
+          setErrorLog(appendErrorLog('chat', errTitle, errDetail));
+          return;
+        }
+
+        const parsedNav = validateNavigateToolArgs(data.navigate);
+        if (parsedNav) {
+          handleNavigateCommand(parsedNav);
+        }
+
+        if (data.needsMotivation) {
+          const latestPost = await fetchLatestPublishedMotivation();
+          const motReply = await deliverMotivationInChat(latestPost);
+          updateMessages((prev) => [
+            ...prev,
+            {
+              id: makeId(),
+              role: 'assistant',
+              text: motReply,
+              timestamp: Date.now(),
+              source: 'chat',
+            },
+          ]);
           return;
         }
 
@@ -403,7 +691,11 @@ export default function App() {
         const pendingAction = data.action || inlineAction || undefined;
         const replyText =
           cleanText ||
-          (pendingAction ? getConfirmationPromptText(pendingAction) : 'বলুন, কীভাবে সাহায্য করতে পারি?');
+          (pendingAction
+            ? getConfirmationPromptText(pendingAction)
+            : parsedNav
+              ? parsedNav.confirmBn
+              : 'বলুন, কীভাবে সাহায্য করতে পারি?');
 
         const assistantMsg: ChatMessage = {
           id: makeId(),
@@ -416,18 +708,31 @@ export default function App() {
             : {}),
         };
         updateMessages((prev) => [...prev, assistantMsg]);
-      } catch {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Network error while contacting Gemini.';
         setChatError('Network error while contacting Gemini.');
+        setErrorLog(appendErrorLog('chat', 'NETWORK_ERROR', msg));
       } finally {
         setIsSendingChat(false);
       }
     },
-    [checkReplyUsage, messages, settings, updateMessages, userAge],
+    [
+      checkReplyUsage,
+      deliverMotivationInChat,
+      fetchLatestPublishedMotivation,
+      handleNavigateCommand,
+      memories,
+      messages,
+      settings,
+      updateMessages,
+      userAge,
+    ],
   );
 
-  const handleDeleteMessage = useCallback(
-    (id: string) => {
-      updateMessages((prev) => prev.filter((m) => m.id !== id));
+  const handleDeleteSessionMessages = useCallback(
+    (ids: string[]) => {
+      const idSet = new Set(ids);
+      updateMessages((prev) => prev.filter((m) => !idSet.has(m.id)));
     },
     [updateMessages],
   );
@@ -438,17 +743,60 @@ export default function App() {
     setActionLinks({});
   }, []);
 
-  const openConnections = useCallback(() => {
-    setActiveTab('settings');
-    setSettingsPage('connections');
+  const handleAddMemory = useCallback((text: string) => {
+    const clean = text.trim();
+    if (!clean) return;
+    setMemories((prev) => {
+      const next: MemoryItem[] = [
+        ...prev,
+        { id: makeId(), text: clean, createdAt: Date.now() },
+      ];
+      saveMemories(next);
+      return next;
+    });
   }, []);
 
-  const handleSelectTab = useCallback((tab: MainTab) => {
-    setActiveTab(tab);
-    if (tab !== 'settings') {
-      setSettingsPage('hub');
-    }
+  const handleDeleteMemory = useCallback((id: string) => {
+    setMemories((prev) => {
+      const next = prev.filter((m) => m.id !== id);
+      saveMemories(next);
+      return next;
+    });
   }, []);
+
+  const handleClearMemories = useCallback(() => {
+    setMemories([]);
+    saveMemories([]);
+  }, []);
+
+  const openConnections = useCallback(() => {
+    navigateTo('settings', 'connections', null);
+  }, [navigateTo]);
+
+  const handleSelectTab = useCallback(
+    (tab: MainTab) => {
+      navigateTo(tab, 'hub', null);
+    },
+    [navigateTo],
+  );
+
+  const handleOpenSettingsPage = useCallback(
+    (page: SettingsPageId) => {
+      navigateTo('settings', page, null);
+    },
+    [navigateTo],
+  );
+
+  const handleSelectSettingsSubpage = useCallback(
+    (sub: string | null) => {
+      if (sub === null) {
+        setSettingsSubpage(null);
+      } else {
+        navigateTo('settings', navStateRef.current.page, sub);
+      }
+    },
+    [navigateTo],
+  );
 
   const handleOpenNotifications = useCallback(async () => {
     setNotifOpen(true);
@@ -488,9 +836,17 @@ export default function App() {
     stopVoice();
     await supabase.auth.signOut();
     setShowAdminScreen(false);
+    setShowMotivationScreen(false);
     setActiveTab('home');
     setSettingsPage('hub');
+    setSettingsSubpage(null);
+    navHistoryRef.current = [];
   }, [stopVoice]);
+
+  const chatSessionCount = useMemo(
+    () => groupMessagesIntoChatSessions(messages).length,
+    [messages],
+  );
 
   const unreadNotifications = notifications.filter((n) => !n.read_at).length;
   const needsAgeCheck =
@@ -541,8 +897,24 @@ export default function App() {
           />
         ) : showAdminScreen && isAdmin ? (
           <AdminScreen
+            settings={settings}
+            voiceState={voiceState}
+            errorLog={errorLog}
+            onClearErrorLog={() => {
+              clearErrorLog();
+              setErrorLog([]);
+            }}
             onBackToHome={() => setShowAdminScreen(false)}
             onLogout={handleSignOut}
+          />
+        ) : showMotivationScreen && isAdmin ? (
+          <MotivationScreen
+            onBack={() => setShowMotivationScreen(false)}
+            onBroadcastSaved={() => {
+              if (session?.user?.id) {
+                loadAccountData(session.user.id);
+              }
+            }}
           />
         ) : (
           <>
@@ -560,7 +932,19 @@ export default function App() {
                 onToggleVoice={toggleVoice}
                 onOpenConnections={openConnections}
                 onOpenNotifications={handleOpenNotifications}
-                onOpenAdmin={() => setShowAdminScreen(true)}
+                onOpenAdmin={() => {
+                  setShowMotivationScreen(false);
+                  setShowAdminScreen(true);
+                }}
+                onOpenMotivation={() => {
+                  setShowAdminScreen(false);
+                  setShowMotivationScreen(true);
+                }}
+                onOpenHome={() => navigateTo('home', 'hub', null)}
+                onOpenChatHistory={() => navigateTo('settings', 'chats_memory', null)}
+                onOpenChat={() => navigateTo('chat', 'hub', null)}
+                onOpenTools={() => navigateTo('settings', 'phone_control', 'quick_actions')}
+                onOpenMore={() => navigateTo('settings', 'hub', null)}
                 onConfirmAction={handleConfirmAction}
                 onCancelAction={handleCancelAction}
               />
@@ -584,75 +968,124 @@ export default function App() {
             {activeTab === 'settings' && settingsPage === 'hub' && (
               <SettingsHub
                 settings={settings}
-                messageCount={messages.length}
+                profile={profile}
+                chatCount={chatSessionCount}
                 userEmail={session.user.email}
-                onOpenPage={setSettingsPage}
-                onClearAllChats={handleClearAllChats}
+                onOpenPage={handleOpenSettingsPage}
               />
             )}
 
             {activeTab === 'settings' && settingsPage === 'about' && (
-              <AboutGuidePage onBack={() => setSettingsPage('hub')} />
+              <AboutGuidePage
+                settings={settings}
+                voiceState={voiceState}
+                hasSession={Boolean(session)}
+                subpage={settingsSubpage}
+                onSelectSubpage={handleSelectSettingsSubpage}
+                onBack={() => {
+                  setSettingsPage('hub');
+                  setSettingsSubpage(null);
+                }}
+              />
             )}
 
             {activeTab === 'settings' && settingsPage === 'connections' && (
               <ConnectionsPage
                 settings={settings}
+                subpage={settingsSubpage}
+                onSelectSubpage={handleSelectSettingsSubpage}
                 onUpdateSettings={updateSettings}
-                onBack={() => setSettingsPage('hub')}
-              />
-            )}
-
-            {activeTab === 'settings' && settingsPage === 'live_model' && (
-              <LiveModelPage
-                settings={settings}
-                onUpdateSettings={updateSettings}
-                onBack={() => setSettingsPage('hub')}
+                onBack={() => {
+                  setSettingsPage('hub');
+                  setSettingsSubpage(null);
+                }}
               />
             )}
 
             {activeTab === 'settings' && settingsPage === 'voice_language' && (
               <VoiceLanguagePage
                 settings={settings}
+                subpage={settingsSubpage}
+                onSelectSubpage={handleSelectSettingsSubpage}
                 onUpdateSettings={updateSettings}
-                onBack={() => setSettingsPage('hub')}
+                onBack={() => {
+                  setSettingsPage('hub');
+                  setSettingsSubpage(null);
+                }}
+              />
+            )}
+
+            {activeTab === 'settings' && settingsPage === 'phone_control' && (
+              <PhoneControlPage
+                subpage={settingsSubpage}
+                onSelectSubpage={handleSelectSettingsSubpage}
+                onBack={() => {
+                  setSettingsPage('hub');
+                  setSettingsSubpage(null);
+                }}
               />
             )}
 
             {activeTab === 'settings' && settingsPage === 'chats_memory' && (
               <ChatsMemoryPage
                 messages={messages}
-                onDeleteMessage={handleDeleteMessage}
+                memories={memories}
+                onDeleteSessionMessages={handleDeleteSessionMessages}
                 onClearAll={handleClearAllChats}
-                onBack={() => setSettingsPage('hub')}
+                onBack={() => {
+                  setSettingsPage('hub');
+                  setSettingsSubpage(null);
+                }}
               />
             )}
 
-            {activeTab === 'settings' && settingsPage === 'look_feel' && (
-              <LookFeelPage
+            {activeTab === 'settings' && settingsPage === 'premium' && (
+              <PremiumPage
+                profile={profile}
+                onBack={() => {
+                  setSettingsPage('hub');
+                  setSettingsSubpage(null);
+                }}
+              />
+            )}
+
+            {activeTab === 'settings' && settingsPage === 'privacy_controls' && (
+              <PrivacyControlsPage
                 settings={settings}
+                messages={messages}
+                memories={memories}
+                subpage={settingsSubpage}
+                onSelectSubpage={handleSelectSettingsSubpage}
                 onUpdateSettings={updateSettings}
-                onBack={() => setSettingsPage('hub')}
+                onClearAllChats={handleClearAllChats}
+                onAddMemory={handleAddMemory}
+                onDeleteMemory={handleDeleteMemory}
+                onClearMemories={handleClearMemories}
+                onOpenPage={handleOpenSettingsPage}
+                onBack={() => {
+                  setSettingsPage('hub');
+                  setSettingsSubpage(null);
+                }}
               />
-            )}
-
-            {activeTab === 'settings' && settingsPage === 'phone_control' && (
-              <PhoneControlPage onBack={() => setSettingsPage('hub')} />
             )}
 
             {activeTab === 'settings' && settingsPage === 'my_account' && (
               <MyAccountPage
                 user={session.user}
                 profile={profile}
-                onBack={() => setSettingsPage('hub')}
+                onBack={() => {
+                  setSettingsPage('hub');
+                  setSettingsSubpage(null);
+                }}
                 onSignedOut={() => {
                   setActiveTab('home');
                   setSettingsPage('hub');
+                  setSettingsSubpage(null);
                 }}
               />
             )}
 
-            {!isInSettingsSubpage && (
+            {activeTab !== 'home' && !isInSettingsSubpage && (
               <BottomNav
                 activeTab={activeTab}
                 voiceState={voiceState}

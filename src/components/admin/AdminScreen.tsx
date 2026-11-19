@@ -11,23 +11,46 @@ import {
   Shield,
   Users,
   BarChart3,
+  Wrench,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { AdminStats, UserProfile } from '../../types/tiya';
+import {
+  AdminStats,
+  ErrorLogEntry,
+  TiyaSettings,
+  UserProfile,
+  VoiceState,
+} from '../../types/tiya';
 import { calculateAge, computePaidUntilIso } from '../../utils/authErrors';
+import { DeveloperToolsPage } from '../settings/DeveloperPrivacyPages';
 
-type AdminView = 'hub' | 'dashboard' | 'users' | 'user_detail' | 'notify_all';
+type AdminView =
+  | 'hub'
+  | 'dashboard'
+  | 'users'
+  | 'user_detail'
+  | 'notify_all'
+  | 'developer_tools';
 
 interface AdminScreenProps {
+  settings: TiyaSettings;
+  voiceState: VoiceState;
+  errorLog: ErrorLogEntry[];
+  onClearErrorLog: () => void;
   onBackToHome: () => void;
   onLogout: () => void;
 }
 
 export const AdminScreen: React.FC<AdminScreenProps> = ({
+  settings,
+  voiceState,
+  errorLog,
+  onClearErrorLog,
   onBackToHome,
   onLogout,
 }) => {
   const [view, setView] = useState<AdminView>('hub');
+  const [devSubpage, setDevSubpage] = useState<string | null>(null);
 
   // Dashboard state
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -323,6 +346,23 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
 
   const isRefreshing = statsLoading || usersLoading;
 
+  if (view === 'developer_tools') {
+    return (
+      <DeveloperToolsPage
+        settings={settings}
+        voiceState={voiceState}
+        errorLog={errorLog}
+        subpage={devSubpage}
+        onSelectSubpage={setDevSubpage}
+        onClearErrorLog={onClearErrorLog}
+        onBack={() => {
+          setDevSubpage(null);
+          setView('hub');
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Admin Top Header */}
@@ -442,6 +482,29 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                   </p>
                 </div>
                 <Bell className="h-4 w-4 text-slate-400" />
+              </button>
+
+              <button
+                type="button"
+                data-testid="admin-developer-tools-btn"
+                onClick={() => {
+                  setDevSubpage(null);
+                  setView('developer_tools');
+                }}
+                className="flex min-h-[60px] w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+              >
+                <span className="font-mono-code flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
+                  4
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold tracking-wide text-slate-900 dark:text-slate-100">
+                    DEVELOPER TOOLS
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    Error log, app status, diagnostics & system info
+                  </p>
+                </div>
+                <Wrench className="h-4 w-4 text-slate-400" />
               </button>
             </div>
           </div>

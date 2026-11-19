@@ -19,6 +19,7 @@ import {
   getConfirmationPromptText,
   validatePhoneAction,
 } from './src/utils/phoneActions';
+import { validateNavigateToolArgs } from './src/utils/tiyaNavigation';
 import { DEFAULT_LIVE_MODELS, LiveModelInfo } from './src/types/tiya';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -71,6 +72,51 @@ function buildPhoneActionTool(nonBlocking: boolean): FunctionDeclaration {
         },
       },
       required: ['action'],
+    },
+  };
+}
+
+function buildNavigateAppTool(nonBlocking: boolean): FunctionDeclaration {
+  return {
+    name: 'navigate_app',
+    description:
+      'Opens a TIYA screen or settings page/subpage, or navigates back. Use whenever the user asks to open Settings, a numbered Settings bar, Home, Chat, Mic Test, Privacy Controls, Developer Tools, etc.',
+    ...(nonBlocking ? { behavior: Behavior.NON_BLOCKING } : {}),
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          description: 'open or back',
+        },
+        tab: {
+          type: Type.STRING,
+          description: 'home, chat, or settings',
+        },
+        page: {
+          type: Type.STRING,
+          description:
+            'Settings page ID: hub, about, connections, live_model, voice_language, chats_memory, look_feel, phone_control, developer_tools, privacy_controls, my_account',
+        },
+        subpage: {
+          type: Type.STRING,
+          description: 'Optional subpage ID inside a Settings page (e.g. mic_test, health_check, error_log)',
+        },
+      },
+      required: ['action'],
+    },
+  };
+}
+
+function buildGetLatestMotivationTool(nonBlocking: boolean): FunctionDeclaration {
+  return {
+    name: 'get_latest_motivation',
+    description:
+      'Fetches the latest published motivation post so TIYA can read it to the user in Bengali. Call this whenever the user asks for daily or today’s motivation.',
+    ...(nonBlocking ? { behavior: Behavior.NON_BLOCKING } : {}),
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
     },
   };
 }
@@ -161,7 +207,116 @@ async function startServer() {
     }
   });
 
-  // Text Chat endpoint using gemini-4-hydrogen
+  // Test non-Gemini provider keys (Groq, OpenRouter, GitHub, OpenAI)
+  app.post('/api/providers/test-key', async (req: Request, res: Response) => {
+    const { provider, apiKey } = req.body as { provider?: string; apiKey?: string };
+    const cleanKey = (apiKey || '').trim();
+    if (!cleanKey) {
+      res.status(401).json({ ok: false, label: 'ERROR', detail: 'No API key entered.' });
+      return;
+    }
+
+    const endpoints: Record<string, { url: string; headers: Record<string, string> }> = {
+      groq: {
+        url: 'https://api.groq.com/openai/v1/models',
+        headers: { Authorization: `Bearer ${cleanKey}` },
+      },
+      openrouter: {
+        url: 'https://openrouter.ai/api/v1/models',
+        headers: { Authorization: `Bearer ${cleanKey}` },
+      },
+      github: {
+        url: 'https://api.github.com/user',
+        headers: {
+          Authorization: `Bearer ${cleanKey}`,
+          'User-Agent': 'tiya-app',
+          Accept: 'application/vnd.github+json',
+        },
+      },
+      openai: {
+        url: 'https://api.openai.com/v1/models',
+        headers: { Authorization: `Bearer ${cleanKey}` },
+      },
+    };
+
+    const target = provider ? endpoints[provider] : undefined;
+    if (!target) {
+      res.status(400).json({ ok: false, label: 'ERROR', detail: 'Unsupported provider.' });
+      return;
+    }
+
+    try {
+      const upstream = await fetch(target.url, {
+        method: 'GET',
+        headers: target.headers,
+        signal: AbortSignal.timeout(8000),
+      });
+      if (upstream.ok) {
+        res.json({ ok: true, label: 'READY', detail: `${provider?.toUpperCase()} key verified and ready.` });
+      } else {
+        res.status(400).json({
+          ok: false,
+          label: 'ERROR',
+          detail: `Key check failed (HTTP ${upstream.status}).`,
+        });
+      }
+    } catch {
+      res.status(400).json({
+        ok: false,
+        label: 'ERROR',
+        detail: 'Network error while testing key.',
+      });
+    }
+  });
+
+  // Fetch available Gemini text/chat models
+  app.post('/api/gemini/chat-models', async (req: Request, res: Response) => {
+    const apiKey = extractApiKey(req);
+    if (!apiKey) {
+      res.status(401).json({ ok: false, label: 'No API key', detail: 'Add your Gemini API key first.' });
+      return;
+    }
+
+    try {
+      const ai = createAiClient(apiKey);
+      const pager = await ai.models.list({ config: { pageSize: 100 } });
+      const models: LiveModelInfo[] = [
+        {
+          id: 'gemini-4-hydrogen',
+          displayName: 'Gemini 4 Hydrogen (Auto)',
+          description: 'Recommended default chat model',
+          isDefault: true,
+        },
+      ];
+      const seen = new Set<string>(['gemini-4-hydrogen']);
+
+      for await (const m of pager) {
+        const rawName = (m.name || '').replace(/^models\//, '');
+        const methods = Array.isArray(m.supportedActions) ? m.supportedActions : [];
+        const supportsText =
+          methods.some((a) => a.toLowerCase().includes('generatecontent')) ||
+          rawName.toLowerCase().includes('gemini');
+        const isEmbedding = rawName.toLowerCase().includes('embedding') || rawName.toLowerCase().includes('tts');
+
+        if (rawName && supportsText && !isEmbedding && !seen.has(rawName)) {
+          seen.add(rawName);
+          models.push({
+            id: rawName,
+            displayName: m.displayName || rawName,
+            description: m.description || 'Gemini text model',
+          });
+        }
+      }
+
+      res.json({ ok: true, models: models.slice(0, 30) });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      const classified = classifyGeminiError(message);
+      res.status(400).json({ ok: false, label: classified.label, detail: classified.detail });
+    }
+  });
+
+  // Text Chat endpoint using selected chat model or gemini-4-hydrogen
   app.post('/api/gemini/chat', async (req: Request, res: Response) => {
     const apiKey = extractApiKey(req);
     if (!apiKey) {
@@ -169,10 +324,11 @@ async function startServer() {
       return;
     }
 
-    const { message, history, systemInstruction } = req.body as {
+    const { message, history, systemInstruction, model } = req.body as {
       message?: string;
       history?: Array<{ role: 'user' | 'assistant'; text: string }>;
       systemInstruction?: string;
+      model?: string;
     };
 
     if (!message || !message.trim()) {
@@ -190,38 +346,54 @@ async function startServer() {
         : [];
 
       const response = await ai.models.generateContent({
-        model: 'gemini-4-hydrogen',
+        model: (model || '').trim() || 'gemini-4-hydrogen',
         contents: [
           ...formattedHistory,
           { role: 'user', parts: [{ text: message }] },
         ],
         config: {
           systemInstruction: systemInstruction || 'You are TIYA, a helpful Bengali-default AI assistant.',
-          tools: [{ functionDeclarations: [buildPhoneActionTool(false)] }],
+          tools: [
+            {
+              functionDeclarations: [
+                buildPhoneActionTool(false),
+                buildNavigateAppTool(false),
+                buildGetLatestMotivationTool(false),
+              ],
+            },
+          ],
         },
       });
 
       const functionCalls = response.functionCalls || [];
       let detectedAction = null;
+      let navigateCommand = null;
+      let needsMotivation = false;
       for (const call of functionCalls) {
-        if (call.name === 'trigger_phone_action' && call.args) {
+        if (call.name === 'trigger_phone_action' && call.args && !detectedAction) {
           const valid = validatePhoneAction(call.args);
-          if (valid) {
-            detectedAction = valid;
-            break;
-          }
+          if (valid) detectedAction = valid;
+        } else if (call.name === 'navigate_app' && call.args && !navigateCommand) {
+          const nav = validateNavigateToolArgs(call.args);
+          if (nav) navigateCommand = nav;
+        } else if (call.name === 'get_latest_motivation') {
+          needsMotivation = true;
         }
       }
 
       let replyText = (response.text || '').trim();
       if (detectedAction && !replyText) {
         replyText = getConfirmationPromptText(detectedAction);
+      } else if (navigateCommand && !replyText) {
+        replyText = navigateCommand.confirmBn;
       }
 
       res.json({
         ok: true,
         text: replyText || 'বলুন, কীভাবে সাহায্য করতে পারি?',
         action: detectedAction,
+        navigate: navigateCommand,
+        needsMotivation,
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -284,11 +456,12 @@ async function startServer() {
       return;
     }
 
-    const { voiceName, assistantName, yourName, language } = req.body as {
+    const { voiceName, assistantName, yourName, language, ttsModel } = req.body as {
       voiceName?: string;
       assistantName?: string;
       yourName?: string;
       language?: string;
+      ttsModel?: string;
     };
 
     const name = assistantName?.trim() || 'তিয়া';
@@ -306,7 +479,7 @@ async function startServer() {
     try {
       const ai = createAiClient(apiKey);
       const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash-lite-tts',
+        model: (ttsModel || '').trim() || 'gemini-3.8-flash-lite-tts',
         contents: text,
         config: {
           responseModalities: [Modality.AUDIO],
@@ -350,6 +523,11 @@ async function startServer() {
     let activeSession: Awaited<ReturnType<GoogleGenAI['live']['connect']>> | null = null;
     let isClosedByClient = false;
     let connectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let currentSessionExtended = false;
+    const pendingMotivationCalls = new Map<
+      string,
+      { callId: string | undefined; name: string; timer: ReturnType<typeof setTimeout> }
+    >();
 
     const safeSend = (payload: Record<string, unknown>) => {
       if (clientWs.readyState === WebSocket.OPEN) {
@@ -362,6 +540,10 @@ async function startServer() {
         clearTimeout(connectTimeout);
         connectTimeout = null;
       }
+      for (const pending of pendingMotivationCalls.values()) {
+        clearTimeout(pending.timer);
+      }
+      pendingMotivationCalls.clear();
       if (activeSession) {
         try {
           activeSession.close();
@@ -399,7 +581,10 @@ async function startServer() {
 
         try {
           const isExtendedThinking = modelId.includes('extended-thinking');
+          currentSessionExtended = isExtendedThinking;
           const toolDecl = buildPhoneActionTool(isExtendedThinking);
+          const navToolDecl = buildNavigateAppTool(isExtendedThinking);
+          const motivationToolDecl = buildGetLatestMotivationTool(isExtendedThinking);
 
           const sessionPromise = ai.live.connect({
             model: modelId,
@@ -416,7 +601,7 @@ async function startServer() {
               ...(isExtendedThinking
                 ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } }
                 : {}),
-              tools: [{ functionDeclarations: [toolDecl] }],
+              tools: [{ functionDeclarations: [toolDecl, navToolDecl, motivationToolDecl] }],
             },
             callbacks: {
               onopen: () => {
@@ -484,6 +669,55 @@ async function startServer() {
                           ],
                         });
                       }
+                    } else if (call.name === 'navigate_app' && call.args) {
+                      const nav = validateNavigateToolArgs(call.args);
+                      if (nav) {
+                        safeSend({ type: 'navigate', command: nav });
+                        activeSession?.sendToolResponse({
+                          functionResponses: [
+                            {
+                              id: call.id,
+                              name: call.name,
+                              response: { status: 'navigated', message: nav.confirmBn },
+                              ...(isExtendedThinking
+                                ? { scheduling: FunctionResponseScheduling.WHEN_IDLE }
+                                : {}),
+                            },
+                          ],
+                        });
+                      }
+                    } else if (call.name === 'get_latest_motivation') {
+                      const token = call.id || `mot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+                      const timer = setTimeout(() => {
+                        const entry = pendingMotivationCalls.get(token);
+                        if (!entry) return;
+                        pendingMotivationCalls.delete(token);
+                        activeSession?.sendToolResponse({
+                          functionResponses: [
+                            {
+                              id: entry.callId,
+                              name: entry.name,
+                              response: {
+                                found: false,
+                                message: 'এখনো কোনো প্রকাশিত মোটিভেশন পাওয়া যায়নি।',
+                              },
+                              ...(isExtendedThinking
+                                ? { scheduling: FunctionResponseScheduling.WHEN_IDLE }
+                                : {}),
+                            },
+                          ],
+                        });
+                      }, 3500);
+                      pendingMotivationCalls.set(token, {
+                        callId: call.id,
+                        name: call.name,
+                        timer,
+                      });
+                      safeSend({
+                        type: 'request_latest_motivation',
+                        callId: token,
+                        name: call.name,
+                      });
                     }
                   }
                 }
@@ -581,6 +815,9 @@ async function startServer() {
           systemInstruction?: string;
           data?: string;
           text?: string;
+          callId?: string;
+          name?: string;
+          post?: { title?: string | null; body?: string } | null;
         };
 
         if (msg.type === 'start') {
@@ -596,6 +833,37 @@ async function startServer() {
             voiceName: msg.voiceName || 'Zephyr',
             systemInstruction: msg.systemInstruction || 'You are TIYA.',
           });
+        } else if (msg.type === 'motivation_response' && msg.callId && activeSession) {
+          const pending = pendingMotivationCalls.get(msg.callId);
+          if (pending) {
+            clearTimeout(pending.timer);
+            pendingMotivationCalls.delete(msg.callId);
+            const post = msg.post;
+            activeSession.sendToolResponse({
+              functionResponses: [
+                {
+                  id: pending.callId,
+                  name: pending.name,
+                  response:
+                    post && post.body?.trim()
+                      ? {
+                          found: true,
+                          title: (post.title || '').trim() || 'Motivation',
+                          body: post.body.trim(),
+                          instruction:
+                            'Read this published motivation post warmly to the user in Bengali.',
+                        }
+                      : {
+                          found: false,
+                          message: 'এখনো কোনো প্রকাশিত মোটিভেশন পাওয়া যায়নি।',
+                        },
+                  ...(currentSessionExtended
+                    ? { scheduling: FunctionResponseScheduling.WHEN_IDLE }
+                    : {}),
+                },
+              ],
+            });
+          }
         } else if (msg.type === 'audio' && msg.data && activeSession) {
           activeSession.sendRealtimeInput({
             audio: {
