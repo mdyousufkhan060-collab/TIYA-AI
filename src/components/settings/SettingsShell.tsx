@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Check } from 'lucide-react';
 
 interface SettingsShellProps {
   title: string;
@@ -158,3 +158,63 @@ export const SettingsToggleBar: React.FC<SettingsToggleBarProps> = ({
     </div>
   );
 };
+
+interface SettingsSelectBarProps {
+  badge?: string;
+  title: string;
+  /** small grey text on the right, e.g. native language name */
+  value?: string;
+  selected: boolean;
+  disabled?: boolean;
+  onSelect: () => void;
+  testId?: string;
+}
+
+/** Same look as SettingsBar, used for "pick one" lists (personality, language...). */
+export const SettingsSelectBar: React.FC<SettingsSelectBarProps> = ({
+  badge,
+  title,
+  value,
+  selected,
+  disabled = false,
+  onSelect,
+  testId,
+}) => (
+  <button
+    type="button"
+    onClick={onSelect}
+    disabled={disabled}
+    aria-pressed={selected}
+    data-testid={testId}
+    className={`flex h-11 w-full items-center gap-2.5 rounded-xl border px-3 text-left transition-colors disabled:opacity-40 ${
+      selected
+        ? 'border-teal-500 bg-teal-500/10'
+        : 'border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 dark:border-white/[0.08] dark:bg-[#11151E] dark:hover:bg-white/[0.05] dark:active:bg-white/[0.08]'
+    }`}
+  >
+    {badge !== undefined && (
+      <span className="font-mono-code flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-md bg-slate-100 px-1.5 text-[10px] font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
+        {badge}
+      </span>
+    )}
+    <span
+      className={`min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide uppercase ${
+        selected ? 'text-teal-700 dark:text-teal-300' : 'text-slate-900 dark:text-slate-100'
+      }`}
+    >
+      {title}
+    </span>
+    {value && (
+      <span className="max-w-[115px] shrink-0 truncate text-[10.5px] font-medium text-slate-400 dark:text-slate-500">
+        {value}
+      </span>
+    )}
+    {disabled ? (
+      <Lock className="h-3.5 w-3.5 shrink-0 text-amber-500/80" aria-label="Locked" />
+    ) : selected ? (
+      <Check className="h-4 w-4 shrink-0 text-teal-500 dark:text-teal-400" />
+    ) : (
+      <span className="h-4 w-4 shrink-0 rounded-full border border-slate-300 dark:border-white/20" aria-hidden="true" />
+    )}
+  </button>
+);

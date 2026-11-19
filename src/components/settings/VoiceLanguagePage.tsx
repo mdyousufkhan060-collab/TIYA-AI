@@ -15,7 +15,7 @@ import {
 import { base64Pcm16ToFloat32, computeRmsEnergy } from '../../utils/audioPcm';
 import { appendErrorLog } from '../../utils/storage';
 import { LiveModelPage } from './LiveModelPage';
-import { SettingsBar, SettingsShell, SettingsToggleBar } from './SettingsShell';
+import { SettingsBar, SettingsSelectBar, SettingsShell, SettingsToggleBar } from './SettingsShell';
 
 interface VoiceLanguagePageProps {
   settings: TiyaSettings;
@@ -260,28 +260,18 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     return (
       <SettingsShell title="PERSONALITY" onBack={() => onSelectSubpage(null)}>
         <div className="space-y-1.5 pb-3">
-          {ALL_PERSONALITIES.map((p) => {
-            const active = settings.personality === p;
-            const isLocked = locked(p);
-            return (
-              <button
-                key={p}
-                type="button"
-                disabled={isLocked}
-                onClick={() => onUpdateSettings({ personality: p })}
-                className={`flex min-h-[48px] w-full items-center justify-between rounded-xl border px-3 py-1.5 text-left disabled:opacity-40 ${
-                  active ? 'border-teal-500 bg-teal-500/10' : 'border-white/[0.08] bg-[#11151E]'
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className={`text-xs font-semibold ${active ? 'text-teal-300' : 'text-slate-100'}`}>{p}</p>
-                  <p className="truncate text-[10px] text-slate-400">{isLocked ? '18+ only' : PERSONALITY_INFO[p]}</p>
-                </div>
-                {active && <Check className="h-4 w-4 shrink-0 text-teal-400" />}
-                {isLocked && <Lock className="h-3.5 w-3.5 shrink-0 text-slate-500" />}
-              </button>
-            );
-          })}
+          {ALL_PERSONALITIES.map((p, i) => (
+            <SettingsSelectBar
+              key={p}
+              badge={String(i + 1).padStart(2, '0')}
+              title={p}
+              value={locked(p) ? '18+' : undefined}
+              selected={settings.personality === p}
+              disabled={locked(p)}
+              onSelect={() => onUpdateSettings({ personality: p })}
+              testId={`personality-${p}`}
+            />
+          ))}
 
           {settings.personality === 'Custom' && (
             <div className="rounded-2xl border border-white/[0.08] bg-[#11151E] p-3.5">
@@ -300,7 +290,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
             </div>
           )}
 
-          <p className="px-1 pt-2 text-[10px] font-semibold tracking-wider text-slate-400">EMOTION LEVEL</p>
+          <p className="px-1 pt-3 text-[10px] font-semibold tracking-wider text-slate-400">EMOTION LEVEL</p>
           <div className="grid grid-cols-5 gap-1">
             {AFFECTION_LEVELS.map((lvl) => {
               const active = settings.affection === lvl;
@@ -310,7 +300,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
                   type="button"
                   disabled={isMinorUser && lvl !== 'Off'}
                   onClick={() => onUpdateSettings({ affection: lvl })}
-                  className={`h-10 rounded-xl border text-[10px] font-semibold disabled:opacity-40 ${
+                  className={`h-11 rounded-xl border text-[10px] font-semibold uppercase disabled:opacity-40 ${
                     active ? 'border-teal-500 bg-teal-500/15 text-teal-300' : 'border-white/[0.08] bg-[#11151E] text-slate-300'
                   }`}
                 >
@@ -319,7 +309,6 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
               );
             })}
           </div>
-          <p className="px-1 text-[10px] text-slate-500">Works in both voice and chat.</p>
         </div>
       </SettingsShell>
     );
@@ -329,32 +318,16 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     return (
       <SettingsShell title="RESPONSE STYLE" onBack={() => onSelectSubpage(null)}>
         <div className="space-y-1.5">
-          {(['Short', 'Normal', 'Detailed'] as const).map((st) => {
-            const active = settings.responseStyle === st;
-            return (
-              <button
-                key={st}
-                type="button"
-                onClick={() => onUpdateSettings({ responseStyle: st })}
-                className={`flex h-12 w-full items-center justify-between rounded-xl border px-3 text-left ${
-                  active ? 'border-teal-500 bg-teal-500/10' : 'border-white/[0.08] bg-[#11151E]'
-                }`}
-              >
-                <div>
-                  <p className={`text-xs font-semibold ${active ? 'text-teal-300' : 'text-slate-100'}`}>{st}</p>
-                  <p className="text-[10px] text-slate-400">{STYLE_INFO[st]}</p>
-                </div>
-                {lang === 'Bengali' ? (
-                  <span className="flex items-center gap-1">
-                    {active && <Check className="h-4 w-4 text-teal-400" />}
-                    <span className="text-slate-400">›</span>
-                  </span>
-                ) : (
-                  active && <Check className="h-4 w-4 text-teal-400" />
-                )}
-              </button>
-            );
-          })}
+          {(['Short', 'Normal', 'Detailed'] as const).map((st, i) => (
+            <SettingsSelectBar
+              key={st}
+              badge={String(i + 1).padStart(2, '0')}
+              title={st}
+              value={STYLE_INFO[st]}
+              selected={settings.responseStyle === st}
+              onSelect={() => onUpdateSettings({ responseStyle: st })}
+            />
+          ))}
         </div>
       </SettingsShell>
     );
@@ -388,30 +361,17 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     return (
       <SettingsShell title="BANGLA DIALECT" onBack={() => onSelectSubpage('language')}>
         <div className="space-y-1.5 pb-3">
-          <p className="px-1 text-[10.5px] text-slate-400">Choose how TIYA speaks Bangla</p>
-          {BENGALI_DIALECTS.map((d) => {
-            const active = settings.language === 'Bengali' && settings.bengaliDialect === d.id;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => onUpdateSettings({ language: 'Bengali', bengaliDialect: d.id })}
-                className={`flex min-h-[48px] w-full items-center justify-between rounded-xl border px-3 py-1.5 text-left ${
-                  active ? 'border-teal-500 bg-teal-500/10' : 'border-white/[0.08] bg-[#11151E]'
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className={`text-xs font-semibold ${active ? 'text-teal-300' : 'text-slate-100'}`}>
-                    {d.label}
-                    {d.id === 'Standard' && <span className="ml-1.5 text-[10px] text-slate-400">(Default)</span>}
-                  </p>
-                  <p className="truncate text-[10.5px] text-slate-400">{d.native}</p>
-                </div>
-                {active && <Check className="h-4 w-4 shrink-0 text-teal-400" />}
-              </button>
-            );
-          })}
-          <p className="px-1 pt-1 text-[10px] text-slate-500">Voice preview in 04 VOICE plays in the chosen dialect.</p>
+          {BENGALI_DIALECTS.map((d, i) => (
+            <SettingsSelectBar
+              key={d.id}
+              badge={String(i + 1).padStart(2, '0')}
+              title={d.id === 'Standard' ? 'Standard (Default)' : d.label}
+              value={d.native}
+              selected={settings.language === 'Bengali' && settings.bengaliDialect === d.id}
+              onSelect={() => onUpdateSettings({ language: 'Bengali', bengaliDialect: d.id })}
+              testId={`dialect-${d.id}`}
+            />
+          ))}
         </div>
       </SettingsShell>
     );
@@ -421,36 +381,32 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     return (
       <SettingsShell title="LANGUAGE" onBack={() => onSelectSubpage(null)}>
         <div className="space-y-1.5 pb-3">
-          {ALL_LANGUAGES.map(({ id: lang, native }) => {
-            const active = settings.language === lang;
-            return (
-              <button
+          {ALL_LANGUAGES.map(({ id: lang, native }, i) =>
+            lang === 'Bengali' ? (
+              <SettingsBar
                 key={lang}
-                type="button"
+                badge={String(i + 1).padStart(2, '0')}
+                title={settings.language === 'Bengali' ? 'Bengali ✓' : 'Bengali'}
+                value={BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect)?.native || native}
                 onClick={() => {
-                  if (lang === 'Bengali') {
-                    onUpdateSettings({ language: lang });
-                    onSelectSubpage('bengali_dialect');
-                  } else {
-                    onUpdateSettings({ language: lang });
-                  }
+                  onUpdateSettings({ language: 'Bengali' });
+                  onSelectSubpage('bengali_dialect');
                 }}
-                className={`flex h-11 w-full items-center justify-between rounded-xl border px-3 text-xs font-medium ${
-                  active
-                    ? 'border-teal-500 bg-teal-500/10 font-semibold text-teal-300'
-                    : 'border-white/[0.08] bg-[#11151E] text-slate-200'
-                }`}
-              >
-                <span>
-                  {lang === 'Bengali'
-                    ? `Bengali · ${BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect)?.label || 'Standard Bangla'}`
-                    : lang}
-                  {native !== lang && <span className="ml-2 text-slate-400">{native}</span>}
-                </span>
-                {active && <Check className="h-4 w-4 text-teal-400" />}
-              </button>
-            );
-          })}
+                tone={settings.language === 'Bengali' ? 'accent' : 'default'}
+                testId="language-Bengali"
+              />
+            ) : (
+              <SettingsSelectBar
+                key={lang}
+                badge={String(i + 1).padStart(2, '0')}
+                title={lang}
+                value={native !== lang ? native : undefined}
+                selected={settings.language === lang}
+                onSelect={() => onUpdateSettings({ language: lang })}
+                testId={`language-${lang}`}
+              />
+            ),
+          )}
         </div>
       </SettingsShell>
     );
@@ -460,63 +416,31 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     return (
       <SettingsShell title="VOICE" onBack={() => onSelectSubpage(null)}>
         <div className="space-y-2.5 pb-3">
-          <p className="px-1 text-[10.5px] text-slate-400">
-            Female voices only · Preview plays in {settings.language}
-          </p>
 
           <div className="space-y-1.5">
-            {FEMALE_VOICES.map((v) => {
+            {FEMALE_VOICES.map((v, i) => {
               const active = settings.voiceName === v.id;
               const isPlaying = previewingVoice === v.id;
               return (
-                <div
-                  key={v.id}
-                  data-testid={`voice-option-${v.id}`}
-                  className={`flex min-h-[48px] items-center justify-between gap-2 rounded-xl border px-3 py-1.5 ${
-                    active
-                      ? 'border-teal-500 bg-teal-500/10'
-                      : 'border-white/[0.08] bg-[#11151E]'
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSettings({ voiceName: v.id as FemaleVoiceId })}
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  >
-                    <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                        active
-                          ? 'border-teal-500 bg-teal-500 text-white'
-                          : 'border-white/25'
-                      }`}
-                    >
-                      {active && <Check className="h-2.5 w-2.5" />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={`truncate text-xs font-semibold ${
-                          active ? 'text-teal-300' : 'text-slate-100'
-                        }`}
-                      >
-                        {v.label}
-                      </p>
-                      <p className="truncate text-[10px] text-slate-400">{v.tone}</p>
-                    </div>
-                  </button>
-
+                <div key={v.id} data-testid={`voice-option-${v.id}`} className="flex items-center gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <SettingsSelectBar
+                      badge={String(i + 1).padStart(2, '0')}
+                      title={v.label}
+                      value={v.tone.split(',')[0]}
+                      selected={active}
+                      onSelect={() => onUpdateSettings({ voiceName: v.id as FemaleVoiceId })}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => handlePreviewVoice(v.id)}
                     disabled={previewingVoice !== null && !isPlaying}
-                    aria-label={`Preview ${v.label} in ${settings.language}`}
+                    aria-label={`Preview ${v.label}`}
                     data-testid={`voice-preview-${v.id}`}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-teal-500/35 bg-teal-500/15 text-teal-300 hover:bg-teal-500/25 disabled:opacity-45"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-teal-500/35 bg-teal-500/15 text-teal-300 hover:bg-teal-500/25 disabled:opacity-45"
                   >
-                    {isPlaying ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Play className="h-3.5 w-3.5 fill-current" />
-                    )}
+                    {isPlaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
                   </button>
                 </div>
               );
