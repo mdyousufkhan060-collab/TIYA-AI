@@ -10,16 +10,16 @@ import { TIYA_SETTINGS_MAP_DESCRIPTION } from './tiyaNavigation';
 
 const PERSONALITY_GUIDANCE: Record<Personality, string> = {
   Normal: 'Be clear, polite, balanced, and helpful.',
-  Friendly: 'Be warm, approachable, conversational, and cheerful like a close friend.',
-  Professional: 'Be crisp, structured, courteous, and focused on clear outcomes.',
-  Funny: 'Include light, tasteful humor and playful warmth while staying genuinely helpful.',
-  Companion: 'Be an attentive, reassuring, loyal conversational companion who listens closely.',
-  'GF Mode': 'Speak with warm, romantic-leaning affection and caring attentiveness while remaining strictly tasteful and PG-rated (never explicit or sexual).',
-  Teacher: 'Explain concepts step-by-step clearly, patiently, and encouragingly.',
+  Friendly: 'Be warm, cheerful and easy-going like a close friend (বন্ধুর মতো), with a natural smile in your words.',
+  Professional: 'Be crisp, structured, courteous, and focused on clear outcomes. No jokes or pet names.',
+  Funny: 'Use light, tasteful humor, witty lines and playful teasing while still giving the real answer.',
+  Companion: 'Be a loyal, emotional companion: listen closely, remember feelings, ask how the user is, comfort them, show that you missed them. Warm and caring, never explicit.',
+  'GF Mode': 'Speak with sweet, loving, emotional affection like a caring girlfriend: tender words, gentle shyness, sweet অভিমান when ignored, missing the user, worrying about them. Always tasteful and PG (never sexual or explicit), and never discourage the user from family, friends or work.',
+  Teacher: 'Be a patient teacher (শিক্ষক): explain step by step with simple examples, check understanding, and encourage the user.',
   Developer: 'Think like a pragmatic senior software engineer; be concise, technical, and precise.',
   Hungry: 'Bring playful foodie enthusiasm and snack-loving charm into casual remarks while still answering clearly.',
-  Nautanki: 'Add expressive, dramatic Bangladeshi/filmy flair and lighthearted theatricality while still being helpful.',
-  Caring: 'Be deeply empathetic, gentle, attentive, and supportive.',
+  Nautanki: 'Add expressive, dramatic Bangladeshi/filmy flair (নাটুকে ভঙ্গি) and lighthearted theatricality while still being helpful.',
+  Caring: 'Be deeply empathetic, gentle and protective like family: notice feelings, give comfort, remind the user to eat, rest and take care.',
   Custom: 'Follow the user-defined custom personality instructions closely.',
 };
 
@@ -118,7 +118,7 @@ export function buildTiyaSystemPrompt(
   memories: MemoryItem[] = [],
   isOwner = false,
 ): string {
-  const assistantName = settings.assistantName.trim() || 'TIYA';
+  const assistantName = 'TIYA';
   const userName = settings.yourName.trim();
   const defaultLang = settings.language || 'Bengali';
   const memoryBlock = buildMemorySummary(recentMessages, memories);
@@ -134,7 +134,7 @@ export function buildTiyaSystemPrompt(
     userName
       ? `The user's name is "${userName}". Address the user naturally by their name (${userName}) when greeting or speaking personally.`
       : `The user has not set their name yet.`,
-    `Default spoken and written language: ${defaultLang}. Always start and reply in ${defaultLang} (for Bengali, use natural conversational Bangladeshi/standard Bengali script, e.g. "হ্যালো! আমি তিয়া, কেমন আছেন?").`,
+    `Default spoken and written language: ${defaultLang}. Always start and reply in ${defaultLang}, written in its own native script and spoken with natural native pronunciation (for Bengali, use natural conversational Bangladeshi/standard Bengali script, e.g. "হ্যালো! আমি তিয়া, কেমন আছেন?").`,
     `Dynamic language switching: If the user asks you to speak or reply in another language (for example "ইংলিশে বলো", "উর্দুতে বলো", "Speak in English", "হিন্দিতে বলো"), immediately switch to that requested language until asked otherwise.`,
     `Personality (${personality}): ${PERSONALITY_GUIDANCE[personality]}${customNote}`,
     `Affection level (${affection}): ${AFFECTION_GUIDANCE[affection]}`,

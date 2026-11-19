@@ -1,6 +1,8 @@
 import {
   AFFECTION_LEVELS,
   ALL_PERSONALITIES,
+  ALL_LANGUAGES,
+  TIYA_FIXED_NAME,
   ChatMessage,
   DEFAULT_LIVE_MODELS,
   ErrorLogEntry,
@@ -87,9 +89,20 @@ export function loadSettings(): TiyaSettings {
         ? parsed.orbStyle
         : DEFAULT_SETTINGS.orbStyle;
 
+    const validLanguage = ALL_LANGUAGES.some((l) => l.id === parsed.language)
+      ? parsed.language!
+      : DEFAULT_SETTINGS.language;
+    const validStyle =
+      parsed.responseStyle === 'Short' || parsed.responseStyle === 'Normal' || parsed.responseStyle === 'Detailed'
+        ? parsed.responseStyle
+        : DEFAULT_SETTINGS.responseStyle;
+
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      assistantName: TIYA_FIXED_NAME,
+      language: validLanguage,
+      responseStyle: validStyle,
       voiceName: validVoice,
       personality: validPersonality,
       affection: validAffection,

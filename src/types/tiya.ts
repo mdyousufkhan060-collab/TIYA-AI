@@ -15,7 +15,69 @@ export type Personality =
 export type AffectionLevel = 'Off' | 'Low' | 'Medium' | 'High' | 'Very affectionate';
 
 export type ResponseStyle = 'Short' | 'Normal' | 'Detailed';
-export type LanguageOption = 'Bengali' | 'English' | 'Urdu' | 'Hindi' | 'Arabic';
+export type LanguageOption =
+  | 'Bengali'
+  | 'English'
+  | 'Hindi'
+  | 'Urdu'
+  | 'Arabic'
+  | 'Nepali'
+  | 'Tamil'
+  | 'Malay'
+  | 'Indonesian'
+  | 'Turkish'
+  | 'Persian'
+  | 'Spanish'
+  | 'French'
+  | 'German'
+  | 'Italian'
+  | 'Portuguese'
+  | 'Russian'
+  | 'Chinese'
+  | 'Japanese'
+  | 'Korean'
+  | 'Thai'
+  | 'Vietnamese';
+
+export interface LanguageInfo {
+  id: LanguageOption;
+  /** name written in that language */
+  native: string;
+  /** BCP-47 code used for the phone's own voice and speech recognition */
+  code: string;
+}
+
+export const ALL_LANGUAGES: LanguageInfo[] = [
+  { id: 'Bengali', native: 'বাংলা', code: 'bn-BD' },
+  { id: 'English', native: 'English', code: 'en-US' },
+  { id: 'Hindi', native: 'हिन्दी', code: 'hi-IN' },
+  { id: 'Urdu', native: 'اردو', code: 'ur-PK' },
+  { id: 'Arabic', native: 'العربية', code: 'ar-SA' },
+  { id: 'Nepali', native: 'नेपाली', code: 'ne-NP' },
+  { id: 'Tamil', native: 'தமிழ்', code: 'ta-IN' },
+  { id: 'Malay', native: 'Bahasa Melayu', code: 'ms-MY' },
+  { id: 'Indonesian', native: 'Bahasa Indonesia', code: 'id-ID' },
+  { id: 'Turkish', native: 'Türkçe', code: 'tr-TR' },
+  { id: 'Persian', native: 'فارسی', code: 'fa-IR' },
+  { id: 'Spanish', native: 'Español', code: 'es-ES' },
+  { id: 'French', native: 'Français', code: 'fr-FR' },
+  { id: 'German', native: 'Deutsch', code: 'de-DE' },
+  { id: 'Italian', native: 'Italiano', code: 'it-IT' },
+  { id: 'Portuguese', native: 'Português', code: 'pt-BR' },
+  { id: 'Russian', native: 'Русский', code: 'ru-RU' },
+  { id: 'Chinese', native: '中文', code: 'zh-CN' },
+  { id: 'Japanese', native: '日本語', code: 'ja-JP' },
+  { id: 'Korean', native: '한국어', code: 'ko-KR' },
+  { id: 'Thai', native: 'ไทย', code: 'th-TH' },
+  { id: 'Vietnamese', native: 'Tiếng Việt', code: 'vi-VN' },
+];
+
+export function languageCode(lang?: string): string {
+  return ALL_LANGUAGES.find((l) => l.id === lang)?.code || 'bn-BD';
+}
+
+/** The assistant's name is fixed and cannot be changed by users. */
+export const TIYA_FIXED_NAME = 'TIYA';
 export type ThemeMode = 'dark' | 'light';
 export type OrbStyle = 'Classic' | 'Pulse' | 'Wave';
 

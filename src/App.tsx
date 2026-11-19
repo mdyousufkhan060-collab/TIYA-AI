@@ -1086,6 +1086,7 @@ export default function App() {
             {activeTab === 'settings' && settingsPage === 'voice_language' && (
               <VoiceLanguagePage
                 settings={settings}
+                isMinorUser={typeof userAge === 'number' && userAge < 18}
                 subpage={settingsSubpage}
                 onSelectSubpage={handleSelectSettingsSubpage}
                 onUpdateSettings={updateSettings}

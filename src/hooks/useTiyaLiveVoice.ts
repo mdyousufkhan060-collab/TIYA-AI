@@ -324,6 +324,7 @@ export function useTiyaLiveVoice({
           fallbackModels,
           autoFallback: settingsRef.current.autoFallback,
           voiceName: settingsRef.current.voiceName,
+          language: settingsRef.current.language,
           systemInstruction,
         }),
       );

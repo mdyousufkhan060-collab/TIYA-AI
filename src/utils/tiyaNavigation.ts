@@ -225,6 +225,26 @@ const KEYWORD_ROUTES: Array<{
     },
   },
   {
+    patterns: [/(পার্সোনালিটি|পারসোনালিটি|ক্যারেক্টার|personality|character)/i],
+    command: {
+      type: 'open',
+      tab: 'settings',
+      page: 'voice_language',
+      subpage: 'personality',
+      confirmBn: 'Personality খোলা হয়েছে।',
+    },
+  },
+  {
+    patterns: [/(রেসপন্স স্টাইল|উত্তরের ধরন|response style)/i],
+    command: {
+      type: 'open',
+      tab: 'settings',
+      page: 'voice_language',
+      subpage: 'response_style',
+      confirmBn: 'Response Style খোলা হয়েছে।',
+    },
+  },
+  {
     patterns: [/(স্পিচ স্পিড|ভয়েস স্পিড|ভয়েস স্পিড|স্পিড সেটিং|speech speed|voice speed)/i],
     command: {
       type: 'open',
@@ -547,7 +567,7 @@ export const TIYA_SETTINGS_MAP_DESCRIPTION = [
   '- Settings Hub (page="hub"):',
   '  01 ABOUT & GUIDE (page="about", subpages: health_check, how_to_use, app_info = ABOUT TIYA with developer & help)',
   '  02 CONNECTIONS (page="connections", subpages: gemini, groq)',
-  '  03 VOICE & LANGUAGE (page="voice_language", subpages: assistant_name, your_name, language, voice, voice_model, custom_model, chat_model_override, speech_speed, volume, mic_listening, mic_test, mic_sensitivity)',
+  '  03 VOICE & LANGUAGE (page="voice_language", subpages: assistant_name (locked), your_name, personality, response_style, language, voice, voice_model, custom_model, chat_model_override, speech_speed, volume, mic_listening, mic_test, mic_sensitivity)',
   '  04 PHONE CONTROL (page="phone_control", subpages: quick_actions)',
   '  05 CHATS & MEMORY (page="chats_memory")',
   '  06 PREMIUM (page="premium")',

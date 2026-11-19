@@ -23,7 +23,7 @@ import {
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { getConfirmationPromptText, validatePhoneAction } from '../utils/phoneActions';
 import { validateNavigateToolArgs } from '../utils/tiyaNavigation';
-import { DEFAULT_LIVE_MODELS, LiveModelInfo } from '../types/tiya';
+import { DEFAULT_LIVE_MODELS, LiveModelInfo, languageCode } from '../types/tiya';
 
 const createAiClient = (apiKey: string) => new GoogleGenAI({ apiKey });
 
@@ -301,6 +301,23 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         Urdu: `السلام علیکم${userPart} میں ${name} ہوں۔ آپ کی آواز بالکل ٹھیک کام کر رہی ہے۔`,
         Hindi: `नमस्ते${userPart} मैं ${name} हूँ। आपकी आवाज़ बिल्कुल सही काम कर रही है।`,
         Arabic: `مرحباً${userPart} أنا ${name}. تم ضبط الصوت بنجاح.`,
+        Nepali: `नमस्ते${userPart} म ${name} हुँ। तपाईंको आवाज ठीकसँग काम गरिरहेको छ।`,
+        Tamil: `வணக்கம்${userPart} நான் ${name}. உங்கள் குரல் சரியாக வேலை செய்கிறது.`,
+        Malay: `Helo${userPart} saya ${name}. Suara anda berfungsi dengan baik.`,
+        Indonesian: `Halo${userPart} aku ${name}. Suaramu sudah berfungsi dengan baik.`,
+        Turkish: `Merhaba${userPart} ben ${name}. Ses ayarın gayet iyi çalışıyor.`,
+        Persian: `سلام${userPart} من ${name} هستم. صدای شما به خوبی کار می‌کند.`,
+        Spanish: `Hola${userPart} soy ${name}. Tu voz funciona perfectamente.`,
+        French: `Bonjour${userPart} je suis ${name}. Ta voix fonctionne parfaitement.`,
+        German: `Hallo${userPart} ich bin ${name}. Deine Stimme funktioniert einwandfrei.`,
+        Italian: `Ciao${userPart} sono ${name}. La tua voce funziona perfettamente.`,
+        Portuguese: `Olá${userPart} eu sou a ${name}. Sua voz está funcionando muito bem.`,
+        Russian: `Привет${userPart} я ${name}. Твой голос работает отлично.`,
+        Chinese: `你好${userPart}我是${name}。你的语音设置一切正常。`,
+        Japanese: `こんにちは${userPart}私は${name}です。音声はばっちり動いています。`,
+        Korean: `안녕하세요${userPart} 저는 ${name}예요. 음성이 잘 작동하고 있어요.`,
+        Thai: `สวัสดีค่ะ${userPart} ฉันชื่อ${name} เสียงของคุณใช้งานได้ดีค่ะ`,
+        Vietnamese: `Xin chào${userPart} mình là ${name}. Giọng nói của bạn hoạt động rất tốt.`,
       };
       const text = samples[body?.language || 'Bengali'] || samples.Bengali;
       const ai = createAiClient(key);
@@ -441,6 +458,7 @@ export class LocalLiveSocket {
   private turnMode = false;
   private apiKey = '';
   private voiceName = 'Zephyr';
+  private language = 'Bengali';
   private systemInstruction = 'You are TIYA.';
   private turnHistory: Array<{ role: 'user' | 'assistant'; text: string }> = [];
   private turnChunks: Int16Array[] = [];
@@ -732,7 +750,7 @@ export class LocalLiveSocket {
               { inlineData: { mimeType: 'audio/wav', data: wavB64 } },
               {
                 text:
-                  'Transcribe exactly what the person says (usually Bengali, in Bengali script). ' +
+                  'Transcribe exactly what the person says, in the language they speak, written in that language\'s own script (Bengali speech in Bengali script). ' +
                   'Output only the words. If there is no clear speech, output nothing.',
               },
             ],
@@ -779,7 +797,7 @@ export class LocalLiveSocket {
       const synth = window.speechSynthesis;
       if (!synth) return;
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = /[\u0980-\u09FF]/.test(text) ? 'bn-BD' : 'en-US';
+      u.lang = /[\u0980-\u09FF]/.test(text) ? 'bn-BD' : languageCode(this.language);
       const female = synth.getVoices().find((v) => v.lang.startsWith(u.lang.slice(0, 2)) && /female|woman/i.test(v.name));
       if (female) u.voice = female;
       this.turnMuteUntil = Date.now() + 60000;
@@ -846,6 +864,7 @@ export class LocalLiveSocket {
         msg.autoFallback && Array.isArray(msg.fallbackModels)
           ? [primary, ...msg.fallbackModels.filter((m: string) => m !== primary)]
           : [primary];
+      this.language = String(msg.language || 'Bengali');
       void this.connect(String(msg.apiKey || '').trim(), candidates, msg.voiceName || 'Zephyr', msg.systemInstruction || 'You are TIYA.');
     } else if (msg.type === 'motivation_response' && msg.callId && this.session) {
       const pending = this.pendingMotivation.get(msg.callId);

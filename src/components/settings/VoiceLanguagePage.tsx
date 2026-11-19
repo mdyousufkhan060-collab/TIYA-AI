@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Loader2, Mic, Play, Square } from 'lucide-react';
+import { Check, Loader2, Lock, Mic, Play, Square } from 'lucide-react';
 import {
+  ADULT_ONLY_PERSONALITIES,
+  AFFECTION_LEVELS,
+  ALL_LANGUAGES,
+  ALL_PERSONALITIES,
   FEMALE_VOICES,
   FemaleVoiceId,
-  LanguageOption,
+  Personality,
+  TIYA_FIXED_NAME,
   TiyaSettings,
 } from '../../types/tiya';
 import { base64Pcm16ToFloat32, computeRmsEnergy } from '../../utils/audioPcm';
@@ -17,9 +22,30 @@ interface VoiceLanguagePageProps {
   onSelectSubpage: (subpage: string | null) => void;
   onUpdateSettings: (partial: Partial<TiyaSettings>) => void;
   onBack: () => void;
+  /** under-18 users cannot pick GF Mode / Companion or emotion levels */
+  isMinorUser?: boolean;
 }
 
-const LANGUAGES: LanguageOption[] = ['Bengali', 'English', 'Urdu', 'Hindi', 'Arabic'];
+const PERSONALITY_INFO: Record<Personality, string> = {
+  Normal: 'Simple and balanced',
+  Friendly: 'Warm, like a close friend',
+  Professional: 'Formal and to the point',
+  Funny: 'Jokes and playful talk',
+  Companion: 'Emotional, caring company',
+  'GF Mode': 'Sweet, loving and emotional',
+  Teacher: 'Explains step by step',
+  Developer: 'Technical, for coding',
+  Hungry: 'Foodie and playful',
+  Nautanki: 'Dramatic and expressive',
+  Caring: 'Gentle, like family',
+  Custom: 'Write your own style',
+};
+
+const STYLE_INFO: Record<TiyaSettings['responseStyle'], string> = {
+  Short: '1-2 sentences',
+  Normal: '2-4 sentences',
+  Detailed: 'Full explanation',
+};
 
 export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
   settings,
@@ -27,6 +53,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
   onSelectSubpage,
   onUpdateSettings,
   onBack,
+  isMinorUser = false,
 }) => {
   // Voice preview state
   const [previewingVoice, setPreviewingVoice] = useState<FemaleVoiceId | null>(null);
@@ -211,21 +238,114 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
   if (subpage === 'assistant_name') {
     return (
       <SettingsShell title="ASSISTANT NAME" onBack={() => onSelectSubpage(null)}>
-        <div className="rounded-2xl border border-white/[0.08] bg-[#11151E] p-3.5">
-          <label
-            htmlFor="assistant-name-input"
-            className="block text-[10px] font-semibold tracking-wider text-slate-400"
-          >
-            ASSISTANT NAME
-          </label>
-          <input
-            id="assistant-name-input"
-            type="text"
-            value={settings.assistantName}
-            onChange={(e) => onUpdateSettings({ assistantName: e.target.value })}
-            placeholder="TIYA"
-            className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-[#090B10] px-3 text-xs text-white focus:border-teal-500 focus:outline-none"
-          />
+        <div className="flex items-center justify-between rounded-2xl border border-white/[0.08] bg-[#11151E] p-4">
+          <div>
+            <p className="text-[10px] font-semibold tracking-wider text-slate-400">ASSISTANT NAME</p>
+            <p className="font-display mt-1 text-base font-bold tracking-[0.25em] text-white">{TIYA_FIXED_NAME}</p>
+          </div>
+          <span className="flex items-center gap-1 text-[11px] text-slate-400">
+            <Lock className="h-3.5 w-3.5" />
+            <span>Locked</span>
+          </span>
+        </div>
+        <p className="px-1 pt-2 text-[11px] text-slate-400">The assistant name is fixed and cannot be changed.</p>
+      </SettingsShell>
+    );
+  }
+
+  if (subpage === 'personality') {
+    const locked = (p: Personality) => ADULT_ONLY_PERSONALITIES.includes(p) && isMinorUser;
+    return (
+      <SettingsShell title="PERSONALITY" onBack={() => onSelectSubpage(null)}>
+        <div className="space-y-1.5 pb-3">
+          {ALL_PERSONALITIES.map((p) => {
+            const active = settings.personality === p;
+            const isLocked = locked(p);
+            return (
+              <button
+                key={p}
+                type="button"
+                disabled={isLocked}
+                onClick={() => onUpdateSettings({ personality: p })}
+                className={`flex min-h-[48px] w-full items-center justify-between rounded-xl border px-3 py-1.5 text-left disabled:opacity-40 ${
+                  active ? 'border-teal-500 bg-teal-500/10' : 'border-white/[0.08] bg-[#11151E]'
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className={`text-xs font-semibold ${active ? 'text-teal-300' : 'text-slate-100'}`}>{p}</p>
+                  <p className="truncate text-[10px] text-slate-400">{isLocked ? '18+ only' : PERSONALITY_INFO[p]}</p>
+                </div>
+                {active && <Check className="h-4 w-4 shrink-0 text-teal-400" />}
+                {isLocked && <Lock className="h-3.5 w-3.5 shrink-0 text-slate-500" />}
+              </button>
+            );
+          })}
+
+          {settings.personality === 'Custom' && (
+            <div className="rounded-2xl border border-white/[0.08] bg-[#11151E] p-3.5">
+              <label htmlFor="custom-personality" className="block text-[10px] font-semibold tracking-wider text-slate-400">
+                CUSTOM STYLE
+              </label>
+              <textarea
+                id="custom-personality"
+                rows={3}
+                maxLength={400}
+                value={settings.customPersonalityPrompt}
+                onChange={(e) => onUpdateSettings({ customPersonalityPrompt: e.target.value })}
+                placeholder="Example: Talk like my elder sister, sweet and caring."
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#090B10] px-3 py-2 text-xs text-white focus:border-teal-500 focus:outline-none"
+              />
+            </div>
+          )}
+
+          <p className="px-1 pt-2 text-[10px] font-semibold tracking-wider text-slate-400">EMOTION LEVEL</p>
+          <div className="grid grid-cols-5 gap-1">
+            {AFFECTION_LEVELS.map((lvl) => {
+              const active = settings.affection === lvl;
+              return (
+                <button
+                  key={lvl}
+                  type="button"
+                  disabled={isMinorUser && lvl !== 'Off'}
+                  onClick={() => onUpdateSettings({ affection: lvl })}
+                  className={`h-10 rounded-xl border text-[10px] font-semibold disabled:opacity-40 ${
+                    active ? 'border-teal-500 bg-teal-500/15 text-teal-300' : 'border-white/[0.08] bg-[#11151E] text-slate-300'
+                  }`}
+                >
+                  {lvl === 'Very affectionate' ? 'Max' : lvl}
+                </button>
+              );
+            })}
+          </div>
+          <p className="px-1 text-[10px] text-slate-500">Works in both voice and chat.</p>
+        </div>
+      </SettingsShell>
+    );
+  }
+
+  if (subpage === 'response_style') {
+    return (
+      <SettingsShell title="RESPONSE STYLE" onBack={() => onSelectSubpage(null)}>
+        <div className="space-y-1.5">
+          {(['Short', 'Normal', 'Detailed'] as const).map((st) => {
+            const active = settings.responseStyle === st;
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => onUpdateSettings({ responseStyle: st })}
+                className={`flex h-12 w-full items-center justify-between rounded-xl border px-3 text-left ${
+                  active ? 'border-teal-500 bg-teal-500/10' : 'border-white/[0.08] bg-[#11151E]'
+                }`}
+              >
+                <div>
+                  <p className={`text-xs font-semibold ${active ? 'text-teal-300' : 'text-slate-100'}`}>{st}</p>
+                  <p className="text-[10px] text-slate-400">{STYLE_INFO[st]}</p>
+                </div>
+                {active && <Check className="h-4 w-4 text-teal-400" />}
+              </button>
+            );
+          })}
         </div>
       </SettingsShell>
     );
@@ -245,10 +365,11 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
             id="your-name-input"
             type="text"
             value={settings.yourName}
-            onChange={(e) => onUpdateSettings({ yourName: e.target.value })}
+            onChange={(e) => onUpdateSettings({ yourName: e.target.value.slice(0, 40) })}
             placeholder="Enter your name"
             className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-[#090B10] px-3 text-xs text-white focus:border-teal-500 focus:outline-none"
           />
+          <p className="mt-2 text-[10px] text-slate-500">Saved automatically. TIYA will call you by this name.</p>
         </div>
       </SettingsShell>
     );
@@ -257,8 +378,8 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
   if (subpage === 'language') {
     return (
       <SettingsShell title="LANGUAGE" onBack={() => onSelectSubpage(null)}>
-        <div className="space-y-1.5">
-          {LANGUAGES.map((lang) => {
+        <div className="space-y-1.5 pb-3">
+          {ALL_LANGUAGES.map(({ id: lang, native }) => {
             const active = settings.language === lang;
             return (
               <button
@@ -271,7 +392,10 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
                     : 'border-white/[0.08] bg-[#11151E] text-slate-200'
                 }`}
               >
-                <span>{lang === 'Bengali' ? 'Bengali (Default)' : lang}</span>
+                <span>
+                  {lang === 'Bengali' ? 'Bengali (Default)' : lang}
+                  {native !== lang && <span className="ml-2 text-slate-400">{native}</span>}
+                </span>
                 {active && <Check className="h-4 w-4 text-teal-400" />}
               </button>
             );
@@ -526,60 +650,17 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
   const activeLiveModel =
     settings.customLiveModel.trim() || settings.selectedLiveModel;
 
-  const bars: Array<{
-    num: string;
-    id: string;
-    title: string;
-    value: string;
-  }> = [
-    {
-      num: '01',
-      id: 'assistant_name',
-      title: 'ASSISTANT NAME',
-      value: settings.assistantName || 'TIYA',
-    },
-    {
-      num: '02',
-      id: 'your_name',
-      title: 'YOUR NAME',
-      value: settings.yourName.trim() || 'Not set',
-    },
-    {
-      num: '03',
-      id: 'language',
-      title: 'LANGUAGE',
-      value: settings.language,
-    },
-    {
-      num: '04',
-      id: 'voice',
-      title: 'VOICE',
-      value: settings.voiceName,
-    },
-    {
-      num: '05',
-      id: 'voice_model',
-      title: 'VOICE MODEL',
-      value: activeLiveModel.replace(/^gemini-/, ''),
-    },
-    {
-      num: '06',
-      id: 'speech_speed',
-      title: 'SPEECH SPEED',
-      value: `${settings.speechSpeed.toFixed(2)}x`,
-    },
-    {
-      num: '07',
-      id: 'volume',
-      title: 'VOLUME',
-      value: `${Math.round(settings.volume * 100)}%`,
-    },
-    {
-      num: '08',
-      id: 'mic_listening',
-      title: 'MIC & LISTENING',
-      value: `Sens ${settings.micListening.sensitivity.toFixed(2)}x`,
-    },
+  const bars: Array<{ num: string; id: string; title: string; value: string; locked?: boolean }> = [
+    { num: '01', id: 'assistant_name', title: 'ASSISTANT NAME', value: TIYA_FIXED_NAME, locked: true },
+    { num: '02', id: 'your_name', title: 'YOUR NAME', value: settings.yourName.trim() || 'Not set' },
+    { num: '03', id: 'personality', title: 'PERSONALITY', value: settings.personality },
+    { num: '04', id: 'response_style', title: 'RESPONSE STYLE', value: settings.responseStyle },
+    { num: '05', id: 'language', title: 'LANGUAGE', value: settings.language },
+    { num: '06', id: 'voice', title: 'VOICE', value: settings.voiceName },
+    { num: '07', id: 'voice_model', title: 'VOICE MODEL', value: activeLiveModel.replace(/^gemini-/, '') },
+    { num: '08', id: 'speech_speed', title: 'SPEECH SPEED', value: `${settings.speechSpeed.toFixed(2)}x` },
+    { num: '09', id: 'volume', title: 'VOLUME', value: `${Math.round(settings.volume * 100)}%` },
+    { num: '10', id: 'mic_listening', title: 'MIC & LISTENING', value: `Sens ${settings.micListening.sensitivity.toFixed(2)}x` },
   ];
 
   return (
@@ -591,6 +672,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
             badge={bar.num}
             title={bar.title}
             value={bar.value}
+            locked={bar.locked}
             onClick={() => onSelectSubpage(bar.id)}
             testId={`voice-bar-${bar.id}`}
           />
