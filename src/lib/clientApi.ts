@@ -11,76 +11,80 @@
  * The API keys never leave the device except to Google / Groq themselves.
  */
 import {
-  Behavior,
-  FunctionDeclaration,
-  FunctionResponseScheduling,
-  GoogleGenAI,
-  LiveServerMessage,
-  Modality,
-  ThinkingLevel,
-  Type,
-} from '@google/genai';
+  ApiError,
+  generateContent,
+  getGroqKey,
+  groqChat,
+  groqTranscribe,
+  isBadKey,
+  listGeminiModels,
+  pickChatModels,
+  pickLiveModels,
+  pickTtsModels,
+  responseAudio,
+  responseCalls,
+  responseText,
+} from './geminiRest';
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { getConfirmationPromptText, validatePhoneAction } from '../utils/phoneActions';
 import { validateNavigateToolArgs } from '../utils/tiyaNavigation';
 import { BENGALI_DIALECTS, DEFAULT_LIVE_MODELS, LiveModelInfo, languageCode } from '../types/tiya';
 
-const createAiClient = (apiKey: string) => new GoogleGenAI({ apiKey });
 
 const errMsg = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
-function buildPhoneActionTool(nonBlocking: boolean): FunctionDeclaration {
+function buildPhoneActionTool(nonBlocking: boolean): Record<string, unknown> {
   return {
     name: 'trigger_phone_action',
     description:
       'Requests a structured phone action (open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call). Always call this when the user wants to open an app, call someone, or send a WhatsApp/Messenger message.',
-    ...(nonBlocking ? { behavior: Behavior.NON_BLOCKING } : {}),
+    ...(nonBlocking ? { behavior: 'NON_BLOCKING' } : {}),
     parameters: {
-      type: Type.OBJECT,
+      type: 'OBJECT',
       properties: {
         action: {
-          type: Type.STRING,
+          type: 'STRING',
           description: 'One of: open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call',
         },
-        app: { type: Type.STRING, description: 'App name when action is open_app (e.g. YouTube)' },
-        contact: { type: Type.STRING, description: 'Contact name or phone number for call/message actions' },
-        text: { type: Type.STRING, description: 'Message text for whatsapp_message or messenger_message' },
+        app: { type: 'STRING', description: 'App name when action is open_app (e.g. YouTube)' },
+        contact: { type: 'STRING', description: 'Contact name or phone number for call/message actions' },
+        text: { type: 'STRING', description: 'Message text for whatsapp_message or messenger_message' },
       },
       required: ['action'],
     },
   };
 }
 
-function buildNavigateAppTool(nonBlocking: boolean): FunctionDeclaration {
+function buildNavigateAppTool(nonBlocking: boolean): Record<string, unknown> {
   return {
     name: 'navigate_app',
     description:
       'Opens a TIYA screen or settings page/subpage, or navigates back. Use whenever the user asks to open Settings, a numbered Settings bar, Home, Chat, Mic Test, Privacy Controls, etc.',
-    ...(nonBlocking ? { behavior: Behavior.NON_BLOCKING } : {}),
+    ...(nonBlocking ? { behavior: 'NON_BLOCKING' } : {}),
     parameters: {
-      type: Type.OBJECT,
+      type: 'OBJECT',
       properties: {
-        action: { type: Type.STRING, description: 'open or back' },
-        tab: { type: Type.STRING, description: 'home, chat, or settings' },
+        action: { type: 'STRING', description: 'open or back' },
+        tab: { type: 'STRING', description: 'home, chat, or settings' },
         page: {
-          type: Type.STRING,
+          type: 'STRING',
           description:
             'Settings page ID: hub, about, connections, live_model, voice_language, chats_memory, look_feel, phone_control, developer_tools, privacy_controls, my_account, premium',
         },
-        subpage: { type: Type.STRING, description: 'Optional subpage ID inside a Settings page (e.g. mic_test, health_check)' },
+        subpage: { type: 'STRING', description: 'Optional subpage ID inside a Settings page (e.g. mic_test, health_check)' },
       },
       required: ['action'],
     },
   };
 }
 
-function buildGetLatestMotivationTool(nonBlocking: boolean): FunctionDeclaration {
+function buildGetLatestMotivationTool(nonBlocking: boolean): Record<string, unknown> {
   return {
     name: 'get_latest_motivation',
     description:
       'Fetches the latest published motivation post so TIYA can read it to the user in Bengali. Call this whenever the user asks for daily or today’s motivation.',
-    ...(nonBlocking ? { behavior: Behavior.NON_BLOCKING } : {}),
-    parameters: { type: Type.OBJECT, properties: {} },
+    ...(nonBlocking ? { behavior: 'NON_BLOCKING' } : {}),
+    parameters: { type: 'OBJECT', properties: {} },
   };
 }
 
@@ -97,30 +101,6 @@ const failFromError = (err: unknown): ApiResult => {
 
 // Chat models tried in order when the chosen one is not available on this key
 
-// TTS models that really exist on this key (found once, then cached)
-let ttsModelCache: { key: string; models: string[] } | null = null;
-async function getTtsModels(apiKey: string, preferred?: string): Promise<string[]> {
-  if (!ttsModelCache || ttsModelCache.key !== apiKey) {
-    const found: string[] = [];
-    try {
-      const pager = await createAiClient(apiKey).models.list({ config: { pageSize: 100 } });
-      for await (const m of pager) {
-        const id = (m.name || '').replace(/^models\//, '');
-        if (/tts/i.test(id)) found.push(id);
-      }
-    } catch {
-      // ignore — fall back to known names
-    }
-    found.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
-    ttsModelCache = { key: apiKey, models: found };
-  }
-  const known = ['gemini-2.5-flash-preview-tts', 'gemini-2.5-pro-preview-tts'];
-  const pref = String(preferred || '').trim();
-  const list = ttsModelCache.models.length ? ttsModelCache.models : known;
-  return Array.from(new Set([...(pref && ttsModelCache.models.includes(pref) ? [pref] : []), ...list, ...known])).slice(0, 4);
-}
-
-const CHAT_MODEL_FALLBACKS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
 
 async function handle(path: string, key: string, body: any): Promise<ApiResult> {
   switch (path) {
@@ -130,52 +110,24 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
     case '/api/gemini/test-key': {
       if (!key) return fail(401, 'No API key', 'Enter your Gemini API key first.');
       try {
-        const pager = await createAiClient(key).models.list({ config: { pageSize: 10 } });
-        let n = 0;
-        for await (const _m of pager) {
-          if (++n >= 3) break;
-        }
-        return ok({ ok: true, label: 'READY', detail: 'API key verified and ready.' });
+        const models = await listGeminiModels(key, true);
+        return ok({ ok: true, label: 'READY', detail: `API key verified (${models.length} models).` });
       } catch (err) {
         return failFromError(err);
       }
     }
-
     case '/api/gemini/models': {
       if (!key) return fail(401, 'No API key', 'Add your Gemini API key in Connections.');
       try {
-        const pager = await createAiClient(key).models.list({ config: { pageSize: 100 } });
-        const discovered: LiveModelInfo[] = [];
-        const seen = new Set<string>();
-        for await (const m of pager) {
-          const rawName = (m.name || '').replace(/^models\//, '');
-          const methods = Array.isArray(m.supportedActions) ? m.supportedActions : [];
-          const bidi =
-            methods.some((a) => a.toLowerCase().includes('bidigeneratecontent')) ||
-            rawName.toLowerCase().includes('live') ||
-            rawName.toLowerCase().includes('native-audio');
-          if (rawName && bidi && !seen.has(rawName)) {
-            seen.add(rawName);
-            discovered.push({
-              id: rawName,
-              displayName: m.displayName || rawName,
-              description: m.description || 'Gemini Live real-time audio model',
-            });
-          }
-        }
-        const merged: LiveModelInfo[] = [];
-        const ids = new Set<string>();
-        for (const d of DEFAULT_LIVE_MODELS) {
-          merged.push(d);
-          ids.add(d.id);
-        }
-        for (const d of discovered) if (!ids.has(d.id)) merged.push(d);
-        return ok({ ok: true, models: merged });
+        const models = await listGeminiModels(key, true);
+        const live = models
+          .filter((m) => m.methods.some((x) => /bidigeneratecontent/i.test(x)))
+          .map((m) => ({ id: m.id, displayName: m.displayName || m.id, description: m.description || 'Gemini Live voice model' }));
+        return ok({ ok: true, models: live.length ? live : DEFAULT_LIVE_MODELS });
       } catch (err) {
         return failFromError(err);
       }
     }
-
     case '/api/providers/test-key': {
       const provider = String(body?.provider || '');
       const cleanKey = String(body?.apiKey || '').trim();
@@ -207,49 +159,39 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
     case '/api/gemini/chat-models': {
       if (!key) return fail(401, 'No API key', 'Add your Gemini API key first.');
       try {
-        const pager = await createAiClient(key).models.list({ config: { pageSize: 100 } });
-        const models: LiveModelInfo[] = [];
-        const seen = new Set<string>();
-        for await (const m of pager) {
-          const rawName = (m.name || '').replace(/^models\//, '');
-          const methods = Array.isArray(m.supportedActions) ? m.supportedActions : [];
-          const text =
-            methods.some((a) => a.toLowerCase().includes('generatecontent')) || rawName.includes('gemini');
-          const skip = /embedding|tts|live|native-audio|image/i.test(rawName);
-          if (rawName && text && !skip && !seen.has(rawName)) {
-            seen.add(rawName);
-            models.push({ id: rawName, displayName: m.displayName || rawName, description: m.description || 'Gemini text model' });
-          }
-        }
-        return ok({ ok: true, models: models.slice(0, 30) });
+        const models = await listGeminiModels(key, true);
+        const list = models
+          .filter(
+            (m) =>
+              m.methods.some((x) => x === 'generateContent') &&
+              !/tts|live|native-audio|image|embedding|aqa|veo|imagen/i.test(m.id),
+          )
+          .map((m) => ({ id: m.id, displayName: m.displayName || m.id, description: m.description || 'Gemini text model' }));
+        return ok({ ok: true, models: list.slice(0, 30) });
       } catch (err) {
         return failFromError(err);
       }
     }
-
     case '/api/gemini/chat': {
-      if (!key) return fail(401, 'No API key', 'Add your Gemini API key in Settings > Connections.');
       const message = String(body?.message || '');
       if (!message.trim()) return fail(400, 'Invalid request', 'Message cannot be empty.');
-      const history = Array.isArray(body?.history) ? body.history : [];
-      const contents = [
-        ...history.slice(-16).map((h: any) => ({
-          role: h.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: String(h.text || '') }],
-        })),
-        { role: 'user', parts: [{ text: message }] },
-      ];
-      const chosen = String(body?.model || '').trim();
-      const models = Array.from(new Set([chosen, ...CHAT_MODEL_FALLBACKS].filter(Boolean)));
-      const ai = createAiClient(key);
+      const history: Array<{ role: 'user' | 'assistant'; text: string }> = (Array.isArray(body?.history) ? body.history : [])
+        .slice(-16)
+        .map((h: any) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', text: String(h.text || '') }))
+        .filter((h: any) => h.text.trim());
+      const system = String(body?.systemInstruction || 'You are TIYA, a helpful Bengali-default AI assistant.');
       let lastErr: unknown = null;
-      for (const model of models) {
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents,
-            config: {
-              systemInstruction: body?.systemInstruction || 'You are TIYA, a helpful Bengali-default AI assistant.',
+
+      if (key) {
+        const contents = [
+          ...history.map((h) => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.text }] })),
+          { role: 'user', parts: [{ text: message }] },
+        ];
+        for (const model of await pickChatModels(key, body?.model)) {
+          try {
+            const res = await generateContent(key, model, {
+              contents,
+              systemInstruction: { parts: [{ text: system }] },
               tools: [
                 {
                   functionDeclarations: [
@@ -259,62 +201,86 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
                   ],
                 },
               ],
-            },
-          });
-          let action = null;
-          let navigate = null;
-          let needsMotivation = false;
-          for (const call of response.functionCalls || []) {
-            if (call.name === 'trigger_phone_action' && call.args && !action) {
-              action = validatePhoneAction(call.args);
-            } else if (call.name === 'navigate_app' && call.args && !navigate) {
-              navigate = validateNavigateToolArgs(call.args);
-            } else if (call.name === 'get_latest_motivation') {
-              needsMotivation = true;
+            });
+            let action = null;
+            let navigate = null;
+            let needsMotivation = false;
+            for (const call of responseCalls(res)) {
+              if (call.name === 'trigger_phone_action' && !action) action = validatePhoneAction(call.args);
+              else if (call.name === 'navigate_app' && !navigate) navigate = validateNavigateToolArgs(call.args);
+              else if (call.name === 'get_latest_motivation') needsMotivation = true;
             }
+            let text = responseText(res);
+            if (action && !text) text = getConfirmationPromptText(action);
+            else if (navigate && !text) text = (navigate as any).confirmBn || '';
+            return ok({ ok: true, text: text || 'বলুন, কীভাবে সাহায্য করতে পারি?', action, navigate, needsMotivation, model });
+          } catch (err) {
+            lastErr = err;
+            if (isBadKey(err)) break;
           }
-          let text = (response.text || '').trim();
-          if (action && !text) text = getConfirmationPromptText(action);
-          else if (navigate && !text) text = (navigate as any).confirmBn || '';
-          return ok({ ok: true, text: text || 'বলুন, কীভাবে সাহায্য করতে পারি?', action, navigate, needsMotivation, model });
-        } catch (err) {
-          lastErr = err;
-          const c = classifyGeminiError(errMsg(err));
-          // wrong / retired model or overload → try the next model; bad key → stop
-          if (!c.shouldFallback && !/not found|no longer|404|unavailable|overload|503/i.test(errMsg(err))) break;
         }
       }
+
+      // Gemini not working → Groq answers instead
+      const groqKey = getGroqKey();
+      if (groqKey) {
+        try {
+          const text = await groqChat(groqKey, system, history, message);
+          return ok({ ok: true, text, action: null, navigate: null, needsMotivation: false, model: 'groq' });
+        } catch (err) {
+          lastErr = lastErr || err;
+        }
+      }
+      if (!key && !groqKey) return fail(401, 'No API key', 'Add your Gemini or Groq API key in Settings > Connections.');
       return failFromError(lastErr);
     }
-
     case '/api/gemini/transcribe': {
-      if (!key) return fail(401, 'No API key', 'Add your Gemini API key in Settings > Connections.');
       if (!body?.audioBase64) return fail(400, 'Invalid audio', 'No audio data received.');
-      const ai = createAiClient(key);
+      const groqKey = getGroqKey();
       let lastErr: unknown = null;
-      for (const model of ['gemini-3.5-transcribe', ...CHAT_MODEL_FALLBACKS]) {
+      if (groqKey) {
         try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: {
-              parts: [
-                { inlineData: { mimeType: body.mimeType || 'audio/webm', data: body.audioBase64 } },
+          const bin = atob(String(body.audioBase64));
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const type = String(body.mimeType || 'audio/webm');
+          const blob = new Blob([bytes], { type });
+          const form = new FormData();
+          const text = await groqTranscribe(groqKey, new File([blob], type.includes('wav') ? 'a.wav' : 'a.webm', { type }), languageCode(body.language));
+          void form;
+          if (text) return ok({ ok: true, text });
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      if (key) {
+        for (const model of await pickChatModels(key)) {
+          try {
+            const res = await generateContent(key, model, {
+              contents: [
                 {
-                  text: `Transcribe the spoken audio accurately in its original language (expected primary language: ${
-                    body.language || 'Bengali'
-                  }). Output only the transcribed text with no commentary.`,
+                  role: 'user',
+                  parts: [
+                    { inlineData: { mimeType: body.mimeType || 'audio/webm', data: body.audioBase64 } },
+                    {
+                      text: `Transcribe the spoken audio accurately in its original language (expected: ${
+                        body.language || 'Bengali'
+                      }), in that language's own script. Output only the words.`,
+                    },
+                  ],
                 },
               ],
-            },
-          });
-          return ok({ ok: true, text: (response.text || '').trim() });
-        } catch (err) {
-          lastErr = err;
+            });
+            return ok({ ok: true, text: responseText(res) });
+          } catch (err) {
+            lastErr = err;
+            if (isBadKey(err)) break;
+          }
         }
       }
+      if (!key && !groqKey) return fail(401, 'No API key', 'Add your Gemini or Groq API key in Settings > Connections.');
       return failFromError(lastErr);
     }
-
     case '/api/gemini/voice-check': {
       if (!key) return fail(401, 'No API key', 'Add your Gemini API key in Settings > Connections.');
       const name = String(body?.assistantName || '').trim() || 'তিয়া';
@@ -348,34 +314,29 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         (body?.language || 'Bengali') === 'Bengali' && dialect && dialect.id !== 'Standard'
           ? dialect.sample
           : samples[body?.language || 'Bengali'] || samples.Bengali;
-      const ai = createAiClient(key);
-      const ttsModels = await getTtsModels(key, body?.ttsModel);
       let lastErr: unknown = null;
-      for (const model of ttsModels) {
+      for (const model of await pickTtsModels(key, body?.ttsModel)) {
         try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: text,
-            config: {
-              responseModalities: [Modality.AUDIO],
+          const res = await generateContent(key, model, {
+            contents: [{ role: 'user', parts: [{ text }] }],
+            generationConfig: {
+              responseModalities: ['AUDIO'],
               speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: body?.voiceName || 'Zephyr' } } },
             },
           });
-          const part = response.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
-          if (part?.inlineData?.data) {
-            return ok({
-              ok: true,
-              audioBase64: part.inlineData.data,
-              mimeType: part.inlineData.mimeType || 'audio/pcm;rate=24000',
-              text,
-            });
-          }
+          const audio = responseAudio(res);
+          if (audio) return ok({ ok: true, audioBase64: audio.data, mimeType: audio.mimeType, text });
         } catch (err) {
           lastErr = err;
+          if (isBadKey(err)) break;
         }
       }
       void lastErr;
-      return fail(502, 'Voice not available', 'Google voice is not available on this key right now.');
+      return fail(
+        502,
+        'Voice not available',
+        `Google voice is not available on this key right now. ${String((lastErr as any)?.message || '').slice(0, 140)}`,
+      );
     }
 
     default:
@@ -465,7 +426,98 @@ function pcmToWavBase64(chunks: Int16Array[], rate: number): string {
   return btoa(bin);
 }
 
-type LiveSession = Awaited<ReturnType<GoogleGenAI['live']['connect']>>;
+/** Direct WebSocket to Gemini Live (Google's documented protocol, no SDK). */
+class RawLiveSession {
+  private ws: WebSocket;
+  constructor(ws: WebSocket) {
+    this.ws = ws;
+  }
+  private send(obj: unknown) {
+    if (this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(obj));
+  }
+  sendRealtimeInput(input: Record<string, unknown>) {
+    this.send({ realtimeInput: input });
+  }
+  sendToolResponse(resp: Record<string, unknown>) {
+    this.send({ toolResponse: resp });
+  }
+  close() {
+    try {
+      this.ws.close();
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function openRawLive(
+  key: string,
+  setup: Record<string, unknown>,
+  handlers: { onMessage: (msg: any) => void; onClose: (reason: string) => void },
+  timeoutMs = 9000,
+): Promise<RawLiveSession> {
+  return new Promise((resolve, reject) => {
+    const url =
+      'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=' +
+      encodeURIComponent(key);
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(url);
+    } catch (err) {
+      reject(err);
+      return;
+    }
+    const session = new RawLiveSession(ws);
+    let ready = false;
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!ready) {
+        done = true;
+        try {
+          ws.close();
+        } catch {
+          // ignore
+        }
+        reject(new Error('Live setup timeout'));
+      }
+    }, timeoutMs);
+    ws.onopen = () => ws.send(JSON.stringify({ setup }));
+    ws.onmessage = async (ev) => {
+      let text = '';
+      try {
+        text = typeof ev.data === 'string' ? ev.data : ev.data instanceof Blob ? await ev.data.text() : new TextDecoder().decode(ev.data);
+      } catch {
+        return;
+      }
+      let msg: any;
+      try {
+        msg = JSON.parse(text);
+      } catch {
+        return;
+      }
+      if (msg.setupComplete !== undefined && !ready) {
+        ready = true;
+        clearTimeout(timer);
+        resolve(session);
+        return;
+      }
+      if (ready) handlers.onMessage(msg);
+    };
+    ws.onerror = () => {
+      // the close event carries the reason
+    };
+    ws.onclose = (ev) => {
+      clearTimeout(timer);
+      if (!ready) {
+        if (!done) reject(new Error(ev.reason || `Live closed (${ev.code})`));
+      } else {
+        handlers.onClose(ev.reason || '');
+      }
+    };
+  });
+}
+
+type LiveSession = RawLiveSession;
 
 export class LocalLiveSocket {
   readyState = 0; // CONNECTING
@@ -559,139 +611,94 @@ export class LocalLiveSocket {
           id,
           name,
           response,
-          ...(this.extended ? { scheduling: FunctionResponseScheduling.WHEN_IDLE } : {}),
         },
       ],
     });
   }
 
+  private startTurnMode() {
+    this.turnMode = true;
+    this.emit({ type: 'ready', model: 'TIYA Voice (standard)' });
+  }
+
   private async connect(apiKey: string, models: string[], voiceName: string, systemInstruction: string) {
-    if (!apiKey) {
-      this.emit({ type: 'error', label: 'No API key', detail: 'Add your Gemini API key in Settings > Connections.' });
-      return;
-    }
     this.apiKey = apiKey;
     this.voiceName = voiceName || 'Zephyr';
     this.systemInstruction = systemInstruction;
-    const ai = createAiClient(apiKey);
-    let lastError = { label: 'Model not available', detail: 'No Live voice model available.' };
+    const groqKey = getGroqKey();
 
-    // Check the key first and find the Live models this key can really use
-    const discovered: string[] = [];
+    if (!apiKey) {
+      if (groqKey) return this.startTurnMode();
+      this.emit({ type: 'error', label: 'No API key', detail: 'Add your Gemini or Groq API key in Settings > Connections.' });
+      return;
+    }
+
+    // Check the key first
     try {
-      const pager = await ai.models.list({ config: { pageSize: 100 } });
-      for await (const m of pager) {
-        const id = (m.name || '').replace(/^models\//, '');
-        const acts = (Array.isArray(m.supportedActions) ? m.supportedActions : []).join(' ').toLowerCase();
-        if (id && (acts.includes('bidigeneratecontent') || /live|native-audio/i.test(id))) discovered.push(id);
-      }
+      await listGeminiModels(apiKey);
     } catch (err) {
-      const c = classifyGeminiError(errMsg(err));
-      if (c.label === 'Invalid API key' || c.label === 'No API key') {
-        this.emit({ type: 'error', label: c.label, detail: c.detail });
+      if (this.closedByClient) return;
+      if (isBadKey(err) || (err as ApiError)?.status === 400 || (err as ApiError)?.status === 403) {
+        if (groqKey) {
+          this.apiKey = '';
+          return this.startTurnMode();
+        }
+        const c = classifyGeminiError(errMsg(err));
+        this.emit({ type: 'error', label: 'Invalid API key', detail: c.detail });
         return;
       }
     }
     if (this.closedByClient) return;
-    const known = ['gemini-2.5-flash-native-audio-preview-12-2025', 'gemini-live-2.5-flash-preview', 'gemini-2.0-flash-live-001'];
-    const discoveredSet = new Set(discovered);
-    const ordered = [
-      ...models.filter((m) => discovered.length === 0 || discoveredSet.has(m)),
-      ...discovered,
-      ...(discovered.length === 0 ? known : []),
-    ];
-    const liveCandidates = Array.from(new Set(ordered.filter(Boolean))).slice(0, 4);
 
-    for (const modelId of liveCandidates) {
+    const candidates = await pickLiveModels(apiKey, models);
+    const tools = [
+      { functionDeclarations: [buildPhoneActionTool(false), buildNavigateAppTool(false), buildGetLatestMotivationTool(false)] },
+    ];
+
+    for (const modelId of candidates) {
       if (this.closedByClient) return;
       const attempt = ++this.liveAttempt;
-      let connected = false;
-      let failedBeforeOpen = false;
+      this.extended = false;
       try {
-        const ext = modelId.includes('extended-thinking');
-        this.extended = ext;
-        const sessionPromise = ai.live.connect({
-          model: modelId,
-          config: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Zephyr' } } },
+        const session = await openRawLive(
+          apiKey,
+          {
+            model: `models/${modelId}`,
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
+            },
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            tools,
             inputAudioTranscription: {},
             outputAudioTranscription: {},
-            systemInstruction,
-            ...(ext ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
-            tools: [
-              {
-                functionDeclarations: [
-                  buildPhoneActionTool(ext),
-                  buildNavigateAppTool(ext),
-                  buildGetLatestMotivationTool(ext),
-                ],
-              },
-            ],
           },
-          callbacks: {
-            onopen: () => {
-              connected = true;
-              if (this.connectTimer) {
-                clearTimeout(this.connectTimer);
-                this.connectTimer = null;
-              }
-              this.emit({ type: 'ready', model: modelId });
+          {
+            onMessage: (msg) => {
+              if (attempt === this.liveAttempt) this.onLiveMessage(msg);
             },
-            onmessage: (message: LiveServerMessage) => this.onLiveMessage(message),
-            onerror: (e: ErrorEvent) => {
-              failedBeforeOpen = !connected;
-              const c = classifyGeminiError(e?.message || 'Gemini Live connection error');
-              lastError = { label: c.label, detail: c.detail };
-              if (connected && attempt === this.liveAttempt) this.liveBroke(c.label, c.detail);
-            },
-            onclose: (e: CloseEvent) => {
-              if (!connected) {
-                failedBeforeOpen = true;
-                const c = classifyGeminiError(e?.reason || 'Live session closed unexpectedly');
-                lastError = { label: c.label, detail: c.detail };
-              } else if (!this.closedByClient && attempt === this.liveAttempt) {
-                const c = classifyGeminiError(e?.reason || 'Live session closed');
-                this.liveBroke(c.label, c.detail);
-              }
+            onClose: (reason) => {
+              if (this.closedByClient || attempt !== this.liveAttempt) return;
+              const c = classifyGeminiError(reason || 'Live session closed');
+              this.liveBroke(c.label, c.detail);
             },
           },
-        });
-        const timeout = new Promise<never>((_r, reject) => {
-          this.connectTimer = setTimeout(() => reject(new Error('Connection timeout — Model not available')), 6000);
-        });
-        this.session = await Promise.race([sessionPromise, timeout]);
-        if (this.connectTimer) {
-          clearTimeout(this.connectTimer);
-          this.connectTimer = null;
-        }
+        );
         if (this.closedByClient) {
-          this.closeSession();
+          session.close();
           return;
         }
-        // give the socket a moment: an instant close means this model is not usable
-        await new Promise((r) => setTimeout(r, 400));
-        if (!failedBeforeOpen) return;
-        this.closeSession();
+        this.session = session;
+        this.emit({ type: 'ready', model: modelId });
+        return;
       } catch (err) {
-        if (this.connectTimer) {
-          clearTimeout(this.connectTimer);
-          this.connectTimer = null;
-        }
         const c = classifyGeminiError(errMsg(err));
-        lastError = { label: c.label, detail: c.detail };
-        this.closeSession();
-        if (c.label === 'Invalid API key' || c.label === 'No API key') {
-          this.emit({ type: 'error', label: c.label, detail: c.detail });
-          return;
-        }
+        if (c.label === 'Invalid API key') break;
       }
     }
     if (this.closedByClient) return;
-    // Live voice is not reachable — keep talking in turn mode instead of failing
-    void lastError;
-    this.turnMode = true;
-    this.emit({ type: 'ready', model: 'TIYA Voice (standard)' });
+    // Live voice is not available on this key → keep talking in standard voice
+    this.startTurnMode();
   }
 
   // ----------------------------- turn mode -----------------------------
@@ -785,57 +792,73 @@ export class LocalLiveSocket {
   }
 
   private async turnTranscribe(wavB64: string): Promise<string> {
-    const ai = createAiClient(this.apiKey);
+    const clean = (t: string) => {
+      const x = t.trim().replace(/^["'“]|["'”]$/g, '');
+      return x.length < 2 ? '' : x;
+    };
+    const groqKey = getGroqKey();
     let lastErr: unknown = null;
-    for (const model of ['gemini-flash-lite-latest', ...CHAT_MODEL_FALLBACKS]) {
+    if (groqKey) {
       try {
-        const r = await ai.models.generateContent({
-          model,
-          contents: {
-            parts: [
-              { inlineData: { mimeType: 'audio/wav', data: wavB64 } },
-              {
-                text:
-                  'Transcribe exactly what the person says, in the language they speak, written in that language\'s own script (Bengali speech in Bengali script). ' +
-                  'Output only the words. If there is no clear speech, output nothing.',
-              },
-            ],
-          },
-        });
-        const t = (r.text || '').trim().replace(/^["'“]|["'”]$/g, '');
-        return t.length < 2 ? '' : t;
+        const bin = atob(wavB64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const t = await groqTranscribe(groqKey, new Blob([bytes], { type: 'audio/wav' }), languageCode(this.language));
+        return clean(t);
       } catch (err) {
         lastErr = err;
-        const c = classifyGeminiError(errMsg(err));
-        if (c.label === 'Invalid API key') throw err;
+      }
+    }
+    if (this.apiKey) {
+      for (const model of await pickChatModels(this.apiKey)) {
+        try {
+          const r = await generateContent(this.apiKey, model, {
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  { inlineData: { mimeType: 'audio/wav', data: wavB64 } },
+                  {
+                    text:
+                      "Transcribe exactly what the person says, in the language they speak, written in that language's own script (Bengali speech in Bengali script). " +
+                      'Output only the words. If there is no clear speech, output nothing.',
+                  },
+                ],
+              },
+            ],
+          });
+          return clean(responseText(r));
+        } catch (err) {
+          lastErr = err;
+          if (isBadKey(err)) break;
+        }
       }
     }
     throw lastErr || new Error('Transcription failed');
   }
 
   private async turnSpeak(text: string) {
-    const ai = createAiClient(this.apiKey);
-    for (const model of await getTtsModels(this.apiKey)) {
-      try {
-        const r = await ai.models.generateContent({
-          model,
-          contents: text,
-          config: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
-          },
-        });
-        const part = r.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
-        const data = part?.inlineData?.data;
-        if (data) {
-          if (this.closedByClient) return;
-          const samples = Math.floor((atob(data).length) / 2);
-          this.turnMuteUntil = Date.now() + (samples / 24000) * 1000 + 600;
-          this.emit({ type: 'audio', data });
-          return;
+    if (this.apiKey) {
+      for (const model of await pickTtsModels(this.apiKey)) {
+        try {
+          const r = await generateContent(this.apiKey, model, {
+            contents: [{ role: 'user', parts: [{ text }] }],
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
+            },
+          });
+          const audio = responseAudio(r);
+          if (audio) {
+            if (this.closedByClient) return;
+            const samples = Math.floor(atob(audio.data).length / 2);
+            this.turnMuteUntil = Date.now() + (samples / 24000) * 1000 + 600;
+            this.emit({ type: 'audio', data: audio.data });
+            return;
+          }
+        } catch (err) {
+          if (isBadKey(err)) break;
         }
-      } catch {
-        // try the next TTS model
       }
     }
     // Last resort: the phone's own voice
@@ -844,7 +867,9 @@ export class LocalLiveSocket {
       if (!synth) return;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = /[\u0980-\u09FF]/.test(text) ? 'bn-BD' : languageCode(this.language);
-      const female = synth.getVoices().find((v) => v.lang.startsWith(u.lang.slice(0, 2)) && /female|woman/i.test(v.name));
+      const female = synth
+        .getVoices()
+        .find((v) => v.lang.toLowerCase().startsWith(u.lang.slice(0, 2).toLowerCase()) && /female|woman/i.test(v.name));
       if (female) u.voice = female;
       this.turnMuteUntil = Date.now() + 60000;
       await new Promise<void>((resolve) => {
@@ -858,7 +883,7 @@ export class LocalLiveSocket {
     }
   }
 
-  private onLiveMessage(message: LiveServerMessage) {
+  private onLiveMessage(message: any) {
     const content = message.serverContent;
     if (content?.inputTranscription?.text) this.emit({ type: 'input_transcript', text: content.inputTranscription.text });
     if (content?.outputTranscription?.text) this.emit({ type: 'output_transcript', text: content.outputTranscription.text });

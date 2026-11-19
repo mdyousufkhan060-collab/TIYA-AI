@@ -227,9 +227,10 @@ export function useTiyaLiveVoice({
     const currentSettings = settingsRef.current;
     const apiKey = currentSettings.apiKey.trim();
 
-    if (!apiKey) {
+    const hasGroq = Boolean((currentSettings.providerConnections?.groq?.apiKey || '').trim());
+    if (!apiKey && !hasGroq) {
       setErrorLabel('No API key');
-      setErrorDetail('Add your Gemini API key in Settings > Connections.');
+      setErrorDetail('Add your Gemini or Groq API key in Settings > Connections.');
       setVoiceState('error');
       return;
     }
