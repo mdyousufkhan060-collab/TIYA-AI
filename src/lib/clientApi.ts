@@ -96,6 +96,30 @@ const failFromError = (err: unknown): ApiResult => {
 };
 
 // Chat models tried in order when the chosen one is not available on this key
+
+// TTS models that really exist on this key (found once, then cached)
+let ttsModelCache: { key: string; models: string[] } | null = null;
+async function getTtsModels(apiKey: string, preferred?: string): Promise<string[]> {
+  if (!ttsModelCache || ttsModelCache.key !== apiKey) {
+    const found: string[] = [];
+    try {
+      const pager = await createAiClient(apiKey).models.list({ config: { pageSize: 100 } });
+      for await (const m of pager) {
+        const id = (m.name || '').replace(/^models\//, '');
+        if (/tts/i.test(id)) found.push(id);
+      }
+    } catch {
+      // ignore — fall back to known names
+    }
+    found.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+    ttsModelCache = { key: apiKey, models: found };
+  }
+  const known = ['gemini-2.5-flash-preview-tts', 'gemini-2.5-pro-preview-tts'];
+  const pref = String(preferred || '').trim();
+  const list = ttsModelCache.models.length ? ttsModelCache.models : known;
+  return Array.from(new Set([...(pref && ttsModelCache.models.includes(pref) ? [pref] : []), ...list, ...known])).slice(0, 4);
+}
+
 const CHAT_MODEL_FALLBACKS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
 
 async function handle(path: string, key: string, body: any): Promise<ApiResult> {
@@ -325,9 +349,7 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
           ? dialect.sample
           : samples[body?.language || 'Bengali'] || samples.Bengali;
       const ai = createAiClient(key);
-      const ttsModels = Array.from(
-        new Set([String(body?.ttsModel || '').trim(), 'gemini-3.8-flash-lite-tts', 'gemini-2.5-flash-preview-tts'].filter(Boolean)),
-      );
+      const ttsModels = await getTtsModels(key, body?.ttsModel);
       let lastErr: unknown = null;
       for (const model of ttsModels) {
         try {
@@ -352,7 +374,8 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
           lastErr = err;
         }
       }
-      return lastErr ? failFromError(lastErr) : fail(500, 'Connection failed', 'No audio returned from TTS.');
+      void lastErr;
+      return fail(502, 'Voice not available', 'Google voice is not available on this key right now.');
     }
 
     default:
@@ -792,7 +815,7 @@ export class LocalLiveSocket {
 
   private async turnSpeak(text: string) {
     const ai = createAiClient(this.apiKey);
-    for (const model of ['gemini-2.5-flash-preview-tts', 'gemini-3.8-flash-lite-tts']) {
+    for (const model of await getTtsModels(this.apiKey)) {
       try {
         const r = await ai.models.generateContent({
           model,

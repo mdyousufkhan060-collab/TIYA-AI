@@ -10,6 +10,7 @@ import {
   FemaleVoiceId,
   Personality,
   TIYA_FIXED_NAME,
+  languageCode,
   TiyaSettings,
 } from '../../types/tiya';
 import { base64Pcm16ToFloat32, computeRmsEnergy } from '../../utils/audioPcm';
@@ -141,6 +142,31 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     }
   };
 
+  const speakWithPhoneVoice = (): boolean => {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return false;
+      const dialect = BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect);
+      const text =
+        settings.language === 'Bengali'
+          ? dialect?.sample || 'হ্যালো, আমি টিয়া।'
+          : `Hello, I am TIYA.`;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = settings.language === 'Bengali' ? 'bn-BD' : languageCode(settings.language);
+      const female = synth
+        .getVoices()
+        .find((v) => v.lang.toLowerCase().startsWith(u.lang.slice(0, 2).toLowerCase()) && /female|woman/i.test(v.name));
+      if (female) u.voice = female;
+      u.rate = settings.speechSpeed;
+      u.volume = settings.volume;
+      synth.cancel();
+      synth.speak(u);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handlePreviewVoice = async (voiceId: FemaleVoiceId) => {
     const key = settings.apiKey.trim();
     if (!key) {
@@ -179,7 +205,13 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
       };
 
       if (!res.ok || !data.ok || !data.audioBase64) {
-        setPreviewStatus(data.detail || data.label || 'Voice preview failed.');
+        // Google voice failed on this key → let the phone's own voice say it
+        const said = speakWithPhoneVoice();
+        setPreviewStatus(
+          said
+            ? 'Google voice is not available on this key, so the phone voice played instead.'
+            : 'Voice preview is not available on this key right now.',
+        );
         setPreviewingVoice(null);
         return;
       }

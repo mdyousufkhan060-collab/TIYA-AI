@@ -116,7 +116,21 @@ export const TIYA_FIXED_NAME = 'TIYA';
 export type ThemeMode = 'dark' | 'light';
 export type OrbStyle = 'Classic' | 'Pulse' | 'Wave';
 
-export type FemaleVoiceId = 'Zephyr' | 'Kore' | 'Aoede' | 'Leda';
+export type FemaleVoiceId =
+  | 'Zephyr'
+  | 'Leda'
+  | 'Kore'
+  | 'Aoede'
+  | 'Callirrhoe'
+  | 'Autonoe'
+  | 'Despina'
+  | 'Erinome'
+  | 'Laomedeia'
+  | 'Achernar'
+  | 'Gacrux'
+  | 'Pulcherrima'
+  | 'Vindemiatrix'
+  | 'Sulafat';
 
 export interface FemaleVoiceInfo {
   id: FemaleVoiceId;
@@ -124,11 +138,22 @@ export interface FemaleVoiceInfo {
   tone: string;
 }
 
+/** Google's female voices. Every voice can speak every language. */
 export const FEMALE_VOICES: FemaleVoiceInfo[] = [
-  { id: 'Zephyr', label: 'Zephyr', tone: 'Youthful, bright female (Default)' },
-  { id: 'Leda', label: 'Leda', tone: 'Youthful, warm & friendly female' },
-  { id: 'Kore', label: 'Kore', tone: 'Calm, gentle female' },
-  { id: 'Aoede', label: 'Aoede', tone: 'Melodic, expressive female' },
+  { id: 'Zephyr', label: 'Zephyr', tone: 'Bright (Default)' },
+  { id: 'Leda', label: 'Leda', tone: 'Youthful' },
+  { id: 'Kore', label: 'Kore', tone: 'Firm, clear' },
+  { id: 'Aoede', label: 'Aoede', tone: 'Breezy' },
+  { id: 'Callirrhoe', label: 'Callirrhoe', tone: 'Easy-going' },
+  { id: 'Autonoe', label: 'Autonoe', tone: 'Bright, lively' },
+  { id: 'Despina', label: 'Despina', tone: 'Smooth' },
+  { id: 'Erinome', label: 'Erinome', tone: 'Clear' },
+  { id: 'Laomedeia', label: 'Laomedeia', tone: 'Upbeat' },
+  { id: 'Achernar', label: 'Achernar', tone: 'Soft' },
+  { id: 'Gacrux', label: 'Gacrux', tone: 'Mature' },
+  { id: 'Pulcherrima', label: 'Pulcherrima', tone: 'Forward' },
+  { id: 'Vindemiatrix', label: 'Vindemiatrix', tone: 'Gentle' },
+  { id: 'Sulafat', label: 'Sulafat', tone: 'Warm' },
 ];
 
 export const ALL_PERSONALITIES: Personality[] = [
