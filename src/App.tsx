@@ -965,6 +965,10 @@ export default function App() {
               setErrorLog([]);
             }}
             onBackToHome={() => setShowAdminScreen(false)}
+            onOpenMotivation={() => {
+              setShowAdminScreen(false);
+              setShowMotivationScreen(true);
+            }}
             onLogout={handleSignOut}
           />
         ) : showMotivationScreen && isAdmin ? (
@@ -989,6 +993,7 @@ export default function App() {
                 actionLinks={actionLinks}
                 unreadNotifications={unreadNotifications}
                 isAdmin={isAdmin}
+                canUseWithoutKey={isAdmin || isProfilePremium(profile)}
                 onToggleVoice={toggleVoice}
                 onOpenConnections={openConnections}
                 onOpenNotifications={handleOpenNotifications}

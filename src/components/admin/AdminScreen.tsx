@@ -39,6 +39,8 @@ interface AdminScreenProps {
   errorLog: ErrorLogEntry[];
   onClearErrorLog: () => void;
   onBackToHome: () => void;
+  /** Motivation writing page (moved here from HOME) */
+  onOpenMotivation?: () => void;
   onLogout: () => void;
 }
 
@@ -48,6 +50,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   errorLog,
   onClearErrorLog,
   onBackToHome,
+  onOpenMotivation,
   onLogout,
 }) => {
   const [view, setView] = useState<AdminView>('hub');
@@ -499,6 +502,28 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                 </div>
                 <Bell className="h-4 w-4 text-slate-400" />
               </button>
+
+              {onOpenMotivation && (
+                <button
+                  type="button"
+                  data-testid="admin-motivation-btn"
+                  onClick={onOpenMotivation}
+                  className="flex min-h-[60px] w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+                >
+                  <span className="font-mono-code flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
+                    ★
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold tracking-wide text-slate-900 dark:text-slate-100">
+                      MOTIVATION
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      Write and publish motivation posts
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </button>
+              )}
 
               <button
                 type="button"
