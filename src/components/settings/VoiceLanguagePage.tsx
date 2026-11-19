@@ -578,7 +578,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
       num: '08',
       id: 'mic_listening',
       title: 'MIC & LISTENING',
-      value: `${settings.micListening.sensitivity.toFixed(2)}x`,
+      value: `Sens ${settings.micListening.sensitivity.toFixed(2)}x`,
     },
   ];
 

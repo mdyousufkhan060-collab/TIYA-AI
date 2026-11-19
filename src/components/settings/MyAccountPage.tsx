@@ -9,6 +9,7 @@ import { SettingsShell } from './SettingsShell';
 interface MyAccountPageProps {
   user: User;
   profile: UserProfile | null;
+  isAdmin?: boolean;
   onBack: () => void;
   onSignedOut: () => void;
 }
@@ -16,6 +17,7 @@ interface MyAccountPageProps {
 export const MyAccountPage: React.FC<MyAccountPageProps> = ({
   user,
   profile,
+  isAdmin = false,
   onBack,
   onSignedOut,
 }) => {
@@ -152,7 +154,7 @@ export const MyAccountPage: React.FC<MyAccountPageProps> = ({
           <div className="flex items-center justify-between px-4 py-3 text-xs">
             <span className="text-slate-500 dark:text-slate-400">Plan</span>
             <span className="font-medium capitalize text-teal-600 dark:text-teal-400">
-              {profile?.plan || 'Free'}
+              {isAdmin ? 'Admin · Unlimited' : profile?.plan || 'Free'}
             </span>
           </div>
         </div>

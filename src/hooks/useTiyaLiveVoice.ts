@@ -16,6 +16,8 @@ interface UseTiyaLiveVoiceOptions {
   messages: ChatMessage[];
   memories?: MemoryItem[];
   userAge?: number | null;
+  /** owner Gmail → emotional persona */
+  isOwner?: boolean;
   checkReplyUsage?: () => Promise<ReplyUsageDecision>;
   onAppendVoiceMessage: (role: 'user' | 'assistant', text: string, action?: PhoneAction) => void;
   onUpdateLastVoiceMessage: (role: 'user' | 'assistant', text: string) => void;
@@ -29,6 +31,7 @@ export function useTiyaLiveVoice({
   messages,
   memories = [],
   userAge,
+  isOwner = false,
   checkReplyUsage,
   onAppendVoiceMessage,
   onUpdateLastVoiceMessage,
@@ -50,6 +53,8 @@ export function useTiyaLiveVoice({
   memoriesRef.current = memories;
   const userAgeRef = useRef(userAge);
   userAgeRef.current = userAge;
+  const isOwnerRef = useRef(isOwner);
+  isOwnerRef.current = isOwner;
   const checkReplyUsageRef = useRef(checkReplyUsage);
   checkReplyUsageRef.current = checkReplyUsage;
   const voiceStateRef = useRef(voiceState);
@@ -302,6 +307,7 @@ export function useTiyaLiveVoice({
         'voice',
         userAgeRef.current,
         memoriesRef.current,
+        isOwnerRef.current,
       );
       const primaryModel =
         settingsRef.current.customLiveModel.trim() || settingsRef.current.selectedLiveModel;

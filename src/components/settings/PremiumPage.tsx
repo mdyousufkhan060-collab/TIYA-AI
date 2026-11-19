@@ -5,6 +5,7 @@ import { SettingsShell } from './SettingsShell';
 
 interface PremiumPageProps {
   profile: UserProfile | null;
+  isAdmin?: boolean;
   onBack: () => void;
 }
 
@@ -40,16 +41,16 @@ function formatRepliesLeft(profile: UserProfile | null): string {
   return 'Unlimited';
 }
 
-export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, onBack }) => {
+export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = false, onBack }) => {
   const isPremium = isProfilePremium(profile);
-  const planLabel = isPremium ? 'PREMIUM' : 'FREE';
+  const planLabel = isAdmin ? 'ADMIN' : isPremium ? 'PREMIUM' : 'FREE';
   const validUntil = formatValidUntil(profile?.paid_until, isPremium);
   const repliesLeft = formatRepliesLeft(profile);
-  const voiceLeft = isPremium ? String(Math.max(0, profile?.premium_voice_left ?? 0)) : '—';
-  const textLeft = isPremium ? String(Math.max(0, profile?.premium_text_left ?? 0)) : '—';
+  const voiceLeft = isAdmin ? 'Unlimited' : isPremium ? String(Math.max(0, profile?.premium_voice_left ?? 0)) : '—';
+  const textLeft = isAdmin ? 'Unlimited' : isPremium ? String(Math.max(0, profile?.premium_text_left ?? 0)) : '—';
 
   const rows = [
-    { id: 'plan', label: 'PLAN', value: planLabel, accent: isPremium },
+    { id: 'plan', label: 'PLAN', value: planLabel, accent: isPremium || isAdmin },
     { id: 'valid_until', label: 'VALID UNTIL', value: validUntil, accent: false },
     { id: 'voice_left', label: 'VOICE REPLIES LEFT', value: voiceLeft, accent: false },
     { id: 'text_left', label: 'TEXT REPLIES LEFT', value: textLeft, accent: false },

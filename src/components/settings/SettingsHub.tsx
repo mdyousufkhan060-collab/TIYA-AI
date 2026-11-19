@@ -9,6 +9,7 @@ interface SettingsHubProps {
   profile: UserProfile | null;
   chatCount: number;
   userEmail?: string | null;
+  isAdmin?: boolean;
   onOpenPage: (page: SettingsPageId) => void;
 }
 
@@ -17,6 +18,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
   profile,
   chatCount,
   userEmail,
+  isAdmin = false,
   onOpenPage,
 }) => {
   const hasNativeBridge =
@@ -26,7 +28,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
   const groqReady = settings.providerConnections.groq?.status === 'ready';
   const connectionValue = geminiReady || groqReady ? 'READY' : 'NO KEY';
 
-  const premiumValue = isProfilePremium(profile) ? 'PREMIUM' : 'FREE';
+  const premiumValue = isAdmin ? 'ADMIN' : isProfilePremium(profile) ? 'PREMIUM' : 'FREE';
 
   const mainItems: Array<{
     num: string;

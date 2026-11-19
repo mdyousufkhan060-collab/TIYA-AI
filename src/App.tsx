@@ -33,7 +33,7 @@ import {
   ReplyUsageDecision,
   setCachedBirthYear,
 } from './utils/authErrors';
-import { buildTiyaSystemPrompt } from './utils/prompts';
+import { buildTiyaSystemPrompt, isTiyaOwnerEmail } from './utils/prompts';
 import {
   executePhoneAction,
   extractActionFromText,
@@ -223,6 +223,8 @@ export default function App() {
       : cachedBirthYear;
 
   const userAge = calculateAge(effectiveBirthYear);
+  // Owner (his Gmail + admin) always gets the emotional persona
+  const isOwner = isAdmin && isTiyaOwnerEmail(session?.user?.email);
 
   const checkReplyUsage = useCallback(async (): Promise<ReplyUsageDecision> => {
     try {
@@ -382,6 +384,7 @@ export default function App() {
     messages,
     memories,
     userAge,
+    isOwner,
     checkReplyUsage,
     onAppendVoiceMessage: handleAppendVoiceMessage,
     onUpdateLastVoiceMessage: handleUpdateLastVoiceMessage,
@@ -491,6 +494,7 @@ export default function App() {
           'chat',
           userAge,
           memories,
+          isOwner,
         );
         const titlePart = (post.title || '').trim()
           ? `Title: ${post.title?.trim()}\n`
@@ -518,7 +522,7 @@ export default function App() {
 
       return formatMotivationReplyBn(post);
     },
-    [memories, messages, settings, userAge],
+    [isOwner, memories, messages, settings, userAge],
   );
 
   const handleSendChat = useCallback(
@@ -636,6 +640,7 @@ export default function App() {
           'chat',
           userAge,
           memories,
+          isOwner,
         );
         if (usePremiumServer) {
           const premiumSystem =
@@ -780,6 +785,7 @@ export default function App() {
       fetchLatestPublishedMotivation,
       handleNavigateCommand,
       isAdmin,
+      isOwner,
       profile,
       memories,
       messages,
@@ -1036,6 +1042,7 @@ export default function App() {
                 profile={profile}
                 chatCount={chatSessionCount}
                 userEmail={session.user.email}
+                isAdmin={isAdmin}
                 onOpenPage={handleOpenSettingsPage}
               />
             )}
@@ -1107,6 +1114,7 @@ export default function App() {
             {activeTab === 'settings' && settingsPage === 'premium' && (
               <PremiumPage
                 profile={profile}
+                isAdmin={isAdmin}
                 onBack={() => {
                   setSettingsPage('hub');
                   setSettingsSubpage(null);
@@ -1138,6 +1146,7 @@ export default function App() {
               <MyAccountPage
                 user={session.user}
                 profile={profile}
+                isAdmin={isAdmin}
                 onBack={() => {
                   setSettingsPage('hub');
                   setSettingsSubpage(null);

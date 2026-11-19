@@ -521,43 +521,23 @@ export const PrivacyControlsPage: React.FC<PrivacyControlsPageProps> = ({
           value={micLabel}
           onClick={() => onSelectSubpage('mic_permission')}
         />
-        <SettingsToggleBar
+        <SettingsBar
           badge="02"
-          title="APPROXIMATE LOCATION"
-          checked={settings.approximateLocation}
-          onToggle={() =>
-            onUpdateSettings({ approximateLocation: !settings.approximateLocation })
-          }
-        />
-        <SettingsBar
-          badge="03"
-          title="CHAT HISTORY"
-          value={`${messages.length}`}
-          onClick={() => onSelectSubpage('chat_history')}
-        />
-        <SettingsBar
-          badge="04"
-          title="TIYA'S MEMORY"
-          value={`${memories.length}`}
-          onClick={() => onSelectSubpage('tiya_memory')}
-        />
-        <SettingsBar
-          badge="05"
           title="STORED INFO"
           onClick={() => onSelectSubpage('stored_info')}
         />
         <SettingsBar
-          badge="06"
+          badge="03"
           title="API KEY SECURITY"
           onClick={() => onSelectSubpage('api_key_security')}
         />
         <SettingsBar
-          badge="07"
+          badge="04"
           title="PRIVACY POLICY & TERMS"
           onClick={() => onSelectSubpage('policy_terms')}
         />
         <SettingsBar
-          badge="08"
+          badge="05"
           title="ACCOUNT & DATA DELETE"
           tone="danger"
           onClick={() => onSelectSubpage('account_delete')}
