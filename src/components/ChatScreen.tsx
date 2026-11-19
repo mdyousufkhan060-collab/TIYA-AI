@@ -171,7 +171,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         <h1 className="font-display text-center text-lg font-bold tracking-[0.35em] text-white drop-shadow-[0_0_10px_rgba(56,189,248,0.75)]">
           {assistantTitle.toUpperCase()}
         </h1>
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onToggleVoice}
+            aria-label={isVoiceOn ? 'Stop talking with TIYA' : 'Talk with TIYA'}
+            aria-pressed={isVoiceOn}
+            className={`flex h-9 w-9 items-center justify-center rounded-full ring-1 backdrop-blur-sm active:scale-95 ${
+              isVoiceOn
+                ? 'bg-emerald-500/80 text-white ring-emerald-300 shadow-[0_0_14px_rgba(52,211,153,0.7)]'
+                : 'bg-[#0A1428]/70 text-cyan-100 ring-cyan-300/40'
+            }`}
+          >
+            {isVoiceOn ? <Square className="h-4 w-4" /> : <Mic className="h-[18px] w-[18px]" />}
+          </button>
           {messages.length > 0 && (
             <button
               type="button"
@@ -284,8 +297,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             <Send className="h-4 w-4" />
           </button>
         </form>
-
       </div>
+
+      {/* Same bottom bar as HOME, fixed to the screen bottom */}
+      <TiyaNeonNav
+        active="chat"
+        isVoiceOn={isVoiceOn}
+        onToggleVoice={onToggleVoice}
+        onOpenChat={() => undefined}
+        onOpenChatHistory={onOpenChatHistory}
+        onOpenTools={onOpenTools}
+        onOpenMore={onOpenMore}
+      />
     </div>
   );
 };

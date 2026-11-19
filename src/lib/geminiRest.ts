@@ -85,8 +85,10 @@ export async function pickChatModels(key: string, preferred?: string): Promise<s
   };
   const sorted = [...text].sort((a, b) => score(b) - score(a));
   const pref = String(preferred || '').trim();
+  // only trust a chosen model if it is a normal Gemini flash/pro model (odd experimental ones hang)
+  const prefOk = pref && /^gemini-[\d.]+-(flash|pro)|^gemini-(flash|pro)/.test(pref) && (text.length === 0 || text.includes(pref));
   const list = [
-    ...(pref && (text.length === 0 || text.includes(pref)) ? [pref] : []),
+    ...(prefOk ? [pref] : []),
     ...known.filter((k) => text.length === 0 || text.includes(k)),
     ...sorted,
   ];
@@ -124,14 +126,29 @@ export async function pickLiveModels(key: string, preferred: string[]): Promise<
 }
 
 /** POST models/{model}:generateContent — body uses Google's REST field names. */
-export async function generateContent(key: string, model: string, body: Record<string, unknown>): Promise<any> {
-  const r = await fetch(`${BASE}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!r.ok) throw await readError(r);
-  return r.json();
+export async function generateContent(
+  key: string,
+  model: string,
+  body: Record<string, unknown>,
+  timeoutMs = 25000,
+): Promise<any> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(`${BASE}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    if (!r.ok) throw await readError(r);
+    return await r.json();
+  } catch (err) {
+    if ((err as any)?.name === 'AbortError') throw new ApiError(504, `504 ${model} took too long`);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function responseText(res: any): string {

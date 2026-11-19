@@ -189,7 +189,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </button>
             )}
           </div>
-        ) : !hasKey && !canUseWithoutKey && captionLines.length === 0 ? (
+        ) : !hasKey && !canUseWithoutKey ? (
           <button
             type="button"
             onClick={onOpenConnections}
@@ -199,18 +199,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </button>
         ) : null}
 
-        {captionLines.length > 0 && (
-          <div data-testid="home-live-caption" className="space-y-0.5 rounded-xl bg-[#020817]/70 px-3 py-1.5 backdrop-blur-[2px]">
-            {captionLines.map((msg) => (
-              <p key={msg.id} className="line-clamp-2 text-[12px] leading-snug">
-                <span className={`mr-1.5 font-semibold ${msg.role === 'user' ? 'text-sky-300' : 'text-cyan-300'}`}>
-                  {msg.role === 'user' ? settings.yourName.trim() || 'You' : assistantTitle}:
-                </span>
-                <span className="text-slate-100/95">{msg.text.replace(/\s+/g, ' ').trim()}</span>
-              </p>
-            ))}
-          </div>
-        )}
 
         {/* voice bars + status */}
         <div className="flex flex-col items-center gap-1 pt-0.5">
