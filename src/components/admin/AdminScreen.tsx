@@ -23,6 +23,7 @@ import {
 } from '../../types/tiya';
 import { calculateAge, computePaidUntilIso } from '../../utils/authErrors';
 import { DeveloperToolsPage } from '../settings/DeveloperPrivacyPages';
+import { PremiumGrantCard } from './PremiumGrantCard';
 
 type AdminView =
   | 'hub'
@@ -68,6 +69,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   // User Detail editable draft
   const [draftPremium, setDraftPremium] = useState(false);
   const [draftMonths, setDraftMonths] = useState<1 | 3 | 6 | 12>(1);
+  const [monthsTouched, setMonthsTouched] = useState(false);
   const [draftDailyLimit, setDraftDailyLimit] = useState('');
   const [draftBlocked, setDraftBlocked] = useState(false);
   const [draftBirthYear, setDraftBirthYear] = useState('');
@@ -125,7 +127,13 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         setUsersError(error.message);
         return;
       }
-      setUsers((data as UserProfile[]) || []);
+      // The database column is is_blocked; keep "blocked" in step for the UI
+      setUsers(
+        ((data as UserProfile[]) || []).map((u) => ({
+          ...u,
+          blocked: Boolean(u.is_blocked ?? u.blocked),
+        })),
+      );
       setUsersLoaded(true);
     } catch {
       setUsersError('Failed to load users.');
@@ -182,6 +190,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
     const isPrem = (user.plan || '').toLowerCase() === 'premium';
     setDraftPremium(isPrem);
     setDraftMonths(1);
+    setMonthsTouched(false);
     setDraftDailyLimit(
       typeof user.daily_limit === 'number' ? String(user.daily_limit) : '',
     );
@@ -219,15 +228,22 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
     }
 
     const nextPlan = draftPremium ? 'premium' : 'free';
+    // Keep an existing (e.g. granted) expiry unless the admin picked new months
+    const currentExpiry = selectedUser.paid_until ? new Date(selectedUser.paid_until).getTime() : 0;
+    const keepExpiry =
+      draftPremium && !monthsTouched && currentExpiry > Date.now() &&
+      (selectedUser.plan || '').toLowerCase() === 'premium';
     const nextPaidUntil = draftPremium
-      ? computePaidUntilIso(draftMonths)
+      ? keepExpiry
+        ? selectedUser.paid_until
+        : computePaidUntilIso(draftMonths)
       : null;
 
     const patch: Partial<UserProfile> = {
       plan: nextPlan,
       paid_until: nextPaidUntil,
       daily_limit: parsedLimit,
-      blocked: draftBlocked,
+      is_blocked: draftBlocked,
       birth_year: parsedBirth,
       admin_note: draftNote.trim() || null,
     };
@@ -243,7 +259,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         return;
       }
 
-      const updated: UserProfile = { ...selectedUser, ...patch };
+      const updated: UserProfile = { ...selectedUser, ...patch, blocked: draftBlocked };
       setSelectedUser(updated);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       setSaveUserMsg('Saved.');
@@ -678,7 +694,10 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                       <button
                         key={m}
                         type="button"
-                        onClick={() => setDraftMonths(m)}
+                        onClick={() => {
+                          setDraftMonths(m);
+                          setMonthsTouched(true);
+                        }}
                         className={`min-h-[40px] rounded-xl text-xs font-semibold ${
                           draftMonths === m
                             ? 'bg-teal-600 text-white'
@@ -788,6 +807,17 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                 <span>SAVE</span>
               </button>
             </div>
+
+            {/* GRANT PREMIUM (months + voice/text replies + payment record) */}
+            <PremiumGrantCard
+              user={selectedUser}
+              onUpdated={(patchP) => {
+                const upd: UserProfile = { ...selectedUser, ...patchP };
+                setSelectedUser(upd);
+                setDraftPremium(true);
+                setUsers((prev) => prev.map((u) => (u.id === upd.id ? upd : u)));
+              }}
+            />
 
             {/* SEND NOTIFICATION TO USER */}
             <form

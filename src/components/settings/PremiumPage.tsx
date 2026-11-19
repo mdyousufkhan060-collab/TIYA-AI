@@ -45,12 +45,15 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, onBack }) => 
   const planLabel = isPremium ? 'PREMIUM' : 'FREE';
   const validUntil = formatValidUntil(profile?.paid_until, isPremium);
   const repliesLeft = formatRepliesLeft(profile);
+  const voiceLeft = isPremium ? String(Math.max(0, profile?.premium_voice_left ?? 0)) : '—';
+  const textLeft = isPremium ? String(Math.max(0, profile?.premium_text_left ?? 0)) : '—';
 
   const rows = [
     { id: 'plan', label: 'PLAN', value: planLabel, accent: isPremium },
     { id: 'valid_until', label: 'VALID UNTIL', value: validUntil, accent: false },
-    { id: 'voice_left', label: 'VOICE REPLIES LEFT', value: repliesLeft, accent: false },
-    { id: 'text_left', label: 'TEXT REPLIES LEFT', value: repliesLeft, accent: false },
+    { id: 'voice_left', label: 'VOICE REPLIES LEFT', value: voiceLeft, accent: false },
+    { id: 'text_left', label: 'TEXT REPLIES LEFT', value: textLeft, accent: false },
+    { id: 'daily', label: 'DAILY LIMIT', value: repliesLeft, accent: false },
   ];
 
   return (

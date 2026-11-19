@@ -174,6 +174,10 @@ export interface UserProfile {
   daily_limit: number | null;
   used_today: number | null;
   blocked: boolean | null;
+  /** real database column (blocked is kept for older code) */
+  is_blocked?: boolean | null;
+  premium_voice_left?: number | null;
+  premium_text_left?: number | null;
   admin_note: string | null;
   last_seen_at?: string | null;
   created_at?: string | null;

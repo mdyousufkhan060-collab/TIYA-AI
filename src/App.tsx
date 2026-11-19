@@ -62,7 +62,8 @@ import { SettingsHub } from './components/settings/SettingsHub';
 import { ConnectionsPage } from './components/settings/ConnectionsPage';
 import { VoiceLanguagePage } from './components/settings/VoiceLanguagePage';
 import { ChatsMemoryPage } from './components/settings/ChatsMemoryPage';
-import { PremiumPage } from './components/settings/PremiumPage';
+import { PremiumPage, isProfilePremium } from './components/settings/PremiumPage';
+import { premiumChat } from './lib/premium';
 import { MyAccountPage } from './components/settings/MyAccountPage';
 import {
   AboutGuidePage,
@@ -591,7 +592,9 @@ export default function App() {
       }
 
       const key = settings.apiKey.trim();
-      if (!key) {
+      // No own key: Premium customers (and the admin) use the TIYA PREMIUM server
+      const usePremiumServer = !key && (isAdmin || isProfilePremium(profile));
+      if (!key && !usePremiumServer) {
         setChatError('No API key. Add your Gemini API key in Settings > Connections.');
         return;
       }
@@ -634,6 +637,61 @@ export default function App() {
           userAge,
           memories,
         );
+        if (usePremiumServer) {
+          const premiumSystem =
+            systemInstruction +
+            '\n\nPHONE ACTIONS: when the user asks to open an app, call someone, or send/call on WhatsApp or Messenger, ' +
+            'reply with one short Bengali sentence and then put exactly one JSON object at the end, for example ' +
+            '{"action":"open_app","app":"YouTube"} or {"action":"call","contact":"Ma"} or {"action":"whatsapp_call","contact":"My House"} or ' +
+            '{"action":"whatsapp_message","contact":"Rahim","text":"..."} or {"action":"messenger_message","contact":"Rahim","text":"..."}. ' +
+            'Never claim the action is already done.';
+          const pr = await premiumChat([
+            { role: 'system', content: premiumSystem },
+            ...historySnapshot.map((h) => ({ role: h.role, content: h.text })),
+            { role: 'user', content: text },
+          ]);
+          if (!pr.ok) {
+            updateMessages((prev) => [
+              ...prev,
+              {
+                id: makeId(),
+                role: 'assistant',
+                text: pr.message || 'Premium উত্তর পাওয়া যায়নি।',
+                timestamp: Date.now(),
+                source: 'chat',
+              },
+            ]);
+            if (pr.reason === 'server_error' || pr.reason === 'network') {
+              setErrorLog(appendErrorLog('chat', 'PREMIUM_ERROR', pr.message || pr.reason || ''));
+            }
+            return;
+          }
+          if (typeof pr.voiceLeft === 'number' || typeof pr.textLeft === 'number') {
+            setProfile((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    premium_voice_left: pr.voiceLeft ?? prev.premium_voice_left,
+                    premium_text_left: pr.textLeft ?? prev.premium_text_left,
+                  }
+                : prev,
+            );
+          }
+          const { cleanText: pClean, action: pAction } = extractActionFromText(pr.text || '');
+          updateMessages((prev) => [
+            ...prev,
+            {
+              id: makeId(),
+              role: 'assistant',
+              text: pClean || (pAction ? getConfirmationPromptText(pAction) : 'বলুন, কীভাবে সাহায্য করতে পারি?'),
+              timestamp: Date.now(),
+              source: 'chat',
+              ...(pAction ? { pendingAction: pAction, actionStatus: 'pending' as const } : {}),
+            },
+          ]);
+          return;
+        }
+
         const res = await fetch('/api/gemini/chat', {
           method: 'POST',
           headers: {
@@ -721,6 +779,8 @@ export default function App() {
       deliverMotivationInChat,
       fetchLatestPublishedMotivation,
       handleNavigateCommand,
+      isAdmin,
+      profile,
       memories,
       messages,
       settings,
