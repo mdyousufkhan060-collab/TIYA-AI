@@ -51,7 +51,10 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
       num: '03',
       id: 'voice_language',
       title: 'VOICE & LANGUAGE',
-      value: `${settings.language} · ${settings.voiceName}`,
+      value:
+        settings.language === 'Bengali' && settings.bengaliDialect && settings.bengaliDialect !== 'Standard'
+          ? `Bangla (${settings.bengaliDialect}) · ${settings.voiceName}`
+          : `${settings.language} · ${settings.voiceName}`,
     },
     {
       num: '04',

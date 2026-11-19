@@ -2,6 +2,7 @@ import {
   AFFECTION_LEVELS,
   ALL_PERSONALITIES,
   ALL_LANGUAGES,
+  BENGALI_DIALECTS,
   TIYA_FIXED_NAME,
   ChatMessage,
   DEFAULT_LIVE_MODELS,
@@ -52,6 +53,7 @@ export const DEFAULT_SETTINGS: TiyaSettings = {
   customPersonalityPrompt: '',
   affection: 'Off',
   language: 'Bengali',
+  bengaliDialect: 'Standard',
   responseStyle: 'Normal',
   voiceName: FEMALE_VOICES[0].id,
   speechSpeed: 1.0,
@@ -102,6 +104,9 @@ export function loadSettings(): TiyaSettings {
       ...parsed,
       assistantName: TIYA_FIXED_NAME,
       language: validLanguage,
+      bengaliDialect: BENGALI_DIALECTS.some((d) => d.id === parsed.bengaliDialect)
+        ? parsed.bengaliDialect!
+        : 'Standard',
       responseStyle: validStyle,
       voiceName: validVoice,
       personality: validPersonality,

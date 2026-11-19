@@ -23,7 +23,7 @@ import {
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { getConfirmationPromptText, validatePhoneAction } from '../utils/phoneActions';
 import { validateNavigateToolArgs } from '../utils/tiyaNavigation';
-import { DEFAULT_LIVE_MODELS, LiveModelInfo, languageCode } from '../types/tiya';
+import { BENGALI_DIALECTS, DEFAULT_LIVE_MODELS, LiveModelInfo, languageCode } from '../types/tiya';
 
 const createAiClient = (apiKey: string) => new GoogleGenAI({ apiKey });
 
@@ -319,7 +319,11 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         Thai: `สวัสดีค่ะ${userPart} ฉันชื่อ${name} เสียงของคุณใช้งานได้ดีค่ะ`,
         Vietnamese: `Xin chào${userPart} mình là ${name}. Giọng nói của bạn hoạt động rất tốt.`,
       };
-      const text = samples[body?.language || 'Bengali'] || samples.Bengali;
+      const dialect = BENGALI_DIALECTS.find((d) => d.id === body?.bengaliDialect);
+      const text =
+        (body?.language || 'Bengali') === 'Bengali' && dialect && dialect.id !== 'Standard'
+          ? dialect.sample
+          : samples[body?.language || 'Bengali'] || samples.Bengali;
       const ai = createAiClient(key);
       const ttsModels = Array.from(
         new Set([String(body?.ttsModel || '').trim(), 'gemini-3.8-flash-lite-tts', 'gemini-2.5-flash-preview-tts'].filter(Boolean)),

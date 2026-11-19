@@ -5,6 +5,7 @@ import {
   AFFECTION_LEVELS,
   ALL_LANGUAGES,
   ALL_PERSONALITIES,
+  BENGALI_DIALECTS,
   FEMALE_VOICES,
   FemaleVoiceId,
   Personality,
@@ -163,6 +164,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
           assistantName: settings.assistantName || 'TIYA',
           yourName: settings.yourName,
           language: settings.language,
+          bengaliDialect: settings.bengaliDialect,
           ttsModel: settings.ttsModel,
         }),
       });
@@ -342,7 +344,14 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
                   <p className={`text-xs font-semibold ${active ? 'text-teal-300' : 'text-slate-100'}`}>{st}</p>
                   <p className="text-[10px] text-slate-400">{STYLE_INFO[st]}</p>
                 </div>
-                {active && <Check className="h-4 w-4 text-teal-400" />}
+                {lang === 'Bengali' ? (
+                  <span className="flex items-center gap-1">
+                    {active && <Check className="h-4 w-4 text-teal-400" />}
+                    <span className="text-slate-400">›</span>
+                  </span>
+                ) : (
+                  active && <Check className="h-4 w-4 text-teal-400" />
+                )}
               </button>
             );
           })}
@@ -375,6 +384,39 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     );
   }
 
+  if (subpage === 'bengali_dialect') {
+    return (
+      <SettingsShell title="BANGLA DIALECT" onBack={() => onSelectSubpage('language')}>
+        <div className="space-y-1.5 pb-3">
+          <p className="px-1 text-[10.5px] text-slate-400">Choose how TIYA speaks Bangla</p>
+          {BENGALI_DIALECTS.map((d) => {
+            const active = settings.language === 'Bengali' && settings.bengaliDialect === d.id;
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => onUpdateSettings({ language: 'Bengali', bengaliDialect: d.id })}
+                className={`flex min-h-[48px] w-full items-center justify-between rounded-xl border px-3 py-1.5 text-left ${
+                  active ? 'border-teal-500 bg-teal-500/10' : 'border-white/[0.08] bg-[#11151E]'
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className={`text-xs font-semibold ${active ? 'text-teal-300' : 'text-slate-100'}`}>
+                    {d.label}
+                    {d.id === 'Standard' && <span className="ml-1.5 text-[10px] text-slate-400">(Default)</span>}
+                  </p>
+                  <p className="truncate text-[10.5px] text-slate-400">{d.native}</p>
+                </div>
+                {active && <Check className="h-4 w-4 shrink-0 text-teal-400" />}
+              </button>
+            );
+          })}
+          <p className="px-1 pt-1 text-[10px] text-slate-500">Voice preview in 04 VOICE plays in the chosen dialect.</p>
+        </div>
+      </SettingsShell>
+    );
+  }
+
   if (subpage === 'language') {
     return (
       <SettingsShell title="LANGUAGE" onBack={() => onSelectSubpage(null)}>
@@ -385,7 +427,14 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
               <button
                 key={lang}
                 type="button"
-                onClick={() => onUpdateSettings({ language: lang })}
+                onClick={() => {
+                  if (lang === 'Bengali') {
+                    onUpdateSettings({ language: lang });
+                    onSelectSubpage('bengali_dialect');
+                  } else {
+                    onUpdateSettings({ language: lang });
+                  }
+                }}
                 className={`flex h-11 w-full items-center justify-between rounded-xl border px-3 text-xs font-medium ${
                   active
                     ? 'border-teal-500 bg-teal-500/10 font-semibold text-teal-300'
@@ -393,7 +442,9 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
                 }`}
               >
                 <span>
-                  {lang === 'Bengali' ? 'Bengali (Default)' : lang}
+                  {lang === 'Bengali'
+                    ? `Bengali · ${BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect)?.label || 'Standard Bangla'}`
+                    : lang}
                   {native !== lang && <span className="ml-2 text-slate-400">{native}</span>}
                 </span>
                 {active && <Check className="h-4 w-4 text-teal-400" />}
@@ -655,7 +706,15 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     { num: '02', id: 'your_name', title: 'YOUR NAME', value: settings.yourName.trim() || 'Not set' },
     { num: '03', id: 'personality', title: 'PERSONALITY', value: settings.personality },
     { num: '04', id: 'response_style', title: 'RESPONSE STYLE', value: settings.responseStyle },
-    { num: '05', id: 'language', title: 'LANGUAGE', value: settings.language },
+    {
+      num: '05',
+      id: 'language',
+      title: 'LANGUAGE',
+      value:
+        settings.language === 'Bengali' && settings.bengaliDialect !== 'Standard'
+          ? `Bangla · ${settings.bengaliDialect}`
+          : settings.language,
+    },
     { num: '06', id: 'voice', title: 'VOICE', value: settings.voiceName },
     { num: '07', id: 'voice_model', title: 'VOICE MODEL', value: activeLiveModel.replace(/^gemini-/, '') },
     { num: '08', id: 'speech_speed', title: 'SPEECH SPEED', value: `${settings.speechSpeed.toFixed(2)}x` },

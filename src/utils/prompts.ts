@@ -1,5 +1,6 @@
 import {
   ADULT_ONLY_PERSONALITIES,
+  BENGALI_DIALECTS,
   AffectionLevel,
   ChatMessage,
   MemoryItem,
@@ -121,6 +122,7 @@ export function buildTiyaSystemPrompt(
   const assistantName = 'TIYA';
   const userName = settings.yourName.trim();
   const defaultLang = settings.language || 'Bengali';
+  const dialectInfo = BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect);
   const memoryBlock = buildMemorySummary(recentMessages, memories);
   const { personality, affection, isMinor } = resolveEffectivePersona(settings, userAge);
 
@@ -135,7 +137,12 @@ export function buildTiyaSystemPrompt(
       ? `The user's name is "${userName}". Address the user naturally by their name (${userName}) when greeting or speaking personally.`
       : `The user has not set their name yet.`,
     `Default spoken and written language: ${defaultLang}. Always start and reply in ${defaultLang}, written in its own native script and spoken with natural native pronunciation (for Bengali, use natural conversational Bangladeshi/standard Bengali script, e.g. "হ্যালো! আমি তিয়া, কেমন আছেন?").`,
-    `Dynamic language switching: If the user asks you to speak or reply in another language (for example "ইংলিশে বলো", "উর্দুতে বলো", "Speak in English", "হিন্দিতে বলো"), immediately switch to that requested language until asked otherwise.`,
+    ...(defaultLang === 'Bengali' && settings.bengaliDialect && settings.bengaliDialect !== 'Standard'
+      ? [
+          `Regional dialect: the user chose ${dialectInfo?.label} Bangla (${dialectInfo?.native}). Speak and write in this dialect naturally, like a real local person: ${dialectInfo?.hint}. Use Bengali script. Understand standard Bangla too. If the user asks for শুদ্ধ/standard Bangla, switch to standard.`,
+        ]
+      : []),
+    `Dynamic language switching: If the user asks you to speak or reply in another language (for example "ইংলিশে বলো", "উর্দুতে বলো", "Speak in English", "হিন্দিতে বলো"), immediately switch to that requested language until asked otherwise. The same for Bangladeshi regional dialects: if asked "সিলেটি ভাষায় বলো", "নোয়াখালীর ভাষায় বলো", "চাটগাঁইয়া ভাষায় বলো", "বরিশালের ভাষায় বলো" etc., speak that dialect naturally; "শুদ্ধ ভাষায় বলো" returns to standard Bangla.`,
     `Personality (${personality}): ${PERSONALITY_GUIDANCE[personality]}${customNote}`,
     `Affection level (${affection}): ${AFFECTION_GUIDANCE[affection]}`,
     `Response length (${settings.responseStyle}): ${STYLE_GUIDANCE[settings.responseStyle]}`,
