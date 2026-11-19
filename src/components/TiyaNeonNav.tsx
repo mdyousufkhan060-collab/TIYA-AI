@@ -27,10 +27,11 @@ export const TiyaNeonNav: React.FC<TiyaNeonNavProps> = ({
 
   return (
             <nav
-      aria-label="Home navigation"
+      aria-label="Main navigation"
       data-testid="home-neon-bottom-bar"
-      className="grid h-[68px] grid-cols-5 items-center rounded-2xl border border-cyan-400/30 bg-[#06122A]/90 px-1 shadow-[0_0_18px_rgba(34,211,238,0.18)] backdrop-blur-md"
+      className="relative z-30 shrink-0 border-t border-cyan-400/25 bg-[#050E22]/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_18px_rgba(34,211,238,0.12)] backdrop-blur-md"
     >
+      <div className="grid h-[64px] grid-cols-5 items-center px-1">
       <button type="button" onClick={onOpenChat} className={`${navBtn} ${active === 'chat' ? activeCls : ''}`}>
         <MessageSquare className="h-5 w-5" />
         <span className="text-[9.5px] font-semibold tracking-wide">CHAT</span>
@@ -73,6 +74,7 @@ export const TiyaNeonNav: React.FC<TiyaNeonNavProps> = ({
         <Settings className="h-5 w-5" />
         <span className="text-[9.5px] font-semibold tracking-wide">SETTINGS</span>
       </button>
+      </div>
     </nav>
   );
 };

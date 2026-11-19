@@ -50,8 +50,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  const listRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    listEndRef.current?.scrollIntoView({ behavior: settings.reduceMotion ? 'auto' : 'smooth' });
+    // scroll only the message list (scrollIntoView also pushed the whole page up)
+    const el = listRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: settings.reduceMotion ? 'auto' : 'smooth' });
   }, [messages.length, isSending, settings.reduceMotion]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -154,7 +157,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[#020714]/70" />
 
       {/* Top row: HOME · TIYA · clear */}
-      <header className="relative z-20 grid h-14 shrink-0 grid-cols-3 items-center px-3">
+      <header className="relative z-20 grid shrink-0 grid-cols-3 items-center px-3 pt-[env(safe-area-inset-top)] [min-height:calc(3.5rem+env(safe-area-inset-top))]">
         <div className="flex justify-start">
           <button
             type="button"
@@ -183,7 +186,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       </header>
 
       {/* Messages */}
-      <div data-testid="chat-message-list" className="tiya-scroll relative z-10 min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
+      <div ref={listRef} data-testid="chat-message-list" className="tiya-scroll relative z-10 min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {messages.length === 0 ? (
           <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-6 text-center">
             <p className="font-display text-sm font-semibold text-white">Start a conversation</p>
@@ -235,7 +238,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       </div>
 
       {/* Lower deck: error · input · same bottom bar as HOME */}
-      <div className="relative z-20 shrink-0 space-y-2 px-3 pb-[max(env(safe-area-inset-bottom),10px)] pt-1">
+      <div className="relative z-20 shrink-0 space-y-2 px-3 pb-3 pt-1">
         {(chatError || micError) && (
           <div className="flex items-center justify-between gap-2 rounded-xl border border-rose-500/40 bg-[#080D1B]/90 px-3 py-1.5 text-[11px] text-rose-300">
             <span className="min-w-0 truncate">{micError || chatError}</span>
@@ -282,17 +285,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           </button>
         </form>
 
-        <div className="pt-2">
-          <TiyaNeonNav
-            active="chat"
-            isVoiceOn={isVoiceOn}
-            onToggleVoice={onToggleVoice}
-            onOpenChat={() => undefined}
-            onOpenChatHistory={onOpenChatHistory}
-            onOpenTools={onOpenTools}
-            onOpenMore={onOpenMore}
-          />
-        </div>
       </div>
     </div>
   );

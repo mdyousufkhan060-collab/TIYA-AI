@@ -460,6 +460,28 @@ export class LocalLiveSocket {
   // Turn mode: used when Gemini Live (WebSocket) cannot connect on this key/network.
   // Mic audio → transcribe → chat → TTS, all over normal HTTPS.
   private turnMode = false;
+  private liveAttempt = 0;
+
+  /** Live voice dropped (model not available, quota, network) → keep talking in standard voice */
+  private liveBroke(label: string, detail: string) {
+    if (this.closedByClient || this.turnMode) return;
+    if (label === 'Invalid API key' || label === 'No API key') {
+      this.emit({ type: 'error', label, detail });
+      return;
+    }
+    this.liveAttempt++;
+    const s = this.session;
+    this.session = null;
+    try {
+      s?.close();
+    } catch {
+      // ignore
+    }
+    this.turnMode = true;
+    this.turnChunks = [];
+    this.turnSpeech = false;
+    this.emit({ type: 'interrupted' });
+  }
   private apiKey = '';
   private voiceName = 'Zephyr';
   private language = 'Bengali';
@@ -559,6 +581,7 @@ export class LocalLiveSocket {
 
     for (const modelId of liveCandidates) {
       if (this.closedByClient) return;
+      const attempt = ++this.liveAttempt;
       let connected = false;
       let failedBeforeOpen = false;
       try {
@@ -597,20 +620,16 @@ export class LocalLiveSocket {
               failedBeforeOpen = !connected;
               const c = classifyGeminiError(e?.message || 'Gemini Live connection error');
               lastError = { label: c.label, detail: c.detail };
-              if (connected) this.emit({ type: 'error', label: c.label, detail: c.detail });
+              if (connected && attempt === this.liveAttempt) this.liveBroke(c.label, c.detail);
             },
             onclose: (e: CloseEvent) => {
               if (!connected) {
                 failedBeforeOpen = true;
                 const c = classifyGeminiError(e?.reason || 'Live session closed unexpectedly');
                 lastError = { label: c.label, detail: c.detail };
-              } else if (!this.closedByClient) {
-                if (e?.reason) {
-                  const c = classifyGeminiError(e.reason);
-                  this.emit({ type: 'error', label: c.label, detail: c.detail });
-                } else {
-                  this.emit({ type: 'closed' });
-                }
+              } else if (!this.closedByClient && attempt === this.liveAttempt) {
+                const c = classifyGeminiError(e?.reason || 'Live session closed');
+                this.liveBroke(c.label, c.detail);
               }
             },
           },

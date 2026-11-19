@@ -122,7 +122,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#020714] via-[#020714]/80 to-transparent" />
 
       {/* Top row: small ADMIN (admin only) · TIYA · bell */}
-      <header className="relative z-20 grid h-14 shrink-0 grid-cols-3 items-center px-3">
+      <header className="relative z-20 grid shrink-0 grid-cols-3 items-center px-3 pt-[env(safe-area-inset-top)] [min-height:calc(3.5rem+env(safe-area-inset-top))]">
         <div className="flex justify-start">
           {isAdmin && (
             <button
@@ -164,7 +164,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <div className="relative z-10 min-h-0 flex-1" />
 
       {/* Lower deck: phone-action card / notice / caption, status, nav */}
-      <div className="relative z-20 shrink-0 space-y-2 px-3 pb-[max(env(safe-area-inset-bottom),10px)]">
+      <div className="relative z-20 shrink-0 space-y-2 px-3 pb-3">
         {pendingActionMessage?.pendingAction && (
           <ActionConfirmCard
             action={pendingActionMessage.pendingAction}
@@ -228,16 +228,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </p>
         </div>
 
-        {/* Bottom bar: CHAT · HISTORY · (voice) · TOOLS · SETTINGS */}
-        <TiyaNeonNav
-          isVoiceOn={isVoiceOn}
-          onToggleVoice={onToggleVoice}
-          onOpenChat={onOpenChat}
-          onOpenChatHistory={onOpenChatHistory}
-          onOpenTools={onOpenTools}
-          onOpenMore={onOpenMore}
-        />
       </div>
+
+      {/* Bottom bar fixed to the screen bottom: CHAT · HISTORY · (voice) · TOOLS · SETTINGS */}
+      <TiyaNeonNav
+        isVoiceOn={isVoiceOn}
+        onToggleVoice={onToggleVoice}
+        onOpenChat={onOpenChat}
+        onOpenChatHistory={onOpenChatHistory}
+        onOpenTools={onOpenTools}
+        onOpenMore={onOpenMore}
+      />
     </div>
   );
 };
