@@ -389,6 +389,38 @@ export function installClientApi(): void {
 // ---------------------------------------------------------------------------
 // LocalLiveSocket — same messages as the old /ws/live server, but runs on the device
 // ---------------------------------------------------------------------------
+function pcmToWavBase64(chunks: Int16Array[], rate: number): string {
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const buf = new ArrayBuffer(44 + total * 2);
+  const v = new DataView(buf);
+  const w = (o: number, str: string) => {
+    for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i));
+  };
+  w(0, 'RIFF');
+  v.setUint32(4, 36 + total * 2, true);
+  w(8, 'WAVE');
+  w(12, 'fmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  w(36, 'data');
+  v.setUint32(40, total * 2, true);
+  let off = 44;
+  for (const c of chunks) {
+    for (let i = 0; i < c.length; i++, off += 2) v.setInt16(off, c[i], true);
+  }
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 0x8000)));
+  }
+  return btoa(bin);
+}
+
 type LiveSession = Awaited<ReturnType<GoogleGenAI['live']['connect']>>;
 
 export class LocalLiveSocket {
@@ -403,6 +435,21 @@ export class LocalLiveSocket {
   private extended = false;
   private connectTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingMotivation = new Map<string, { callId?: string; name: string; timer: ReturnType<typeof setTimeout> }>();
+
+  // Turn mode: used when Gemini Live (WebSocket) cannot connect on this key/network.
+  // Mic audio → transcribe → chat → TTS, all over normal HTTPS.
+  private turnMode = false;
+  private apiKey = '';
+  private voiceName = 'Zephyr';
+  private systemInstruction = 'You are TIYA.';
+  private turnHistory: Array<{ role: 'user' | 'assistant'; text: string }> = [];
+  private turnChunks: Int16Array[] = [];
+  private turnSpeech = false;
+  private turnSilenceMs = 0;
+  private turnSpeechMs = 0;
+  private turnNoise = 0.006;
+  private turnBusy = false;
+  private turnMuteUntil = 0;
 
   constructor() {
     setTimeout(() => {
@@ -456,10 +503,39 @@ export class LocalLiveSocket {
       this.emit({ type: 'error', label: 'No API key', detail: 'Add your Gemini API key in Settings > Connections.' });
       return;
     }
+    this.apiKey = apiKey;
+    this.voiceName = voiceName || 'Zephyr';
+    this.systemInstruction = systemInstruction;
     const ai = createAiClient(apiKey);
     let lastError = { label: 'Model not available', detail: 'No Live voice model available.' };
 
-    for (const modelId of models) {
+    // Check the key first and find the Live models this key can really use
+    const discovered: string[] = [];
+    try {
+      const pager = await ai.models.list({ config: { pageSize: 100 } });
+      for await (const m of pager) {
+        const id = (m.name || '').replace(/^models\//, '');
+        const acts = (Array.isArray(m.supportedActions) ? m.supportedActions : []).join(' ').toLowerCase();
+        if (id && (acts.includes('bidigeneratecontent') || /live|native-audio/i.test(id))) discovered.push(id);
+      }
+    } catch (err) {
+      const c = classifyGeminiError(errMsg(err));
+      if (c.label === 'Invalid API key' || c.label === 'No API key') {
+        this.emit({ type: 'error', label: c.label, detail: c.detail });
+        return;
+      }
+    }
+    if (this.closedByClient) return;
+    const known = ['gemini-2.5-flash-native-audio-preview-12-2025', 'gemini-live-2.5-flash-preview', 'gemini-2.0-flash-live-001'];
+    const discoveredSet = new Set(discovered);
+    const ordered = [
+      ...models.filter((m) => discovered.length === 0 || discoveredSet.has(m)),
+      ...discovered,
+      ...(discovered.length === 0 ? known : []),
+    ];
+    const liveCandidates = Array.from(new Set(ordered.filter(Boolean))).slice(0, 4);
+
+    for (const modelId of liveCandidates) {
       if (this.closedByClient) return;
       let connected = false;
       let failedBeforeOpen = false;
@@ -518,7 +594,7 @@ export class LocalLiveSocket {
           },
         });
         const timeout = new Promise<never>((_r, reject) => {
-          this.connectTimer = setTimeout(() => reject(new Error('Connection timeout — Model not available')), 10000);
+          this.connectTimer = setTimeout(() => reject(new Error('Connection timeout — Model not available')), 6000);
         });
         this.session = await Promise.race([sessionPromise, timeout]);
         if (this.connectTimer) {
@@ -541,13 +617,181 @@ export class LocalLiveSocket {
         const c = classifyGeminiError(errMsg(err));
         lastError = { label: c.label, detail: c.detail };
         this.closeSession();
-        if (!c.shouldFallback) {
+        if (c.label === 'Invalid API key' || c.label === 'No API key') {
           this.emit({ type: 'error', label: c.label, detail: c.detail });
           return;
         }
       }
     }
-    if (!this.closedByClient) this.emit({ type: 'error', label: lastError.label, detail: lastError.detail });
+    if (this.closedByClient) return;
+    // Live voice is not reachable — keep talking in turn mode instead of failing
+    void lastError;
+    this.turnMode = true;
+    this.emit({ type: 'ready', model: 'TIYA Voice (standard)' });
+  }
+
+  // ----------------------------- turn mode -----------------------------
+  private onTurnAudio(b64: string) {
+    if (this.turnBusy || Date.now() < this.turnMuteUntil) return;
+    const bin = atob(b64);
+    const pcm = new Int16Array(bin.length >> 1);
+    for (let i = 0; i < pcm.length; i++) {
+      const lo = bin.charCodeAt(i * 2);
+      const hi = bin.charCodeAt(i * 2 + 1);
+      let v = (hi << 8) | lo;
+      if (v >= 0x8000) v -= 0x10000;
+      pcm[i] = v;
+    }
+    let sum = 0;
+    for (let i = 0; i < pcm.length; i++) {
+      const f = pcm[i] / 32768;
+      sum += f * f;
+    }
+    const rms = Math.sqrt(sum / Math.max(1, pcm.length));
+    const ms = (pcm.length / 16000) * 1000;
+    const startLevel = Math.max(this.turnNoise * 3, 0.02);
+
+    if (!this.turnSpeech) {
+      this.turnNoise = this.turnNoise * 0.95 + Math.min(rms, 0.05) * 0.05;
+      // keep ~0.5 s of audio before speech starts
+      this.turnChunks.push(pcm);
+      while (this.turnChunks.length > 2) this.turnChunks.shift();
+      if (rms > startLevel) {
+        this.turnSpeech = true;
+        this.turnSilenceMs = 0;
+        this.turnSpeechMs = ms;
+      }
+      return;
+    }
+
+    this.turnChunks.push(pcm);
+    this.turnSpeechMs += ms;
+    if (rms < startLevel * 0.6) this.turnSilenceMs += ms;
+    else this.turnSilenceMs = 0;
+
+    if (this.turnSilenceMs >= 900 || this.turnSpeechMs >= 15000) {
+      const chunks = this.turnChunks;
+      const spoke = this.turnSpeechMs - this.turnSilenceMs;
+      this.turnChunks = [];
+      this.turnSpeech = false;
+      this.turnSilenceMs = 0;
+      this.turnSpeechMs = 0;
+      if (spoke >= 350) void this.runTurn(chunks);
+    }
+  }
+
+  private async runTurn(chunks: Int16Array[]) {
+    this.turnBusy = true;
+    try {
+      const wav = pcmToWavBase64(chunks, 16000);
+      const heard = await this.turnTranscribe(wav);
+      if (this.closedByClient) return;
+      if (!heard) return;
+      this.emit({ type: 'input_transcript', text: heard });
+
+      const res = await handle('/api/gemini/chat', this.apiKey, {
+        message: heard,
+        history: this.turnHistory.slice(-12),
+        systemInstruction:
+          this.systemInstruction +
+          '\n\nThis is a spoken conversation: reply in 1-3 short natural sentences, no lists, no emojis, no markdown.',
+      });
+      if (this.closedByClient) return;
+      const data = res.json as any;
+      if (res.status !== 200 || !data?.ok) {
+        this.emit({ type: 'error', label: data?.label || 'Connection failed', detail: data?.detail || 'Could not get a reply.' });
+        return;
+      }
+      if (data.action) this.emit({ type: 'phone_action', action: data.action });
+      if (data.navigate) this.emit({ type: 'navigate', command: data.navigate });
+      const reply = String(data.text || '').trim();
+      this.turnHistory.push({ role: 'user', text: heard }, { role: 'assistant', text: reply });
+      if (this.turnHistory.length > 24) this.turnHistory.splice(0, this.turnHistory.length - 24);
+      if (reply) {
+        this.emit({ type: 'output_transcript', text: reply });
+        await this.turnSpeak(reply);
+      }
+      this.emit({ type: 'turn_complete' });
+    } catch (err) {
+      const c = classifyGeminiError(errMsg(err));
+      this.emit({ type: 'error', label: c.label, detail: c.detail });
+    } finally {
+      this.turnBusy = false;
+    }
+  }
+
+  private async turnTranscribe(wavB64: string): Promise<string> {
+    const ai = createAiClient(this.apiKey);
+    let lastErr: unknown = null;
+    for (const model of ['gemini-flash-lite-latest', ...CHAT_MODEL_FALLBACKS]) {
+      try {
+        const r = await ai.models.generateContent({
+          model,
+          contents: {
+            parts: [
+              { inlineData: { mimeType: 'audio/wav', data: wavB64 } },
+              {
+                text:
+                  'Transcribe exactly what the person says (usually Bengali, in Bengali script). ' +
+                  'Output only the words. If there is no clear speech, output nothing.',
+              },
+            ],
+          },
+        });
+        const t = (r.text || '').trim().replace(/^["'“]|["'”]$/g, '');
+        return t.length < 2 ? '' : t;
+      } catch (err) {
+        lastErr = err;
+        const c = classifyGeminiError(errMsg(err));
+        if (c.label === 'Invalid API key') throw err;
+      }
+    }
+    throw lastErr || new Error('Transcription failed');
+  }
+
+  private async turnSpeak(text: string) {
+    const ai = createAiClient(this.apiKey);
+    for (const model of ['gemini-2.5-flash-preview-tts', 'gemini-3.8-flash-lite-tts']) {
+      try {
+        const r = await ai.models.generateContent({
+          model,
+          contents: text,
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
+          },
+        });
+        const part = r.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+        const data = part?.inlineData?.data;
+        if (data) {
+          if (this.closedByClient) return;
+          const samples = Math.floor((atob(data).length) / 2);
+          this.turnMuteUntil = Date.now() + (samples / 24000) * 1000 + 600;
+          this.emit({ type: 'audio', data });
+          return;
+        }
+      } catch {
+        // try the next TTS model
+      }
+    }
+    // Last resort: the phone's own voice
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = /[\u0980-\u09FF]/.test(text) ? 'bn-BD' : 'en-US';
+      const female = synth.getVoices().find((v) => v.lang.startsWith(u.lang.slice(0, 2)) && /female|woman/i.test(v.name));
+      if (female) u.voice = female;
+      this.turnMuteUntil = Date.now() + 60000;
+      await new Promise<void>((resolve) => {
+        u.onend = () => resolve();
+        u.onerror = () => resolve();
+        synth.speak(u);
+      });
+      this.turnMuteUntil = Date.now() + 400;
+    } catch {
+      // ignore
+    }
   }
 
   private onLiveMessage(message: LiveServerMessage) {
@@ -622,6 +866,27 @@ export class LocalLiveSocket {
             : { found: false, message: 'এখনো কোনো প্রকাশিত মোটিভেশন পাওয়া যায়নি।' },
         );
       }
+    } else if (msg.type === 'audio' && msg.data && this.turnMode) {
+      this.onTurnAudio(String(msg.data));
+    } else if (msg.type === 'text' && msg.text && this.turnMode) {
+      void (async () => {
+        this.turnBusy = true;
+        try {
+          const res = await handle('/api/gemini/chat', this.apiKey, {
+            message: String(msg.text),
+            history: this.turnHistory.slice(-12),
+            systemInstruction: this.systemInstruction,
+          });
+          const data = res.json as any;
+          if (data?.ok && data.text) {
+            this.emit({ type: 'output_transcript', text: data.text });
+            await this.turnSpeak(String(data.text));
+            this.emit({ type: 'turn_complete' });
+          }
+        } finally {
+          this.turnBusy = false;
+        }
+      })();
     } else if (msg.type === 'audio' && msg.data && this.session) {
       this.session.sendRealtimeInput({ audio: { data: msg.data, mimeType: 'audio/pcm;rate=16000' } });
     } else if (msg.type === 'text' && msg.text && this.session) {

@@ -301,7 +301,7 @@ export function useTiyaLiveVoice({
         setErrorDetail('Timed out connecting to Gemini Live. Check your key or model.');
         setVoiceState('error');
       }
-    }, 12000);
+    }, 40000);
 
     ws.onopen = () => {
       const systemInstruction = buildTiyaSystemPrompt(

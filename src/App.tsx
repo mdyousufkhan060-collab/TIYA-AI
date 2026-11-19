@@ -1033,6 +1033,12 @@ export default function App() {
                 onCancelAction={handleCancelAction}
                 onClearChats={handleClearAllChats}
                 onOpenConnections={openConnections}
+                isVoiceOn={['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState)}
+                onToggleVoice={toggleVoice}
+                onOpenHome={() => navigateTo('home', 'hub', null)}
+                onOpenChatHistory={() => navigateTo('settings', 'chats_memory', null)}
+                onOpenTools={() => navigateTo('settings', 'phone_control', 'quick_actions')}
+                onOpenMore={() => navigateTo('settings', 'hub', null)}
               />
             )}
 
@@ -1162,7 +1168,7 @@ export default function App() {
               />
             )}
 
-            {activeTab !== 'home' && !isInSettingsSubpage && (
+            {activeTab !== 'home' && activeTab !== 'chat' && !isInSettingsSubpage && (
               <BottomNav
                 activeTab={activeTab}
                 voiceState={voiceState}

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, Send, Square, Trash2 } from 'lucide-react';
+import { Home, Mic, Send, Square, Trash2 } from 'lucide-react';
 import { ChatMessage, PhoneAction, TiyaSettings } from '../types/tiya';
 import { ActionConfirmCard } from './ActionConfirmCard';
+import { TiyaNeonNav } from './TiyaNeonNav';
 
 interface ChatScreenProps {
   settings: TiyaSettings;
@@ -14,6 +15,12 @@ interface ChatScreenProps {
   onCancelAction: (msgId: string) => void;
   onClearChats: () => void;
   onOpenConnections: () => void;
+  isVoiceOn: boolean;
+  onToggleVoice: () => void;
+  onOpenHome: () => void;
+  onOpenChatHistory: () => void;
+  onOpenTools: () => void;
+  onOpenMore: () => void;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
@@ -27,6 +34,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onCancelAction,
   onClearChats,
   onOpenConnections,
+  isVoiceOn,
+  onToggleVoice,
+  onOpenHome,
+  onOpenChatHistory,
+  onOpenTools,
+  onOpenMore,
 }) => {
   const [input, setInput] = useState('');
   const [isRecordingMic, setIsRecordingMic] = useState(false);
@@ -129,63 +142,68 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const assistantTitle = settings.assistantName.trim() || 'TIYA';
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {/* Top Bar */}
-      <header className="flex h-13 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-white/[0.08]">
-        <div>
-          <h1 className="font-display text-base font-semibold text-slate-900 dark:text-[#F4F5F7]">
-            Chat with {assistantTitle}
-          </h1>
-        </div>
-        {messages.length > 0 && (
+    <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#020714] text-slate-100">
+      {/* Same TIYA picture as HOME, blurred and darkened behind the chat */}
+      <img
+        src="/tiya-home.jpg"
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover object-top blur-[6px] select-none"
+      />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[#020714]/70" />
+
+      {/* Top row: HOME · TIYA · clear */}
+      <header className="relative z-20 grid h-14 shrink-0 grid-cols-3 items-center px-3">
+        <div className="flex justify-start">
           <button
             type="button"
-            onClick={onClearChats}
-            aria-label="Clear chat history"
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-rose-500 dark:text-slate-400 dark:hover:bg-white/[0.06]"
+            onClick={onOpenHome}
+            aria-label="Home"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0A1428]/70 text-cyan-100 ring-1 ring-cyan-300/40 backdrop-blur-sm active:scale-95"
           >
-            <Trash2 className="h-4 w-4" />
+            <Home className="h-[18px] w-[18px]" />
           </button>
-        )}
+        </div>
+        <h1 className="font-display text-center text-lg font-bold tracking-[0.35em] text-white drop-shadow-[0_0_10px_rgba(56,189,248,0.75)]">
+          {assistantTitle.toUpperCase()}
+        </h1>
+        <div className="flex justify-end">
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={onClearChats}
+              aria-label="Clear chat history"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0A1428]/70 text-cyan-100 ring-1 ring-cyan-300/40 backdrop-blur-sm hover:text-rose-400 active:scale-95"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </header>
 
-      {/* Scrollable Message History */}
-      <div
-        data-testid="chat-message-list"
-        className="tiya-scroll flex-1 space-y-3 overflow-y-auto px-4 py-4"
-      >
+      {/* Messages */}
+      <div data-testid="chat-message-list" className="tiya-scroll relative z-10 min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {messages.length === 0 ? (
-          <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center px-6">
-            <p className="font-display text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Start a conversation
-            </p>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-              Type or tap the mic to chat with {assistantTitle}. Shared memory works across both voice and chat.
+          <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-6 text-center">
+            <p className="font-display text-sm font-semibold text-white">Start a conversation</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-cyan-100/70">
+              Type a message or tap the mic.
             </p>
           </div>
         ) : (
           messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex flex-col ${
-                msg.role === 'user' ? 'items-end' : 'items-start'
-              }`}
-            >
-              <div className="mb-1 flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                <span>
-                  {msg.role === 'user'
-                    ? settings.yourName.trim() || 'You'
-                    : assistantTitle}
-                </span>
+            <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+              <div className="mb-1 flex items-center gap-1.5 text-[10px] font-medium text-cyan-100/60">
+                <span>{msg.role === 'user' ? settings.yourName.trim() || 'You' : assistantTitle}</span>
                 <span aria-hidden="true">·</span>
                 <span>{msg.source === 'voice' ? 'Voice' : 'Text'}</span>
               </div>
-
               <div
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed backdrop-blur-sm ${
                   msg.role === 'user'
-                    ? 'bg-teal-600 text-white'
-                    : 'border border-slate-200 bg-white text-slate-800 dark:border-white/[0.08] dark:bg-[#141923] dark:text-slate-100'
+                    ? 'bg-gradient-to-br from-sky-500/90 to-blue-700/90 text-white'
+                    : 'border border-cyan-400/25 bg-[#06122A]/80 text-slate-100'
                 }`}
               >
                 <p className="whitespace-pre-wrap break-words">{msg.text}</p>
@@ -208,7 +226,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
         {isSending && (
           <div className="flex items-start">
-            <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-500 dark:border-white/[0.08] dark:bg-[#141923] dark:text-slate-400">
+            <div className="rounded-2xl border border-cyan-400/25 bg-[#06122A]/80 px-3.5 py-2.5 text-xs text-cyan-100/80">
               Thinking...
             </div>
           </div>
@@ -216,66 +234,66 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         <div ref={listEndRef} />
       </div>
 
-      {/* Inline Error Banner */}
-      {(chatError || micError) && (
-        <div className="mx-4 mb-2 flex items-center justify-between gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-600 dark:text-rose-300">
-          <span>{micError || chatError}</span>
-          {(chatError.includes('No API key') || micError.includes('No API key')) && (
-            <button
-              type="button"
-              onClick={onOpenConnections}
-              className="shrink-0 font-semibold underline underline-offset-2"
-            >
-              Connections
-            </button>
-          )}
-        </div>
-      )}
+      {/* Lower deck: error · input · same bottom bar as HOME */}
+      <div className="relative z-20 shrink-0 space-y-2 px-3 pb-[max(env(safe-area-inset-bottom),10px)] pt-1">
+        {(chatError || micError) && (
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-rose-500/40 bg-[#080D1B]/90 px-3 py-1.5 text-[11px] text-rose-300">
+            <span className="min-w-0 truncate">{micError || chatError}</span>
+            {(chatError.includes('No API key') || micError.includes('No API key')) && (
+              <button
+                type="button"
+                onClick={onOpenConnections}
+                className="shrink-0 rounded-lg bg-cyan-500/20 px-2.5 py-1 text-[10px] font-semibold text-cyan-200"
+              >
+                Connections
+              </button>
+            )}
+          </div>
+        )}
 
-      {/* Bottom Input Bar */}
-      <form
-        onSubmit={handleSubmit}
-        className="shrink-0 border-t border-slate-200 bg-white/90 px-3 py-2.5 dark:border-white/[0.08] dark:bg-[#0D1017]/90"
-      >
-        <div className="flex items-center gap-2">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <button
             type="button"
             onClick={toggleMicInput}
             aria-label={isRecordingMic ? 'Stop voice dictation' : 'Record voice message'}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors active:scale-95 ${
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 ${
               isRecordingMic
-                ? 'bg-rose-600 text-white'
-                : 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-200 dark:hover:bg-white/10'
+                ? 'bg-rose-600 text-white ring-rose-400'
+                : 'bg-[#06122A]/90 text-cyan-100 ring-cyan-400/40'
             }`}
           >
             {isRecordingMic ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </button>
-
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              isTranscribing
-                ? 'Transcribing audio...'
-                : isRecordingMic
-                  ? 'Recording... tap stop'
-                  : 'Message TIYA...'
-            }
+            placeholder={isTranscribing ? 'Transcribing...' : isRecordingMic ? 'Recording... tap stop' : `Message ${assistantTitle}...`}
             aria-label="Chat message input"
-            className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-[#141923] dark:text-white dark:placeholder:text-slate-500"
+            className="h-11 min-w-0 flex-1 rounded-full border border-cyan-400/30 bg-[#06122A]/90 px-4 text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300 focus:outline-none"
           />
-
           <button
             type="submit"
             disabled={!input.trim() || isSending}
             aria-label="Send message"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white transition-colors hover:bg-teal-500 disabled:opacity-40 active:scale-95"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-blue-700 text-white shadow-[0_0_14px_rgba(56,189,248,0.5)] disabled:opacity-40 active:scale-95"
           >
             <Send className="h-4 w-4" />
           </button>
+        </form>
+
+        <div className="pt-2">
+          <TiyaNeonNav
+            active="chat"
+            isVoiceOn={isVoiceOn}
+            onToggleVoice={onToggleVoice}
+            onOpenChat={() => undefined}
+            onOpenChatHistory={onOpenChatHistory}
+            onOpenTools={onOpenTools}
+            onOpenMore={onOpenMore}
+          />
         </div>
-      </form>
+      </div>
     </div>
   );
 };
