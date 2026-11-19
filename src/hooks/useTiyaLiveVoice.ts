@@ -1,3 +1,4 @@
+import { createLiveSocket } from '../lib/clientApi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChatMessage, MemoryItem, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
 import {
@@ -288,7 +289,9 @@ export function useTiyaLiveVoice({
     if (outputCtx.state === 'suspended') await outputCtx.resume();
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/live`);
+    // Runs on the device (Vercel has no voice server) — see src/lib/clientApi.ts
+    void protocol;
+    const ws = createLiveSocket();
     wsRef.current = ws;
 
     connectWatchdogRef.current = setTimeout(() => {
