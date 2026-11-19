@@ -1125,6 +1125,9 @@ export default function App() {
               <PremiumPage
                 profile={profile}
                 isAdmin={isAdmin}
+                onRefreshProfile={() => {
+                  if (session?.user?.id) loadAccountData(session.user.id);
+                }}
                 onBack={() => {
                   setSettingsPage('hub');
                   setSettingsSubpage(null);

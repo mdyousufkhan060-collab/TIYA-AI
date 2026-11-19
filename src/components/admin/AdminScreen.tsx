@@ -24,6 +24,8 @@ import {
 import { calculateAge, computePaidUntilIso } from '../../utils/authErrors';
 import { DeveloperToolsPage } from '../settings/DeveloperPrivacyPages';
 import { PremiumGrantCard } from './PremiumGrantCard';
+import { AdminGiftCodesPage, AdminIncomePage, AdminPaymentsPage, AdminPlansPage } from './AdminSalesPages';
+import { SettingsBar } from '../settings/SettingsShell';
 
 type AdminView =
   | 'hub'
@@ -31,6 +33,10 @@ type AdminView =
   | 'users'
   | 'user_detail'
   | 'notify_all'
+  | 'payments'
+  | 'plans'
+  | 'gifts'
+  | 'income'
   | 'developer_tools';
 
 interface AdminScreenProps {
@@ -54,6 +60,17 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   onLogout,
 }) => {
   const [view, setView] = useState<AdminView>('hub');
+  const [pendingPayments, setPendingPayments] = useState(0);
+
+  // show how many payments wait for approval on the PAYMENTS bar
+  useEffect(() => {
+    if (view !== 'hub') return;
+    void supabase
+      .from('payment_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+      .then(({ count }) => setPendingPayments(count || 0));
+  }, [view]);
   const [devSubpage, setDevSubpage] = useState<string | null>(null);
 
   // Dashboard state
@@ -355,13 +372,19 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   const headerTitle =
     view === 'hub'
       ? 'Admin'
-      : view === 'dashboard'
-        ? '1. Dashboard'
-        : view === 'users'
-          ? '2. Users'
-          : view === 'user_detail'
-            ? selectedUser?.full_name || selectedUser?.email || 'User Detail'
-            : '3. Notify All';
+      : view === 'user_detail'
+        ? selectedUser?.full_name || selectedUser?.email || 'User Detail'
+        : (
+            {
+              dashboard: '01 Dashboard',
+              users: '02 Users',
+              payments: '03 Payments',
+              plans: '04 Plans & Prices',
+              gifts: '05 Gift Codes',
+              income: '06 Income',
+              notify_all: '07 Notify All',
+            } as Record<string, string>
+          )[view] || 'Admin';
 
   const isRefreshing = statsLoading || usersLoading;
 
@@ -439,117 +462,40 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         className="tiya-scroll flex-1 overflow-y-auto px-4 py-4"
       >
         {view === 'hub' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 px-1 text-xs text-slate-500 dark:text-slate-400">
-              <Shield className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-              <span>Admin controls · Manual refresh only</span>
-            </div>
-
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 dark:border-white/[0.08] dark:bg-[#11151E] dark:divide-white/[0.06]">
-              <button
-                type="button"
-                onClick={() => setView('dashboard')}
-                className="flex min-h-[60px] w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-              >
-                <span className="font-mono-code flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
-                  1
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold tracking-wide text-slate-900 dark:text-slate-100">
-                    DASHBOARD
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                    Total, premium, blocked, active & age breakdown
-                  </p>
-                </div>
-                <BarChart3 className="h-4 w-4 text-slate-400" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setView('users')}
-                className="flex min-h-[60px] w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-              >
-                <span className="font-mono-code flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
-                  2
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold tracking-wide text-slate-900 dark:text-slate-100">
-                    USERS
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                    Search users, manage Premium, limits, block & notes
-                  </p>
-                </div>
-                <Users className="h-4 w-4 text-slate-400" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setView('notify_all')}
-                className="flex min-h-[60px] w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-              >
-                <span className="font-mono-code flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
-                  3
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold tracking-wide text-slate-900 dark:text-slate-100">
-                    NOTIFY ALL
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                    Send a broadcast notification to every user
-                  </p>
-                </div>
-                <Bell className="h-4 w-4 text-slate-400" />
-              </button>
-
-              {onOpenMotivation && (
-                <button
-                  type="button"
-                  data-testid="admin-motivation-btn"
-                  onClick={onOpenMotivation}
-                  className="flex min-h-[60px] w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-                >
-                  <span className="font-mono-code flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
-                    ★
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold tracking-wide text-slate-900 dark:text-slate-100">
-                      MOTIVATION
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                      Write and publish motivation posts
-                    </p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                </button>
-              )}
-
-              <button
-                type="button"
-                data-testid="admin-developer-tools-btn"
-                onClick={() => {
-                  setDevSubpage(null);
-                  setView('developer_tools');
-                }}
-                className="flex min-h-[60px] w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-              >
-                <span className="font-mono-code flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
-                  4
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold tracking-wide text-slate-900 dark:text-slate-100">
-                    DEVELOPER TOOLS
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                    Error log, app status, diagnostics & system info
-                  </p>
-                </div>
-                <Wrench className="h-4 w-4 text-slate-400" />
-              </button>
-            </div>
+          <div className="space-y-1.5">
+            <SettingsBar badge="01" title="DASHBOARD" onClick={() => setView('dashboard')} testId="admin-bar-dashboard" />
+            <SettingsBar badge="02" title="USERS" onClick={() => setView('users')} testId="admin-bar-users" />
+            <SettingsBar
+              badge="03"
+              title="PAYMENTS"
+              value={pendingPayments > 0 ? `${pendingPayments} NEW` : undefined}
+              tone={pendingPayments > 0 ? 'accent' : 'default'}
+              onClick={() => setView('payments')}
+              testId="admin-bar-payments"
+            />
+            <SettingsBar badge="04" title="PLANS & PRICES" onClick={() => setView('plans')} testId="admin-bar-plans" />
+            <SettingsBar badge="05" title="GIFT CODES" onClick={() => setView('gifts')} testId="admin-bar-gifts" />
+            <SettingsBar badge="06" title="INCOME" onClick={() => setView('income')} testId="admin-bar-income" />
+            <SettingsBar badge="07" title="NOTIFY ALL" onClick={() => setView('notify_all')} testId="admin-bar-notify" />
+            {onOpenMotivation && (
+              <SettingsBar badge="08" title="MOTIVATION" onClick={onOpenMotivation} testId="admin-motivation-btn" />
+            )}
+            <SettingsBar
+              badge="09"
+              title="DEVELOPER TOOLS"
+              onClick={() => {
+                setDevSubpage(null);
+                setView('developer_tools');
+              }}
+              testId="admin-developer-tools-btn"
+            />
           </div>
         )}
+
+        {view === 'payments' && <AdminPaymentsPage onCountChange={setPendingPayments} />}
+        {view === 'plans' && <AdminPlansPage />}
+        {view === 'gifts' && <AdminGiftCodesPage />}
+        {view === 'income' && <AdminIncomePage />}
 
         {view === 'dashboard' && (
           <div className="space-y-4">
