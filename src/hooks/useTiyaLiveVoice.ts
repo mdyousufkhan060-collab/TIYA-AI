@@ -6,6 +6,17 @@ import {
   computeRmsEnergy,
   float32ToPcm16Base64,
 } from '../utils/audioPcm';
+import {
+  applyStartAntiClick,
+  createVoiceInputChain,
+  createVoiceOutputChain,
+  getFallbackVoiceMediaConstraints,
+  getMobileVoiceMediaConstraints,
+  PrimarySpeakerVoiceGate,
+  resampleTo16kHz,
+  VoiceInputChain,
+  VoiceOutputChain,
+} from '../utils/voiceAudioPipeline';
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { ReplyUsageDecision } from '../utils/authErrors';
 import { buildTiyaSystemPrompt } from '../utils/prompts';
@@ -64,9 +75,10 @@ export function useTiyaLiveVoice({
   const wsRef = useRef<WebSocket | null>(null);
   const inputCtxRef = useRef<AudioContext | null>(null);
   const outputCtxRef = useRef<AudioContext | null>(null);
-  const gainNodeRef = useRef<GainNode | null>(null);
+  const inputChainRef = useRef<VoiceInputChain | null>(null);
+  const outputChainRef = useRef<VoiceOutputChain | null>(null);
+  const voiceGateRef = useRef<PrimarySpeakerVoiceGate>(new PrimarySpeakerVoiceGate());
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
   const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const nextStartTimeRef = useRef<number>(0);
   const connectWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,14 +104,10 @@ export function useTiyaLiveVoice({
     onRequestLatestMotivation,
   };
 
-  // Sync live volume changes to GainNode immediately
+  // Sync live volume changes to the mobile speaker output chain immediately
   useEffect(() => {
-    if (gainNodeRef.current && outputCtxRef.current) {
-      gainNodeRef.current.gain.setTargetAtTime(
-        settings.volume,
-        outputCtxRef.current.currentTime,
-        0.02,
-      );
+    if (outputChainRef.current) {
+      outputChainRef.current.setVolume(settings.volume);
     }
   }, [settings.volume]);
 
@@ -128,15 +136,12 @@ export function useTiyaLiveVoice({
 
     stopPlaybackQueue();
 
-    if (processorRef.current) {
-      try {
-        processorRef.current.disconnect();
-        processorRef.current.onaudioprocess = null;
-      } catch {
-        // ignore
-      }
-      processorRef.current = null;
+    if (inputChainRef.current) {
+      inputChainRef.current.disconnect();
+      inputChainRef.current = null;
     }
+
+    voiceGateRef.current.reset();
 
     if (mediaStreamRef.current) {
       for (const track of mediaStreamRef.current.getTracks()) {
@@ -150,11 +155,15 @@ export function useTiyaLiveVoice({
       inputCtxRef.current = null;
     }
 
+    if (outputChainRef.current) {
+      outputChainRef.current.cleanup();
+      outputChainRef.current = null;
+    }
+
     if (outputCtxRef.current) {
       outputCtxRef.current.close().catch(() => {});
       outputCtxRef.current = null;
     }
-    gainNodeRef.current = null;
 
     if (wsRef.current) {
       try {
@@ -183,11 +192,20 @@ export function useTiyaLiveVoice({
 
   const playPcmChunk = useCallback((base64Data: string) => {
     const ctx = outputCtxRef.current;
-    const gainNode = gainNodeRef.current;
-    if (!ctx || !gainNode) return;
+    const outputChain = outputChainRef.current;
+    if (!ctx || !outputChain) return;
 
-    const float32 = base64Pcm16ToFloat32(base64Data);
-    if (float32.length === 0) return;
+    if (ctx.state === 'suspended') {
+      void outputChain.ensureActive();
+    }
+
+    const decoded = base64Pcm16ToFloat32(base64Data);
+    if (decoded.length === 0) return;
+
+    const float32 =
+      activeSourcesRef.current.size === 0
+        ? applyStartAntiClick(decoded, 24000)
+        : decoded;
 
     const rms = computeRmsEnergy(float32);
     setAudioLevel(Math.min(1, rms * 4.5));
@@ -202,7 +220,7 @@ export function useTiyaLiveVoice({
     if (typeof source.detune !== 'undefined' && pitchRatio !== 1.0) {
       source.detune.value = (pitchRatio - 1.0) * 1200;
     }
-    source.connect(gainNode);
+    source.connect(outputChain.inputNode);
 
     const now = ctx.currentTime;
     const startAt = Math.max(now, nextStartTimeRef.current);
@@ -235,10 +253,24 @@ export function useTiyaLiveVoice({
       return;
     }
 
+    cleanupResources();
+    setErrorLabel('');
+    setErrorDetail('');
+    setVoiceState('connecting');
+
+    // Create and unlock output audio context synchronously inside user tap gesture
+    // so mobile Chrome & Android WebView route playback cleanly to the phone speaker.
+    const outputCtx = new AudioContext({ sampleRate: 24000 });
+    const outputChain = createVoiceOutputChain(outputCtx, currentSettings.volume);
+    outputCtxRef.current = outputCtx;
+    outputChainRef.current = outputChain;
+    void outputChain.ensureActive();
+
     if (checkReplyUsageRef.current) {
       const decision = await checkReplyUsageRef.current();
       if (!decision.allowed) {
         const msg = decision.messageBn || 'আজকের লিমিট শেষ';
+        cleanupResources();
         setErrorLabel(msg);
         setErrorDetail('');
         setVoiceState('error');
@@ -247,24 +279,25 @@ export function useTiyaLiveVoice({
       }
     }
 
-    cleanupResources();
-    setErrorLabel('');
-    setErrorDetail('');
-    setVoiceState('connecting');
-
     let stream: MediaStream;
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Microphone not supported in this browser');
       }
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      });
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(
+          getMobileVoiceMediaConstraints(),
+        );
+      } catch (constraintErr: unknown) {
+        const errName =
+          constraintErr instanceof Error ? constraintErr.name : '';
+        if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+          throw constraintErr;
+        }
+        stream = await navigator.mediaDevices.getUserMedia(
+          getFallbackVoiceMediaConstraints(),
+        );
+      }
       mediaStreamRef.current = stream;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -277,17 +310,10 @@ export function useTiyaLiveVoice({
     }
 
     const inputCtx = new AudioContext({ sampleRate: 16000 });
-    const outputCtx = new AudioContext({ sampleRate: 24000 });
-    const gainNode = outputCtx.createGain();
-    gainNode.gain.value = currentSettings.volume;
-    gainNode.connect(outputCtx.destination);
-
     inputCtxRef.current = inputCtx;
-    outputCtxRef.current = outputCtx;
-    gainNodeRef.current = gainNode;
 
     if (inputCtx.state === 'suspended') await inputCtx.resume();
-    if (outputCtx.state === 'suspended') await outputCtx.resume();
+    await outputChain.ensureActive();
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Runs on the device (Vercel has no voice server) — see src/lib/clientApi.ts
@@ -354,24 +380,32 @@ export function useTiyaLiveVoice({
           setActiveModel(msg.model || settingsRef.current.selectedLiveModel);
           setVoiceState('listening');
 
-          // Begin continuous 16kHz mic streaming
-          const source = inputCtx.createMediaStreamSource(stream);
-          const processor = inputCtx.createScriptProcessor(4096, 1, 1);
-          processorRef.current = processor;
+          // Begin noise-cancelled, primary-speaker gated 16 kHz mic streaming
+          voiceGateRef.current.reset();
+          const inputChain = createVoiceInputChain(inputCtx, stream);
+          inputChainRef.current = inputChain;
 
-          source.connect(processor);
-          processor.connect(inputCtx.destination);
-
-          processor.onaudioprocess = (audioEvent) => {
+          inputChain.processor.onaudioprocess = (audioEvent) => {
             if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-            const channelData = audioEvent.inputBuffer.getChannelData(0);
+            const rawChannel = audioEvent.inputBuffer.getChannelData(0);
+            const pcm16k = resampleTo16kHz(rawChannel, inputCtx.sampleRate);
             const sensitivity = settingsRef.current.micListening?.sensitivity ?? 1.0;
-            const rms = computeRmsEnergy(channelData) * sensitivity;
+            const isSpeaking = voiceStateRef.current === 'speaking';
+
+            const gateResult = voiceGateRef.current.processFrame(
+              pcm16k,
+              sensitivity,
+              isSpeaking,
+            );
+
             if (voiceStateRef.current === 'listening') {
-              setAudioLevel(Math.min(1, rms * 6));
+              setAudioLevel(gateResult.displayLevel);
             }
-            const base64 = float32ToPcm16Base64(channelData);
-            wsRef.current.send(JSON.stringify({ type: 'audio', data: base64 }));
+
+            for (const chunk of gateResult.chunksToSend) {
+              const base64 = float32ToPcm16Base64(chunk);
+              wsRef.current.send(JSON.stringify({ type: 'audio', data: base64 }));
+            }
           };
         } else if (msg.type === 'input_transcript' && msg.text) {
           hasStartedAssistantBubbleRef.current = false;
