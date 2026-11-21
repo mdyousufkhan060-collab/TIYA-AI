@@ -2,10 +2,12 @@
  * Mobile-optimized Voice Input (Noise Cancellation + Primary Speaker VAD)
  * and Voice Output (Speaker Loudness & Clarity Mastering) Pipeline.
  */
+import { FEMALE_VOICES, FemaleVoiceId } from '../types/tiya';
 
 export const TARGET_MIC_SAMPLE_RATE = 16000;
 export const OUTPUT_LOUDNESS_GAIN = 2.75;
 export const MIN_ACTIVE_OUTPUT_GAIN = 0.45;
+export const DEFAULT_LOCKED_FEMALE_VOICE: FemaleVoiceId = FEMALE_VOICES[0].id;
 
 /**
  * Mobile Chrome & Android WebView optimized getUserMedia constraints.
@@ -719,17 +721,123 @@ export function createVoiceOutputChain(
 }
 
 /**
- * Natural conversational speaking speed factor (0.90x of the old 1.0x default,
- * centered inside the 0.85x-0.95x natural target without stretching/distortion).
+ * Resolves and locks a voice ID strictly to TIYA's approved female voice catalog.
+ * Prevents male voices, unknown IDs, or empty values from ever substituting in.
  */
-export const NATURAL_SPEECH_RATE_FACTOR = 0.90;
-export const MIN_NATURAL_PLAYBACK_RATE = 0.84;
-export const MAX_NATURAL_PLAYBACK_RATE = 1.30;
+export function resolveCanonicalFemaleVoice(voiceName?: string | null): FemaleVoiceId {
+  const candidate = String(voiceName || '').trim();
+  const match = FEMALE_VOICES.find((v) => v.id === candidate);
+  return match ? match.id : DEFAULT_LOCKED_FEMALE_VOICE;
+}
 
 /**
- * Computes a comfortable, distortion-free playback rate for TIYA's spoken voice.
- * Default user speed (1.0) maps to 0.90x so delivery is calm, warm, and unhurried
- * while respecting user adjustments and clamping away artificial stretching.
+ * Decodes either raw 16-bit LE PCM or a RIFF/WAVE audio payload into Float32
+ * samples with its exact sample rate. Stripping 44-byte WAV headers and reading
+ * the real rate prevents clicks, pops, and thick/thin pitch warping.
+ */
+export function decodeAudioChunkPayload(
+  base64Data: string,
+  mimeType?: string,
+): { samples: Float32Array; sampleRate: number } {
+  const rateMatch = /rate=(\d+)/i.exec(String(mimeType || ''));
+  let sampleRate = rateMatch ? Number(rateMatch[1]) : 24000;
+  if (!Number.isFinite(sampleRate) || sampleRate < 8000 || sampleRate > 96000) {
+    sampleRate = 24000;
+  }
+
+  let binary = '';
+  try {
+    binary = atob(base64Data);
+  } catch {
+    return { samples: new Float32Array(0), sampleRate };
+  }
+
+  const totalBytes = binary.length;
+  if (totalBytes < 2) return { samples: new Float32Array(0), sampleRate };
+
+  let dataOffset = 0;
+  let dataLength = totalBytes;
+
+  // Detect RIFF....WAVE header (returned by unary Gemini 3.8 TTS)
+  if (
+    totalBytes >= 44 &&
+    binary.charCodeAt(0) === 0x52 && // R
+    binary.charCodeAt(1) === 0x49 && // I
+    binary.charCodeAt(2) === 0x46 && // F
+    binary.charCodeAt(3) === 0x46 && // F
+    binary.charCodeAt(8) === 0x57 && // W
+    binary.charCodeAt(9) === 0x41 && // A
+    binary.charCodeAt(10) === 0x56 && // V
+    binary.charCodeAt(11) === 0x45 // E
+  ) {
+    const readUint32LE = (off: number) =>
+      (binary.charCodeAt(off) |
+        (binary.charCodeAt(off + 1) << 8) |
+        (binary.charCodeAt(off + 2) << 16) |
+        (binary.charCodeAt(off + 3) << 24)) >>>
+      0;
+
+    const wavRate = readUint32LE(24);
+    if (wavRate >= 8000 && wavRate <= 96000) {
+      sampleRate = wavRate;
+    }
+
+    // Locate the 'data' subchunk safely (handles non-44-byte WAV headers too)
+    let pos = 12;
+    while (pos + 8 <= totalBytes) {
+      const chunkId =
+        String.fromCharCode(
+          binary.charCodeAt(pos),
+          binary.charCodeAt(pos + 1),
+          binary.charCodeAt(pos + 2),
+          binary.charCodeAt(pos + 3),
+        );
+      const chunkSize = readUint32LE(pos + 4);
+      if (chunkId === 'data') {
+        dataOffset = pos + 8;
+        dataLength = Math.min(chunkSize, totalBytes - dataOffset);
+        break;
+      }
+      pos += 8 + chunkSize + (chunkSize % 2);
+    }
+    if (dataOffset === 0) {
+      dataOffset = 44;
+      dataLength = totalBytes - 44;
+    }
+  }
+
+  const sampleCount = Math.floor(dataLength / 2);
+  if (sampleCount <= 0) return { samples: new Float32Array(0), sampleRate };
+
+  const samples = new Float32Array(sampleCount);
+  for (let i = 0; i < sampleCount; i++) {
+    const byteIdx = dataOffset + i * 2;
+    const lo = binary.charCodeAt(byteIdx);
+    const hi = binary.charCodeAt(byteIdx + 1);
+    let val = (hi << 8) | lo;
+    if (val >= 0x8000) val -= 0x10000;
+    samples[i] = val / 32768;
+  }
+
+  return { samples, sampleRate };
+}
+
+/**
+ * Pitch-faithful playback rate factor.
+ * Web Audio AudioBufferSourceNode.playbackRate shifts BOTH speed and pitch
+ * (0.90x lowers female voice pitch by -1.82 semitones, making it sound thicker/deeper).
+ * Keeping the default at 1.0 preserves the exact female vocal identity without
+ * artificial stretching, while Gemini Live / TTS native prosody delivers the
+ * unhurried 0.85x-0.95x conversational pace cleanly.
+ */
+export const NATURAL_SPEECH_RATE_FACTOR = 1.0;
+export const MIN_NATURAL_PLAYBACK_RATE = 0.92;
+export const MAX_NATURAL_PLAYBACK_RATE = 1.15;
+
+/**
+ * Computes a pitch-faithful playback rate for TIYA's spoken voice.
+ * Default speed (1.0) maps to 1.0 so the female vocal timbre stays 100% consistent
+ * and undistorted, while explicit user adjustments remain gently clamped.
  */
 export function computeNaturalPlaybackRate(userSpeed?: number): number {
   const base =

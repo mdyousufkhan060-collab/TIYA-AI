@@ -10,10 +10,10 @@ import {
   FemaleVoiceId,
   Personality,
   TIYA_FIXED_NAME,
-  languageCode,
   TiyaSettings,
 } from '../../types/tiya';
-import { base64Pcm16ToFloat32, computeRmsEnergy } from '../../utils/audioPcm';
+import { computeRmsEnergy } from '../../utils/audioPcm';
+import { computeNaturalPlaybackRate, decodeAudioChunkPayload } from '../../utils/voiceAudioPipeline';
 import { appendErrorLog } from '../../utils/storage';
 import { LiveModelPage } from './LiveModelPage';
 import { SettingsBar, SettingsSelectBar, SettingsShell, SettingsToggleBar } from './SettingsShell';
@@ -142,31 +142,6 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     }
   };
 
-  const speakWithPhoneVoice = (): boolean => {
-    try {
-      const synth = window.speechSynthesis;
-      if (!synth) return false;
-      const dialect = BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect);
-      const text =
-        settings.language === 'Bengali'
-          ? dialect?.sample || 'হ্যালো, আমি টিয়া।'
-          : `Hello, I am TIYA.`;
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = settings.language === 'Bengali' ? 'bn-BD' : languageCode(settings.language);
-      const female = synth
-        .getVoices()
-        .find((v) => v.lang.toLowerCase().startsWith(u.lang.slice(0, 2).toLowerCase()) && /female|woman/i.test(v.name));
-      if (female) u.voice = female;
-      u.rate = settings.speechSpeed;
-      u.volume = settings.volume;
-      synth.cancel();
-      synth.speak(u);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   const handlePreviewVoice = async (voiceId: FemaleVoiceId) => {
     const key = settings.apiKey.trim();
     if (!key) {
@@ -205,12 +180,9 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
       };
 
       if (!res.ok || !data.ok || !data.audioBase64) {
-        // Google voice failed on this key → let the phone's own voice say it
-        const said = speakWithPhoneVoice();
+        // NEVER silently substitute browser SpeechSynthesis (keeps TIYA's single female voice consistent)
         setPreviewStatus(
-          said
-            ? 'Google voice is not available on this key, so the phone voice played instead.'
-            : 'Voice preview is not available on this key right now.',
+          data.detail || 'Gemini voice preview is unavailable on this key right now.',
         );
         setPreviewingVoice(null);
         return;
@@ -227,8 +199,8 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
       const playBuffer = (buffer: AudioBuffer) => {
         const src = ctx.createBufferSource();
         src.buffer = buffer;
-        src.playbackRate.value = settings.speechSpeed;
-        if (typeof src.detune !== 'undefined' && settings.pitch !== 1.0) {
+        src.playbackRate.value = computeNaturalPlaybackRate(settings.speechSpeed);
+        if (typeof src.detune !== 'undefined' && Math.abs(settings.pitch - 1.0) > 0.005) {
           src.detune.value = (settings.pitch - 1.0) * 1200;
         }
         src.connect(gainNode);
@@ -242,16 +214,16 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
         };
       };
 
-      if (data.mimeType?.includes('wav') || data.mimeType?.includes('mp3')) {
+      if (data.mimeType?.includes('mp3')) {
         const binary = atob(data.audioBase64);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         const decoded = await ctx.decodeAudioData(bytes.buffer);
         playBuffer(decoded);
       } else {
-        const float32 = base64Pcm16ToFloat32(data.audioBase64);
-        const buffer = ctx.createBuffer(1, float32.length, 24000);
-        buffer.getChannelData(0).set(float32);
+        const { samples, sampleRate } = decodeAudioChunkPayload(data.audioBase64, data.mimeType);
+        const buffer = ctx.createBuffer(1, samples.length, sampleRate);
+        buffer.getChannelData(0).set(samples);
         playBuffer(buffer);
       }
 

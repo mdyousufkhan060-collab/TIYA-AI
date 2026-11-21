@@ -33,7 +33,7 @@ import {
   ReplyUsageDecision,
   setCachedBirthYear,
 } from './utils/authErrors';
-import { buildTiyaSystemPrompt, isTiyaOwnerEmail } from './utils/prompts';
+import { buildTiyaSystemPrompt, enforceAdminAddressingText, isTiyaOwnerEmail } from './utils/prompts';
 import {
   executePhoneAction,
   extractActionFromText,
@@ -515,7 +515,8 @@ export default function App() {
         });
         const data = (await res.json()) as { ok?: boolean; text?: string };
         if (res.ok && data.ok && data.text?.trim()) {
-          return data.text.trim();
+          const cleanMot = data.text.trim();
+          return isOwner ? enforceAdminAddressingText(cleanMot) : cleanMot;
         }
       } catch {
         // Fallback to direct formatted Bengali response
@@ -684,12 +685,19 @@ export default function App() {
             );
           }
           const { cleanText: pClean, action: pAction } = extractActionFromText(pr.text || '');
+          const pRaw =
+            pClean ||
+            (pAction
+              ? getConfirmationPromptText(pAction)
+              : isOwner
+                ? 'স্যার, বলুন না, আপনার কী কথা আছে?'
+                : 'বলুন, কীভাবে সাহায্য করতে পারি?');
           updateMessages((prev) => [
             ...prev,
             {
               id: makeId(),
               role: 'assistant',
-              text: pClean || (pAction ? getConfirmationPromptText(pAction) : 'বলুন, কীভাবে সাহায্য করতে পারি?'),
+              text: isOwner ? enforceAdminAddressingText(pRaw) : pRaw,
               timestamp: Date.now(),
               source: 'chat',
               ...(pAction ? { pendingAction: pAction, actionStatus: 'pending' as const } : {}),
@@ -753,13 +761,16 @@ export default function App() {
 
         const { cleanText, action: inlineAction } = extractActionFromText(data.text || '');
         const pendingAction = data.action || inlineAction || undefined;
-        const replyText =
+        const rawReplyText =
           cleanText ||
           (pendingAction
             ? getConfirmationPromptText(pendingAction)
             : parsedNav
               ? parsedNav.confirmBn
-              : 'বলুন, কীভাবে সাহায্য করতে পারি?');
+              : isOwner
+                ? 'স্যার, বলুন না, আপনার কী কথা আছে?'
+                : 'বলুন, কীভাবে সাহায্য করতে পারি?');
+        const replyText = isOwner ? enforceAdminAddressingText(rawReplyText) : rawReplyText;
 
         const assistantMsg: ChatMessage = {
           id: makeId(),

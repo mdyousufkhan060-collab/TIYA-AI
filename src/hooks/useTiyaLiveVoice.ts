@@ -2,7 +2,6 @@ import { createLiveSocket } from '../lib/clientApi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChatMessage, MemoryItem, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
 import {
-  base64Pcm16ToFloat32,
   computeRmsEnergy,
   float32ToPcm16Base64,
 } from '../utils/audioPcm';
@@ -11,10 +10,12 @@ import {
   computeNaturalPlaybackRate,
   createVoiceInputChain,
   createVoiceOutputChain,
+  decodeAudioChunkPayload,
   getFallbackVoiceMediaConstraints,
   getMobileVoiceMediaConstraints,
   PrimarySpeakerVoiceGate,
   resampleTo16kHz,
+  resolveCanonicalFemaleVoice,
   VoiceInputChain,
   VoiceOutputChain,
   VoiceTranscriptSynchronizer,
@@ -86,6 +87,7 @@ export function useTiyaLiveVoice({
   const nextStartTimeRef = useRef<number>(0);
   const lastAudioChunkStartRef = useRef<number>(0);
   const connectWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionGenRef = useRef<number>(0);
 
   const userTurnBufferRef = useRef<TranscriptStreamBuffer>(new TranscriptStreamBuffer());
   const assistantTurnBufferRef = useRef<TranscriptStreamBuffer>(new TranscriptStreamBuffer());
@@ -193,6 +195,9 @@ export function useTiyaLiveVoice({
   }, []);
 
   const cleanupResources = useCallback(() => {
+    // Advance generation immediately so no in-flight async setup or stale socket can overlap audio
+    sessionGenRef.current += 1;
+
     if (connectWatchdogRef.current) {
       clearTimeout(connectWatchdogRef.current);
       connectWatchdogRef.current = null;
@@ -230,15 +235,21 @@ export function useTiyaLiveVoice({
     }
 
     if (wsRef.current) {
+      const oldWs = wsRef.current;
+      wsRef.current = null;
       try {
-        if (wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: 'stop' }));
+        // Detach all handlers before closing so stale audio frames never overlap a new session
+        oldWs.onopen = null;
+        oldWs.onmessage = null;
+        oldWs.onerror = null;
+        oldWs.onclose = null;
+        if (oldWs.readyState === WebSocket.OPEN) {
+          oldWs.send(JSON.stringify({ type: 'stop' }));
         }
-        wsRef.current.close();
+        oldWs.close();
       } catch {
         // ignore
       }
-      wsRef.current = null;
     }
 
     resetTurnState();
@@ -251,7 +262,7 @@ export function useTiyaLiveVoice({
     setActiveModel('');
   }, [cleanupResources]);
 
-  const playPcmChunk = useCallback((base64Data: string) => {
+  const playPcmChunk = useCallback((base64Data: string, mimeType?: string) => {
     const ctx = outputCtxRef.current;
     const outputChain = outputChainRef.current;
     if (!ctx || !outputChain) return;
@@ -260,27 +271,27 @@ export function useTiyaLiveVoice({
       void outputChain.ensureActive();
     }
 
-    const decoded = base64Pcm16ToFloat32(base64Data);
+    const { samples: decoded, sampleRate } = decodeAudioChunkPayload(base64Data, mimeType);
     if (decoded.length === 0) return;
 
     const float32 =
       activeSourcesRef.current.size === 0
-        ? applyStartAntiClick(decoded, 24000)
+        ? applyStartAntiClick(decoded, sampleRate)
         : decoded;
 
     const rms = computeRmsEnergy(float32);
     setAudioLevel(Math.min(1, rms * 4.5));
 
-    const buffer = ctx.createBuffer(1, float32.length, 24000);
+    const buffer = ctx.createBuffer(1, float32.length, sampleRate);
     buffer.getChannelData(0).set(float32);
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    // Natural slower conversational playback rate (0.90x default, clamped away from distortion)
+    // Pitch-faithful playback rate (1.0 at default preserves exact female vocal identity without deepening)
     const effectiveRate = computeNaturalPlaybackRate(settingsRef.current.speechSpeed);
     source.playbackRate.value = effectiveRate;
     const pitchRatio = settingsRef.current.pitch || 1.0;
-    if (typeof source.detune !== 'undefined' && pitchRatio !== 1.0) {
+    if (typeof source.detune !== 'undefined' && Math.abs(pitchRatio - 1.0) > 0.005) {
       source.detune.value = (pitchRatio - 1.0) * 1200;
     }
     source.connect(outputChain.inputNode);
@@ -322,6 +333,7 @@ export function useTiyaLiveVoice({
     }
 
     cleanupResources();
+    const mySessionGen = sessionGenRef.current;
     setErrorLabel('');
     setErrorDetail('');
     setVoiceState('connecting');
@@ -336,6 +348,7 @@ export function useTiyaLiveVoice({
 
     if (checkReplyUsageRef.current) {
       const decision = await checkReplyUsageRef.current();
+      if (mySessionGen !== sessionGenRef.current) return;
       if (!decision.allowed) {
         const msg = decision.messageBn || 'আজকের লিমিট শেষ';
         cleanupResources();
@@ -366,8 +379,13 @@ export function useTiyaLiveVoice({
           getFallbackVoiceMediaConstraints(),
         );
       }
+      if (mySessionGen !== sessionGenRef.current) {
+        for (const track of stream.getTracks()) track.stop();
+        return;
+      }
       mediaStreamRef.current = stream;
     } catch (err: unknown) {
+      if (mySessionGen !== sessionGenRef.current) return;
       const msg = err instanceof Error ? err.message : String(err);
       const classified = classifyGeminiError(msg);
       setErrorLabel(classified.label);
@@ -382,6 +400,7 @@ export function useTiyaLiveVoice({
 
     if (inputCtx.state === 'suspended') await inputCtx.resume();
     await outputChain.ensureActive();
+    if (mySessionGen !== sessionGenRef.current) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Runs on the device (Vercel has no voice server) — see src/lib/clientApi.ts
@@ -390,7 +409,7 @@ export function useTiyaLiveVoice({
     wsRef.current = ws;
 
     connectWatchdogRef.current = setTimeout(() => {
-      if (voiceStateRef.current === 'connecting') {
+      if (mySessionGen === sessionGenRef.current && voiceStateRef.current === 'connecting') {
         cleanupResources();
         setErrorLabel('Model not available');
         setErrorDetail('Timed out connecting to Gemini Live. Check your key or model.');
@@ -399,6 +418,7 @@ export function useTiyaLiveVoice({
     }, 40000);
 
     ws.onopen = () => {
+      if (mySessionGen !== sessionGenRef.current) return;
       const systemInstruction = buildTiyaSystemPrompt(
         settingsRef.current,
         messagesRef.current,
@@ -410,6 +430,7 @@ export function useTiyaLiveVoice({
       const primaryModel =
         settingsRef.current.customLiveModel.trim() || settingsRef.current.selectedLiveModel;
       const fallbackModels = settingsRef.current.availableLiveModels.map((m) => m.id);
+      const lockedVoiceName = resolveCanonicalFemaleVoice(settingsRef.current.voiceName);
 
       ws.send(
         JSON.stringify({
@@ -418,20 +439,23 @@ export function useTiyaLiveVoice({
           model: primaryModel,
           fallbackModels,
           autoFallback: settingsRef.current.autoFallback,
-          voiceName: settingsRef.current.voiceName,
+          voiceName: lockedVoiceName,
           language: settingsRef.current.language,
           speechSpeed: settingsRef.current.speechSpeed,
+          isOwner: isOwnerRef.current,
           systemInstruction,
         }),
       );
     };
 
     ws.onmessage = (event) => {
+      if (mySessionGen !== sessionGenRef.current) return;
       try {
         const msg = JSON.parse(event.data as string) as {
           type: string;
           model?: string;
           data?: string;
+          mimeType?: string;
           text?: string;
           final?: boolean;
           label?: string;
@@ -581,7 +605,7 @@ export function useTiyaLiveVoice({
           pushAssistantBubble(display);
         } else if (msg.type === 'audio' && msg.data) {
           setVoiceState('speaking');
-          playPcmChunk(msg.data);
+          playPcmChunk(msg.data, msg.mimeType);
           // Pump synchronized text immediately as new audio playback begins
           if (assistantSyncRef.current.pendingCount() > 0) {
             runAssistantSyncPump();

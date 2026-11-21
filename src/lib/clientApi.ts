@@ -27,8 +27,13 @@ import {
 } from './geminiRest';
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { getConfirmationPromptText, validatePhoneAction } from '../utils/phoneActions';
+import { detectEmotionalVoiceStyle, enforceAdminAddressingText } from '../utils/prompts';
 import { validateNavigateToolArgs } from '../utils/tiyaNavigation';
-import { computeNaturalPlaybackRate } from '../utils/voiceAudioPipeline';
+import {
+  computeNaturalPlaybackRate,
+  DEFAULT_LOCKED_FEMALE_VOICE,
+  resolveCanonicalFemaleVoice,
+} from '../utils/voiceAudioPipeline';
 import { BENGALI_DIALECTS, DEFAULT_LIVE_MODELS, LiveModelInfo, languageCode } from '../types/tiya';
 
 
@@ -284,8 +289,13 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
     }
     case '/api/gemini/voice-check': {
       if (!key) return fail(401, 'No API key', 'Add your Gemini API key in Settings > Connections.');
+      const lockedVoice = resolveCanonicalFemaleVoice(body?.voiceName);
       const name = String(body?.assistantName || '').trim() || 'তিয়া';
-      const userPart = String(body?.yourName || '').trim() ? ` ${String(body.yourName).trim()},` : '';
+      const userPart = body?.isOwner
+        ? ' স্যার,'
+        : String(body?.yourName || '').trim()
+          ? ` ${String(body.yourName).trim()},`
+          : '';
       const samples: Record<string, string> = {
         Bengali: `হ্যালো${userPart} আমি ${name}। আপনার ভয়েস সেটআপ একদম ঠিক আছে!`,
         English: `Hello${userPart} I am ${name}. Your voice check is working clearly.`,
@@ -322,7 +332,7 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
             contents: [{ role: 'user', parts: [{ text }] }],
             generationConfig: {
               responseModalities: ['AUDIO'],
-              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: body?.voiceName || 'Zephyr' } } },
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: lockedVoice } } },
             },
           });
           const audio = responseAudio(res);
@@ -538,13 +548,14 @@ export class LocalLiveSocket {
   private turnMode = false;
   private liveAttempt = 0;
 
-  /** Live voice dropped (model not available, quota, network) → keep talking in standard voice */
+  /**
+   * Live voice dropped unexpectedly: NEVER silently switch to a different voice
+   * engine or browser SpeechSynthesis (which causes abrupt voice switching).
+   * Instead attempt one clean reconnect with the EXACT same locked model & female voice;
+   * if that fails, surface a clear error so voice identity stays 100% consistent.
+   */
   private liveBroke(label: string, detail: string) {
     if (this.closedByClient || this.turnMode) return;
-    if (label === 'Invalid API key' || label === 'No API key') {
-      this.emit({ type: 'error', label, detail });
-      return;
-    }
     this.liveAttempt++;
     const s = this.session;
     this.session = null;
@@ -553,13 +564,80 @@ export class LocalLiveSocket {
     } catch {
       // ignore
     }
-    this.turnMode = true;
-    this.turnChunks = [];
-    this.turnSpeech = false;
     this.emit({ type: 'interrupted' });
+
+    if (
+      label === 'Invalid API key' ||
+      label === 'No API key' ||
+      label === 'Quota finished' ||
+      !this.lockedLiveModel ||
+      this.reconnectAttempts >= 1
+    ) {
+      this.emit({
+        type: 'error',
+        label: label || 'Voice connection paused',
+        detail: detail || 'Gemini Live voice disconnected. Tap the orb to reconnect with the same TIYA voice.',
+      });
+      return;
+    }
+
+    this.reconnectAttempts++;
+    void this.reconnectLockedLive();
   }
+
+  private async reconnectLockedLive() {
+    if (this.closedByClient || !this.apiKey || !this.lockedLiveModel) return;
+    const attempt = ++this.liveAttempt;
+    const tools = [
+      { functionDeclarations: [buildPhoneActionTool(false), buildNavigateAppTool(false), buildGetLatestMotivationTool(false)] },
+    ];
+    try {
+      const session = await openRawLive(
+        this.apiKey,
+        {
+          model: `models/${this.lockedLiveModel}`,
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            temperature: 0.7,
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
+          },
+          systemInstruction: { parts: [{ text: this.systemInstruction }] },
+          tools,
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
+        },
+        {
+          onMessage: (msg) => {
+            if (attempt === this.liveAttempt) this.onLiveMessage(msg);
+          },
+          onClose: (reason) => {
+            if (this.closedByClient || attempt !== this.liveAttempt) return;
+            const c = classifyGeminiError(reason || 'Live session closed');
+            this.liveBroke(c.label, c.detail);
+          },
+        },
+      );
+      if (this.closedByClient || attempt !== this.liveAttempt) {
+        session.close();
+        return;
+      }
+      this.session = session;
+      this.reconnectAttempts = 0;
+      this.emit({ type: 'ready', model: this.lockedLiveModel });
+    } catch (err) {
+      if (this.closedByClient) return;
+      const c = classifyGeminiError(errMsg(err));
+      this.emit({ type: 'error', label: c.label, detail: c.detail });
+    }
+  }
+
   private apiKey = '';
-  private voiceName = 'Zephyr';
+  private voiceName = DEFAULT_LOCKED_FEMALE_VOICE;
+  private lockedLiveModel = '';
+  private lockedTtsModel = '';
+  private reconnectAttempts = 0;
+  private speakGen = 0;
+  private isOwner = false;
   private language = 'Bengali';
   private speechSpeed = 1.0;
   private systemInstruction = 'You are TIYA.';
@@ -590,6 +668,7 @@ export class LocalLiveSocket {
   }
 
   private closeSession() {
+    this.speakGen++;
     if (this.connectTimer) {
       clearTimeout(this.connectTimer);
       this.connectTimer = null;
@@ -620,18 +699,24 @@ export class LocalLiveSocket {
 
   private startTurnMode() {
     this.turnMode = true;
-    this.emit({ type: 'ready', model: 'TIYA Voice (standard)' });
+    this.emit({ type: 'ready', model: this.lockedTtsModel || 'TIYA Voice (Gemini TTS)' });
   }
 
   private async connect(apiKey: string, models: string[], voiceName: string, systemInstruction: string) {
     this.apiKey = apiKey;
-    this.voiceName = voiceName || 'Zephyr';
+    // Lock strictly to one verified female voice ID for the entire session
+    this.voiceName = resolveCanonicalFemaleVoice(voiceName);
     this.systemInstruction = systemInstruction;
-    const groqKey = getGroqKey();
+    this.lockedLiveModel = '';
+    this.lockedTtsModel = '';
+    this.reconnectAttempts = 0;
 
     if (!apiKey) {
-      if (groqKey) return this.startTurnMode();
-      this.emit({ type: 'error', label: 'No API key', detail: 'Add your Gemini or Groq API key in Settings > Connections.' });
+      this.emit({
+        type: 'error',
+        label: 'No API key',
+        detail: 'Add your Gemini API key in Settings > Connections to use TIYA’s consistent female voice.',
+      });
       return;
     }
 
@@ -641,10 +726,6 @@ export class LocalLiveSocket {
     } catch (err) {
       if (this.closedByClient) return;
       if (isBadKey(err) || (err as ApiError)?.status === 400 || (err as ApiError)?.status === 403) {
-        if (groqKey) {
-          this.apiKey = '';
-          return this.startTurnMode();
-        }
         const c = classifyGeminiError(errMsg(err));
         this.emit({ type: 'error', label: 'Invalid API key', detail: c.detail });
         return;
@@ -668,6 +749,7 @@ export class LocalLiveSocket {
             model: `models/${modelId}`,
             generationConfig: {
               responseModalities: ['AUDIO'],
+              temperature: 0.7,
               speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
             },
             systemInstruction: { parts: [{ text: systemInstruction }] },
@@ -691,6 +773,7 @@ export class LocalLiveSocket {
           return;
         }
         this.session = session;
+        this.lockedLiveModel = modelId;
         this.emit({ type: 'ready', model: modelId });
         return;
       } catch (err) {
@@ -699,8 +782,18 @@ export class LocalLiveSocket {
       }
     }
     if (this.closedByClient) return;
-    // Live voice is not available on this key → keep talking in standard voice
-    this.startTurnMode();
+    // Live WebSocket model unavailable on this key -> lock ONE Gemini TTS model (never browser SpeechSynthesis)
+    const ttsCandidates = await pickTtsModels(apiKey);
+    if (ttsCandidates.length > 0) {
+      this.lockedTtsModel = ttsCandidates[0];
+      this.startTurnMode();
+      return;
+    }
+    this.emit({
+      type: 'error',
+      label: 'Voice model not available',
+      detail: 'No Gemini voice model is available on this API key right now.',
+    });
   }
 
   // ----------------------------- turn mode -----------------------------
@@ -777,7 +870,8 @@ export class LocalLiveSocket {
       }
       if (data.action) this.emit({ type: 'phone_action', action: data.action });
       if (data.navigate) this.emit({ type: 'navigate', command: data.navigate });
-      const reply = String(data.text || '').trim();
+      const rawReply = String(data.text || '').trim();
+      const reply = this.isOwner ? enforceAdminAddressingText(rawReply) : rawReply;
       this.turnHistory.push({ role: 'user', text: heard }, { role: 'assistant', text: reply });
       if (this.turnHistory.length > 24) this.turnHistory.splice(0, this.turnHistory.length - 24);
       if (reply) {
@@ -839,80 +933,83 @@ export class LocalLiveSocket {
   }
 
   private async turnSpeak(text: string) {
-    if (this.apiKey) {
-      for (const model of await pickTtsModels(this.apiKey)) {
-        try {
-          const r = await generateContent(this.apiKey, model, {
-            contents: [{ role: 'user', parts: [{ text }] }],
-            generationConfig: {
-              responseModalities: ['AUDIO'],
-              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
-            },
-          });
-          const audio = responseAudio(r);
-          if (audio) {
-            if (this.closedByClient) return;
-            const samples = Math.floor(atob(audio.data).length / 2);
-            const rate = computeNaturalPlaybackRate(this.speechSpeed);
-            this.turnMuteUntil = Date.now() + (samples / (24000 * rate)) * 1000 + 600;
-            // Emit audio + transcript together so text appears right as speech begins
-            this.emit({ type: 'audio', data: audio.data });
-            this.emit({ type: 'output_transcript', text });
-            return;
-          }
-        } catch (err) {
-          if (isBadKey(err)) break;
-        }
-      }
-    }
-    // Last resort: the phone's own speech synthesizer with natural pace & real onboundary word sync
-    try {
-      const synth = window.speechSynthesis;
-      if (!synth) {
-        this.emit({ type: 'output_transcript', text });
-        return;
-      }
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = /[\u0980-\u09FF]/.test(text) ? 'bn-BD' : languageCode(this.language);
-      u.rate = computeNaturalPlaybackRate(this.speechSpeed);
-      const female = synth
-        .getVoices()
-        .find((v) => v.lang.toLowerCase().startsWith(u.lang.slice(0, 2).toLowerCase()) && /female|woman/i.test(v.name));
-      if (female) u.voice = female;
-      this.turnMuteUntil = Date.now() + 60000;
-      let receivedBoundary = false;
-      u.onboundary = (ev: SpeechSynthesisEvent) => {
-        if (this.closedByClient) return;
-        if (typeof ev.charIndex === 'number' && ev.charIndex >= 0) {
-          receivedBoundary = true;
-          const endIdx =
-            typeof ev.charLength === 'number' && ev.charLength > 0
-              ? ev.charIndex + ev.charLength
-              : text.indexOf(' ', ev.charIndex + 1);
-          const sliceEnd = endIdx > 0 ? Math.min(text.length, endIdx) : text.length;
-          const spokenSoFar = text.slice(0, sliceEnd).trim();
-          if (spokenSoFar) {
-            this.emit({ type: 'output_transcript_sync', text: spokenSoFar });
-          }
-        }
-      };
-      u.onstart = () => {
-        if (!receivedBoundary && !this.closedByClient) {
-          // If the synthesizer fires onboundary, it will update progressively; otherwise show on end
-        }
-      };
-      await new Promise<void>((resolve) => {
-        u.onend = () => resolve();
-        u.onerror = () => resolve();
-        synth.speak(u);
-      });
-      if (!this.closedByClient) {
-        this.emit({ type: 'output_transcript_sync', text, final: true });
-      }
-      this.turnMuteUntil = Date.now() + 400;
-    } catch {
+    const mySpeakGen = ++this.speakGen;
+    if (!this.apiKey) {
       this.emit({ type: 'output_transcript', text });
+      this.emit({
+        type: 'error',
+        label: 'Voice unavailable',
+        detail: 'Gemini API key is required for TIYA’s consistent female voice.',
+      });
+      return;
     }
+
+    // Lock ONE Gemini TTS model for the entire session so voice identity never switches
+    const modelList = this.lockedTtsModel
+      ? [this.lockedTtsModel]
+      : await pickTtsModels(this.apiKey);
+    const styleCue = detectEmotionalVoiceStyle(text, this.isOwner);
+    let lastErr: unknown = null;
+
+    for (const model of modelList) {
+      if (this.closedByClient || mySpeakGen !== this.speakGen) return;
+      const isGemini38Tts = /3\.8/i.test(model);
+      const requestBody = (withMetadata: boolean) => ({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              withMetadata
+                ? { text, speechMetadata: { style: styleCue } }
+                : { text },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseModalities: ['AUDIO'],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
+        },
+      });
+
+      try {
+        let r: any;
+        try {
+          r = await generateContent(this.apiKey, model, requestBody(isGemini38Tts));
+        } catch (metaErr) {
+          if (isGemini38Tts && !isBadKey(metaErr)) {
+            r = await generateContent(this.apiKey, model, requestBody(false));
+          } else {
+            throw metaErr;
+          }
+        }
+        const audio = responseAudio(r);
+        if (audio) {
+          if (this.closedByClient || mySpeakGen !== this.speakGen) return;
+          if (!this.lockedTtsModel) this.lockedTtsModel = model;
+          const samples = Math.floor(atob(audio.data).length / 2);
+          const rate = computeNaturalPlaybackRate(this.speechSpeed);
+          this.turnMuteUntil = Date.now() + (samples / (24000 * rate)) * 1000 + 600;
+          // Emit audio (with exact mimeType) + transcript together so text and audio stay aligned
+          this.emit({ type: 'audio', data: audio.data, mimeType: audio.mimeType });
+          this.emit({ type: 'output_transcript', text });
+          return;
+        }
+      } catch (err) {
+        lastErr = err;
+        if (isBadKey(err)) break;
+        if (this.lockedTtsModel) break; // Never hop to a second TTS model once locked
+      }
+    }
+
+    // NEVER silently fall back to window.speechSynthesis (prevents random male/OS voice switching)
+    if (this.closedByClient || mySpeakGen !== this.speakGen) return;
+    this.emit({ type: 'output_transcript', text });
+    const c = classifyGeminiError(errMsg(lastErr || 'Gemini TTS failed'));
+    this.emit({
+      type: 'error',
+      label: c.label || 'Voice unavailable',
+      detail: 'Gemini voice could not play right now. Browser voice fallback is disabled to preserve TIYA’s single female voice.',
+    });
   }
 
   private onLiveMessage(message: any) {
@@ -928,7 +1025,13 @@ export class LocalLiveSocket {
       });
     }
     for (const part of content?.modelTurn?.parts ?? []) {
-      if (part.inlineData?.data) this.emit({ type: 'audio', data: part.inlineData.data });
+      if (part.inlineData?.data) {
+        this.emit({
+          type: 'audio',
+          data: part.inlineData.data,
+          mimeType: part.inlineData.mimeType || 'audio/pcm;rate=24000',
+        });
+      }
     }
     if (content?.outputTranscription?.text) {
       this.emit({ type: 'output_transcript', text: content.outputTranscription.text });
@@ -980,7 +1083,13 @@ export class LocalLiveSocket {
           : [primary];
       this.language = String(msg.language || 'Bengali');
       this.speechSpeed = typeof msg.speechSpeed === 'number' && Number.isFinite(msg.speechSpeed) ? msg.speechSpeed : 1.0;
-      void this.connect(String(msg.apiKey || '').trim(), candidates, msg.voiceName || 'Zephyr', msg.systemInstruction || 'You are TIYA.');
+      this.isOwner = Boolean(msg.isOwner);
+      void this.connect(
+        String(msg.apiKey || '').trim(),
+        candidates,
+        resolveCanonicalFemaleVoice(msg.voiceName),
+        msg.systemInstruction || 'You are TIYA.',
+      );
     } else if (msg.type === 'motivation_response' && msg.callId && this.session) {
       const pending = this.pendingMotivation.get(msg.callId);
       if (pending) {

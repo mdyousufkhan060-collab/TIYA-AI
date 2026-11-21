@@ -20,6 +20,7 @@ import {
   validatePhoneAction,
 } from './src/utils/phoneActions';
 import { validateNavigateToolArgs } from './src/utils/tiyaNavigation';
+import { resolveCanonicalFemaleVoice } from './src/utils/voiceAudioPipeline';
 import { DEFAULT_LIVE_MODELS, LiveModelInfo } from './src/types/tiya';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -524,18 +525,24 @@ async function startServer() {
       return;
     }
 
-    const { voiceName, assistantName, yourName, language, ttsModel } = req.body as {
+    const { voiceName, assistantName, yourName, language, ttsModel, isOwner } = req.body as {
       voiceName?: string;
       assistantName?: string;
       yourName?: string;
       language?: string;
       ttsModel?: string;
+      isOwner?: boolean;
     };
 
-    const name = assistantName?.trim() || 'তিয়া';
-    const userPart = yourName?.trim() ? ` ${yourName.trim()},` : '';
+    const lockedVoice = resolveCanonicalFemaleVoice(voiceName);
+    const name = assistantName?.trim() || 'তিয়া';
+    const userPart = isOwner
+      ? ' স্যার,'
+      : yourName?.trim()
+        ? ` ${yourName.trim()},`
+        : '';
     const sampleByLang: Record<string, string> = {
-      Bengali: `হ্যালো${userPart} আমি ${name}। আপনার ভয়েস সেটআপ একদম ঠিক আছে!`,
+      Bengali: `হ্যালো${userPart} আমি ${name}। আপনার ভয়েস সেটআপ একদম ঠিক আছে!`,
       English: `Hello${userPart} I am ${name}. Your voice check is working clearly.`,
       Urdu: `السلام علیکم${userPart} میں ${name} ہوں۔ آپ کی آواز بالکل ٹھیک کام کر رہی ہے۔`,
       Hindi: `नमस्ते${userPart} मैं ${name} हूँ। आपकी आवाज़ बिल्कुल सही काम कर रही है।`,
@@ -554,7 +561,7 @@ async function startServer() {
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: {
-                voiceName: voiceName || 'Zephyr',
+                voiceName: lockedVoice,
               },
             },
           },
@@ -668,13 +675,15 @@ async function startServer() {
           const navToolDecl = buildNavigateAppTool(isExtendedThinking);
           const motivationToolDecl = buildGetLatestMotivationTool(isExtendedThinking);
 
+          const lockedVoice = resolveCanonicalFemaleVoice(voiceName);
           const sessionPromise = ai.live.connect({
             model: modelId,
             config: {
               responseModalities: [Modality.AUDIO],
+              temperature: 0.7,
               speechConfig: {
                 voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: voiceName || 'Zephyr' },
+                  prebuiltVoiceConfig: { voiceName: lockedVoice },
                 },
               },
               inputAudioTranscription: {},
@@ -710,7 +719,11 @@ async function startServer() {
                 }
                 for (const part of content?.modelTurn?.parts ?? []) {
                   if (part.inlineData?.data) {
-                    safeSend({ type: 'audio', data: part.inlineData.data });
+                    safeSend({
+                      type: 'audio',
+                      data: part.inlineData.data,
+                      mimeType: part.inlineData.mimeType || 'audio/pcm;rate=24000',
+                    });
                   }
                 }
                 if (content?.outputTranscription?.text) {

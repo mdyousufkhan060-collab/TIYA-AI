@@ -143,17 +143,63 @@ test('Mobile voice media constraints enable noise suppression, echo cancellation
   assert.deepEqual(audio.autoGainControl, { ideal: true });
 });
 
-test('computeNaturalPlaybackRate tunes default speed to 0.90x without stretching/distortion', async () => {
+test('computeNaturalPlaybackRate preserves 1.0x native female pitch at default and clamps extremes safely', async () => {
   const { computeNaturalPlaybackRate } = await import('./voiceAudioPipeline.ts');
-  const defaultRate = computeNaturalPlaybackRate(1.0);
-  assert.ok(defaultRate >= 0.85 && defaultRate <= 0.95, `expected 0.85-0.95, got ${defaultRate}`);
-  assert.equal(defaultRate, 0.9);
+  // Default 1.0 stays 1.0 so female vocal timbre is NEVER pitched deeper/thicker
+  assert.equal(computeNaturalPlaybackRate(1.0), 1.0);
+  // Extreme low slider clamps cleanly to avoid pitch-deepening distortion
+  assert.equal(computeNaturalPlaybackRate(0.5), 0.92);
+  // Faster user setting clamps cleanly to avoid thin/chipmunk distortion
+  assert.equal(computeNaturalPlaybackRate(2.0), 1.15);
+});
 
-  // Extreme low slider clamps cleanly to avoid distorted audio
-  assert.equal(computeNaturalPlaybackRate(0.5), 0.84);
-  // Faster user setting still speeds up smoothly within safe bounds
-  assert.ok(computeNaturalPlaybackRate(1.25) > 1.05);
-  assert.equal(computeNaturalPlaybackRate(2.0), 1.3);
+test('resolveCanonicalFemaleVoice locks strictly to approved female voices and rejects male/unknown voices', async () => {
+  const { resolveCanonicalFemaleVoice, DEFAULT_LOCKED_FEMALE_VOICE } = await import('./voiceAudioPipeline.ts');
+  assert.equal(resolveCanonicalFemaleVoice('Aoede'), 'Aoede');
+  assert.equal(resolveCanonicalFemaleVoice('Sulafat'), 'Sulafat');
+  assert.equal(resolveCanonicalFemaleVoice('Vindemiatrix'), 'Vindemiatrix');
+  // Male Gemini voices (Puck, Charon, Fenrir) and empty/unknown IDs fall back strictly to default female voice
+  assert.equal(resolveCanonicalFemaleVoice('Puck'), DEFAULT_LOCKED_FEMALE_VOICE);
+  assert.equal(resolveCanonicalFemaleVoice('Charon'), DEFAULT_LOCKED_FEMALE_VOICE);
+  assert.equal(resolveCanonicalFemaleVoice('Fenrir'), DEFAULT_LOCKED_FEMALE_VOICE);
+  assert.equal(resolveCanonicalFemaleVoice(''), DEFAULT_LOCKED_FEMALE_VOICE);
+  assert.equal(resolveCanonicalFemaleVoice(undefined), DEFAULT_LOCKED_FEMALE_VOICE);
+});
+
+test('decodeAudioChunkPayload parses PCM rate and strips RIFF/WAVE headers cleanly', async () => {
+  const { decodeAudioChunkPayload } = await import('./voiceAudioPipeline.ts');
+
+  // 1. Raw PCM with explicit rate=16000
+  const rawBuf = Buffer.alloc(8);
+  rawBuf.writeInt16LE(16384, 0);
+  rawBuf.writeInt16LE(-16384, 2);
+  rawBuf.writeInt16LE(8192, 4);
+  rawBuf.writeInt16LE(0, 6);
+  const decodedRaw = decodeAudioChunkPayload(rawBuf.toString('base64'), 'audio/pcm;rate=16000');
+  assert.equal(decodedRaw.sampleRate, 16000);
+  assert.equal(decodedRaw.samples.length, 4);
+  assert.ok(Math.abs(decodedRaw.samples[0] - 0.5) < 0.001);
+
+  // 2. RIFF/WAVE header (44 bytes) + 4 PCM samples at 24000 Hz
+  const wavBuf = Buffer.alloc(44 + 8);
+  wavBuf.write('RIFF', 0);
+  wavBuf.writeUInt32LE(36 + 8, 4);
+  wavBuf.write('WAVE', 8);
+  wavBuf.write('fmt ', 12);
+  wavBuf.writeUInt32LE(16, 16);
+  wavBuf.writeUInt16LE(1, 20);
+  wavBuf.writeUInt16LE(1, 22);
+  wavBuf.writeUInt32LE(24000, 24);
+  wavBuf.writeUInt32LE(48000, 28);
+  wavBuf.writeUInt16LE(2, 32);
+  wavBuf.writeUInt16LE(16, 34);
+  wavBuf.write('data', 36);
+  wavBuf.writeUInt32LE(8, 40);
+  rawBuf.copy(wavBuf, 44);
+  const decodedWav = decodeAudioChunkPayload(wavBuf.toString('base64'), 'audio/wav');
+  assert.equal(decodedWav.sampleRate, 24000);
+  assert.equal(decodedWav.samples.length, 4);
+  assert.ok(Math.abs(decodedWav.samples[0] - 0.5) < 0.001);
 });
 
 test('VoiceTranscriptSynchronizer releases real server chunks in sync with audio clock and cancels on barge-in', async () => {
@@ -162,15 +208,15 @@ test('VoiceTranscriptSynchronizer releases real server chunks in sync with audio
 
   // Audio chunk 1 plays [1.0s .. 1.6s], chunk 2 plays [1.6s .. 2.2s], chunk 3 plays [2.2s .. 2.8s]
   sync.enqueue('স্যার,', 1.0, 1.0, 1.6);
-  sync.enqueue(' তুমি', 1.0, 1.6, 2.2);
-  sync.enqueue(' কেমন আছো?', 1.0, 2.2, 2.8);
+  sync.enqueue(' আপনি', 1.0, 1.6, 2.2);
+  sync.enqueue(' কেমন আছেন?', 1.0, 2.2, 2.8);
 
   // At t=1.0s: only first chunk is released
   assert.deepEqual(sync.drainReady(1.0), ['স্যার,']);
   assert.equal(sync.pendingCount(), 2);
 
   // At t=1.65s: second chunk is released right when audio chunk 2 plays
-  assert.deepEqual(sync.drainReady(1.65), [' তুমি']);
+  assert.deepEqual(sync.drainReady(1.65), [' আপনি']);
   assert.equal(sync.pendingCount(), 1);
 
   // User interrupts mid-sentence -> unplayed chunk 3 is cancelled so audio & text never contradict
@@ -179,7 +225,7 @@ test('VoiceTranscriptSynchronizer releases real server chunks in sync with audio
   assert.deepEqual(sync.flushAll(), []);
 
   // Normal completion flushes any final pending chunk cleanly
-  sync.enqueue('ভালো আছি।', 3.0, 3.4, 3.8);
-  assert.deepEqual(sync.flushAll(), ['ভালো আছি।']);
+  sync.enqueue('ভালো আছি স্যার।', 3.0, 3.4, 3.8);
+  assert.deepEqual(sync.flushAll(), ['ভালো আছি স্যার।']);
 });
 
