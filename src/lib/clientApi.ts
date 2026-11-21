@@ -1004,3 +1004,176 @@ export class LocalLiveSocket {
 export function createLiveSocket(): WebSocket {
   return new LocalLiveSocket() as unknown as WebSocket;
 }
+
+// ---------------------------------------------------------------------------
+// LocalTranscribeSocket — direct client-side Gemini Live streaming STT
+// Works everywhere (AI Studio preview, Vercel, mobile Chrome, Android APK).
+// ---------------------------------------------------------------------------
+export class LocalTranscribeSocket {
+  readyState = 0; // CONNECTING
+  onopen: ((ev: Event) => void) | null = null;
+  onmessage: ((ev: MessageEvent) => void) | null = null;
+  onerror: ((ev: Event) => void) | null = null;
+  onclose: ((ev: CloseEvent) => void) | null = null;
+
+  private session: RawLiveSession | null = null;
+  private closedByClient = false;
+  private attemptId = 0;
+
+  constructor() {
+    setTimeout(() => {
+      if (this.closedByClient) return;
+      this.readyState = 1; // OPEN
+      this.onopen?.(new Event('open'));
+    }, 0);
+  }
+
+  private emit(payload: Record<string, unknown>) {
+    if (this.readyState !== 1) return;
+    try {
+      this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(payload) }));
+    } catch {
+      // ignore listener errors
+    }
+  }
+
+  private closeSession() {
+    if (this.session) {
+      try {
+        this.session.close();
+      } catch {
+        // ignore
+      }
+      this.session = null;
+    }
+  }
+
+  private async connect(apiKey: string, languageCodes?: string[]) {
+    const trimmedKey = apiKey.trim();
+    if (!trimmedKey) {
+      this.emit({
+        type: 'error',
+        label: 'No API key',
+        detail: 'Add your Gemini API key in Settings > Connections.',
+      });
+      return;
+    }
+
+    const requestedCodes = Array.isArray(languageCodes)
+      ? languageCodes.filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+      : [];
+
+    const attempts: Array<string[] | undefined> =
+      requestedCodes.length > 0 ? [requestedCodes, undefined] : [undefined];
+
+    let lastErr = { label: 'Model not available', detail: 'Real-time transcription model is unavailable on this key.' };
+
+    for (const codes of attempts) {
+      if (this.closedByClient) return;
+      const attempt = ++this.attemptId;
+
+      try {
+        const session = await openRawLive(
+          trimmedKey,
+          {
+            model: 'models/gemini-3.5-transcribe-live',
+            generationConfig: {
+              responseModalities: ['TEXT'],
+            },
+            inputAudioTranscription: codes ? { languageCodes: codes } : {},
+          },
+          {
+            onMessage: (msg) => {
+              if (attempt !== this.attemptId || this.closedByClient) return;
+              const sc = msg?.serverContent;
+              if (!sc) return;
+
+              if (sc.interimInputTranscription?.text) {
+                this.emit({ type: 'interim', text: String(sc.interimInputTranscription.text) });
+              }
+              if (sc.inputTranscription?.text) {
+                const isPartial = sc.inputTranscription.finished === false;
+                this.emit({
+                  type: isPartial ? 'interim' : 'final',
+                  text: String(sc.inputTranscription.text),
+                });
+              }
+              if (sc.turnComplete) {
+                this.emit({ type: 'turn_complete' });
+              }
+            },
+            onClose: (reason) => {
+              if (attempt !== this.attemptId || this.closedByClient) return;
+              this.session = null;
+              this.emit({ type: 'closed', reason: reason || '' });
+            },
+          },
+          4500,
+        );
+
+        if (this.closedByClient) {
+          session.close();
+          return;
+        }
+        this.session = session;
+        this.emit({ type: 'ready', model: 'gemini-3.5-transcribe-live' });
+        return;
+      } catch (err) {
+        const c = classifyGeminiError(errMsg(err));
+        lastErr = c;
+        if (c.label === 'Invalid API key' || c.label === 'Quota finished') {
+          break;
+        }
+      }
+    }
+
+    if (!this.closedByClient) {
+      this.emit({ type: 'error', label: lastErr.label, detail: lastErr.detail });
+    }
+  }
+
+  send(raw: string) {
+    let msg: any;
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      return;
+    }
+
+    if (msg.type === 'start') {
+      this.closeSession();
+      this.closedByClient = false;
+      void this.connect(String(msg.apiKey || ''), msg.languageCodes);
+    } else if (msg.type === 'audio' && msg.data && this.session) {
+      this.session.sendRealtimeInput({
+        audio: {
+          data: msg.data,
+          mimeType: 'audio/pcm;rate=16000',
+        },
+      });
+    } else if (msg.type === 'audio_end' && this.session) {
+      this.session.sendRealtimeInput({ audioStreamEnd: true });
+    } else if (msg.type === 'stop') {
+      this.closedByClient = true;
+      this.closeSession();
+    }
+  }
+
+  close() {
+    if (this.readyState === 3) return;
+    this.closedByClient = true;
+    this.closeSession();
+    this.readyState = 3; // CLOSED
+    try {
+      this.onclose?.(new CloseEvent('close'));
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/** Real-time streaming transcription socket that works everywhere (Vercel, Android app, PC). */
+export function createTranscribeSocket(): WebSocket {
+  return new LocalTranscribeSocket() as unknown as WebSocket;
+}
+

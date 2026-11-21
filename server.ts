@@ -448,6 +448,74 @@ async function startServer() {
     }
   });
 
+  // Optional Groq Whisper transcription fallback (preserves original spoken language)
+  app.post('/api/groq/transcribe', async (req: Request, res: Response) => {
+    const groqKey = String(req.headers['x-groq-api-key'] || '').trim();
+    if (!groqKey) {
+      res.status(401).json({ ok: false, label: 'No Groq key', detail: 'Add your Groq API key in Settings > Connections.' });
+      return;
+    }
+
+    const { audioBase64, mimeType, languageCode: langCode } = req.body as {
+      audioBase64?: string;
+      mimeType?: string;
+      languageCode?: string;
+    };
+
+    if (!audioBase64) {
+      res.status(400).json({ ok: false, label: 'Invalid audio', detail: 'No audio data received.' });
+      return;
+    }
+
+    try {
+      const rawBuffer = Buffer.from(audioBase64, 'base64');
+      const safeMime = mimeType || 'audio/webm';
+      const ext = safeMime.includes('mp4')
+        ? 'm4a'
+        : safeMime.includes('ogg')
+          ? 'ogg'
+          : safeMime.includes('wav')
+            ? 'wav'
+            : 'webm';
+
+      const form = new FormData();
+      form.append('file', new Blob([rawBuffer], { type: safeMime }), `speech.${ext}`);
+      form.append('model', 'whisper-large-v3-turbo');
+      form.append('temperature', '0');
+      form.append('response_format', 'json');
+      if (langCode && /^[a-z]{2}$/i.test(langCode.trim())) {
+        form.append('language', langCode.trim().toLowerCase());
+      }
+
+      const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${groqKey}`,
+        },
+        body: form,
+      });
+
+      const data = (await groqRes.json().catch(() => ({}))) as {
+        text?: string;
+        error?: { message?: string };
+      };
+
+      if (!groqRes.ok) {
+        res.status(groqRes.status).json({
+          ok: false,
+          label: 'Groq transcription failed',
+          detail: data.error?.message || `Groq HTTP ${groqRes.status}`,
+        });
+        return;
+      }
+
+      res.json({ ok: true, text: (data.text || '').trim() });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(400).json({ ok: false, label: 'Groq transcription failed', detail: msg });
+    }
+  });
+
   // Voice check endpoint using Gemini TTS
   app.post('/api/gemini/voice-check', async (req: Request, res: Response) => {
     const apiKey = extractApiKey(req);
@@ -516,8 +584,22 @@ async function startServer() {
 
   const server = http.createServer(app);
 
-  // WebSocket server for Gemini Live API native audio
-  const wss = new WebSocketServer({ server, path: '/ws/live' });
+  // WebSocket servers routed cleanly by pathname
+  const wss = new WebSocketServer({ noServer: true });
+  const transcribeWss = new WebSocketServer({ noServer: true });
+
+  server.on('upgrade', (req, socket, head) => {
+    const pathname = new URL(req.url || '/', 'http://localhost').pathname;
+    if (pathname === '/ws/live') {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req);
+      });
+    } else if (pathname === '/ws/transcribe') {
+      transcribeWss.handleUpgrade(req, socket, head, (ws) => {
+        transcribeWss.emit('connection', ws, req);
+      });
+    }
+  });
 
   wss.on('connection', (clientWs: WebSocket) => {
     let activeSession: Awaited<ReturnType<GoogleGenAI['live']['connect']>> | null = null;
@@ -875,6 +957,221 @@ async function startServer() {
           activeSession.sendRealtimeInput({
             text: msg.text,
           });
+        } else if (msg.type === 'stop') {
+          isClosedByClient = true;
+          closeSession();
+        }
+      } catch {
+        // Ignore malformed WS payloads
+      }
+    });
+
+    clientWs.on('close', () => {
+      isClosedByClient = true;
+      closeSession();
+    });
+  });
+
+  // WebSocket server for genuine real-time streaming Speech-to-Text (Gemini Live Transcribe)
+  transcribeWss.on('connection', (clientWs: WebSocket) => {
+    let activeSession: Awaited<ReturnType<GoogleGenAI['live']['connect']>> | null = null;
+    let isClosedByClient = false;
+    let connectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const safeSend = (payload: Record<string, unknown>) => {
+      if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(JSON.stringify(payload));
+      }
+    };
+
+    const closeSession = () => {
+      if (connectTimeout) {
+        clearTimeout(connectTimeout);
+        connectTimeout = null;
+      }
+      if (activeSession) {
+        try {
+          activeSession.close();
+        } catch {
+          // ignore
+        }
+        activeSession = null;
+      }
+    };
+
+    const connectTranscribe = async (params: { apiKey: string; languageCodes?: string[] }) => {
+      const apiKey = params.apiKey.trim();
+      if (!apiKey) {
+        safeSend({
+          type: 'error',
+          label: 'No API key',
+          detail: 'Add your Gemini API key in Settings > Connections.',
+        });
+        return;
+      }
+
+      const ai = createAiClient(apiKey);
+      const requestedCodes = Array.isArray(params.languageCodes)
+        ? params.languageCodes.filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+        : [];
+
+      // Try requested language hints first (e.g. ['bn-BD', 'en-US']), then auto-detect fallback
+      const attempts: Array<string[] | undefined> =
+        requestedCodes.length > 0 ? [requestedCodes, undefined] : [undefined];
+
+      let lastErr = { label: 'Transcription unavailable', detail: 'Could not start real-time transcription.' };
+
+      for (const codes of attempts) {
+        if (isClosedByClient) return;
+
+        let connected = false;
+        let erroredBeforeOpen = false;
+
+        try {
+          const sessionPromise = ai.live.connect({
+            model: 'gemini-3.5-transcribe-live',
+            config: {
+              responseModalities: [Modality.TEXT],
+              inputAudioTranscription: codes ? { languageCodes: codes } : {},
+            },
+            callbacks: {
+              onopen: () => {
+                connected = true;
+                if (connectTimeout) {
+                  clearTimeout(connectTimeout);
+                  connectTimeout = null;
+                }
+                safeSend({ type: 'ready', model: 'gemini-3.5-transcribe-live' });
+              },
+              onmessage: (message: LiveServerMessage) => {
+                const content = message.serverContent;
+                if (!content) return;
+
+                if (content.interimInputTranscription?.text) {
+                  safeSend({
+                    type: 'interim',
+                    text: content.interimInputTranscription.text,
+                  });
+                }
+                if (content.inputTranscription?.text) {
+                  safeSend({
+                    type: 'final',
+                    text: content.inputTranscription.text,
+                  });
+                }
+                if (content.turnComplete) {
+                  safeSend({ type: 'turn_complete' });
+                }
+              },
+              onerror: (err: unknown) => {
+                const msg =
+                  err && typeof err === 'object' && 'message' in err
+                    ? String((err as { message?: unknown }).message)
+                    : String(err);
+                const classified = classifyGeminiError(msg);
+                lastErr = classified;
+                if (!connected) {
+                  erroredBeforeOpen = true;
+                  return;
+                }
+                if (!isClosedByClient) {
+                  safeSend({ type: 'error', label: classified.label, detail: classified.detail });
+                }
+              },
+              onclose: (event: unknown) => {
+                const closeEvt = event as { code?: number; reason?: string } | undefined;
+                if (!connected && closeEvt?.reason) {
+                  lastErr = classifyGeminiError(closeEvt.reason);
+                  erroredBeforeOpen = true;
+                  return;
+                }
+                if (!isClosedByClient && connected) {
+                  safeSend({ type: 'closed', reason: closeEvt?.reason || '' });
+                }
+              },
+            },
+          });
+
+          const session = await Promise.race([
+            sessionPromise,
+            new Promise<never>((_, reject) => {
+              connectTimeout = setTimeout(
+                () => reject(new Error('Real-time transcription connection timed out')),
+                10000,
+              );
+            }),
+          ]);
+
+          if (connectTimeout) {
+            clearTimeout(connectTimeout);
+            connectTimeout = null;
+          }
+
+          if (isClosedByClient) {
+            session.close();
+            return;
+          }
+
+          // Briefly verify session did not immediately reject before open
+          await new Promise((r) => setTimeout(r, 120));
+          if (erroredBeforeOpen || !connected) {
+            try {
+              session.close();
+            } catch {
+              // ignore
+            }
+            continue;
+          }
+
+          activeSession = session;
+          return;
+        } catch (err: unknown) {
+          if (connectTimeout) {
+            clearTimeout(connectTimeout);
+            connectTimeout = null;
+          }
+          const msg = err instanceof Error ? err.message : String(err);
+          lastErr = classifyGeminiError(msg);
+          if (lastErr.label === 'Invalid API key' || lastErr.label === 'Quota finished') {
+            break;
+          }
+        }
+      }
+
+      if (!isClosedByClient) {
+        safeSend({ type: 'error', label: lastErr.label, detail: lastErr.detail });
+      }
+    };
+
+    clientWs.on('message', async (rawData) => {
+      try {
+        const msg = JSON.parse(rawData.toString()) as {
+          type: string;
+          apiKey?: string;
+          languageCodes?: string[];
+          data?: string;
+        };
+
+        if (msg.type === 'start') {
+          closeSession();
+          isClosedByClient = false;
+          await connectTranscribe({
+            apiKey: msg.apiKey || '',
+            languageCodes: msg.languageCodes,
+          });
+        } else if (msg.type === 'audio' && msg.data && activeSession) {
+          activeSession.sendRealtimeInput({
+            audio: {
+              data: msg.data,
+              mimeType: 'audio/pcm;rate=16000',
+            },
+          });
+        } else if (msg.type === 'audio_end' && activeSession) {
+          try {
+            activeSession.sendRealtimeInput({ audioStreamEnd: true });
+          } catch {
+            // ignore
+          }
         } else if (msg.type === 'stop') {
           isClosedByClient = true;
           closeSession();
