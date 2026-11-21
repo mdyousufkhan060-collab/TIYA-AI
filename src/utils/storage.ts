@@ -12,11 +12,38 @@ import {
   MicListeningSettings,
   TiyaSettings,
 } from '../types/tiya';
+import {
+  DEFAULT_PUBLIC_CHARACTER_ID,
+  sanitizePublicCharacterId,
+} from './characters';
 
 const SETTINGS_STORAGE_KEY = 'tiya_settings_v1';
 const CHATS_STORAGE_KEY = 'tiya_chats_v1';
+const ADMIN_CHATS_STORAGE_PREFIX = 'tiya_admin_chats_v1';
 const MEMORIES_STORAGE_KEY = 'tiya_memories_v1';
+const ADMIN_MEMORIES_STORAGE_PREFIX = 'tiya_admin_memories_v1';
 const ERROR_LOG_STORAGE_KEY = 'tiya_error_log_v1';
+
+export interface StorageAccountScope {
+  userId?: string | null;
+  isVerifiedAdmin?: boolean;
+}
+
+function resolveChatsStorageKey(scope?: StorageAccountScope): string {
+  const uid = String(scope?.userId || '').trim();
+  if (!uid) return CHATS_STORAGE_KEY;
+  return scope?.isVerifiedAdmin
+    ? `${ADMIN_CHATS_STORAGE_PREFIX}:${uid}`
+    : `${CHATS_STORAGE_KEY}:${uid}`;
+}
+
+function resolveMemoriesStorageKey(scope?: StorageAccountScope): string {
+  const uid = String(scope?.userId || '').trim();
+  if (!uid) return MEMORIES_STORAGE_KEY;
+  return scope?.isVerifiedAdmin
+    ? `${ADMIN_MEMORIES_STORAGE_PREFIX}:${uid}`
+    : `${MEMORIES_STORAGE_KEY}:${uid}`;
+}
 
 export const DEFAULT_MIC_LISTENING: MicListeningSettings = {
   sensitivity: 1.0,
@@ -49,6 +76,7 @@ export const DEFAULT_SETTINGS: TiyaSettings = {
   voiceModel: 'gemini-live-native',
   assistantName: 'TIYA',
   yourName: '',
+  selectedCharacterId: DEFAULT_PUBLIC_CHARACTER_ID,
   personality: 'Friendly',
   customPersonalityPrompt: '',
   affection: 'Off',
@@ -109,6 +137,7 @@ export function loadSettings(): TiyaSettings {
         : 'Standard',
       responseStyle: validStyle,
       voiceName: validVoice,
+      selectedCharacterId: sanitizePublicCharacterId(parsed.selectedCharacterId),
       personality: validPersonality,
       affection: validAffection,
       orbStyle: validOrbStyle,
@@ -166,10 +195,18 @@ export function saveSettings(settings: TiyaSettings): void {
   }
 }
 
-export function loadChats(): ChatMessage[] {
+export function loadChats(scope?: StorageAccountScope): ChatMessage[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = window.localStorage.getItem(CHATS_STORAGE_KEY);
+    const key = resolveChatsStorageKey(scope);
+    let raw = window.localStorage.getItem(key);
+    // One-time read fallback from legacy un-scoped storage for existing accounts
+    // (only when scoped key is empty and caller is the verified Admin or un-scoped)
+    if (!raw && scope?.userId && !scope.isVerifiedAdmin) {
+      raw = null;
+    } else if (!raw && scope?.isVerifiedAdmin) {
+      raw = window.localStorage.getItem(CHATS_STORAGE_KEY);
+    }
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -182,21 +219,24 @@ export function loadChats(): ChatMessage[] {
   }
 }
 
-export function saveChats(messages: ChatMessage[]): void {
+export function saveChats(messages: ChatMessage[], scope?: StorageAccountScope): void {
   if (typeof window === 'undefined') return;
   try {
     // Keep up to the most recent 200 messages in localStorage
     const trimmed = messages.slice(-200);
-    window.localStorage.setItem(CHATS_STORAGE_KEY, JSON.stringify(trimmed));
+    window.localStorage.setItem(resolveChatsStorageKey(scope), JSON.stringify(trimmed));
   } catch {
     // Ignore storage quota errors cleanly
   }
 }
 
-export function clearAllChatsStorage(): void {
+export function clearAllChatsStorage(scope?: StorageAccountScope): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.removeItem(CHATS_STORAGE_KEY);
+    window.localStorage.removeItem(resolveChatsStorageKey(scope));
+    if (!scope?.userId) {
+      window.localStorage.removeItem(CHATS_STORAGE_KEY);
+    }
   } catch {
     // Ignore
   }
@@ -258,26 +298,42 @@ export function groupMessagesIntoChatSessions(
     .reverse();
 }
 
-export function loadMemories(): MemoryItem[] {
+export function loadMemories(scope?: StorageAccountScope): MemoryItem[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = window.localStorage.getItem(MEMORIES_STORAGE_KEY);
+    const key = resolveMemoriesStorageKey(scope);
+    let raw = window.localStorage.getItem(key);
+    // Preserve legacy saved memories for verified Admin while strictly isolating ordinary users
+    if (!raw && scope?.isVerifiedAdmin) {
+      raw = window.localStorage.getItem(MEMORIES_STORAGE_KEY);
+    }
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (m): m is MemoryItem =>
-        Boolean(m) && typeof m.id === 'string' && typeof m.text === 'string',
-    );
+    const expectedScope = scope?.isVerifiedAdmin ? 'admin' : scope?.userId ? 'user' : null;
+    return parsed
+      .filter(
+        (m): m is MemoryItem =>
+          Boolean(m) && typeof m.id === 'string' && typeof m.text === 'string',
+      )
+      .filter((m) => {
+        if (expectedScope === 'user' && m.scope === 'admin') return false;
+        if (expectedScope === 'admin' && m.scope === 'user') return false;
+        return true;
+      });
   } catch {
     return [];
   }
 }
 
-export function saveMemories(memories: MemoryItem[]): void {
+export function saveMemories(memories: MemoryItem[], scope?: StorageAccountScope): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(MEMORIES_STORAGE_KEY, JSON.stringify(memories.slice(-100)));
+    const expectedScope = scope?.isVerifiedAdmin ? 'admin' : scope?.userId ? 'user' : undefined;
+    const normalized = memories.slice(-100).map((m) =>
+      expectedScope ? { ...m, scope: expectedScope as MemoryItem['scope'] } : m,
+    );
+    window.localStorage.setItem(resolveMemoriesStorageKey(scope), JSON.stringify(normalized));
   } catch {
     // Ignore
   }

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Bell, Crown } from 'lucide-react';
+import { Bell, Camera, CameraOff, Crown } from 'lucide-react';
 import { ChatMessage, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
 import { ActionConfirmCard } from './ActionConfirmCard';
 import { TiyaNeonNav } from './TiyaNeonNav';
@@ -16,6 +16,9 @@ interface HomeScreenProps {
   isAdmin: boolean;
   /** Premium customers / admin can chat without their own key */
   canUseWithoutKey?: boolean;
+  cameraActive?: boolean;
+  cameraError?: string;
+  onToggleCamera?: () => void;
   onToggleVoice: () => void;
   onOpenConnections: () => void;
   onOpenNotifications: () => void;
@@ -46,6 +49,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   unreadNotifications,
   isAdmin,
   canUseWithoutKey = false,
+  cameraActive = false,
+  cameraError = '',
+  onToggleCamera,
   onToggleVoice,
   onOpenConnections,
   onOpenNotifications,
@@ -61,7 +67,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     voiceState === 'connecting' ||
     voiceState === 'listening' ||
     voiceState === 'thinking' ||
-    voiceState === 'speaking';
+    voiceState === 'speaking' ||
+    voiceState === 'interrupted';
   const isSpeaking = voiceState === 'speaking';
   const hasKey = Boolean(settings.apiKey.trim());
   const assistantTitle = (settings.assistantName.trim() || 'TIYA').toUpperCase();
@@ -76,6 +83,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         return { text: 'THINKING', tone: 'text-cyan-300' };
       case 'speaking':
         return { text: 'SPEAKING', tone: 'text-emerald-300' };
+      case 'interrupted':
+        return { text: 'INTERRUPTED', tone: 'text-amber-300' };
+      case 'stopped':
+        return { text: 'STOPPED', tone: 'text-slate-400' };
       case 'error':
         return { text: errorLabel || 'ERROR', tone: 'text-rose-400' };
       default:
@@ -139,7 +150,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <h1 className="font-display text-center text-lg font-bold tracking-[0.35em] text-white drop-shadow-[0_0_10px_rgba(56,189,248,0.75)]">
           {assistantTitle}
         </h1>
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end gap-2">
+          {isAdmin && isVoiceOn && onToggleCamera && (
+            <button
+              type="button"
+              onClick={onToggleCamera}
+              aria-pressed={cameraActive}
+              aria-label={cameraActive ? 'Turn off camera visual context' : 'Turn on camera visual context'}
+              data-testid="admin-camera-toggle"
+              className={`relative flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm active:scale-95 ${
+                cameraActive
+                  ? 'bg-teal-500/25 text-teal-200 ring-1 ring-teal-300/70'
+                  : 'bg-[#0A1428]/70 text-cyan-100/80 ring-1 ring-cyan-300/35'
+              }`}
+            >
+              {cameraActive ? <Camera className="h-[17px] w-[17px]" /> : <CameraOff className="h-[17px] w-[17px]" />}
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenNotifications}
@@ -198,6 +225,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             Add Gemini API key in Settings
           </button>
         ) : null}
+
+        {isAdmin && cameraError && (
+          <p className="text-center text-[10.5px] font-medium text-amber-300/90" data-testid="admin-camera-error">
+            {cameraError}
+          </p>
+        )}
 
 
         {/* voice bars + status */}

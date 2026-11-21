@@ -1,6 +1,13 @@
 import { createLiveSocket } from '../lib/clientApi';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChatMessage, MemoryItem, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  CharacterProfile,
+  ChatMessage,
+  MemoryItem,
+  PhoneAction,
+  TiyaSettings,
+  VoiceState,
+} from '../types/tiya';
 import {
   computeRmsEnergy,
   float32ToPcm16Base64,
@@ -23,6 +30,7 @@ import {
 import { TranscriptStreamBuffer } from '../utils/transcriptBuffer';
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { ReplyUsageDecision } from '../utils/authErrors';
+import { buildProactiveVoiceCue, resolveActiveCharacter } from '../utils/characters';
 import { buildTiyaSystemPrompt } from '../utils/prompts';
 import { appendErrorLog } from '../utils/storage';
 import { NavigationCommand, parseNavigationCommand } from '../utils/tiyaNavigation';
@@ -32,15 +40,21 @@ interface UseTiyaLiveVoiceOptions {
   messages: ChatMessage[];
   memories?: MemoryItem[];
   userAge?: number | null;
-  /** owner Gmail → emotional persona */
+  /** Backend-verified Admin session flag (from Supabase is_admin RPC + active session) */
   isOwner?: boolean;
   checkReplyUsage?: () => Promise<ReplyUsageDecision>;
   onAppendVoiceMessage: (role: 'user' | 'assistant', text: string, action?: PhoneAction) => void;
   onUpdateLastVoiceMessage: (role: 'user' | 'assistant', text: string) => void;
+  onUserTranscriptFinalized?: (text: string) => void;
   onPhoneAction: (action: PhoneAction) => void;
   onNavigate?: (cmd: NavigationCommand) => void;
   onRequestLatestMotivation?: () => Promise<{ title?: string | null; body: string } | null>;
 }
+
+const CAMERA_FPS_INTERVAL_MS = 1000; // <= 1 FPS per Gemini Live API guidelines
+const PROACTIVE_OPENING_DELAY_MS = 550;
+const INTERRUPT_DISPLAY_MS = 320;
+const STOPPED_DISPLAY_MS = 280;
 
 export function useTiyaLiveVoice({
   settings,
@@ -51,6 +65,7 @@ export function useTiyaLiveVoice({
   checkReplyUsage,
   onAppendVoiceMessage,
   onUpdateLastVoiceMessage,
+  onUserTranscriptFinalized,
   onPhoneAction,
   onNavigate,
   onRequestLatestMotivation,
@@ -60,6 +75,14 @@ export function useTiyaLiveVoice({
   const [errorDetail, setErrorDetail] = useState<string>('');
   const [activeModel, setActiveModel] = useState<string>('');
   const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [cameraActive, setCameraActive] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string>('');
+
+  const isMinor = typeof userAge === 'number' && userAge < 18;
+  const activeCharacter: CharacterProfile = useMemo(
+    () => resolveActiveCharacter(settings, isOwner, isMinor),
+    [settings, isOwner, isMinor],
+  );
 
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -71,10 +94,14 @@ export function useTiyaLiveVoice({
   userAgeRef.current = userAge;
   const isOwnerRef = useRef(isOwner);
   isOwnerRef.current = isOwner;
+  const activeCharacterRef = useRef<CharacterProfile>(activeCharacter);
+  activeCharacterRef.current = activeCharacter;
   const checkReplyUsageRef = useRef(checkReplyUsage);
   checkReplyUsageRef.current = checkReplyUsage;
   const voiceStateRef = useRef(voiceState);
   voiceStateRef.current = voiceState;
+  const cameraActiveRef = useRef(cameraActive);
+  cameraActiveRef.current = cameraActive;
 
   const wsRef = useRef<WebSocket | null>(null);
   const inputCtxRef = useRef<AudioContext | null>(null);
@@ -89,6 +116,19 @@ export function useTiyaLiveVoice({
   const connectWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionGenRef = useRef<number>(0);
 
+  // Proactive initiation & state transition timers
+  const proactiveOpeningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const idleCheckInTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const proactiveStreakRef = useRef<number>(0);
+  const hasSpokenInSessionRef = useRef<boolean>(false);
+
+  // Opt-in camera streaming resources (OFF by default, verified Admin only)
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cameraFrameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const userTurnBufferRef = useRef<TranscriptStreamBuffer>(new TranscriptStreamBuffer());
   const assistantTurnBufferRef = useRef<TranscriptStreamBuffer>(new TranscriptStreamBuffer());
   const assistantSyncRef = useRef<VoiceTranscriptSynchronizer>(new VoiceTranscriptSynchronizer());
@@ -98,10 +138,12 @@ export function useTiyaLiveVoice({
   const hasStartedUserBubbleRef = useRef<boolean>(false);
   const hasStartedAssistantBubbleRef = useRef<boolean>(false);
   const lastNavHandledRef = useRef<string>('');
+  const lastFinalizedUserMemoryTextRef = useRef<string>('');
 
   const callbacksRef = useRef({
     onAppendVoiceMessage,
     onUpdateLastVoiceMessage,
+    onUserTranscriptFinalized,
     onPhoneAction,
     onNavigate,
     onRequestLatestMotivation,
@@ -109,6 +151,7 @@ export function useTiyaLiveVoice({
   callbacksRef.current = {
     onAppendVoiceMessage,
     onUpdateLastVoiceMessage,
+    onUserTranscriptFinalized,
     onPhoneAction,
     onNavigate,
     onRequestLatestMotivation,
@@ -121,12 +164,201 @@ export function useTiyaLiveVoice({
     }
   }, [settings.volume]);
 
+  const clearProactiveTimers = useCallback(() => {
+    if (proactiveOpeningTimerRef.current) {
+      clearTimeout(proactiveOpeningTimerRef.current);
+      proactiveOpeningTimerRef.current = null;
+    }
+    if (idleCheckInTimerRef.current) {
+      clearTimeout(idleCheckInTimerRef.current);
+      idleCheckInTimerRef.current = null;
+    }
+  }, []);
+
+  const clearStateTransitionTimer = useCallback(() => {
+    if (stateTransitionTimerRef.current) {
+      clearTimeout(stateTransitionTimerRef.current);
+      stateTransitionTimerRef.current = null;
+    }
+  }, []);
+
   const clearAssistantSyncTimer = useCallback(() => {
     if (assistantSyncTimerRef.current) {
       clearTimeout(assistantSyncTimerRef.current);
       assistantSyncTimerRef.current = null;
     }
   }, []);
+
+  const stopCamera = useCallback(() => {
+    if (cameraFrameTimerRef.current) {
+      clearInterval(cameraFrameTimerRef.current);
+      cameraFrameTimerRef.current = null;
+    }
+    if (cameraVideoRef.current) {
+      try {
+        cameraVideoRef.current.pause();
+        cameraVideoRef.current.srcObject = null;
+      } catch {
+        // ignore
+      }
+      cameraVideoRef.current = null;
+    }
+    cameraCanvasRef.current = null;
+    if (cameraStreamRef.current) {
+      for (const track of cameraStreamRef.current.getTracks()) {
+        try {
+          track.stop();
+        } catch {
+          // ignore
+        }
+      }
+      cameraStreamRef.current = null;
+    }
+    cameraActiveRef.current = false;
+    setCameraActive(false);
+    setCameraError('');
+  }, []);
+
+  const sendCameraFrame = useCallback(() => {
+    const ws = wsRef.current;
+    const video = cameraVideoRef.current;
+    const canvas = cameraCanvasRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN || !video || !canvas) return;
+    if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
+    try {
+      const targetW = 320;
+      const targetH = Math.max(180, Math.round((video.videoHeight / video.videoWidth) * targetW));
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, targetW, targetH);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+      const commaIdx = dataUrl.indexOf(',');
+      const base64 = commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : '';
+      if (base64) {
+        ws.send(JSON.stringify({ type: 'video', data: base64, mimeType: 'image/jpeg' }));
+      }
+    } catch {
+      // Skip transient frame capture errors
+    }
+  }, []);
+
+  const toggleCamera = useCallback(async () => {
+    setCameraError('');
+    if (cameraActiveRef.current) {
+      stopCamera();
+      return;
+    }
+    // Strict backend-verified Admin & capability gate
+    if (!isOwnerRef.current || !activeCharacterRef.current.capabilities.cameraVisualContext) {
+      return;
+    }
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      setCameraError('Start voice mode first to enable camera visual context.');
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError('Camera is not supported in this browser.');
+      return;
+    }
+
+    const mySessionGen = sessionGenRef.current;
+    try {
+      const videoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
+        audio: false,
+      });
+
+      if (mySessionGen !== sessionGenRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        for (const t of videoStream.getTracks()) t.stop();
+        return;
+      }
+
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = videoStream;
+      await video.play().catch(() => {});
+
+      const canvas = document.createElement('canvas');
+      cameraStreamRef.current = videoStream;
+      cameraVideoRef.current = video;
+      cameraCanvasRef.current = canvas;
+      cameraActiveRef.current = true;
+      setCameraActive(true);
+      setCameraError('');
+
+      // Send an initial frame once metadata is available, then <= 1 FPS
+      setTimeout(() => {
+        if (cameraActiveRef.current && mySessionGen === sessionGenRef.current) {
+          sendCameraFrame();
+        }
+      }, 250);
+      cameraFrameTimerRef.current = setInterval(() => {
+        if (cameraActiveRef.current && mySessionGen === sessionGenRef.current) {
+          sendCameraFrame();
+        }
+      }, CAMERA_FPS_INTERVAL_MS);
+    } catch {
+      stopCamera();
+      setCameraError('Camera permission denied or unavailable.');
+    }
+  }, [sendCameraFrame, stopCamera]);
+
+  const scheduleIdleCheckIn = useCallback(
+    (mySessionGen: number) => {
+      if (idleCheckInTimerRef.current) {
+        clearTimeout(idleCheckInTimerRef.current);
+        idleCheckInTimerRef.current = null;
+      }
+
+      const char = activeCharacterRef.current;
+      if (
+        !isOwnerRef.current ||
+        !char.initiationBehavior.enabled ||
+        !char.initiationBehavior.allowIdleFollowUp ||
+        proactiveStreakRef.current >= char.initiationBehavior.maxConsecutiveProactiveTurns
+      ) {
+        return;
+      }
+
+      const waitMs = Math.max(15000, char.initiationBehavior.idleCheckInMinMs || 45000);
+      idleCheckInTimerRef.current = setTimeout(() => {
+        idleCheckInTimerRef.current = null;
+        if (mySessionGen !== sessionGenRef.current) return;
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+        if (voiceStateRef.current !== 'listening' || activeSourcesRef.current.size > 0) return;
+
+        const latestChar = activeCharacterRef.current;
+        if (
+          !isOwnerRef.current ||
+          !latestChar.initiationBehavior.enabled ||
+          !latestChar.initiationBehavior.allowIdleFollowUp ||
+          proactiveStreakRef.current >= latestChar.initiationBehavior.maxConsecutiveProactiveTurns
+        ) {
+          return;
+        }
+
+        proactiveStreakRef.current += 1;
+        const cue = buildProactiveVoiceCue({
+          kind: 'idle_checkin',
+          language: settingsRef.current.language || 'Bengali',
+          recentMessages: messagesRef.current,
+          cameraActive: cameraActiveRef.current,
+        });
+        setVoiceState('thinking');
+        wsRef.current.send(JSON.stringify({ type: 'proactive_prompt', text: cue }));
+      }, waitMs);
+    },
+    [],
+  );
 
   const pushUserBubble = useCallback((displayText: string) => {
     const trimmed = displayText.trim();
@@ -138,6 +370,21 @@ export function useTiyaLiveVoice({
       callbacksRef.current.onUpdateLastVoiceMessage('user', displayText);
     }
   }, []);
+
+  const finalizePendingUserBubble = useCallback(() => {
+    if (!hasStartedUserBubbleRef.current) return;
+    const finalizedUser = userTurnBufferRef.current.finalize();
+    if (finalizedUser) {
+      pushUserBubble(finalizedUser);
+      const clean = finalizedUser.trim();
+      if (clean && clean !== lastFinalizedUserMemoryTextRef.current) {
+        lastFinalizedUserMemoryTextRef.current = clean;
+        callbacksRef.current.onUserTranscriptFinalized?.(clean);
+      }
+    }
+    hasStartedUserBubbleRef.current = false;
+    userTurnBufferRef.current.reset();
+  }, [pushUserBubble]);
 
   const pushAssistantBubble = useCallback((displayText: string) => {
     const trimmed = displayText.trim();
@@ -198,6 +445,10 @@ export function useTiyaLiveVoice({
     // Advance generation immediately so no in-flight async setup or stale socket can overlap audio
     sessionGenRef.current += 1;
 
+    clearProactiveTimers();
+    clearStateTransitionTimer();
+    stopCamera();
+
     if (connectWatchdogRef.current) {
       clearTimeout(connectWatchdogRef.current);
       connectWatchdogRef.current = null;
@@ -252,73 +503,86 @@ export function useTiyaLiveVoice({
       }
     }
 
+    proactiveStreakRef.current = 0;
+    hasSpokenInSessionRef.current = false;
     resetTurnState();
     setAudioLevel(0);
-  }, [resetTurnState, stopPlaybackQueue]);
+  }, [clearProactiveTimers, clearStateTransitionTimer, resetTurnState, stopCamera, stopPlaybackQueue]);
 
   const stopVoice = useCallback(() => {
     cleanupResources();
-    setVoiceState('idle');
+    const stoppedGen = sessionGenRef.current;
     setActiveModel('');
+    setVoiceState('stopped');
+    stateTransitionTimerRef.current = setTimeout(() => {
+      stateTransitionTimerRef.current = null;
+      if (sessionGenRef.current === stoppedGen && voiceStateRef.current === 'stopped') {
+        setVoiceState('idle');
+      }
+    }, STOPPED_DISPLAY_MS);
   }, [cleanupResources]);
 
-  const playPcmChunk = useCallback((base64Data: string, mimeType?: string) => {
-    const ctx = outputCtxRef.current;
-    const outputChain = outputChainRef.current;
-    if (!ctx || !outputChain) return;
+  const playPcmChunk = useCallback(
+    (base64Data: string, mimeType: string | undefined, mySessionGen: number) => {
+      const ctx = outputCtxRef.current;
+      const outputChain = outputChainRef.current;
+      if (!ctx || !outputChain) return;
 
-    if (ctx.state === 'suspended') {
-      void outputChain.ensureActive();
-    }
-
-    const { samples: decoded, sampleRate } = decodeAudioChunkPayload(base64Data, mimeType);
-    if (decoded.length === 0) return;
-
-    const float32 =
-      activeSourcesRef.current.size === 0
-        ? applyStartAntiClick(decoded, sampleRate)
-        : decoded;
-
-    const rms = computeRmsEnergy(float32);
-    setAudioLevel(Math.min(1, rms * 4.5));
-
-    const buffer = ctx.createBuffer(1, float32.length, sampleRate);
-    buffer.getChannelData(0).set(float32);
-
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    // Pitch-faithful playback rate (1.0 at default preserves exact female vocal identity without deepening)
-    const effectiveRate = computeNaturalPlaybackRate(settingsRef.current.speechSpeed);
-    source.playbackRate.value = effectiveRate;
-    const pitchRatio = settingsRef.current.pitch || 1.0;
-    if (typeof source.detune !== 'undefined' && Math.abs(pitchRatio - 1.0) > 0.005) {
-      source.detune.value = (pitchRatio - 1.0) * 1200;
-    }
-    source.connect(outputChain.inputNode);
-
-    const now = ctx.currentTime;
-    const startAt = Math.max(now, nextStartTimeRef.current);
-    source.start(startAt);
-    lastAudioChunkStartRef.current = startAt;
-    nextStartTimeRef.current = startAt + buffer.duration / effectiveRate;
-
-    activeSourcesRef.current.add(source);
-    source.onended = () => {
-      activeSourcesRef.current.delete(source);
-      if (activeSourcesRef.current.size === 0) {
-        // Flush any remaining synchronized assistant text right as speech completes
-        flushRemainingAssistantChunks();
-        if (turnCompletePendingRef.current) {
-          resetTurnState();
-        }
-        if (voiceStateRef.current === 'speaking') {
-          // Hands-free loop: return seamlessly to listening once TIYA finishes speaking
-          setVoiceState('listening');
-          setAudioLevel(0);
-        }
+      if (ctx.state === 'suspended') {
+        void outputChain.ensureActive();
       }
-    };
-  }, [flushRemainingAssistantChunks, resetTurnState]);
+
+      const { samples: decoded, sampleRate } = decodeAudioChunkPayload(base64Data, mimeType);
+      if (decoded.length === 0) return;
+
+      const float32 =
+        activeSourcesRef.current.size === 0
+          ? applyStartAntiClick(decoded, sampleRate)
+          : decoded;
+
+      const rms = computeRmsEnergy(float32);
+      setAudioLevel(Math.min(1, rms * 4.5));
+
+      const buffer = ctx.createBuffer(1, float32.length, sampleRate);
+      buffer.getChannelData(0).set(float32);
+
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      // Pitch-faithful playback rate (1.0 at default preserves exact female vocal identity without deepening)
+      const effectiveRate = computeNaturalPlaybackRate(settingsRef.current.speechSpeed);
+      source.playbackRate.value = effectiveRate;
+      const pitchRatio = settingsRef.current.pitch || 1.0;
+      if (typeof source.detune !== 'undefined' && Math.abs(pitchRatio - 1.0) > 0.005) {
+        source.detune.value = (pitchRatio - 1.0) * 1200;
+      }
+      source.connect(outputChain.inputNode);
+
+      const now = ctx.currentTime;
+      const startAt = Math.max(now, nextStartTimeRef.current);
+      source.start(startAt);
+      lastAudioChunkStartRef.current = startAt;
+      nextStartTimeRef.current = startAt + buffer.duration / effectiveRate;
+
+      activeSourcesRef.current.add(source);
+      source.onended = () => {
+        activeSourcesRef.current.delete(source);
+        if (activeSourcesRef.current.size === 0) {
+          // Flush any remaining synchronized assistant text right as speech completes
+          flushRemainingAssistantChunks();
+          if (turnCompletePendingRef.current) {
+            resetTurnState();
+          }
+          if (voiceStateRef.current === 'speaking' && mySessionGen === sessionGenRef.current) {
+            // Hands-free loop: return seamlessly to listening once TIYA finishes speaking
+            setVoiceState('listening');
+            setAudioLevel(0);
+            scheduleIdleCheckIn(mySessionGen);
+          }
+        }
+      };
+    },
+    [flushRemainingAssistantChunks, resetTurnState, scheduleIdleCheckIn],
+  );
 
   const startVoice = useCallback(async () => {
     const currentSettings = settingsRef.current;
@@ -336,6 +600,7 @@ export function useTiyaLiveVoice({
     const mySessionGen = sessionGenRef.current;
     setErrorLabel('');
     setErrorDetail('');
+    setCameraError('');
     setVoiceState('connecting');
 
     // Create and unlock output audio context synchronously inside user tap gesture
@@ -419,6 +684,7 @@ export function useTiyaLiveVoice({
 
     ws.onopen = () => {
       if (mySessionGen !== sessionGenRef.current) return;
+      const char = activeCharacterRef.current;
       const systemInstruction = buildTiyaSystemPrompt(
         settingsRef.current,
         messagesRef.current,
@@ -426,6 +692,10 @@ export function useTiyaLiveVoice({
         userAgeRef.current,
         memoriesRef.current,
         isOwnerRef.current,
+        {
+          cameraActive: false,
+          character: char,
+        },
       );
       const primaryModel =
         settingsRef.current.customLiveModel.trim() || settingsRef.current.selectedLiveModel;
@@ -492,6 +762,8 @@ export function useTiyaLiveVoice({
           }
           setActiveModel(msg.model || settingsRef.current.selectedLiveModel);
           setVoiceState('listening');
+          proactiveStreakRef.current = 0;
+          hasSpokenInSessionRef.current = false;
 
           // Begin noise-cancelled, primary-speaker gated 16 kHz mic streaming
           voiceGateRef.current.reset();
@@ -513,6 +785,11 @@ export function useTiyaLiveVoice({
 
             if (voiceStateRef.current === 'listening') {
               setAudioLevel(gateResult.displayLevel);
+              // If user begins speaking strongly before the opening proactive cue fires, yield immediately
+              if (gateResult.displayLevel > 0.2 && proactiveOpeningTimerRef.current) {
+                clearTimeout(proactiveOpeningTimerRef.current);
+                proactiveOpeningTimerRef.current = null;
+              }
             }
 
             for (const chunk of gateResult.chunksToSend) {
@@ -520,7 +797,40 @@ export function useTiyaLiveVoice({
               wsRef.current.send(JSON.stringify({ type: 'audio', data: base64 }));
             }
           };
+
+          // Proactive natural voice initiation ONLY for verified Admin / enabled characters
+          const char = activeCharacterRef.current;
+          if (
+            isOwnerRef.current &&
+            char.initiationBehavior.enabled &&
+            char.initiationBehavior.allowVoiceOpening
+          ) {
+            proactiveOpeningTimerRef.current = setTimeout(() => {
+              proactiveOpeningTimerRef.current = null;
+              if (mySessionGen !== sessionGenRef.current) return;
+              if (hasSpokenInSessionRef.current) return;
+              if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+              if (voiceStateRef.current !== 'listening') return;
+
+              proactiveStreakRef.current += 1;
+              const cue = buildProactiveVoiceCue({
+                kind: 'session_opening',
+                language: settingsRef.current.language || 'Bengali',
+                recentMessages: messagesRef.current,
+                cameraActive: cameraActiveRef.current,
+              });
+              setVoiceState('thinking');
+              wsRef.current.send(JSON.stringify({ type: 'proactive_prompt', text: cue }));
+            }, PROACTIVE_OPENING_DELAY_MS);
+          }
         } else if (msg.type === 'input_interim' && msg.text) {
+          clearProactiveTimers();
+          clearStateTransitionTimer();
+          proactiveStreakRef.current = 0;
+          hasSpokenInSessionRef.current = true;
+          if (voiceStateRef.current === 'interrupted') {
+            setVoiceState('listening');
+          }
           // User started or continues speaking: flush/close any prior assistant turn cleanly
           if (hasStartedAssistantBubbleRef.current) {
             flushRemainingAssistantChunks();
@@ -544,6 +854,10 @@ export function useTiyaLiveVoice({
             });
           }
         } else if (msg.type === 'input_transcript' && msg.text) {
+          clearProactiveTimers();
+          clearStateTransitionTimer();
+          proactiveStreakRef.current = 0;
+          hasSpokenInSessionRef.current = true;
           if (hasStartedAssistantBubbleRef.current) {
             flushRemainingAssistantChunks();
             hasStartedAssistantBubbleRef.current = false;
@@ -570,17 +884,13 @@ export function useTiyaLiveVoice({
             lastNavHandledRef.current = display.trim();
             callbacksRef.current.onNavigate?.(navCmd);
           }
-          if (voiceStateRef.current === 'listening') {
+          if (voiceStateRef.current === 'listening' || voiceStateRef.current === 'interrupted') {
             setVoiceState('thinking');
           }
         } else if (msg.type === 'output_transcript' && msg.text) {
+          clearProactiveTimers();
           // Finalize any pending user interim text before switching to assistant bubble
-          if (hasStartedUserBubbleRef.current) {
-            const finalizedUser = userTurnBufferRef.current.finalize();
-            if (finalizedUser) pushUserBubble(finalizedUser);
-            hasStartedUserBubbleRef.current = false;
-            userTurnBufferRef.current.reset();
-          }
+          finalizePendingUserBubble();
 
           const ctx = outputCtxRef.current;
           const audioNow = ctx ? ctx.currentTime : 0;
@@ -590,12 +900,8 @@ export function useTiyaLiveVoice({
           assistantSyncRef.current.enqueue(msg.text, audioNow, schedStart, schedEnd);
           runAssistantSyncPump();
         } else if (msg.type === 'output_transcript_sync' && msg.text) {
-          if (hasStartedUserBubbleRef.current) {
-            const finalizedUser = userTurnBufferRef.current.finalize();
-            if (finalizedUser) pushUserBubble(finalizedUser);
-            hasStartedUserBubbleRef.current = false;
-            userTurnBufferRef.current.reset();
-          }
+          clearProactiveTimers();
+          finalizePendingUserBubble();
           const display = msg.final
             ? assistantTurnBufferRef.current.commitFinal(msg.text, {
                 isDelta: false,
@@ -604,24 +910,39 @@ export function useTiyaLiveVoice({
             : assistantTurnBufferRef.current.setInterim(msg.text);
           pushAssistantBubble(display);
         } else if (msg.type === 'audio' && msg.data) {
+          clearProactiveTimers();
+          clearStateTransitionTimer();
+          finalizePendingUserBubble();
           setVoiceState('speaking');
-          playPcmChunk(msg.data, msg.mimeType);
+          playPcmChunk(msg.data, msg.mimeType, mySessionGen);
           // Pump synchronized text immediately as new audio playback begins
           if (assistantSyncRef.current.pendingCount() > 0) {
             runAssistantSyncPump();
           }
         } else if (msg.type === 'interrupted') {
-          // Stop playback and cancel unplayed queued transcript so audio & text never contradict
+          // User barged in: stop playback immediately, cancel queued text & pending proactive cues,
+          // surface explicit 'interrupted' state briefly, then resume listening seamlessly.
+          clearProactiveTimers();
+          clearStateTransitionTimer();
           stopPlaybackQueue();
           clearAssistantSyncTimer();
           assistantSyncRef.current.cancelPending();
           turnCompletePendingRef.current = false;
-          setVoiceState('listening');
+          setAudioLevel(0);
+          setVoiceState('interrupted');
+          stateTransitionTimerRef.current = setTimeout(() => {
+            stateTransitionTimerRef.current = null;
+            if (mySessionGen === sessionGenRef.current && voiceStateRef.current === 'interrupted') {
+              setVoiceState('listening');
+            }
+          }, INTERRUPT_DISPLAY_MS);
         } else if (msg.type === 'turn_complete') {
+          finalizePendingUserBubble();
           if (activeSourcesRef.current.size === 0) {
             flushRemainingAssistantChunks();
             resetTurnState();
             setVoiceState('listening');
+            scheduleIdleCheckIn(mySessionGen);
           } else {
             // Keep synchronized text draining until the last scheduled audio buffer ends
             turnCompletePendingRef.current = true;
@@ -690,17 +1011,22 @@ export function useTiyaLiveVoice({
   }, [
     cleanupResources,
     clearAssistantSyncTimer,
+    clearProactiveTimers,
+    clearStateTransitionTimer,
+    finalizePendingUserBubble,
     flushRemainingAssistantChunks,
     playPcmChunk,
     pushAssistantBubble,
     pushUserBubble,
     resetTurnState,
+    scheduleIdleCheckIn,
     stopPlaybackQueue,
   ]);
 
   const toggleVoice = useCallback(() => {
     if (
       voiceStateRef.current === 'idle' ||
+      voiceStateRef.current === 'stopped' ||
       voiceStateRef.current === 'error'
     ) {
       startVoice();
@@ -727,9 +1053,14 @@ export function useTiyaLiveVoice({
     errorDetail,
     activeModel,
     audioLevel,
+    activeCharacter,
+    cameraActive,
+    cameraError,
     toggleVoice,
     startVoice,
     stopVoice,
+    toggleCamera,
+    stopCamera,
     sendActionFeedbackToLive,
   };
 }

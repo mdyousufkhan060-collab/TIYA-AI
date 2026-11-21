@@ -25,6 +25,7 @@ import {
   saveChats,
   saveMemories,
   saveSettings,
+  StorageAccountScope,
 } from './utils/storage';
 import {
   calculateAge,
@@ -37,7 +38,8 @@ import {
   buildCleanUrlAfterAuthCallback,
   extractOAuthCallbackError,
 } from './utils/authRedirect';
-import { buildTiyaSystemPrompt, enforceAdminAddressingText, isTiyaOwnerEmail } from './utils/prompts';
+import { extractExplicitMemories, mergeMemories } from './utils/memoryEngine';
+import { buildTiyaSystemPrompt, enforceAdminAddressingText } from './utils/prompts';
 import {
   executePhoneAction,
   extractActionFromText,
@@ -84,8 +86,8 @@ function makeId(): string {
 
 export default function App() {
   const [settings, setSettings] = useState<TiyaSettings>(() => loadSettings());
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadChats());
-  const [memories, setMemories] = useState<MemoryItem[]>(() => loadMemories());
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [errorLog, setErrorLog] = useState<ErrorLogEntry[]>(() => loadErrorLog());
   const [activeTab, setActiveTab] = useState<MainTab>('home');
   const [settingsPage, setSettingsPage] = useState<SettingsPageId>('hub');
@@ -260,9 +262,30 @@ export default function App() {
       : cachedBirthYear;
 
   const userAge = calculateAge(effectiveBirthYear);
-  // Verified authenticated session email check for Admin emotional personality
-  // (never derived from display name, typed email, or client-editable settings)
-  const isOwner = Boolean(session?.user?.id) && isTiyaOwnerEmail(session?.user?.email);
+  // Backend-verified Admin identity strictly from Supabase is_admin RPC + active authenticated session
+  // (NEVER derived from a client-side email string, display name, or client-editable settings)
+  const isVerifiedAdmin = Boolean(session?.user?.id) && isAdmin === true;
+
+  const accountScope: StorageAccountScope = useMemo(
+    () => ({
+      userId: session?.user?.id,
+      isVerifiedAdmin,
+    }),
+    [session?.user?.id, isVerifiedAdmin],
+  );
+  const accountScopeRef = useRef<StorageAccountScope>(accountScope);
+  accountScopeRef.current = accountScope;
+
+  // Reload isolated per-account chats & memories whenever authenticated user or verified Admin status changes
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setMessages([]);
+      setMemories([]);
+      return;
+    }
+    setMessages(loadChats(accountScope));
+    setMemories(loadMemories(accountScope));
+  }, [session?.user?.id, accountScope]);
 
   const checkReplyUsage = useCallback(async (): Promise<ReplyUsageDecision> => {
     try {
@@ -284,8 +307,21 @@ export default function App() {
   const updateMessages = useCallback((updater: (prev: ChatMessage[]) => ChatMessage[]) => {
     setMessages((prev) => {
       const next = updater(prev);
-      saveChats(next);
+      saveChats(next, accountScopeRef.current);
       return next;
+    });
+  }, []);
+
+  const ingestExplicitMemory = useCallback((utterance: string) => {
+    const scope = accountScopeRef.current;
+    if (!scope.userId) return;
+    const memScope = scope.isVerifiedAdmin ? 'admin' : 'user';
+    setMemories((prev) => {
+      const extracted = extractExplicitMemories(utterance, prev, memScope);
+      if (extracted.length === 0) return prev;
+      const merged = mergeMemories(prev, extracted);
+      saveMemories(merged, scope);
+      return merged;
     });
   }, []);
 
@@ -414,18 +450,22 @@ export default function App() {
     errorLabel,
     errorDetail,
     audioLevel,
+    cameraActive,
+    cameraError,
     toggleVoice,
     stopVoice,
+    toggleCamera,
     sendActionFeedbackToLive,
   } = useTiyaLiveVoice({
     settings,
     messages,
     memories,
     userAge,
-    isOwner,
+    isOwner: isVerifiedAdmin,
     checkReplyUsage,
     onAppendVoiceMessage: handleAppendVoiceMessage,
     onUpdateLastVoiceMessage: handleUpdateLastVoiceMessage,
+    onUserTranscriptFinalized: ingestExplicitMemory,
     onPhoneAction: handleLivePhoneAction,
     onNavigate: handleNavigateCommand,
     onRequestLatestMotivation: fetchLatestPublishedMotivation,
@@ -532,7 +572,7 @@ export default function App() {
           'chat',
           userAge,
           memories,
-          isOwner,
+          isVerifiedAdmin,
         );
         const titlePart = (post.title || '').trim()
           ? `Title: ${post.title?.trim()}\n`
@@ -553,7 +593,7 @@ export default function App() {
         const data = (await res.json()) as { ok?: boolean; text?: string };
         if (res.ok && data.ok && data.text?.trim()) {
           const cleanMot = data.text.trim();
-          return isOwner ? enforceAdminAddressingText(cleanMot) : cleanMot;
+          return isVerifiedAdmin ? enforceAdminAddressingText(cleanMot) : cleanMot;
         }
       } catch {
         // Fallback to direct formatted Bengali response
@@ -561,7 +601,7 @@ export default function App() {
 
       return formatMotivationReplyBn(post);
     },
-    [isOwner, memories, messages, settings, userAge],
+    [isVerifiedAdmin, memories, messages, settings, userAge],
   );
 
   const handleSendChat = useCallback(
@@ -656,6 +696,7 @@ export default function App() {
         .map((m) => ({ role: m.role as 'user' | 'assistant', text: m.text }));
 
       updateMessages((prev) => [...prev, userMsg]);
+      ingestExplicitMemory(text);
       setIsSendingChat(true);
 
       try {
@@ -679,7 +720,7 @@ export default function App() {
           'chat',
           userAge,
           memories,
-          isOwner,
+          isVerifiedAdmin,
         );
         if (usePremiumServer) {
           const premiumSystem =
@@ -726,7 +767,7 @@ export default function App() {
             pClean ||
             (pAction
               ? getConfirmationPromptText(pAction)
-              : isOwner
+              : isVerifiedAdmin
                 ? 'স্যার, বলুন না, আপনার কী কথা আছে?'
                 : 'বলুন, কীভাবে সাহায্য করতে পারি?');
           updateMessages((prev) => [
@@ -734,7 +775,7 @@ export default function App() {
             {
               id: makeId(),
               role: 'assistant',
-              text: isOwner ? enforceAdminAddressingText(pRaw) : pRaw,
+              text: isVerifiedAdmin ? enforceAdminAddressingText(pRaw) : pRaw,
               timestamp: Date.now(),
               source: 'chat',
               ...(pAction ? { pendingAction: pAction, actionStatus: 'pending' as const } : {}),
@@ -804,10 +845,10 @@ export default function App() {
             ? getConfirmationPromptText(pendingAction)
             : parsedNav
               ? parsedNav.confirmBn
-              : isOwner
+              : isVerifiedAdmin
                 ? 'স্যার, বলুন না, আপনার কী কথা আছে?'
                 : 'বলুন, কীভাবে সাহায্য করতে পারি?');
-        const replyText = isOwner ? enforceAdminAddressingText(rawReplyText) : rawReplyText;
+        const replyText = isVerifiedAdmin ? enforceAdminAddressingText(rawReplyText) : rawReplyText;
 
         const assistantMsg: ChatMessage = {
           id: makeId(),
@@ -833,8 +874,9 @@ export default function App() {
       deliverMotivationInChat,
       fetchLatestPublishedMotivation,
       handleNavigateCommand,
+      ingestExplicitMemory,
       isAdmin,
-      isOwner,
+      isVerifiedAdmin,
       profile,
       memories,
       messages,
@@ -853,7 +895,7 @@ export default function App() {
   );
 
   const handleClearAllChats = useCallback(() => {
-    clearAllChatsStorage();
+    clearAllChatsStorage(accountScopeRef.current);
     setMessages([]);
     setActionLinks({});
   }, []);
@@ -861,27 +903,35 @@ export default function App() {
   const handleAddMemory = useCallback((text: string) => {
     const clean = text.trim();
     if (!clean) return;
+    const scope = accountScopeRef.current;
     setMemories((prev) => {
       const next: MemoryItem[] = [
         ...prev,
-        { id: makeId(), text: clean, createdAt: Date.now() },
+        {
+          id: makeId(),
+          text: clean,
+          createdAt: Date.now(),
+          category: 'general',
+          scope: scope.isVerifiedAdmin ? 'admin' : 'user',
+        },
       ];
-      saveMemories(next);
+      saveMemories(next, scope);
       return next;
     });
   }, []);
 
   const handleDeleteMemory = useCallback((id: string) => {
+    const scope = accountScopeRef.current;
     setMemories((prev) => {
       const next = prev.filter((m) => m.id !== id);
-      saveMemories(next);
+      saveMemories(next, scope);
       return next;
     });
   }, []);
 
   const handleClearMemories = useCallback(() => {
     setMemories([]);
-    saveMemories([]);
+    saveMemories([], accountScopeRef.current);
   }, []);
 
   const openConnections = useCallback(() => {
@@ -949,6 +999,8 @@ export default function App() {
 
   const handleSignOut = useCallback(async () => {
     stopVoice();
+    setMessages([]);
+    setMemories([]);
     await supabase.auth.signOut();
     setShowAdminScreen(false);
     setShowMotivationScreen(false);
@@ -1047,8 +1099,11 @@ export default function App() {
                 messages={messages}
                 actionLinks={actionLinks}
                 unreadNotifications={unreadNotifications}
-                isAdmin={isAdmin}
-                canUseWithoutKey={isAdmin || isProfilePremium(profile)}
+                isAdmin={isVerifiedAdmin}
+                canUseWithoutKey={isVerifiedAdmin || isProfilePremium(profile)}
+                cameraActive={cameraActive}
+                cameraError={cameraError}
+                onToggleCamera={toggleCamera}
                 onToggleVoice={toggleVoice}
                 onOpenConnections={openConnections}
                 onOpenNotifications={handleOpenNotifications}
@@ -1082,7 +1137,7 @@ export default function App() {
                 onCancelAction={handleCancelAction}
                 onClearChats={handleClearAllChats}
                 onOpenConnections={openConnections}
-                isVoiceOn={['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState)}
+                isVoiceOn={['connecting', 'listening', 'thinking', 'speaking', 'interrupted'].includes(voiceState)}
                 onToggleVoice={toggleVoice}
                 onOpenHome={() => navigateTo('home', 'hub', null)}
                 onOpenChatHistory={() => navigateTo('settings', 'chats_memory', null)}
@@ -1097,7 +1152,7 @@ export default function App() {
                 profile={profile}
                 chatCount={chatSessionCount}
                 userEmail={session.user.email}
-                isAdmin={isAdmin}
+                isAdmin={isVerifiedAdmin}
                 onOpenPage={handleOpenSettingsPage}
               />
             )}
@@ -1107,8 +1162,8 @@ export default function App() {
                 settings={settings}
                 voiceState={voiceState}
                 hasSession={Boolean(session)}
-                isAdmin={isAdmin}
-                canUseWithoutKey={isAdmin || isProfilePremium(profile)}
+                isAdmin={isVerifiedAdmin}
+                canUseWithoutKey={isVerifiedAdmin || isProfilePremium(profile)}
                 subpage={settingsSubpage}
                 onSelectSubpage={handleSelectSettingsSubpage}
                 onOpenConnections={() => handleOpenSettingsPage('connections')}
@@ -1136,6 +1191,7 @@ export default function App() {
               <VoiceLanguagePage
                 settings={settings}
                 isMinorUser={typeof userAge === 'number' && userAge < 18}
+                isAdmin={isVerifiedAdmin}
                 subpage={settingsSubpage}
                 onSelectSubpage={handleSelectSettingsSubpage}
                 onUpdateSettings={updateSettings}
@@ -1161,7 +1217,9 @@ export default function App() {
               <ChatsMemoryPage
                 messages={messages}
                 memories={memories}
+                isAdmin={isVerifiedAdmin}
                 onDeleteSessionMessages={handleDeleteSessionMessages}
+                onDeleteMemory={handleDeleteMemory}
                 onClearAll={handleClearAllChats}
                 onBack={() => {
                   setSettingsPage('hub');

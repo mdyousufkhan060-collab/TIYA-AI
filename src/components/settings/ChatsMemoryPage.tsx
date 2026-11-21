@@ -7,7 +7,9 @@ import { SettingsShell } from './SettingsShell';
 interface ChatsMemoryPageProps {
   messages: ChatMessage[];
   memories: MemoryItem[];
+  isAdmin?: boolean;
   onDeleteSessionMessages: (ids: string[]) => void;
+  onDeleteMemory?: (id: string) => void;
   onClearAll: () => void;
   onBack: () => void;
 }
@@ -15,7 +17,9 @@ interface ChatsMemoryPageProps {
 export const ChatsMemoryPage: React.FC<ChatsMemoryPageProps> = ({
   messages,
   memories,
+  isAdmin = false,
   onDeleteSessionMessages,
+  onDeleteMemory,
   onClearAll,
   onBack,
 }) => {
@@ -94,6 +98,54 @@ export const ChatsMemoryPage: React.FC<ChatsMemoryPageProps> = ({
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* SAVED MEMORIES list */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+                SAVED MEMORIES
+              </p>
+              {isAdmin && (
+                <span
+                  data-testid="admin-private-memory-tag"
+                  className="text-[9.5px] font-semibold tracking-wider text-amber-400"
+                >
+                  ADMIN PRIVATE
+                </span>
+              )}
+            </div>
+
+            {memories.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-4 text-center dark:border-white/[0.08] dark:bg-[#11151E]">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  No saved memories yet
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1.5" data-testid="saved-memories-list">
+                {memories.map((mem) => (
+                  <div
+                    key={mem.id}
+                    className="flex items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-white/[0.08] dark:bg-[#11151E]"
+                  >
+                    <p className="min-w-0 flex-1 text-xs text-slate-800 dark:text-slate-200">
+                      {mem.text}
+                    </p>
+                    {onDeleteMemory && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteMemory(mem.id)}
+                        aria-label={`Delete memory ${mem.text}`}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-500/10 hover:text-rose-500"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

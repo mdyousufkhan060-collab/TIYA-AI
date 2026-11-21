@@ -915,6 +915,7 @@ async function startServer() {
           voiceName?: string;
           systemInstruction?: string;
           data?: string;
+          mimeType?: string;
           text?: string;
           callId?: string;
           name?: string;
@@ -965,6 +966,18 @@ async function startServer() {
               ],
             });
           }
+        } else if (msg.type === 'proactive_prompt' && msg.text && activeSession) {
+          activeSession.sendClientContent({
+            turns: [{ role: 'user', parts: [{ text: msg.text }] }],
+            turnComplete: true,
+          });
+        } else if (msg.type === 'video' && msg.data && activeSession) {
+          activeSession.sendRealtimeInput({
+            video: {
+              data: msg.data,
+              mimeType: msg.mimeType || 'image/jpeg',
+            },
+          });
         } else if (msg.type === 'audio' && msg.data && activeSession) {
           activeSession.sendRealtimeInput({
             audio: {

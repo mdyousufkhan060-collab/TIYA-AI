@@ -13,6 +13,11 @@ import {
   TiyaSettings,
 } from '../../types/tiya';
 import { computeRmsEnergy } from '../../utils/audioPcm';
+import {
+  DEFAULT_PUBLIC_CHARACTER_ID,
+  getSelectableCharacters,
+  resolveActiveCharacter,
+} from '../../utils/characters';
 import { computeNaturalPlaybackRate, decodeAudioChunkPayload } from '../../utils/voiceAudioPipeline';
 import { appendErrorLog } from '../../utils/storage';
 import { LiveModelPage } from './LiveModelPage';
@@ -26,6 +31,8 @@ interface VoiceLanguagePageProps {
   onBack: () => void;
   /** under-18 users cannot pick GF Mode / Companion or emotion levels */
   isMinorUser?: boolean;
+  /** backend-verified Admin flag */
+  isAdmin?: boolean;
 }
 
 const PERSONALITY_INFO: Record<Personality, string> = {
@@ -56,6 +63,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
   onUpdateSettings,
   onBack,
   isMinorUser = false,
+  isAdmin = false,
 }) => {
   // Voice preview state
   const [previewingVoice, setPreviewingVoice] = useState<FemaleVoiceId | null>(null);
@@ -261,9 +269,45 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
 
   if (subpage === 'personality') {
     const locked = (p: Personality) => ADULT_ONLY_PERSONALITIES.includes(p) && isMinorUser;
+    const selectableChars = getSelectableCharacters(isMinorUser);
+    const activePublicCharId = settings.selectedCharacterId || DEFAULT_PUBLIC_CHARACTER_ID;
     return (
       <SettingsShell title="PERSONALITY" onBack={() => onSelectSubpage(null)}>
         <div className="space-y-1.5 pb-3">
+          {isAdmin ? (
+            <div
+              data-testid="admin-personality-notice"
+              className="mb-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3.5"
+            >
+              <p className="text-[10px] font-semibold tracking-wider text-amber-300">
+                VERIFIED ADMIN COMPANION ACTIVE
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-200">
+                Your dedicated protected Admin Companion personality, proactive voice mode, and private Admin memory are automatically active for your authenticated Admin account, independent of ordinary user character settings.
+              </p>
+            </div>
+          ) : (
+            <div className="mb-2 space-y-1.5">
+              <p className="px-1 text-[10px] font-semibold tracking-wider text-slate-400">
+                CHARACTER
+              </p>
+              {selectableChars.map((char, i) => (
+                <SettingsSelectBar
+                  key={char.id}
+                  badge={String(i + 1).padStart(2, '0')}
+                  title={char.displayLabel}
+                  value={char.tagline}
+                  selected={activePublicCharId === char.id}
+                  onSelect={() => onUpdateSettings({ selectedCharacterId: char.id })}
+                  testId={`character-${char.id}`}
+                />
+              ))}
+              <p className="px-1 pt-2 text-[10px] font-semibold tracking-wider text-slate-400">
+                PERSONALITY STYLE
+              </p>
+            </div>
+          )}
+
           {ALL_PERSONALITIES.map((p, i) => (
             <SettingsSelectBar
               key={p}
@@ -629,10 +673,17 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
   const activeLiveModel =
     settings.customLiveModel.trim() || settings.selectedLiveModel;
 
+  const resolvedChar = resolveActiveCharacter(settings, isAdmin, isMinorUser);
+  const personalitySummary = isAdmin
+    ? 'Admin Companion'
+    : resolvedChar.id !== DEFAULT_PUBLIC_CHARACTER_ID
+      ? `${resolvedChar.displayLabel} · ${settings.personality}`
+      : settings.personality;
+
   const bars: Array<{ num: string; id: string; title: string; value: string; locked?: boolean }> = [
     { num: '01', id: 'assistant_name', title: 'ASSISTANT NAME', value: TIYA_FIXED_NAME, locked: true },
     { num: '02', id: 'your_name', title: 'YOUR NAME', value: settings.yourName.trim() || 'Not set' },
-    { num: '03', id: 'personality', title: 'PERSONALITY', value: settings.personality },
+    { num: '03', id: 'personality', title: 'PERSONALITY', value: personalitySummary },
     { num: '04', id: 'response_style', title: 'RESPONSE STYLE', value: settings.responseStyle },
     {
       num: '05',

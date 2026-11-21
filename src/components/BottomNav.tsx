@@ -19,6 +19,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     voiceState === 'listening' ||
     voiceState === 'thinking' ||
     voiceState === 'speaking' ||
+    voiceState === 'interrupted' ||
     voiceState === 'connecting';
 
   return (

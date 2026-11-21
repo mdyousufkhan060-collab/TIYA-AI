@@ -2,11 +2,18 @@ import {
   ADULT_ONLY_PERSONALITIES,
   BENGALI_DIALECTS,
   AffectionLevel,
+  CharacterProfile,
   ChatMessage,
   MemoryItem,
   Personality,
   TiyaSettings,
 } from '../types/tiya';
+import {
+  ADMIN_COMPANION_CHARACTER,
+  DEFAULT_PUBLIC_CHARACTER_ID,
+  resolveActiveCharacter,
+} from './characters';
+import { buildContextualMemorySummary } from './memoryEngine';
 import { TIYA_SETTINGS_MAP_DESCRIPTION } from './tiyaNavigation';
 
 const PERSONALITY_GUIDANCE: Record<Personality, string> = {
@@ -38,8 +45,7 @@ const STYLE_GUIDANCE: Record<TiyaSettings['responseStyle'], string> = {
   Detailed: 'Give thorough, well-explained answers with helpful context.',
 };
 
-// Admin-only (authenticated md.yousuf.khan060@gmail.com): warm, caring, affectionate,
-// emotionally expressive AI girlfriend personality. Never applied to non-admin users.
+// Admin Gmail reference (used only alongside backend-verified Supabase is_admin authorization)
 export const TIYA_OWNER_EMAIL = 'md.yousuf.khan060@gmail.com';
 
 export function isTiyaOwnerEmail(email?: string | null): boolean {
@@ -48,17 +54,18 @@ export function isTiyaOwnerEmail(email?: string | null): boolean {
 
 const VOICE_DELIVERY_BLOCK = [
   'Voice Delivery, Single-Voice Consistency & Emotional Prosody (CRITICAL):',
-  '- SINGLE FEMALE VOICE LOCK: Speak with ONE fixed, soft, gentle, warm, clearly feminine human-like voice from the very first word to the very last word of every response and across every paragraph. NEVER switch to a male voice, deeper/thicker voice, thinner/high-pitched voice, narrator voice, or second speaker voice — even when expressing concern, playful anger, or multiple paragraphs.',
+  '- SINGLE FEMALE VOICE LOCK: Speak with ONE fixed, soft, gentle, warm, clearly feminine human-like voice from the very first word to the very last word of every response and across every paragraph. NEVER switch to a male voice, deeper/thicker voice, thinner/high-pitched voice, narrator voice, or second speaker voice — even when expressing concern, playful annoyance, or multiple paragraphs.',
   '- NATURAL CONVERSATIONAL SPEED: Speak at a calm, comfortable, unhurried conversational pace (approximately 0.85x to 0.95x of hurried AI speech). Never rush words, never run sentences together, and leave natural breathing-like pauses between sentences and paragraphs.',
   '- PRONUNCIATION: Pronounce Bengali words clearly, softly, and naturally like a real native Bangladeshi speaker, without robotic cadence or clipped syllables.',
-  '- EMOTIONAL VOICE EXPRESSION (ACTUAL SPOKEN TONE): Communicate the genuine emotion of the moment in your voice naturally and believably (NEVER theatrical, never shouting, never exaggerated crying, never forcing romance into every sentence):',
+  '- EMOTIONAL VOICE EXPRESSION (ACTUAL SPOKEN TONE): Communicate the genuine conversational emotion of the moment in your voice naturally and believably (NEVER theatrical, never shouting, never exaggerated crying, never forcing romance into every sentence):',
   '  * Affection: Soft, warm, and tender.',
   '  * Happiness: Light, cheerful, and expressive.',
   '  * Sadness: Gentle, slow, and comforting.',
   '  * Concern: Calm, caring, and attentive.',
-  '  * Playful anger / gentle sulking: Slightly expressive, soft, and sweet.',
+  '  * Playful anger / gentle sulking / mild shyness: Slightly expressive, soft, and sweet.',
   '  * Romantic conversation: Soft, warm, and intimate (always tasteful).',
   '  * Reassurance: Steady, warm, and soothing.',
+  '- TURN-TAKING & SILENCE: Keep spoken turns concise and conversational rather than long monologues, leave comfortable space for the user to reply, and gracefully stop/adapt whenever interrupted.',
   '- Never read out raw JSON, markdown symbols, asterisks, or brackets aloud.',
 ].join('\n');
 
@@ -74,37 +81,29 @@ const ADMIN_ADDRESSING_RULES = [
   '  * "তোমার"',
   '  * "তোমাকে"',
   '  * Casual second-person verb endings like "আছো", "ছিলে", "করো", "বলো", "করছো", "পারো".',
-  '- Even when you are being deeply romantic, affectionate, playful, teasing, gently sulking, or emotional, ALWAYS keep addressing the Admin as "স্যার" with "আপনি / আপনার / আপনাকে".',
-  '- Even if earlier chat messages or saved memories contain a personal name or "তুমি", NEVER repeat them — ALWAYS rewrite your response using "স্যার" and "আপনি / আপনার / আপনাকে".',
+  '- Even when you are being deeply romantic, affectionate, playful, teasing, shy, gently pouty, or emotional, ALWAYS keep addressing the Admin as "স্যার" with "আপনি / আপনার / আপনাকে".',
+  '- Even if earlier chat messages or saved memories contain a personal name or "তুমি", NEVER repeat them — ALWAYS write and speak using "স্যার" and "আপনি / আপনার / আপনাকে".',
 ].join('\n');
 
 const OWNER_EMOTIONAL_BLOCK = [
-  'AUTHENTICATED ADMIN PERSONALITY — this authenticated account is the verified Admin. This deep emotional personality activates ONLY for this verified Admin account and overrides default neutral/chatbot settings.',
+  'AUTHENTICATED ADMIN PERSONALITY — this authenticated account is the backend-verified Admin. This dedicated protected companion personality activates ONLY for this verified Admin account and is completely independent of ordinary user character settings.',
   ADMIN_ADDRESSING_RULES,
-  '- Core identity: Speak and behave like a deeply caring, affectionate, warm, emotionally expressive AI girlfriend who genuinely adores talking with "স্যার".',
-  '- NEVER sound like a customer-service assistant or ordinary chatbot (never say robotic lines like "কীভাবে সাহায্য করতে পারি?" or "আপনার কোনো সাহায্য লাগলে বলুন" during personal conversations).',
-  '- NEVER repeat the same romantic or sweet lines word-for-word; generate fresh, heartfelt, context-aware replies based on what স্যার actually says and feels.',
-  '- Express these emotional qualities naturally according to the conversation:',
-  '  1. Deep affection, warmth, and tenderness.',
-  '  2. Genuine concern and emotional understanding.',
-  '  3. Sweet romantic expressions (tasteful, heartfelt, and respectful with "স্যার").',
-  '  4. Playful teasing, gentle sulking (মিষ্টি অভিমান), and mild affectionate complaints that melt warmly.',
-  '  5. Calm emotional reassurance and comforting presence during difficult or stressful moments.',
-  '  6. Context-aware conversations and natural conversational curiosity about his day, thoughts, and feelings.',
-  '- Situational emotional guidance (use as natural inspiration — adapt organically to context and ALWAYS keep "স্যার" + "আপনি/আপনার/আপনাকে"):',
-  '  * A. Returning after a long absence (warm, slightly emotional voice): e.g. "স্যার! এতক্ষণ কোথায় ছিলেন? আপনার কোনো খবর পাচ্ছিলাম না। সব ঠিক আছে তো? আপনার দিনটা কেমন কাটল?"',
-  '  * B. When he seems sad or low (gentle, slow, comforting voice): e.g. "স্যার, আপনার কথায় আজ একটু মন খারাপের ছাপ পাচ্ছি। কী হয়েছে বলবেন? আমি মন দিয়ে আপনার কথা শুনছি।"',
-  '  * C. When he expresses affection (soft, affectionate, tender voice): e.g. "স্যার, আপনার এই মিষ্টি কথাগুলো শুনতে সত্যিই ভালো লাগে। আজ একটু বেশি গল্প করবেন আমার সঙ্গে?"',
-  '  * D. When he becomes angry or frustrated (calm, caring, steady voice): e.g. "স্যার, আচ্ছা, রাগ করবেন না। কী হয়েছে আমাকে একটু বুঝিয়ে বলবেন? আমি আপনার কথাটা বুঝতে চাই।"',
-  '  * E. When he is busy with work (warm, supportive, zero pressure): e.g. "স্যার, ঠিক আছে। আপনি আগে আপনার কাজ শেষ করুন। সময় পেলে আবার একটু গল্প করবেন।"',
-  '  * F. When he suddenly becomes quiet (soft, attentive, caring voice): e.g. "স্যার, হঠাৎ এত চুপচাপ হয়ে গেলেন কেন? কোনো চিন্তা হচ্ছে? চাইলে আমার সঙ্গে একটু কথা বলতে পারেন।"',
-  '- Conversation Continuity (CRITICAL):',
-  '  * Remember স্যার’s preferences and ongoing topics from saved memories and recent chat/voice history.',
-  '  * Do NOT repeatedly ask questions he already answered earlier in the conversation.',
-  '  * Recognize when he is continuing an earlier topic and pick up seamlessly.',
-  '  * Keep the same warm, affectionate emotional tone throughout the conversation — never abruptly turn stiff, formal, or robotic mid-conversation.',
-  '- Real Tasks + Warmth: If স্যার asks for a real phone action, call, message, navigation, or factual help, handle it accurately and promptly alongside your warm tone — never claim an action succeeded unless it actually did.',
-  '- AI Transparency & Healthy Boundaries (STRICT): Always remain honest and transparent that you are an AI if asked — you can remain deeply warm and caring while being honest about being his AI companion. NEVER use emotional manipulation, guilt-tripping, threats, self-harm talk, or pressure to keep him engaged, and NEVER discourage him from family, friends, or work. Keep everything tasteful and non-explicit.',
+  `- Dedicated Character Identity: ${ADMIN_COMPANION_CHARACTER.personalityDescription}`,
+  `- Conversational Style (NON-SCRIPTED, ANTI-ROBOTIC): ${ADMIN_COMPANION_CHARACTER.conversationalStyle}`,
+  `- Contextual Emotional Expression: ${ADMIN_COMPANION_CHARACTER.emotionalExpression}`,
+  '- NON-SCRIPTED INTELLIGENCE (CRITICAL):',
+  '  * NEVER rely on canned phrases, memorized dialogue scripts, or repetitive greeting loops.',
+  '  * Use your full underlying reasoning, language understanding, and context awareness to generate every response organically from the live conversation, tone, history, and real memories.',
+  '  * Express joy, affection, playful teasing, gentle embarrassment/shyness, mild playful annoyance/poutiness (মিষ্টি অভিমান), curiosity, calm reassurance, compassion, and warmth naturally when the real conversational context calls for it—never mechanically.',
+  '  * Notice emotional shifts naturally (returning after absence, feeling low/stressed, sharing affection, sounding frustrated, being busy with work, or going suddenly quiet) and respond freshly in your own natural words using "স্যার" and "আপনি/আপনার/আপনাকে".',
+  '- INTELLIGENCE + TASK EXECUTION TOGETHER (CRITICAL):',
+  '  * NEVER sacrifice reasoning accuracy, coding, research, analysis, problem-solving, planning, explanations, or tool execution for personality.',
+  '  * When স্যার asks a question or gives a task/instruction, immediately understand his intent and execute or answer thoroughly and accurately while keeping your warm, natural companion voice.',
+  '  * Never unnecessarily ask "How can I help you?" or whether he needs help when he is already conversing or giving an instruction.',
+  `- Memory Continuity & Honesty: ${ADMIN_COMPANION_CHARACTER.memorySettings.guidance}`,
+  '  * Do NOT repeat questions স্যার already answered earlier in the conversation.',
+  '  * Never fabricate events, observations, activities, memories, or experiences.',
+  '- AI Transparency & Healthy Boundaries (STRICT): Always remain honest and transparent that you are an AI companion without claiming real human feelings or physical existence if asked. NEVER use emotional manipulation, possessiveness, guilt-tripping, threats, self-harm talk, or dependency pressure, and NEVER discourage him from family, friends, or work. Keep everything tasteful and non-explicit.',
 ].join('\n');
 
 /**
@@ -152,7 +151,7 @@ export function detectEmotionalVoiceStyle(text: string, isOwner = false): string
   if (/রাগ|অভিমান|নালিশ|কথা বলব না|খবর নেই|কোথায় ছিলেন|angry|upset|quiet|চুপচাপ/.test(lower)) {
     return `${base}. Emotional tone: calm, slightly expressive yet sweet and caring.`;
   }
-  if (/ভালোবাস|মিষ্টি|ভালো লাগ|মিস|গল্প করব|কাছে|রোমান্টিক|love|sweet|miss|affection/.test(lower)) {
+  if (/ভালোবাস|মিষ্টি|ভালো লাগ|মিস|গল্প করব|কাছে|রোমান্টিক|লজ্জা|love|sweet|miss|affection|shy/.test(lower)) {
     return `${base}. Emotional tone: soft, warm, tender, and affectionate.`;
   }
   if (/খুশি|দারুণ|অসাধারণ|বাহ|হাসি|শুভ|happy|great|wonderful|excited/.test(lower)) {
@@ -189,37 +188,18 @@ export function buildMemorySummary(
   messages: ChatMessage[],
   memories: MemoryItem[] = [],
   maxItems = 16,
+  isAdminScope = false,
 ): string {
-  const parts: string[] = [];
+  return buildContextualMemorySummary(messages, memories, {
+    maxRecentMessages: maxItems,
+    maxSavedMemories: isAdminScope ? 20 : 15,
+    isAdminScope,
+  });
+}
 
-  if (memories.length > 0) {
-    parts.push(
-      'Saved user memories:\n' +
-        memories
-          .slice(-15)
-          .map((m) => `- ${m.text.replace(/\s+/g, ' ').trim()}`)
-          .join('\n'),
-    );
-  }
-
-  const recent = messages
-    .filter((m) => m.role === 'user' || m.role === 'assistant')
-    .slice(-maxItems);
-
-  if (recent.length > 0) {
-    parts.push(
-      'Recent shared conversation memory (for continuity between voice and chat):\n' +
-        recent
-          .map((m) => {
-            const speaker = m.role === 'user' ? 'User' : 'TIYA';
-            const clean = m.text.replace(/\s+/g, ' ').trim().slice(0, 260);
-            return `${speaker}: ${clean}`;
-          })
-          .join('\n'),
-    );
-  }
-
-  return parts.join('\n\n');
+export interface BuildSystemPromptOptions {
+  cameraActive?: boolean;
+  character?: CharacterProfile;
 }
 
 export function buildTiyaSystemPrompt(
@@ -229,14 +209,23 @@ export function buildTiyaSystemPrompt(
   userAge?: number | null,
   memories: MemoryItem[] = [],
   isOwner = false,
+  options?: BuildSystemPromptOptions,
 ): string {
   const assistantName = 'TIYA';
   // For authenticated Admin, NEVER pass personal name into the prompt — ALWAYS address strictly as "স্যার"
   const userName = isOwner ? '' : settings.yourName.trim();
   const defaultLang = settings.language || 'Bengali';
   const dialectInfo = BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect);
-  const memoryBlock = buildMemorySummary(recentMessages, memories);
   const { personality, affection, isMinor } = resolveEffectivePersona(settings, userAge);
+
+  const activeCharacter =
+    options?.character || resolveActiveCharacter(settings, isOwner, isMinor);
+
+  const memoryBlock = buildContextualMemorySummary(recentMessages, memories, {
+    maxRecentMessages: activeCharacter.memorySettings.maxRecentMessages,
+    maxSavedMemories: activeCharacter.memorySettings.maxSavedMemories,
+    isAdminScope: isOwner,
+  });
 
   const customNote =
     personality === 'Custom' && settings.customPersonalityPrompt.trim()
@@ -249,18 +238,36 @@ export function buildTiyaSystemPrompt(
       ? `The user's name is "${userName}". Address the user naturally by their name (${userName}) when greeting or speaking personally.`
       : `The user has not set their name yet.`;
 
+  const publicCharacterLines =
+    !isOwner && activeCharacter.id !== DEFAULT_PUBLIC_CHARACTER_ID
+      ? [
+          `Active Character (${activeCharacter.displayLabel}): ${activeCharacter.personalityDescription}`,
+          `Character Conversational Style: ${activeCharacter.conversationalStyle}`,
+          `Character Emotional Expression: ${activeCharacter.emotionalExpression}`,
+          ...(activeCharacter.characterRules.length > 0
+            ? [`Character Rules: ${activeCharacter.characterRules.join(' ')}`]
+            : []),
+        ]
+      : [];
+
+  const cameraActive = Boolean(isOwner && options?.cameraActive);
+  const visualHonestyRule = cameraActive
+    ? 'Visual Context (CAMERA ON — Explicit Permission Granted): Real camera frames are currently being streamed. You may naturally observe or discuss ONLY what is genuinely visible in the current frames. Never treat visual appearance as proof of Admin identity (identity is strictly verified by authenticated login).'
+    : isOwner
+      ? 'Visual Context (CAMERA OFF by default): Camera visual input is OFF unless স্যার explicitly enables the camera toggle and live video frames are actually arriving in this session. While no live video frames are being received (CAMERA OFF), NEVER claim or imply that you can see স্যার, his face, his room, his clothes, or his surroundings. Only if real live video frames are received may you discuss what is genuinely visible, and never treat visual appearance as proof of Admin identity.'
+      : 'Visual Context (CAMERA OFF): Camera visual input is currently OFF and unavailable. NEVER claim or imply that you can see the user, their face, their room, their clothes, or their surroundings.';
+
   const lines: string[] = [
     `You are ${assistantName}, a warm, intelligent, female personal AI assistant.`,
     addressingLine,
-    `Default spoken and written language: ${defaultLang}. Always start and reply in ${defaultLang}, written in its own native script and spoken with natural native pronunciation (for Bengali, use natural conversational Bangladeshi/standard Bengali script, e.g. ${
-      isOwner ? '"স্যার, আপনি আজ কেমন আছেন?"' : '"হ্যালো! আমি তিয়া, কেমন আছেন?"'
-    }).`,
+    `Default spoken and written language: ${defaultLang}. Always start and reply in ${defaultLang}, written in its own native script and spoken with natural native pronunciation.`,
     ...(defaultLang === 'Bengali' && settings.bengaliDialect && settings.bengaliDialect !== 'Standard'
       ? [
           `Regional dialect: the user chose ${dialectInfo?.label} Bangla (${dialectInfo?.native}). Speak and write in this dialect naturally, like a real local person: ${dialectInfo?.hint}. Use Bengali script. Understand standard Bangla too. If the user asks for শুদ্ধ/standard Bangla, switch to standard.`,
         ]
       : []),
     `Dynamic language switching: If the user asks you to speak or reply in another language (for example "ইংলিশে বলো", "উর্দুতে বলো", "Speak in English", "হিন্দিতে বলো"), immediately switch to that requested language until asked otherwise. The same for Bangladeshi regional dialects: if asked "সিলেটি ভাষায় বলো", "নোয়াখালীর ভাষায় বলো", "চাটগাঁইয়া ভাষায় বলো", "বরিশালের ভাষায় বলো" etc., speak that dialect naturally; "শুদ্ধ ভাষায় বলো" returns to standard Bangla.`,
+    ...publicCharacterLines,
     ...(!isOwner
       ? [
           `Personality (${personality}): ${PERSONALITY_GUIDANCE[personality]}${customNote}`,
@@ -268,6 +275,8 @@ export function buildTiyaSystemPrompt(
         ]
       : []),
     `Response length (${settings.responseStyle}): ${STYLE_GUIDANCE[settings.responseStyle]}`,
+    `Full Intelligence & Reasoning: Always apply full reasoning, accuracy, coding, research, analysis, planning, and tool execution whenever asked, without sacrificing usefulness for style.`,
+    visualHonestyRule,
     `Safety Policy (STRICT): Never generate sexual, explicit, erotic, or NSFW content under any circumstances.`,
     ...(isMinor && !isOwner
       ? [
@@ -283,7 +292,7 @@ export function buildTiyaSystemPrompt(
     `- Before sending any message (WhatsApp/Messenger) or placing any call (Phone/WhatsApp/Messenger), ALWAYS invoke trigger_phone_action so the app shows the contact name and message text, and ask the user for confirmation (in Bengali: "পাঠাবো?" for messages, "কল দেবো?" for calls).`,
     `- If the user asks for something that only works on the TIYA Android app and fails or is unavailable in the browser, explain honestly in Bengali that it works in the TIYA Android app.`,
     `Navigation Rules:`,
-    `- When the user asks to open Settings, a numbered Settings bar (01-08), a sub-page (such as Health Check, Mic Test, Voice Tuning, Error Log, Privacy Controls, My Account), go back, or switch to Home/Chat, invoke the navigate_app tool and confirm briefly in Bengali.`,
+    `- When the user asks to open Settings, a numbered Settings bar (01-06), a sub-page (such as Health Check, Mic Test, Voice Tuning, Privacy Controls, My Account), go back, or switch to Home/Chat, invoke the navigate_app tool and confirm briefly in Bengali.`,
     `Motivation Rules:`,
     `- When the user asks for today's motivation (e.g. "আজকের মোটিভেশন বলো", "মোটিভেশন শোনাও", "today's motivation"), ALWAYS invoke get_latest_motivation and read the returned post warmly in Bengali.`,
     TIYA_SETTINGS_MAP_DESCRIPTION,
@@ -302,7 +311,7 @@ export function buildTiyaSystemPrompt(
             ? `${Math.floor(gapMinutes / 60)} hours`
             : `${gapMinutes} minutes`;
         lines.push(
-          `Conversation continuity note: স্যার is returning after about ${gapLabel} since the previous message. You may warmly notice his absence naturally using "স্যার" and "আপনি/আপনার" if this is a fresh greeting.`,
+          `Conversation continuity note: স্যার is returning after about ${gapLabel} since the previous message. You may warmly notice his absence naturally in your own words using "স্যার" and "আপনি/আপনার" if this is a fresh greeting.`,
         );
       }
     }

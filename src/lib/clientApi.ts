@@ -449,6 +449,9 @@ class RawLiveSession {
   sendRealtimeInput(input: Record<string, unknown>) {
     this.send({ realtimeInput: input });
   }
+  sendClientContent(turns: unknown[], turnComplete = true) {
+    this.send({ clientContent: { turns, turnComplete } });
+  }
   sendToolResponse(resp: Record<string, unknown>) {
     this.send({ toolResponse: resp });
   }
@@ -1129,6 +1132,37 @@ export class LocalLiveSocket {
           this.turnBusy = false;
         }
       })();
+    } else if (msg.type === 'proactive_prompt' && msg.text && this.turnMode) {
+      if (this.turnBusy) return;
+      void (async () => {
+        this.turnBusy = true;
+        try {
+          const res = await handle('/api/gemini/chat', this.apiKey, {
+            message: String(msg.text),
+            history: this.turnHistory.slice(-12),
+            systemInstruction: this.systemInstruction,
+          });
+          const data = res.json as any;
+          if (data?.ok && data.text) {
+            await this.turnSpeak(String(data.text));
+            this.emit({ type: 'turn_complete' });
+          }
+        } finally {
+          this.turnBusy = false;
+        }
+      })();
+    } else if (msg.type === 'proactive_prompt' && msg.text && this.session) {
+      this.session.sendClientContent(
+        [{ role: 'user', parts: [{ text: String(msg.text) }] }],
+        true,
+      );
+    } else if (msg.type === 'video' && msg.data && this.session) {
+      this.session.sendRealtimeInput({
+        video: {
+          data: String(msg.data),
+          mimeType: String(msg.mimeType || 'image/jpeg'),
+        },
+      });
     } else if (msg.type === 'audio' && msg.data && this.session) {
       this.session.sendRealtimeInput({ audio: { data: msg.data, mimeType: 'audio/pcm;rate=16000' } });
     } else if (msg.type === 'text' && msg.text && this.session) {
