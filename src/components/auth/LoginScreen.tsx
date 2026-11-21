@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { getAuthRedirectUrl, supabase } from '../../lib/supabase';
 import { mapAuthErrorToBengali } from '../../utils/authErrors';
 
 type AuthTab = 'signin' | 'signup';
 
-export const LoginScreen: React.FC = () => {
+interface LoginScreenProps {
+  initialError?: string;
+}
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = '' }) => {
   const [tab, setTab] = useState<AuthTab>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -15,8 +19,16 @@ export const LoginScreen: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [errorBn, setErrorBn] = useState('');
+  const [errorBn, setErrorBn] = useState(() =>
+    initialError ? mapAuthErrorToBengali(initialError) : '',
+  );
   const [infoBn, setInfoBn] = useState('');
+
+  useEffect(() => {
+    if (initialError) {
+      setErrorBn(mapAuthErrorToBengali(initialError));
+    }
+  }, [initialError]);
 
   const handleGoogleSignIn = async () => {
     setErrorBn('');
@@ -26,7 +38,7 @@ export const LoginScreen: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: getAuthRedirectUrl(),
         },
       });
       if (error) {
@@ -85,7 +97,7 @@ export const LoginScreen: React.FC = () => {
           email: trimmedEmail,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: getAuthRedirectUrl(),
             data: { full_name: trimmedName },
           },
         });

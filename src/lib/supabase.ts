@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { resolveAuthRedirectUrl } from '../utils/authRedirect';
 
 const SUPABASE_URL = 'https://ukgwipazzjstjkdfaozg.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_CRMgURG899vqIqUIsADWgw_p90ZliES';
@@ -30,6 +31,10 @@ if (typeof window !== 'undefined') {
   } catch {
     // Ignore storage access errors
   }
+}
+
+export function getAuthRedirectUrl(): string {
+  return resolveAuthRedirectUrl();
 }
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

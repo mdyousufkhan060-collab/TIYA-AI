@@ -33,6 +33,10 @@ import {
   ReplyUsageDecision,
   setCachedBirthYear,
 } from './utils/authErrors';
+import {
+  buildCleanUrlAfterAuthCallback,
+  extractOAuthCallbackError,
+} from './utils/authRedirect';
 import { buildTiyaSystemPrompt, enforceAdminAddressingText, isTiyaOwnerEmail } from './utils/prompts';
 import {
   executePhoneAction,
@@ -106,6 +110,7 @@ export default function App() {
   // Supabase Auth & Account State
   const [authReady, setAuthReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [authCallbackError, setAuthCallbackError] = useState('');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [cachedBirthYear, setCachedBirthYearState] = useState<number | null>(null);
@@ -142,11 +147,41 @@ export default function App() {
   // Restore persisted Supabase session & listen to auth changes
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+
+    const cleanAuthUrlAfterSdk = () => {
+      if (typeof window === 'undefined') return;
+      const cleanUrl = buildCleanUrlAfterAuthCallback(window.location.href);
+      if (cleanUrl) {
+        try {
+          window.history.replaceState(window.history.state, document.title, cleanUrl);
+        } catch {
+          // Ignore history errors in restricted WebViews
+        }
+      }
+    };
+
+    // Wait for Supabase SDK to finish detectSessionInUrl (#access_token or ?code)
+    // before cleaning sensitive tokens/params from the address bar.
+    supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) return;
-      setSession(data.session ?? null);
+      const callbackErr =
+        typeof window !== 'undefined'
+          ? extractOAuthCallbackError(window.location.search, window.location.hash)
+          : null;
+
       if (data.session?.user?.id) {
+        setSession(data.session);
+        setAuthCallbackError('');
         setCachedBirthYearState(getCachedBirthYear(data.session.user.id));
+        cleanAuthUrlAfterSdk();
+      } else {
+        setSession(null);
+        if (callbackErr) {
+          setAuthCallbackError(callbackErr);
+          cleanAuthUrlAfterSdk();
+        } else if (error?.message) {
+          setAuthCallbackError(error.message);
+        }
       }
       setAuthReady(true);
     });
@@ -155,7 +190,9 @@ export default function App() {
       if (!mounted) return;
       setSession(nextSession ?? null);
       if (nextSession?.user?.id) {
+        setAuthCallbackError('');
         setCachedBirthYearState(getCachedBirthYear(nextSession.user.id));
+        cleanAuthUrlAfterSdk();
       } else {
         setProfile(null);
         setProfileLoaded(false);
@@ -947,7 +984,7 @@ export default function App() {
             Loading TIYA...
           </div>
         ) : !session ? (
-          <LoginScreen />
+          <LoginScreen initialError={authCallbackError} />
         ) : needsAgeCheck ? (
           <AgeCheckScreen
             userId={session.user.id}
