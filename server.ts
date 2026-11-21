@@ -696,22 +696,28 @@ async function startServer() {
               },
               onmessage: (message: LiveServerMessage) => {
                 const content = message.serverContent;
+                if (content?.interimInputTranscription?.text) {
+                  safeSend({
+                    type: 'input_interim',
+                    text: content.interimInputTranscription.text,
+                  });
+                }
                 if (content?.inputTranscription?.text) {
                   safeSend({
                     type: 'input_transcript',
                     text: content.inputTranscription.text,
                   });
                 }
+                for (const part of content?.modelTurn?.parts ?? []) {
+                  if (part.inlineData?.data) {
+                    safeSend({ type: 'audio', data: part.inlineData.data });
+                  }
+                }
                 if (content?.outputTranscription?.text) {
                   safeSend({
                     type: 'output_transcript',
                     text: content.outputTranscription.text,
                   });
-                }
-                for (const part of content?.modelTurn?.parts ?? []) {
-                  if (part.inlineData?.data) {
-                    safeSend({ type: 'audio', data: part.inlineData.data });
-                  }
                 }
                 if (content?.interrupted) {
                   safeSend({ type: 'interrupted' });

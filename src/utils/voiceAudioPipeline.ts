@@ -717,3 +717,98 @@ export function createVoiceOutputChain(
     cleanup,
   };
 }
+
+/**
+ * Natural conversational speaking speed factor (0.90x of the old 1.0x default,
+ * centered inside the 0.85x-0.95x natural target without stretching/distortion).
+ */
+export const NATURAL_SPEECH_RATE_FACTOR = 0.90;
+export const MIN_NATURAL_PLAYBACK_RATE = 0.84;
+export const MAX_NATURAL_PLAYBACK_RATE = 1.30;
+
+/**
+ * Computes a comfortable, distortion-free playback rate for TIYA's spoken voice.
+ * Default user speed (1.0) maps to 0.90x so delivery is calm, warm, and unhurried
+ * while respecting user adjustments and clamping away artificial stretching.
+ */
+export function computeNaturalPlaybackRate(userSpeed?: number): number {
+  const base =
+    typeof userSpeed === 'number' && Number.isFinite(userSpeed) && userSpeed > 0
+      ? userSpeed
+      : 1.0;
+  const scaled = base * NATURAL_SPEECH_RATE_FACTOR;
+  return Math.max(MIN_NATURAL_PLAYBACK_RATE, Math.min(MAX_NATURAL_PLAYBACK_RATE, scaled));
+}
+
+interface ScheduledTranscriptChunk {
+  text: string;
+  releaseAtSec: number;
+}
+
+/**
+ * Synchronizes genuine streaming assistant output_transcript chunks with the
+ * Web Audio playback timeline (AudioContext.currentTime).
+ *
+ * - Never splits an already completed sentence into fake words.
+ * - Releases each real server transcript chunk when its corresponding queued
+ *   audio segment actually plays out of the speaker.
+ * - Cancels unplayed future chunks on user interruption (barge-in) so spoken
+ *   audio and displayed text never contradict each other.
+ */
+export class VoiceTranscriptSynchronizer {
+  private queue: ScheduledTranscriptChunk[] = [];
+  private lastAssignedSec = 0;
+
+  public enqueue(
+    text: string,
+    audioNowSec: number,
+    scheduledStartSec: number,
+    scheduledEndSec: number,
+  ): void {
+    if (!text) return;
+    const baseStart = Math.max(audioNowSec, scheduledStartSec);
+    const windowEnd = Math.max(baseStart, scheduledEndSec);
+
+    let releaseAtSec = baseStart;
+    if (this.queue.length > 0 && this.lastAssignedSec >= baseStart) {
+      const remaining = Math.max(0, windowEnd - this.lastAssignedSec);
+      const step = remaining > 0.04 ? Math.min(0.18, remaining * 0.45) : 0.03;
+      releaseAtSec = Math.min(windowEnd, this.lastAssignedSec + step);
+    }
+
+    this.lastAssignedSec = releaseAtSec;
+    this.queue.push({ text, releaseAtSec });
+  }
+
+  public drainReady(audioNowSec: number): string[] {
+    const ready: string[] = [];
+    while (this.queue.length > 0 && this.queue[0].releaseAtSec <= audioNowSec + 0.015) {
+      ready.push(this.queue.shift()!.text);
+    }
+    return ready;
+  }
+
+  public nextDelayMs(audioNowSec: number): number | null {
+    if (this.queue.length === 0) return null;
+    const deltaSec = this.queue[0].releaseAtSec - audioNowSec;
+    return Math.max(16, Math.min(400, Math.round(deltaSec * 1000)));
+  }
+
+  public flushAll(): string[] {
+    if (this.queue.length === 0) return [];
+    const all = this.queue.map((item) => item.text);
+    this.queue = [];
+    this.lastAssignedSec = 0;
+    return all;
+  }
+
+  public cancelPending(): void {
+    this.queue = [];
+    this.lastAssignedSec = 0;
+  }
+
+  public pendingCount(): number {
+    return this.queue.length;
+  }
+}
+

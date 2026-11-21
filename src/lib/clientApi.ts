@@ -28,6 +28,7 @@ import {
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { getConfirmationPromptText, validatePhoneAction } from '../utils/phoneActions';
 import { validateNavigateToolArgs } from '../utils/tiyaNavigation';
+import { computeNaturalPlaybackRate } from '../utils/voiceAudioPipeline';
 import { BENGALI_DIALECTS, DEFAULT_LIVE_MODELS, LiveModelInfo, languageCode } from '../types/tiya';
 
 
@@ -560,6 +561,7 @@ export class LocalLiveSocket {
   private apiKey = '';
   private voiceName = 'Zephyr';
   private language = 'Bengali';
+  private speechSpeed = 1.0;
   private systemInstruction = 'You are TIYA.';
   private turnHistory: Array<{ role: 'user' | 'assistant'; text: string }> = [];
   private turnChunks: Int16Array[] = [];
@@ -779,7 +781,6 @@ export class LocalLiveSocket {
       this.turnHistory.push({ role: 'user', text: heard }, { role: 'assistant', text: reply });
       if (this.turnHistory.length > 24) this.turnHistory.splice(0, this.turnHistory.length - 24);
       if (reply) {
-        this.emit({ type: 'output_transcript', text: reply });
         await this.turnSpeak(reply);
       }
       this.emit({ type: 'turn_complete' });
@@ -852,8 +853,11 @@ export class LocalLiveSocket {
           if (audio) {
             if (this.closedByClient) return;
             const samples = Math.floor(atob(audio.data).length / 2);
-            this.turnMuteUntil = Date.now() + (samples / 24000) * 1000 + 600;
+            const rate = computeNaturalPlaybackRate(this.speechSpeed);
+            this.turnMuteUntil = Date.now() + (samples / (24000 * rate)) * 1000 + 600;
+            // Emit audio + transcript together so text appears right as speech begins
             this.emit({ type: 'audio', data: audio.data });
+            this.emit({ type: 'output_transcript', text });
             return;
           }
         } catch (err) {
@@ -861,34 +865,73 @@ export class LocalLiveSocket {
         }
       }
     }
-    // Last resort: the phone's own voice
+    // Last resort: the phone's own speech synthesizer with natural pace & real onboundary word sync
     try {
       const synth = window.speechSynthesis;
-      if (!synth) return;
+      if (!synth) {
+        this.emit({ type: 'output_transcript', text });
+        return;
+      }
       const u = new SpeechSynthesisUtterance(text);
       u.lang = /[\u0980-\u09FF]/.test(text) ? 'bn-BD' : languageCode(this.language);
+      u.rate = computeNaturalPlaybackRate(this.speechSpeed);
       const female = synth
         .getVoices()
         .find((v) => v.lang.toLowerCase().startsWith(u.lang.slice(0, 2).toLowerCase()) && /female|woman/i.test(v.name));
       if (female) u.voice = female;
       this.turnMuteUntil = Date.now() + 60000;
+      let receivedBoundary = false;
+      u.onboundary = (ev: SpeechSynthesisEvent) => {
+        if (this.closedByClient) return;
+        if (typeof ev.charIndex === 'number' && ev.charIndex >= 0) {
+          receivedBoundary = true;
+          const endIdx =
+            typeof ev.charLength === 'number' && ev.charLength > 0
+              ? ev.charIndex + ev.charLength
+              : text.indexOf(' ', ev.charIndex + 1);
+          const sliceEnd = endIdx > 0 ? Math.min(text.length, endIdx) : text.length;
+          const spokenSoFar = text.slice(0, sliceEnd).trim();
+          if (spokenSoFar) {
+            this.emit({ type: 'output_transcript_sync', text: spokenSoFar });
+          }
+        }
+      };
+      u.onstart = () => {
+        if (!receivedBoundary && !this.closedByClient) {
+          // If the synthesizer fires onboundary, it will update progressively; otherwise show on end
+        }
+      };
       await new Promise<void>((resolve) => {
         u.onend = () => resolve();
         u.onerror = () => resolve();
         synth.speak(u);
       });
+      if (!this.closedByClient) {
+        this.emit({ type: 'output_transcript_sync', text, final: true });
+      }
       this.turnMuteUntil = Date.now() + 400;
     } catch {
-      // ignore
+      this.emit({ type: 'output_transcript', text });
     }
   }
 
   private onLiveMessage(message: any) {
     const content = message.serverContent;
-    if (content?.inputTranscription?.text) this.emit({ type: 'input_transcript', text: content.inputTranscription.text });
-    if (content?.outputTranscription?.text) this.emit({ type: 'output_transcript', text: content.outputTranscription.text });
+    if (content?.interimInputTranscription?.text) {
+      this.emit({ type: 'input_interim', text: content.interimInputTranscription.text });
+    }
+    if (content?.inputTranscription?.text) {
+      const isPartial = content.inputTranscription.finished === false;
+      this.emit({
+        type: isPartial ? 'input_interim' : 'input_transcript',
+        text: content.inputTranscription.text,
+      });
+    }
     for (const part of content?.modelTurn?.parts ?? []) {
       if (part.inlineData?.data) this.emit({ type: 'audio', data: part.inlineData.data });
+    }
+    if (content?.outputTranscription?.text) {
+      this.emit({ type: 'output_transcript', text: content.outputTranscription.text });
     }
     if (content?.interrupted) this.emit({ type: 'interrupted' });
     if (content?.turnComplete) this.emit({ type: 'turn_complete' });
@@ -936,6 +979,7 @@ export class LocalLiveSocket {
           ? [primary, ...msg.fallbackModels.filter((m: string) => m !== primary)]
           : [primary];
       this.language = String(msg.language || 'Bengali');
+      this.speechSpeed = typeof msg.speechSpeed === 'number' && Number.isFinite(msg.speechSpeed) ? msg.speechSpeed : 1.0;
       void this.connect(String(msg.apiKey || '').trim(), candidates, msg.voiceName || 'Zephyr', msg.systemInstruction || 'You are TIYA.');
     } else if (msg.type === 'motivation_response' && msg.callId && this.session) {
       const pending = this.pendingMotivation.get(msg.callId);
@@ -969,7 +1013,6 @@ export class LocalLiveSocket {
           });
           const data = res.json as any;
           if (data?.ok && data.text) {
-            this.emit({ type: 'output_transcript', text: data.text });
             await this.turnSpeak(String(data.text));
             this.emit({ type: 'turn_complete' });
           }

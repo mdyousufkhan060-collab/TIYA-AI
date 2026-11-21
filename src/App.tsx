@@ -223,8 +223,9 @@ export default function App() {
       : cachedBirthYear;
 
   const userAge = calculateAge(effectiveBirthYear);
-  // Owner (his Gmail + admin) always gets the emotional persona
-  const isOwner = isAdmin && isTiyaOwnerEmail(session?.user?.email);
+  // Verified authenticated session email check for Admin emotional personality
+  // (never derived from display name, typed email, or client-editable settings)
+  const isOwner = Boolean(session?.user?.id) && isTiyaOwnerEmail(session?.user?.email);
 
   const checkReplyUsage = useCallback(async (): Promise<ReplyUsageDecision> => {
     try {

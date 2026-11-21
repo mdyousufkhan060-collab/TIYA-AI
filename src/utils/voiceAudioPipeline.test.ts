@@ -142,3 +142,44 @@ test('Mobile voice media constraints enable noise suppression, echo cancellation
   assert.deepEqual(audio.noiseSuppression, { ideal: true });
   assert.deepEqual(audio.autoGainControl, { ideal: true });
 });
+
+test('computeNaturalPlaybackRate tunes default speed to 0.90x without stretching/distortion', async () => {
+  const { computeNaturalPlaybackRate } = await import('./voiceAudioPipeline.ts');
+  const defaultRate = computeNaturalPlaybackRate(1.0);
+  assert.ok(defaultRate >= 0.85 && defaultRate <= 0.95, `expected 0.85-0.95, got ${defaultRate}`);
+  assert.equal(defaultRate, 0.9);
+
+  // Extreme low slider clamps cleanly to avoid distorted audio
+  assert.equal(computeNaturalPlaybackRate(0.5), 0.84);
+  // Faster user setting still speeds up smoothly within safe bounds
+  assert.ok(computeNaturalPlaybackRate(1.25) > 1.05);
+  assert.equal(computeNaturalPlaybackRate(2.0), 1.3);
+});
+
+test('VoiceTranscriptSynchronizer releases real server chunks in sync with audio clock and cancels on barge-in', async () => {
+  const { VoiceTranscriptSynchronizer } = await import('./voiceAudioPipeline.ts');
+  const sync = new VoiceTranscriptSynchronizer();
+
+  // Audio chunk 1 plays [1.0s .. 1.6s], chunk 2 plays [1.6s .. 2.2s], chunk 3 plays [2.2s .. 2.8s]
+  sync.enqueue('স্যার,', 1.0, 1.0, 1.6);
+  sync.enqueue(' তুমি', 1.0, 1.6, 2.2);
+  sync.enqueue(' কেমন আছো?', 1.0, 2.2, 2.8);
+
+  // At t=1.0s: only first chunk is released
+  assert.deepEqual(sync.drainReady(1.0), ['স্যার,']);
+  assert.equal(sync.pendingCount(), 2);
+
+  // At t=1.65s: second chunk is released right when audio chunk 2 plays
+  assert.deepEqual(sync.drainReady(1.65), [' তুমি']);
+  assert.equal(sync.pendingCount(), 1);
+
+  // User interrupts mid-sentence -> unplayed chunk 3 is cancelled so audio & text never contradict
+  sync.cancelPending();
+  assert.equal(sync.pendingCount(), 0);
+  assert.deepEqual(sync.flushAll(), []);
+
+  // Normal completion flushes any final pending chunk cleanly
+  sync.enqueue('ভালো আছি।', 3.0, 3.4, 3.8);
+  assert.deepEqual(sync.flushAll(), ['ভালো আছি।']);
+});
+

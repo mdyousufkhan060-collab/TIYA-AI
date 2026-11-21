@@ -8,6 +8,7 @@ import {
 } from '../utils/audioPcm';
 import {
   applyStartAntiClick,
+  computeNaturalPlaybackRate,
   createVoiceInputChain,
   createVoiceOutputChain,
   getFallbackVoiceMediaConstraints,
@@ -16,7 +17,9 @@ import {
   resampleTo16kHz,
   VoiceInputChain,
   VoiceOutputChain,
+  VoiceTranscriptSynchronizer,
 } from '../utils/voiceAudioPipeline';
+import { TranscriptStreamBuffer } from '../utils/transcriptBuffer';
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { ReplyUsageDecision } from '../utils/authErrors';
 import { buildTiyaSystemPrompt } from '../utils/prompts';
@@ -81,10 +84,15 @@ export function useTiyaLiveVoice({
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const nextStartTimeRef = useRef<number>(0);
+  const lastAudioChunkStartRef = useRef<number>(0);
   const connectWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const currentUserTurnRef = useRef<string>('');
-  const currentAssistantTurnRef = useRef<string>('');
+  const userTurnBufferRef = useRef<TranscriptStreamBuffer>(new TranscriptStreamBuffer());
+  const assistantTurnBufferRef = useRef<TranscriptStreamBuffer>(new TranscriptStreamBuffer());
+  const assistantSyncRef = useRef<VoiceTranscriptSynchronizer>(new VoiceTranscriptSynchronizer());
+  const assistantSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const turnCompletePendingRef = useRef<boolean>(false);
+
   const hasStartedUserBubbleRef = useRef<boolean>(false);
   const hasStartedAssistantBubbleRef = useRef<boolean>(false);
   const lastNavHandledRef = useRef<string>('');
@@ -111,9 +119,63 @@ export function useTiyaLiveVoice({
     }
   }, [settings.volume]);
 
+  const clearAssistantSyncTimer = useCallback(() => {
+    if (assistantSyncTimerRef.current) {
+      clearTimeout(assistantSyncTimerRef.current);
+      assistantSyncTimerRef.current = null;
+    }
+  }, []);
+
+  const pushUserBubble = useCallback((displayText: string) => {
+    const trimmed = displayText.trim();
+    if (!trimmed) return;
+    if (!hasStartedUserBubbleRef.current) {
+      hasStartedUserBubbleRef.current = true;
+      callbacksRef.current.onAppendVoiceMessage('user', displayText);
+    } else {
+      callbacksRef.current.onUpdateLastVoiceMessage('user', displayText);
+    }
+  }, []);
+
+  const pushAssistantBubble = useCallback((displayText: string) => {
+    const trimmed = displayText.trim();
+    if (!trimmed) return;
+    if (!hasStartedAssistantBubbleRef.current) {
+      hasStartedAssistantBubbleRef.current = true;
+      callbacksRef.current.onAppendVoiceMessage('assistant', displayText);
+    } else {
+      callbacksRef.current.onUpdateLastVoiceMessage('assistant', displayText);
+    }
+  }, []);
+
+  const flushRemainingAssistantChunks = useCallback(() => {
+    clearAssistantSyncTimer();
+    const remaining = assistantSyncRef.current.flushAll();
+    if (remaining.length === 0) return;
+    let latest = '';
+    for (const chunk of remaining) {
+      latest = assistantTurnBufferRef.current.commitFinal(chunk, { isDelta: true });
+    }
+    if (latest) {
+      pushAssistantBubble(latest);
+    }
+  }, [clearAssistantSyncTimer, pushAssistantBubble]);
+
+  const resetTurnState = useCallback(() => {
+    clearAssistantSyncTimer();
+    assistantSyncRef.current.cancelPending();
+    userTurnBufferRef.current.reset();
+    assistantTurnBufferRef.current.reset();
+    hasStartedUserBubbleRef.current = false;
+    hasStartedAssistantBubbleRef.current = false;
+    turnCompletePendingRef.current = false;
+    lastNavHandledRef.current = '';
+  }, [clearAssistantSyncTimer]);
+
   const stopPlaybackQueue = useCallback(() => {
     for (const source of activeSourcesRef.current) {
       try {
+        source.onended = null;
         source.stop();
         source.disconnect();
       } catch {
@@ -123,8 +185,10 @@ export function useTiyaLiveVoice({
     activeSourcesRef.current.clear();
     if (outputCtxRef.current) {
       nextStartTimeRef.current = outputCtxRef.current.currentTime;
+      lastAudioChunkStartRef.current = outputCtxRef.current.currentTime;
     } else {
       nextStartTimeRef.current = 0;
+      lastAudioChunkStartRef.current = 0;
     }
   }, []);
 
@@ -177,12 +241,9 @@ export function useTiyaLiveVoice({
       wsRef.current = null;
     }
 
-    currentUserTurnRef.current = '';
-    currentAssistantTurnRef.current = '';
-    hasStartedUserBubbleRef.current = false;
-    hasStartedAssistantBubbleRef.current = false;
+    resetTurnState();
     setAudioLevel(0);
-  }, [stopPlaybackQueue]);
+  }, [resetTurnState, stopPlaybackQueue]);
 
   const stopVoice = useCallback(() => {
     cleanupResources();
@@ -215,7 +276,9 @@ export function useTiyaLiveVoice({
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.playbackRate.value = settingsRef.current.speechSpeed || 1.0;
+    // Natural slower conversational playback rate (0.90x default, clamped away from distortion)
+    const effectiveRate = computeNaturalPlaybackRate(settingsRef.current.speechSpeed);
+    source.playbackRate.value = effectiveRate;
     const pitchRatio = settingsRef.current.pitch || 1.0;
     if (typeof source.detune !== 'undefined' && pitchRatio !== 1.0) {
       source.detune.value = (pitchRatio - 1.0) * 1200;
@@ -225,21 +288,26 @@ export function useTiyaLiveVoice({
     const now = ctx.currentTime;
     const startAt = Math.max(now, nextStartTimeRef.current);
     source.start(startAt);
-    nextStartTimeRef.current = startAt + buffer.duration / source.playbackRate.value;
+    lastAudioChunkStartRef.current = startAt;
+    nextStartTimeRef.current = startAt + buffer.duration / effectiveRate;
 
     activeSourcesRef.current.add(source);
     source.onended = () => {
       activeSourcesRef.current.delete(source);
-      if (
-        activeSourcesRef.current.size === 0 &&
-        voiceStateRef.current === 'speaking'
-      ) {
-        // Hands-free loop: return seamlessly to listening once TIYA finishes speaking
-        setVoiceState('listening');
-        setAudioLevel(0);
+      if (activeSourcesRef.current.size === 0) {
+        // Flush any remaining synchronized assistant text right as speech completes
+        flushRemainingAssistantChunks();
+        if (turnCompletePendingRef.current) {
+          resetTurnState();
+        }
+        if (voiceStateRef.current === 'speaking') {
+          // Hands-free loop: return seamlessly to listening once TIYA finishes speaking
+          setVoiceState('listening');
+          setAudioLevel(0);
+        }
       }
     };
-  }, []);
+  }, [flushRemainingAssistantChunks, resetTurnState]);
 
   const startVoice = useCallback(async () => {
     const currentSettings = settingsRef.current;
@@ -352,6 +420,7 @@ export function useTiyaLiveVoice({
           autoFallback: settingsRef.current.autoFallback,
           voiceName: settingsRef.current.voiceName,
           language: settingsRef.current.language,
+          speechSpeed: settingsRef.current.speechSpeed,
           systemInstruction,
         }),
       );
@@ -364,12 +433,32 @@ export function useTiyaLiveVoice({
           model?: string;
           data?: string;
           text?: string;
+          final?: boolean;
           label?: string;
           detail?: string;
           action?: PhoneAction;
           command?: NavigationCommand;
           callId?: string;
           name?: string;
+        };
+
+        const runAssistantSyncPump = () => {
+          clearAssistantSyncTimer();
+          const audioNow = outputCtxRef.current ? outputCtxRef.current.currentTime : 0;
+          const ready = assistantSyncRef.current.drainReady(audioNow);
+          if (ready.length > 0) {
+            let latest = '';
+            for (const chunk of ready) {
+              latest = assistantTurnBufferRef.current.commitFinal(chunk, { isDelta: true });
+            }
+            if (latest) {
+              pushAssistantBubble(latest);
+            }
+          }
+          const delayMs = assistantSyncRef.current.nextDelayMs(audioNow);
+          if (delayMs !== null) {
+            assistantSyncTimerRef.current = setTimeout(runAssistantSyncPump, delayMs);
+          }
         };
 
         if (msg.type === 'ready') {
@@ -407,66 +496,111 @@ export function useTiyaLiveVoice({
               wsRef.current.send(JSON.stringify({ type: 'audio', data: base64 }));
             }
           };
-        } else if (msg.type === 'input_transcript' && msg.text) {
-          hasStartedAssistantBubbleRef.current = false;
-          currentAssistantTurnRef.current = '';
-          currentUserTurnRef.current += msg.text;
-          if (!hasStartedUserBubbleRef.current) {
-            hasStartedUserBubbleRef.current = true;
-            callbacksRef.current.onAppendVoiceMessage('user', currentUserTurnRef.current);
-            if (checkReplyUsageRef.current) {
-              void checkReplyUsageRef.current().then((decision) => {
-                if (!decision.allowed && wsRef.current) {
-                  const limitMsg = decision.messageBn || 'আজকের লিমিট শেষ';
-                  cleanupResources();
-                  setErrorLabel(limitMsg);
-                  setErrorDetail('');
-                  setVoiceState('error');
-                  callbacksRef.current.onAppendVoiceMessage('assistant', limitMsg);
-                }
-              });
-            }
-          } else {
-            callbacksRef.current.onUpdateLastVoiceMessage('user', currentUserTurnRef.current);
+        } else if (msg.type === 'input_interim' && msg.text) {
+          // User started or continues speaking: flush/close any prior assistant turn cleanly
+          if (hasStartedAssistantBubbleRef.current) {
+            flushRemainingAssistantChunks();
+            hasStartedAssistantBubbleRef.current = false;
+            assistantTurnBufferRef.current.reset();
+            turnCompletePendingRef.current = false;
           }
-          const navCmd = parseNavigationCommand(currentUserTurnRef.current);
-          if (navCmd && lastNavHandledRef.current !== currentUserTurnRef.current.trim()) {
-            lastNavHandledRef.current = currentUserTurnRef.current.trim();
+          const wasFirstBubble = !hasStartedUserBubbleRef.current;
+          const display = userTurnBufferRef.current.setInterim(msg.text);
+          pushUserBubble(display);
+          if (wasFirstBubble && hasStartedUserBubbleRef.current && checkReplyUsageRef.current) {
+            void checkReplyUsageRef.current().then((decision) => {
+              if (!decision.allowed && wsRef.current) {
+                const limitMsg = decision.messageBn || 'আজকের লিমিট শেষ';
+                cleanupResources();
+                setErrorLabel(limitMsg);
+                setErrorDetail('');
+                setVoiceState('error');
+                callbacksRef.current.onAppendVoiceMessage('assistant', limitMsg);
+              }
+            });
+          }
+        } else if (msg.type === 'input_transcript' && msg.text) {
+          if (hasStartedAssistantBubbleRef.current) {
+            flushRemainingAssistantChunks();
+            hasStartedAssistantBubbleRef.current = false;
+            assistantTurnBufferRef.current.reset();
+            turnCompletePendingRef.current = false;
+          }
+          const wasFirstBubble = !hasStartedUserBubbleRef.current;
+          const display = userTurnBufferRef.current.commitFinal(msg.text, { isDelta: true });
+          pushUserBubble(display);
+          if (wasFirstBubble && hasStartedUserBubbleRef.current && checkReplyUsageRef.current) {
+            void checkReplyUsageRef.current().then((decision) => {
+              if (!decision.allowed && wsRef.current) {
+                const limitMsg = decision.messageBn || 'আজকের লিমিট শেষ';
+                cleanupResources();
+                setErrorLabel(limitMsg);
+                setErrorDetail('');
+                setVoiceState('error');
+                callbacksRef.current.onAppendVoiceMessage('assistant', limitMsg);
+              }
+            });
+          }
+          const navCmd = parseNavigationCommand(display);
+          if (navCmd && lastNavHandledRef.current !== display.trim()) {
+            lastNavHandledRef.current = display.trim();
             callbacksRef.current.onNavigate?.(navCmd);
           }
           if (voiceStateRef.current === 'listening') {
             setVoiceState('thinking');
           }
         } else if (msg.type === 'output_transcript' && msg.text) {
-          hasStartedUserBubbleRef.current = false;
-          currentUserTurnRef.current = '';
-          currentAssistantTurnRef.current += msg.text;
-          if (!hasStartedAssistantBubbleRef.current) {
-            hasStartedAssistantBubbleRef.current = true;
-            callbacksRef.current.onAppendVoiceMessage(
-              'assistant',
-              currentAssistantTurnRef.current,
-            );
-          } else {
-            callbacksRef.current.onUpdateLastVoiceMessage(
-              'assistant',
-              currentAssistantTurnRef.current,
-            );
+          // Finalize any pending user interim text before switching to assistant bubble
+          if (hasStartedUserBubbleRef.current) {
+            const finalizedUser = userTurnBufferRef.current.finalize();
+            if (finalizedUser) pushUserBubble(finalizedUser);
+            hasStartedUserBubbleRef.current = false;
+            userTurnBufferRef.current.reset();
           }
+
+          const ctx = outputCtxRef.current;
+          const audioNow = ctx ? ctx.currentTime : 0;
+          const schedStart = ctx ? Math.max(audioNow, lastAudioChunkStartRef.current) : 0;
+          const schedEnd = ctx ? Math.max(schedStart, nextStartTimeRef.current) : 0;
+
+          assistantSyncRef.current.enqueue(msg.text, audioNow, schedStart, schedEnd);
+          runAssistantSyncPump();
+        } else if (msg.type === 'output_transcript_sync' && msg.text) {
+          if (hasStartedUserBubbleRef.current) {
+            const finalizedUser = userTurnBufferRef.current.finalize();
+            if (finalizedUser) pushUserBubble(finalizedUser);
+            hasStartedUserBubbleRef.current = false;
+            userTurnBufferRef.current.reset();
+          }
+          const display = msg.final
+            ? assistantTurnBufferRef.current.commitFinal(msg.text, {
+                isDelta: false,
+                deduplicateBoundaryWord: true,
+              })
+            : assistantTurnBufferRef.current.setInterim(msg.text);
+          pushAssistantBubble(display);
         } else if (msg.type === 'audio' && msg.data) {
           setVoiceState('speaking');
           playPcmChunk(msg.data);
+          // Pump synchronized text immediately as new audio playback begins
+          if (assistantSyncRef.current.pendingCount() > 0) {
+            runAssistantSyncPump();
+          }
         } else if (msg.type === 'interrupted') {
+          // Stop playback and cancel unplayed queued transcript so audio & text never contradict
           stopPlaybackQueue();
+          clearAssistantSyncTimer();
+          assistantSyncRef.current.cancelPending();
+          turnCompletePendingRef.current = false;
           setVoiceState('listening');
         } else if (msg.type === 'turn_complete') {
-          hasStartedUserBubbleRef.current = false;
-          hasStartedAssistantBubbleRef.current = false;
-          currentUserTurnRef.current = '';
-          currentAssistantTurnRef.current = '';
-          lastNavHandledRef.current = '';
           if (activeSourcesRef.current.size === 0) {
+            flushRemainingAssistantChunks();
+            resetTurnState();
             setVoiceState('listening');
+          } else {
+            // Keep synchronized text draining until the last scheduled audio buffer ends
+            turnCompletePendingRef.current = true;
           }
         } else if (msg.type === 'phone_action' && msg.action) {
           callbacksRef.current.onPhoneAction(msg.action);
@@ -529,7 +663,16 @@ export function useTiyaLiveVoice({
         setVoiceState('error');
       }
     };
-  }, [cleanupResources, playPcmChunk, stopPlaybackQueue]);
+  }, [
+    cleanupResources,
+    clearAssistantSyncTimer,
+    flushRemainingAssistantChunks,
+    playPcmChunk,
+    pushAssistantBubble,
+    pushUserBubble,
+    resetTurnState,
+    stopPlaybackQueue,
+  ]);
 
   const toggleVoice = useCallback(() => {
     if (
