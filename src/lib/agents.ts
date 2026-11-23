@@ -20,7 +20,7 @@ export interface AgentInfo {
 }
 
 export const AGENTS: AgentInfo[] = [
-  { id: 'rose', name: 'ROSE', nameBn: 'রোজ', role: 'Chief Manager', color: '#FF4D8D', skills: 'Plans the work, gives tasks to the team and reports to the owner.', photo: '/agents/rose.png' },
+  { id: 'rose', name: 'ROSE', nameBn: 'রোজ', role: 'Chief Manager', color: '#FF4D8D', skills: 'Plans the work, gives tasks to the team and reports to the owner.', photo: '/agents/rose.png?v=3' },
   { id: 'mira', name: 'MIRA', nameBn: 'মিরা', role: 'Customer Communication', color: '#2DD4BF', skills: 'Writes replies to customers, follow-up messages, offers and FAQ answers.', photo: '/agents/mira.png' },
   { id: 'arin', name: 'ARIN', nameBn: 'আরিন', role: 'Sales & Orders', color: '#60A5FA', skills: 'Checks orders, prices, stock and sales; prepares order summaries.', photo: '/agents/arin.png' },
   { id: 'zayan', name: 'ZAYAN', nameBn: 'জায়ান', role: 'Parcel & Delivery', color: '#FBBF24', skills: 'Plans deliveries, writes delivery notes and tracking updates.', photo: '/agents/zayan.png' },

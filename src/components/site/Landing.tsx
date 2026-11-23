@@ -197,7 +197,7 @@ export const Landing: React.FC = () => {
           <div className="relative mx-auto w-full max-w-sm">
             <div className="absolute -inset-6 rounded-full bg-pink-500/20 blur-3xl" />
             <div className="relative overflow-hidden rounded-[6px] border border-white/10 shadow-2xl">
-              <img src="/tiya-home.jpg" alt="ROSE app home screen" className="aspect-[9/16] w-full object-cover" />
+              <img src="/tiya-home.jpg?v=3" alt="ROSE app home screen" className="aspect-[9/16] w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4">
                 <p className="text-xs font-bold tracking-[0.3em] text-pink-200">ROSE</p>
                 <p className="mt-1 text-sm text-slate-100">"আসসালামু আলাইকুম! আমি রোজ, আজ কীভাবে সাহায্য করতে পারি?"</p>

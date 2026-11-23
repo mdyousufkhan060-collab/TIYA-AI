@@ -128,7 +128,7 @@ export const LoginScreen: React.FC = () => {
   };
 
   const field =
-    'flex h-12 w-full items-center gap-3 rounded-[10px] border border-white/15 bg-[#050B16]/80 px-3.5 text-sm text-white transition-colors focus-within:border-cyan-400/70 focus-within:shadow-[0_0_14px_rgba(34,211,238,0.25)]';
+    'flex h-11 lg:h-12 w-full items-center gap-3 rounded-[10px] border border-white/15 bg-[#050B16]/80 px-3.5 text-sm text-white transition-colors focus-within:border-cyan-400/70 focus-within:shadow-[0_0_14px_rgba(34,211,238,0.25)]';
   const inputBase = 'h-full min-w-0 flex-1 bg-transparent text-[13px] tracking-wide text-white placeholder:uppercase placeholder:tracking-wider placeholder:text-slate-400 focus:outline-none';
 
   const googleIcon = (
@@ -166,24 +166,24 @@ export const LoginScreen: React.FC = () => {
   );
 
   const card = (
-    <div className="relative w-full rounded-[22px] border border-cyan-400/60 bg-[#06101D]/90 px-5 pb-6 pt-7 shadow-[0_0_28px_rgba(34,211,238,0.35),inset_0_0_24px_rgba(34,211,238,0.06)] backdrop-blur-xl sm:px-8 lg:px-10 lg:pb-9 lg:pt-10">
+    <div className="relative w-full rounded-[22px] border border-cyan-400/60 bg-[#06101D]/90 px-5 pb-5 pt-4 shadow-[0_0_28px_rgba(34,211,238,0.35),inset_0_0_24px_rgba(34,211,238,0.06)] backdrop-blur-xl sm:px-8 lg:px-10 lg:pb-9 lg:pt-10">
       {/* Logo */}
       <div className="flex flex-col items-center text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-cyan-400 bg-cyan-500/10 shadow-[0_0_18px_rgba(34,211,238,0.5)] lg:h-20 lg:w-20">
-          <span className="flex items-center gap-[3px]" aria-hidden="true">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-cyan-400 bg-cyan-500/10 shadow-[0_0_18px_rgba(34,211,238,0.5)] lg:h-20 lg:w-20">
+          <span className="flex scale-[0.62] items-center gap-[3px] lg:scale-100" aria-hidden="true">
             {[8, 16, 24, 16, 8].map((h, i) => (
               <span key={i} className="w-[4px] rounded-full bg-cyan-300 lg:w-[5px]" style={{ height: h }} />
             ))}
           </span>
         </div>
-        <h1 className="mt-3 pl-[0.6em] font-display text-3xl font-medium tracking-[0.6em] text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] lg:text-5xl">
+        <h1 className="mt-2 pl-[0.6em] font-display text-xl font-medium tracking-[0.6em] text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] lg:mt-3 lg:text-5xl">
           ROSE
         </h1>
-        <p className="mt-2 text-[12.5px] text-slate-300 lg:text-sm">Sign in to continue to your voice assistant</p>
+        <p className="mt-1 text-[11px] text-slate-300 lg:mt-2 lg:text-sm">Sign in to continue to your voice assistant</p>
       </div>
 
       {/* Tabs */}
-      <div role="tablist" aria-label="Authentication mode" className="mt-5 grid grid-cols-2 border-b border-white/10">
+      <div role="tablist" aria-label="Authentication mode" className="mt-3 grid grid-cols-2 border-b border-white/10 lg:mt-5">
         {(['signin', 'signup'] as AuthTab[]).map((t) => (
           <button
             key={t}
@@ -191,7 +191,7 @@ export const LoginScreen: React.FC = () => {
             role="tab"
             aria-selected={tab === t}
             onClick={() => switchTab(t)}
-            className={`relative h-11 text-[13px] font-bold tracking-wider transition-colors ${
+            className={`relative h-10 text-[12.5px] font-bold lg:h-11 lg:text-[13px] tracking-wider transition-colors ${
               tab === t ? 'text-cyan-300' : 'text-slate-300 hover:text-white'
             }`}
           >
@@ -201,7 +201,7 @@ export const LoginScreen: React.FC = () => {
         ))}
       </div>
 
-      <form onSubmit={handleEmailSubmit} className="mt-5 space-y-3" noValidate>
+      <form onSubmit={handleEmailSubmit} className="rose-auth mt-4 space-y-2.5 lg:mt-5 lg:space-y-3" noValidate>
         {tab === 'signup' && (
           <label className={field}>
             <User className="h-5 w-5 shrink-0 text-slate-300" />
@@ -320,7 +320,7 @@ export const LoginScreen: React.FC = () => {
       {/* ---------- PC: picture left, card right ---------- */}
       <div className="hidden min-h-full lg:grid lg:grid-cols-2">
         <div className="relative min-h-screen overflow-hidden">
-          <img src="/auth/login-pc.jpg" alt="ROSE" className="absolute inset-0 h-full w-full object-cover object-center" />
+          <img src="/tiya-home.jpg?v=3" alt="ROSE" className="absolute inset-0 h-full w-full object-cover object-[center_32%]" />
           <div className="absolute inset-y-0 right-0 w-40 bg-gradient-to-r from-transparent to-[#030814]" />
         </div>
         <div className="relative flex min-h-screen items-center justify-center px-10 py-10">
@@ -331,11 +331,11 @@ export const LoginScreen: React.FC = () => {
 
       {/* ---------- Mobile / tablet: picture on top, card overlapping below ---------- */}
       <div className="relative min-h-full lg:hidden">
-        <div className="absolute inset-x-0 top-0 h-[62vh] max-h-[640px] overflow-hidden">
-          <img src="/auth/login-mobile.jpg" alt="ROSE" className="h-full w-full object-cover object-top" />
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent via-[#030814]/70 to-[#030814]" />
+        <div className="absolute inset-x-0 top-0 h-[68vh] max-h-[720px] overflow-hidden">
+          <img src="/auth/login-mobile.jpg?v=3" alt="ROSE" className="h-full w-full object-cover object-top" />
+          <div className="absolute inset-x-0 bottom-0 h-[34%] bg-gradient-to-b from-transparent via-[#030814]/70 to-[#030814]" />
         </div>
-        <div className="relative mx-auto w-full max-w-[460px] px-4 pb-6 pt-[36vh]">{card}</div>
+        <div className="relative mx-auto w-full max-w-[460px] px-4 pb-5 pt-[min(52vh,470px)]">{card}</div>
       </div>
     </div>
   );

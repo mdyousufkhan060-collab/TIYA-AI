@@ -68,7 +68,7 @@ export const DeveloperDetails: React.FC<{ p: DevProfile; dark?: boolean }> = ({ 
     <div>
       <div className="flex items-center gap-4">
         <img
-          src={p.photo_url || '/tiya-avatar.png'}
+          src={p.photo_url || '/tiya-avatar.png?v=3'}
           alt={p.full_name || 'Developer'}
           className="h-20 w-20 shrink-0 rounded-[6px] border border-white/10 object-cover"
         />

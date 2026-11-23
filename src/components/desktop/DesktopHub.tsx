@@ -133,7 +133,7 @@ export const DesktopTopBar: React.FC<{
   return (
     <header className="col-span-2 flex h-14 items-center gap-3 rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]/90 px-3">
       <div className="flex items-center gap-2 pr-1">
-        <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[8px]" />
+        <img src="/icons/icon-192.png?v=3" alt="" className="h-9 w-9 rounded-full border-2 border-fuchsia-400/70 object-cover" />
         <div className="leading-tight">
           <p className="text-sm font-extrabold tracking-[0.25em] text-white">ROSE</p>
           <p className="text-[9.5px] text-slate-400">Live Operations Hub</p>
@@ -148,13 +148,13 @@ export const DesktopTopBar: React.FC<{
           </button>
         )}
       </div>
-      <nav className="flex items-center gap-1">
+      <nav className="flex items-center gap-1 rounded-[8px] border border-white/[0.06] bg-black/25 p-1">
         {tabs.map(([id, label, icon]) => (
           <button
             key={id}
             type="button"
             onClick={() => onTab(id)}
-            className={`flex h-9 items-center gap-1.5 rounded-[6px] px-3 text-xs font-semibold transition-colors ${
+            className={`flex h-8 items-center gap-1.5 rounded-[6px] px-3 text-xs font-semibold transition-colors ${
               tab === id ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-[0_0_20px_-6px_#a855f7]' : 'text-slate-300 hover:bg-white/[0.06]'
             }`}
           >
@@ -162,15 +162,15 @@ export const DesktopTopBar: React.FC<{
           </button>
         ))}
       </nav>
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/25 py-1 pl-1 pr-1">
+        <VoiceOrb on={voiceOn} state={voiceState} onClick={onVoice} />
+        <button type="button" onClick={onMicSettings} title="Microphone" className={round}>
+          {voiceOn ? <Mic className="h-4 w-4 text-fuchsia-300" /> : <MicOff className="h-4 w-4" />}
+        </button>
         <button type="button" onClick={() => setCamOpen(true)} title="Camera" className={round}>
           {camOpen ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
         </button>
-        <button type="button" onClick={onMicSettings} title="Microphone settings" className={round}>
-          {voiceOn ? <Mic className="h-4 w-4 text-fuchsia-300" /> : <MicOff className="h-4 w-4" />}
-        </button>
-        <VoiceOrb on={voiceOn} state={voiceState} onClick={onVoice} />
-        <button type="button" onClick={onBell} className={`relative ${round}`}>
+        <button type="button" onClick={onBell} title="Notifications" className={`relative ${round}`}>
           <Bell className="h-4 w-4" />
           {unread > 0 && (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
@@ -178,11 +178,17 @@ export const DesktopTopBar: React.FC<{
             </span>
           )}
         </button>
-        <div className="flex items-center gap-2 rounded-[6px] border border-white/10 px-2 py-1">
-          {avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer" className="h-7 w-7 rounded-full object-cover" /> : <span className="h-7 w-7 rounded-full bg-violet-600" />}
-          <span className="max-w-[150px] truncate text-[11px] text-slate-300">{email}</span>
-        </div>
-        <button type="button" onClick={onSignOut} title="Sign out" className={`${round} hover:text-rose-300`}>
+        <span className="mx-0.5 h-6 w-px bg-white/10" />
+        <span title={email || ''} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-400 p-[2px]">
+          {avatar ? (
+            <img src={avatar} alt="" referrerPolicy="no-referrer" className="h-full w-full rounded-full object-cover" />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center rounded-full bg-[#0D0B1A] text-[11px] font-bold text-white">
+              {(email || '?')[0].toUpperCase()}
+            </span>
+          )}
+        </span>
+        <button type="button" onClick={onSignOut} title="Sign out" className={`${round} hover:border-rose-400/60 hover:text-rose-300`}>
           <LogOut className="h-4 w-4" />
         </button>
       </div>
@@ -588,11 +594,11 @@ export const DesktopRosePanel: React.FC<{
   return (
     <aside className="relative flex min-h-0 w-full flex-col overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#120F22]">
       {/* ROSE as a soft watermark behind the whole chat */}
-      <img src="/tiya-home.jpg" alt="" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover object-top opacity-35 blur-[3px]" />
+      <img src="/tiya-home.jpg?v=3" alt="" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover object-[center_38%] opacity-35 blur-[3px]" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#120F22]/70 via-[#120F22]/55 to-[#120F22]/90" />
 
       <div className="relative flex shrink-0 items-center gap-3 border-b border-white/[0.08] px-3 py-2.5 backdrop-blur-sm">
-        <img src="/agents/rose.png" alt="ROSE" className="h-10 w-10 rounded-full border-2 border-fuchsia-400 object-cover" />
+        <img src="/agents/rose.png?v=3" alt="ROSE" className="h-10 w-10 rounded-full border-2 border-fuchsia-400 object-cover" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-extrabold tracking-[0.25em] text-white">ROSE</p>
           <p className="flex items-center gap-1.5 text-[11px] text-emerald-300">

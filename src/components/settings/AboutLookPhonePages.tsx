@@ -504,7 +504,7 @@ const AppDeveloperCard: React.FC = () => {
           rel="noreferrer"
           className="flex items-center gap-3 rounded-[4px] border border-white/[0.08] bg-[#11151E] p-2.5"
         >
-          <img src={d.photo_url || '/tiya-avatar.png'} alt="" className="h-12 w-12 rounded-[4px] object-cover" />
+          <img src={d.photo_url || '/tiya-avatar.png?v=3'} alt="" className="h-12 w-12 rounded-[4px] object-cover" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-bold text-white">{d.full_name}</span>
             <span className="block truncate text-[11px] text-slate-400">{d.title || 'Developer'}</span>

@@ -85,3 +85,18 @@
 .animate-orb-ripple {
   animation: orbRipple 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
+
+/* ROSE login: no white autofill box, text looks the same as typed password */
+.rose-auth input:-webkit-autofill,
+.rose-auth input:-webkit-autofill:hover,
+.rose-auth input:-webkit-autofill:focus,
+.rose-auth input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  -webkit-box-shadow: 0 0 0 1000px #050b16 inset !important;
+  box-shadow: 0 0 0 1000px #050b16 inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+  font-size: 13px;
+}
+.rose-auth input { background-color: transparent !important; }
+

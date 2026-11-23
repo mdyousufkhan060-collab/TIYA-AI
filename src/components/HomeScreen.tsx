@@ -109,7 +109,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#020714] text-slate-100">
       {/* Full-screen ROSE picture */}
       <img
-        src="/tiya-home.jpg"
+        src="/tiya-home.jpg?v=3"
         alt=""
         aria-hidden="true"
         draggable={false}

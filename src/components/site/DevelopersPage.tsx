@@ -103,7 +103,7 @@ const DevSection: React.FC<{ d: Developer; accent: string }> = ({ d, accent }) =
       <div className="relative flex items-center gap-4 border-b border-white/[0.08] p-4 sm:gap-5 sm:p-5" style={{ background: `linear-gradient(90deg, ${accent}22, transparent 70%)` }}>
         <span className="absolute inset-y-0 left-0 w-1" style={{ background: accent }} />
         <img
-          src={d.photo_url || '/tiya-avatar.png'}
+          src={d.photo_url || '/tiya-avatar.png?v=3'}
           alt={d.full_name}
           className="h-20 w-20 shrink-0 rounded-[6px] border-2 object-cover object-top sm:h-24 sm:w-24"
           style={{ borderColor: accent }}
