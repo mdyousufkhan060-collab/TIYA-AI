@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, LogOut, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { UserAvatar, loadProfilesByEmail, type MiniProfile } from './UserAvatar';
 import { UserProfile } from '../../types/tiya';
 import { PremiumGrantCard } from './PremiumGrantCard';
 
@@ -71,7 +72,9 @@ export const AdminGivePremiumPage: React.FC = () => {
     if (error) return setErr(error.message);
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) return setErr('No account with this Gmail. Ask them to sign in to ROSE once first.');
-    setUser({ ...row, blocked: row.is_blocked });
+    let avatar = row.avatar_url || null;
+    if (!avatar) avatar = (await loadProfilesByEmail([row.email])).get(String(row.email || '').toLowerCase())?.avatar_url || null;
+    setUser({ ...row, avatar_url: avatar, blocked: row.is_blocked });
   };
 
   const isPrem = user?.paid_until && new Date(user.paid_until) > new Date();
@@ -104,7 +107,8 @@ export const AdminGivePremiumPage: React.FC = () => {
         <>
           <div className={card}>
             <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
+              <UserAvatar src={(user as any).avatar_url} name={user.full_name} email={user.email} size={48} />
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-white">{user.full_name || 'No name'}</p>
                 <p className="truncate text-[11px] text-slate-400">{user.email}</p>
               </div>
@@ -136,6 +140,7 @@ interface LoginRow {
 /** 08 LOGIN ACTIVITY: who logged in, signed up or was logged out. */
 export const AdminLoginActivityPage: React.FC = () => {
   const [rows, setRows] = useState<LoginRow[]>([]);
+  const [profs, setProfs] = useState<Map<string, MiniProfile>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -144,8 +149,10 @@ export const AdminLoginActivityPage: React.FC = () => {
       .select('id,email,event,platform,created_at')
       .order('created_at', { ascending: false })
       .limit(100)
-      .then(({ data }) => {
-        setRows((data as LoginRow[]) || []);
+      .then(async ({ data }) => {
+        const list = (data as LoginRow[]) || [];
+        setRows(list);
+        setProfs(await loadProfilesByEmail(list.map((r) => r.email)));
         setLoading(false);
       });
   }, []);
@@ -169,9 +176,11 @@ export const AdminLoginActivityPage: React.FC = () => {
   return (
     <div className="space-y-1.5">
       {rows.map((r) => (
-        <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-[#11151E] px-3 py-2.5">
-          <div className="min-w-0">
-            <p className="truncate text-xs text-white">{r.email || 'unknown'}</p>
+        <div key={r.id} className="flex items-center justify-between gap-2.5 rounded-xl border border-white/[0.08] bg-[#11151E] px-3 py-2.5">
+          <UserAvatar src={profs.get((r.email || '').toLowerCase())?.avatar_url} name={profs.get((r.email || '').toLowerCase())?.full_name} email={r.email} size={34} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-white">{profs.get((r.email || '').toLowerCase())?.full_name || r.email || 'unknown'}</p>
+            {profs.get((r.email || '').toLowerCase())?.full_name && <p className="truncate text-[10.5px] text-slate-400">{r.email}</p>}
             <p className="text-[10px] text-slate-500">
               {new Date(r.created_at).toLocaleString('en-GB')} {r.platform ? `· ${r.platform}` : ''}
             </p>

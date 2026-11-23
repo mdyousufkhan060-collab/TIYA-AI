@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { UserAvatar, loadProfilesByEmail, type MiniProfile } from './UserAvatar';
 import { CrudConfig, CrudSection } from '../workspace/CrudSection';
 
 /** Extra numbers for the Admin dashboard: users by mode, logins, errors... */
@@ -98,7 +99,24 @@ const DELETIONS: CrudConfig = {
 };
 
 export const AdminApiProvidersPage: React.FC = () => <CrudSection config={API_PROVIDERS} scope={{}} />;
-export const AdminDeletionRequestsPage: React.FC = () => <CrudSection config={DELETIONS} scope={{}} />;
+export const AdminDeletionRequestsPage: React.FC = () => {
+  const [profs, setProfs] = useState<Map<string, MiniProfile>>(new Map());
+  useEffect(() => {
+    void supabase
+      .from('account_deletion_requests')
+      .select('email')
+      .limit(500)
+      .then(async ({ data }) => setProfs(await loadProfilesByEmail((data || []).map((r: any) => r.email))));
+  }, []);
+  const config: CrudConfig = {
+    ...DELETIONS,
+    renderLead: (r) => {
+      const p = profs.get(String(r.email || '').toLowerCase());
+      return <UserAvatar src={p?.avatar_url} name={p?.full_name} email={r.email} size={32} />;
+    },
+  };
+  return <CrudSection config={config} scope={{}} />;
+};
 
 /** Latest system / security errors */
 export const AdminSystemLogsPage: React.FC = () => {

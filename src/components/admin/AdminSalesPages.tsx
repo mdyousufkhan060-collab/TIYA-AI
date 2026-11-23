@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { UserChip, loadProfilesById } from './UserAvatar';
 
 /* ------------------------------------------------------------------ */
 /* shared bits                                                         */
@@ -58,9 +59,8 @@ export const AdminPaymentsPage: React.FC<{ onCountChange?: (n: number) => void }
     const list = (data || []) as PayReq[];
     const ids = Array.from(new Set(list.map((r) => r.user_id)));
     if (ids.length) {
-      const { data: profs } = await supabase.from('profiles').select('id,email').in('id', ids);
-      const map = new Map((profs || []).map((p: any) => [p.id, p.email]));
-      list.forEach((r) => (r.email = map.get(r.user_id) || null));
+      const map = await loadProfilesById(ids);
+      list.forEach((r: any) => { r.prof = map.get(r.user_id) || null; r.email = r.prof?.email || null; });
     }
     setRows(list);
     if (tab === 'pending') onCountChange?.(list.length);
@@ -119,7 +119,7 @@ export const AdminPaymentsPage: React.FC<{ onCountChange?: (n: number) => void }
               <p className="text-xs font-semibold uppercase text-white">{r.plan_name || 'Plan'}</p>
               <p className="font-mono-code text-sm font-bold text-teal-300">{taka(r.amount_bdt)}</p>
             </div>
-            <p className="truncate text-[11px] text-slate-300">{r.email || r.user_id}</p>
+            <UserChip profile={(r as any).prof} fallback={r.email || r.user_id} size={30} />
             <div className="grid grid-cols-2 gap-x-2 text-[10.5px] text-slate-400">
               <span>Method: <b className="text-slate-200">{r.method}</b></span>
               <span>From: <b className="text-slate-200">{r.sender_number || '—'}</b></span>
@@ -400,7 +400,7 @@ export const AdminGiftCodesPage: React.FC = () => {
 
       <p className="px-1 text-[10px] font-semibold tracking-wider text-slate-400">ALL CODES ({codes.length})</p>
       {codes.map((g) => (
-        <div key={g.code} className="flex h-12 items-center gap-2 rounded-xl border border-white/[0.08] bg-[#11151E] px-3">
+        <div key={g.code} className="flex min-h-[52px] items-center gap-2 rounded-xl border border-white/[0.08] bg-[#11151E] px-3 py-1.5">
           <div className="min-w-0 flex-1">
             <p className={`font-mono-code truncate text-xs font-semibold ${g.is_active ? 'text-white' : 'text-slate-500 line-through'}`}>{g.code}</p>
             <p className="truncate text-[10px] text-slate-400">
@@ -438,9 +438,8 @@ export const AdminIncomePage: React.FC = () => {
       const list = pays || [];
       const ids = Array.from(new Set(list.map((p: any) => p.user_id)));
       if (ids.length) {
-        const { data: profs } = await supabase.from('profiles').select('id,email').in('id', ids);
-        const map = new Map((profs || []).map((p: any) => [p.id, p.email]));
-        list.forEach((p: any) => (p.email = map.get(p.user_id)));
+        const map = await loadProfilesById(ids);
+        list.forEach((p: any) => { p.prof = map.get(p.user_id) || null; p.email = p.prof?.email; });
       }
       setRecent(list);
     })();
@@ -473,12 +472,9 @@ export const AdminIncomePage: React.FC = () => {
         <p className={`${card} text-center text-xs text-slate-400`}>No payments yet.</p>
       ) : (
         recent.map((p) => (
-          <div key={p.id} className="flex h-12 items-center gap-2 rounded-xl border border-white/[0.08] bg-[#11151E] px-3">
+          <div key={p.id} className="flex min-h-[52px] items-center gap-2 rounded-xl border border-white/[0.08] bg-[#11151E] px-3 py-1.5">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-semibold text-slate-100">{p.email || p.user_id}</p>
-              <p className="truncate text-[10px] text-slate-400">
-                {p.method || 'manual'} · {p.months}m · {when(p.created_at)}
-              </p>
+              <UserChip profile={p.prof} fallback={p.email || p.user_id} size={28} sub={`${p.method || 'manual'} · ${p.months}m · ${when(p.created_at)}`} />
             </div>
             <p className="font-mono-code text-xs font-bold text-teal-300">{taka(p.amount_bdt)}</p>
           </div>

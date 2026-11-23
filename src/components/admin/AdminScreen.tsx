@@ -29,6 +29,7 @@ import { SettingsBar } from '../settings/SettingsShell';
 import { AdminGivePremiumPage, AdminLoginActivityPage, ForceLogoutButton } from './AdminUserControl';
 import { AdminDeveloperProfilePage } from './AdminDeveloperProfilePage';
 import { AdminBusinessesPage, AdminTeamActivityPage } from './AdminBusinessPages';
+import { UserAvatar } from './UserAvatar';
 import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
@@ -649,6 +650,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                       onClick={() => openUserDetail(u)}
                       className="flex min-h-[60px] w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
                     >
+                      <UserAvatar src={(u as any).avatar_url} name={u.full_name} email={u.email} size={40} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">
                           {u.full_name || 'Unnamed'} ·{' '}
@@ -682,12 +684,17 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
           <div className="space-y-4 pb-6">
             {/* Summary */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/[0.08] dark:bg-[#11151E]">
-              <p className="text-xs font-semibold text-slate-900 dark:text-white">
-                {selectedUser.full_name || 'Unnamed User'}
-              </p>
-              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                {selectedUser.email}
-              </p>
+              <div className="flex items-center gap-3">
+                <UserAvatar src={(selectedUser as any).avatar_url} name={selectedUser.full_name} email={selectedUser.email} size={56} />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                    {selectedUser.full_name || 'Unnamed User'}
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                    {selectedUser.email}
+                  </p>
+                </div>
+              </div>
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600 dark:text-slate-300">
                 <span>
                   Age: {calculateAge(selectedUser.birth_year) ?? 'Unknown'}

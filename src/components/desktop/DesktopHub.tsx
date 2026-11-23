@@ -27,6 +27,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { loadProfilesByEmail, loadProfilesById } from '../admin/UserAvatar';
 import { AGENTS, AgentTask, agentById } from '../../lib/agents';
 import { ChatMessage, VoiceState } from '../../types/tiya';
 import { TeamPanel } from '../team/TeamPanel';
@@ -178,7 +179,7 @@ export const DesktopTopBar: React.FC<{
           )}
         </button>
         <div className="flex items-center gap-2 rounded-[6px] border border-white/10 px-2 py-1">
-          {avatar ? <img src={avatar} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="h-7 w-7 rounded-full bg-violet-600" />}
+          {avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer" className="h-7 w-7 rounded-full object-cover" /> : <span className="h-7 w-7 rounded-full bg-violet-600" />}
           <span className="max-w-[150px] truncate text-[11px] text-slate-300">{email}</span>
         </div>
         <button type="button" onClick={onSignOut} title="Sign out" className={`${round} hover:text-rose-300`}>
@@ -313,9 +314,12 @@ function useDashboardData(userId: string, isAdmin: boolean) {
         const since = dayKey(days[0]);
         const [{ data: logins }, { data: pays }, { data: newUsers }] = await Promise.all([
           supabase.from('login_events').select('id,email,event,platform,created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(500),
-          supabase.from('payment_requests').select('id,plan_name,amount_bdt,method,status,created_at').order('created_at', { ascending: false }).limit(10),
-          supabase.from('profiles').select('id,email,created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(20),
+          supabase.from('payment_requests').select('id,user_id,plan_name,amount_bdt,method,status,created_at').order('created_at', { ascending: false }).limit(10),
+          supabase.from('profiles').select('id,email,full_name,avatar_url,created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(20),
         ]);
+        if (!alive) return;
+        const byMail = await loadProfilesByEmail((logins || []).slice(0, 25).map((l: any) => l.email));
+        const byId = await loadProfilesById((pays || []).map((p: any) => p.user_id));
         if (!alive) return;
         (logins || []).slice(0, 25).forEach((l: any) =>
           items.push({
@@ -324,12 +328,13 @@ function useDashboardData(userId: string, isAdmin: boolean) {
             who: l.event === 'login' ? 'LOGIN' : l.event === 'signup' ? 'SIGN UP' : String(l.event).toUpperCase().replace('_', ' '),
             color: l.event === 'forced_logout' ? '#FB7185' : '#34D399',
             icon: <LogIn className="h-4 w-4" />,
-            text: `${l.email || 'user'}${l.platform ? ` · ${l.platform}` : ''}`,
+            photo: byMail.get(String(l.email || '').toLowerCase())?.avatar_url || undefined,
+            text: `${byMail.get(String(l.email || '').toLowerCase())?.full_name || l.email || 'user'}${l.platform ? ` · ${l.platform}` : ''}`,
             state: 'info',
           }),
         );
         (newUsers || []).forEach((u: any) =>
-          items.push({ id: `u_${u.id}`, at: u.created_at, who: 'NEW USER', color: '#A78BFA', icon: <UserPlus className="h-4 w-4" />, text: u.email || 'new account', state: 'info' }),
+          items.push({ id: `u_${u.id}`, at: u.created_at, who: 'NEW USER', color: '#A78BFA', icon: <UserPlus className="h-4 w-4" />, photo: u.avatar_url || undefined, text: u.full_name ? `${u.full_name} · ${u.email}` : u.email || 'new account', state: 'info' }),
         );
         (pays || []).forEach((p: any) =>
           items.push({
@@ -338,7 +343,8 @@ function useDashboardData(userId: string, isAdmin: boolean) {
             who: 'PAYMENT',
             color: '#FBBF24',
             icon: <CreditCard className="h-4 w-4" />,
-            text: `${p.plan_name} · ${tk(p.amount_bdt)} · ${p.method} · ${String(p.status).toUpperCase()}`,
+            photo: byId.get(p.user_id)?.avatar_url || undefined,
+            text: `${byId.get(p.user_id)?.full_name || byId.get(p.user_id)?.email || ''} · ${p.plan_name} · ${tk(p.amount_bdt)} · ${p.method} · ${String(p.status).toUpperCase()}`,
             state: p.status === 'approved' ? 'done' : p.status === 'rejected' ? 'failed' : 'working',
           }),
         );
@@ -479,7 +485,7 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
               {feed.map((f) => (
                 <div key={f.id} className="flex items-center gap-2.5 rounded-[6px] px-1.5 py-2 hover:bg-white/[0.03]">
                   {f.photo ? (
-                    <img src={f.photo} alt={f.who} className="h-8 w-8 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: f.color }} />
+                    <img src={f.photo} alt={f.who} referrerPolicy="no-referrer" className="h-8 w-8 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: f.color }} />
                   ) : (
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: `${f.color}26`, color: f.color }}>
                       {f.icon}

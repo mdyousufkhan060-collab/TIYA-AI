@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Bell, ChevronDown, Loader2, Mail, MapPin, Phone, Power, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { UserAvatar, UserChip, loadProfilesById, type MiniProfile } from './UserAvatar';
 import { agentById } from '../../lib/agents';
 
 /** 16 BUSINESSES: every business with full owner contact, on/off switch and quick actions. */
@@ -24,6 +25,8 @@ interface BizRow {
 }
 
 interface OwnerInfo {
+  full_name?: string | null;
+  avatar_url?: string | null;
   id: string;
   email: string | null;
   business_access: boolean | null;
@@ -80,7 +83,10 @@ const BizCard: React.FC<{ b: BizRow; owner?: OwnerInfo; onChanged: () => void }>
   return (
     <div className={box}>
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-3.5 py-3 text-left">
-        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${accessOn ? 'bg-emerald-400' : 'bg-rose-500'}`} />
+        <span className="relative shrink-0">
+          <UserAvatar src={owner?.avatar_url} name={owner?.full_name || b.owner_name} email={owner?.email || b.owner_email} size={40} />
+          <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-[#11151E] ${accessOn ? 'bg-emerald-400' : 'bg-rose-500'}`} />
+        </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-bold text-white">{b.name}</span>
           <span className="block truncate text-[11px] text-slate-400">
@@ -190,7 +196,7 @@ export const AdminBusinessesPage: React.FC = () => {
     setRows(list);
     const ids = Array.from(new Set(list.map((b) => b.owner_id)));
     if (ids.length) {
-      const { data: profs } = await supabase.from('profiles').select('id,email,business_access,last_seen_at,paid_until').in('id', ids);
+      const { data: profs } = await supabase.from('profiles').select('id,email,full_name,avatar_url,business_access,last_seen_at,paid_until').in('id', ids);
       const map: Record<string, OwnerInfo> = {};
       (profs || []).forEach((p: any) => (map[p.id] = p));
       setOwners(map);
@@ -251,20 +257,14 @@ export const AdminBusinessesPage: React.FC = () => {
 /** 17 TEAM ACTIVITY: every ROSE team task from every user. */
 export const AdminTeamActivityPage: React.FC = () => {
   const [rows, setRows] = useState<any[] | null>(null);
-  const [emails, setEmails] = useState<Record<string, string>>({});
+  const [profs, setProfs] = useState<Map<string, MiniProfile>>(new Map());
 
   useEffect(() => {
     void (async () => {
       const { data } = await supabase.from('agent_tasks').select('*').order('created_at', { ascending: false }).limit(150);
       const list = data || [];
       setRows(list);
-      const ids = Array.from(new Set(list.map((t: any) => t.user_id)));
-      if (ids.length) {
-        const { data: profs } = await supabase.from('profiles').select('id,email').in('id', ids);
-        const m: Record<string, string> = {};
-        (profs || []).forEach((p: any) => (m[p.id] = p.email));
-        setEmails(m);
-      }
+      setProfs(await loadProfilesById(list.map((t: any) => t.user_id)));
     })();
   }, []);
 
@@ -291,7 +291,7 @@ export const AdminTeamActivityPage: React.FC = () => {
               <span className="ml-auto text-slate-500">{new Date(t.created_at).toLocaleString('en-GB')}</span>
             </div>
             <p className="mt-1 text-xs text-white">{t.title}</p>
-            <p className="text-[10.5px] text-slate-500">{emails[t.user_id] || t.user_id}</p>
+            <div className="mt-1.5"><UserChip profile={profs.get(t.user_id)} fallback={t.user_id} size={26} /></div>
             {t.result && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-[11px] text-slate-300">{t.result}</p>}
           </div>
         );

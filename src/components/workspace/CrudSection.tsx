@@ -28,6 +28,8 @@ export interface CrudConfig {
   badgeKey?: string;
   orderBy?: { column: string; ascending: boolean };
   emptyText?: string;
+  /** optional picture / icon shown at the left of each bar */
+  renderLead?: (row: any) => React.ReactNode;
 }
 
 interface Props {
@@ -282,6 +284,7 @@ export const CrudSection: React.FC<Props> = ({ config, scope, onChanged }) => {
             onClick={() => open(r)}
             className="flex min-h-[52px] w-full items-center gap-2 rounded-[4px] border border-white/[0.08] bg-[#11151E] px-3.5 py-2 text-left"
           >
+            {config.renderLead ? config.renderLead(r) : null}
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs font-semibold text-white">{fmt(r[config.titleKey]) || '—'}</span>
               {config.subKey && fmt(r[config.subKey]) && (
