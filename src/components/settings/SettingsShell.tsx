@@ -80,6 +80,7 @@ const BAR_ICONS: Array<[RegExp, React.ElementType, string]> = [
   [/AI REPLY|REPLY/, KeyRound, '#2dd4bf'],
   [/TASK/, ListChecks, '#34d399'],
   [/CONTENT|VIDEO/, Video, '#f472b6'],
+  [/WRITER/, FileText, '#e879f9'],
   [/NOTES/, FileText, '#93c5fd'],
   [/ROUTINE/, CalendarDays, '#60a5fa'],
   [/TEST/, BarChart3, '#a78bfa'],

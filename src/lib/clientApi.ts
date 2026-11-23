@@ -189,6 +189,46 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         /কল|ফোন|মেসেজ|ম্যাসেজ|এসএমএস|হোয়াটস|হোয়াটস|মেসেঞ্জার|ম্যাসেঞ্জার|খোল|ওপেন|অপেন|চালু কর|বন্ধ কর|নিয়ে যাও|নিয়ে যাও|সেটিং|পেজ|মোটিভেশন|ইউটিউব|ফেসবুক|call|message|sms|whatsapp|messenger|open|settings|motivation|youtube|facebook/i.test(
           message,
         );
+      // Live Google Search for news, prices, updates, AI tools, study facts (Gemini grounding)
+      const needsSearch =
+        /খবর|নিউজ|আজকের|আজ কি|সর্বশেষ|লেটেস্ট|সার্চ|খুঁজে দাও|খুঁজে বের|গুগল|দাম কত|দাম কি|রেট|আপডেট|লঞ্চ|রিলিজ|কে জিতেছে|ফলাফল|রেজাল্ট|আবহাওয়া|বাজার|ট্রেন্ডিং|ভাইরাল|সিলেবাস|ভর্তি|news|latest|search|google|price|rate|update|launch|release|today|current|weather|score|result|trending|viral|ai tool|new model|syllabus|admission/i.test(
+          message,
+        );
+      if (key && needsSearch) {
+        for (const model of await pickChatModels(key, body?.model)) {
+          try {
+            const res = await generateContent(
+              key,
+              model,
+              {
+                contents: [
+                  ...history.map((h) => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.text }] })),
+                  { role: 'user', parts: [{ text: message }] },
+                ],
+                systemInstruction: {
+                  parts: [
+                    {
+                      text: `${system}\nUse Google Search for anything current. Today is ${new Date().toDateString()}. Give only facts you found, newest first, say clearly when something is not confirmed, never invent numbers, prices or links. Keep it short and clear.`,
+                    },
+                  ],
+                },
+                tools: [{ google_search: {} }],
+              },
+              30000,
+            );
+            let text = responseText(res);
+            if (!text) throw new Error('empty search answer');
+            const chunks: any[] = res?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+            const names = Array.from(new Set(chunks.map((c) => String(c?.web?.title || '').trim()).filter(Boolean))).slice(0, 4);
+            if (names.length) text += `\n\nসূত্র: ${names.join(', ')}`;
+            return ok({ ok: true, text, action: null, navigate: null, needsMotivation: false, model: `${model}+search` });
+          } catch (err) {
+            lastErr = err;
+            if (isBadKey(err)) break;
+          }
+        }
+      }
+
       if (groqKey && !needsTools) {
         try {
           const text = await groqChat(groqKey, system, history, message);

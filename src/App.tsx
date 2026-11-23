@@ -73,6 +73,7 @@ import {
 import { PrivacyControlsPage } from './components/settings/DeveloperPrivacyPages';
 import { WorkspacePage } from './components/workspace/WorkspacePage';
 import { DesktopDashboard, DesktopRosePanel, DesktopTab, DesktopTeam, DesktopTopBar } from './components/desktop/DesktopHub';
+import { WriterPanel } from './components/desktop/WriterPanel';
 import { agentById, parseAgentCommand, runAgentTask } from './lib/agents';
 import { clearModeContext, refreshModeContext } from './utils/modeContext';
 
@@ -1065,6 +1066,7 @@ export default function App() {
     return () => mq.removeEventListener?.('change', on);
   }, []);
   const [desktopTab, setDesktopTab] = useState<DesktopTab>('dashboard');
+  const [writerInbox, setWriterInbox] = useState<string | null>(null);
   const desktopMode =
     isWide &&
     Boolean(session?.user?.id) &&
@@ -1148,6 +1150,8 @@ export default function App() {
             <div className="col-start-1 row-start-2 min-h-0">
               {desktopTab === 'dashboard' ? (
                 <DesktopDashboard userId={session.user.id} isAdmin={isAdmin} onOpenTeam={() => setDesktopTab('team')} />
+              ) : desktopTab === 'writer' ? (
+                <WriterPanel initialText={writerInbox} onUsed={() => setWriterInbox(null)} />
               ) : (
                 <DesktopTeam userId={session.user.id} email={session.user.email} />
               )}
@@ -1464,6 +1468,10 @@ export default function App() {
             voiceState={voiceState}
             onSend={(t) => void handleSendChat(t)}
             onVoice={toggleVoice}
+            onToWriter={(t) => {
+              setWriterInbox(t);
+              setDesktopTab('writer');
+            }}
           />
         </div>
       )}

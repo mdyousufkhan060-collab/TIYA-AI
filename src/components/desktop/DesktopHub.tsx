@@ -5,6 +5,7 @@ import {
   Camera,
   CameraOff,
   CreditCard,
+  FileText,
   LogIn,
   Package,
   UserPlus,
@@ -35,7 +36,7 @@ import { TeamPanel } from '../team/TeamPanel';
  * DASHBOARD / TEAM / APP, the right side shows ROSE with the chat box.
  * Small windows and phones keep the normal mobile app.
  */
-export type DesktopTab = 'dashboard' | 'team' | 'app';
+export type DesktopTab = 'dashboard' | 'team' | 'writer' | 'app';
 
 // ---------- camera preview (real camera, nothing is recorded or uploaded) ----------
 const CameraModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -124,6 +125,7 @@ export const DesktopTopBar: React.FC<{
   const tabs: Array<[DesktopTab, string, React.ReactNode]> = [
     ['dashboard', 'Dashboard', <LayoutDashboard key="d" className="h-4 w-4" />],
     ['team', 'Team & Tasks', <ListChecks key="t" className="h-4 w-4" />],
+    ['writer', 'Writer', <FileText key="w" className="h-4 w-4" />],
     ['app', 'Settings', <Settings key="a" className="h-4 w-4" />],
   ];
   const round = 'flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-slate-200 hover:border-white/35';
@@ -550,23 +552,25 @@ export const DesktopTeam: React.FC<{ userId: string; email?: string | null }> = 
   </div>
 );
 
-// ---------- right side: ROSE + chat ----------
+// ---------- right side: full chat, ROSE picture as a soft background ----------
 export const DesktopRosePanel: React.FC<{
   messages: ChatMessage[];
   isSending: boolean;
   voiceState: VoiceState;
   onSend: (t: string) => void;
   onVoice: () => void;
-}> = ({ messages, isSending, voiceState, onSend, onVoice }) => {
+  /** send a ROSE reply into the WRITER */
+  onToWriter?: (text: string) => void;
+}> = ({ messages, isSending, voiceState, onSend, onVoice, onToWriter }) => {
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement | null>(null);
-  const recent = messages.slice(-40);
+  const recent = messages.slice(-60);
   const voiceOn = ['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState);
 
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [recent.length]);
+  }, [recent.length, isSending]);
 
   const send = () => {
     const v = text.trim();
@@ -576,55 +580,71 @@ export const DesktopRosePanel: React.FC<{
   };
 
   return (
-    <aside className="flex min-h-0 w-full flex-col overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#120F22]">
-      <div className="relative h-[42%] min-h-[220px] shrink-0 overflow-hidden">
-        <img src="/tiya-home.jpg" alt="ROSE" className="h-full w-full object-cover object-top" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#120F22] via-transparent to-transparent" />
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-extrabold tracking-[0.25em] text-white">ROSE</p>
-            <p className="flex items-center gap-1.5 text-[11px] text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {voiceOn ? voiceState.toUpperCase() : 'ONLINE'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onVoice}
-            className={`flex h-11 w-11 items-center justify-center rounded-full ${
-              voiceOn ? 'bg-fuchsia-600 text-white shadow-[0_0_22px_#c026d3]' : 'bg-white/15 text-white backdrop-blur'
-            }`}
-            title={voiceOn ? 'Stop voice' : 'Talk to ROSE'}
-          >
-            <Mic className="h-5 w-5" />
-          </button>
+    <aside className="relative flex min-h-0 w-full flex-col overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#120F22]">
+      {/* ROSE as a soft watermark behind the whole chat */}
+      <img src="/tiya-home.jpg" alt="" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover object-top opacity-35 blur-[3px]" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#120F22]/70 via-[#120F22]/55 to-[#120F22]/90" />
+
+      <div className="relative flex shrink-0 items-center gap-3 border-b border-white/[0.08] px-3 py-2.5 backdrop-blur-sm">
+        <img src="/agents/rose.png" alt="ROSE" className="h-10 w-10 rounded-full border-2 border-fuchsia-400 object-cover" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-extrabold tracking-[0.25em] text-white">ROSE</p>
+          <p className="flex items-center gap-1.5 text-[11px] text-emerald-300">
+            <span className={`h-1.5 w-1.5 rounded-full bg-emerald-400 ${voiceOn ? 'animate-pulse' : ''}`} />
+            {voiceOn ? voiceState.toUpperCase() : 'ONLINE'}
+          </p>
         </div>
+        <VoiceOrb on={voiceOn} state={voiceState} onClick={onVoice} />
       </div>
-      <div ref={listRef} className="tiya-scroll min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-2">
+
+      <div ref={listRef} className="tiya-scroll relative min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
         {recent.length === 0 ? (
-          <p className="py-6 text-center text-xs text-slate-500">Say hello to ROSE.</p>
+          <p className="py-6 text-center text-xs text-slate-400">Say hello to ROSE.</p>
         ) : (
           recent.map((m) => (
-            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <p
-                className={`max-w-[85%] whitespace-pre-wrap rounded-[10px] px-3 py-2 text-[12.5px] leading-relaxed ${
-                  m.role === 'user' ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white' : 'bg-white/[0.06] text-slate-100'
-                }`}
-              >
-                {m.text}
-              </p>
+            <div key={m.id} className={`group flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className="max-w-[88%]">
+                <p
+                  className={`whitespace-pre-wrap rounded-[12px] px-3 py-2 text-[13px] leading-relaxed shadow-lg ${
+                    m.role === 'user'
+                      ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                      : 'border border-white/10 bg-[#1A1530]/85 text-slate-100 backdrop-blur-sm'
+                  }`}
+                >
+                  {m.text}
+                </p>
+                {m.role !== 'user' && onToWriter && m.text.length > 40 && (
+                  <button
+                    type="button"
+                    onClick={() => onToWriter(m.text)}
+                    className="mt-0.5 hidden text-[10px] font-bold text-fuchsia-300 group-hover:inline"
+                  >
+                    OPEN IN WRITER →
+                  </button>
+                )}
+              </div>
             </div>
           ))
         )}
-        {isSending && <p className="text-[11px] text-slate-500">ROSE is typing…</p>}
+        {isSending && (
+          <p className="flex items-center gap-1 text-[11px] text-slate-300">
+            ROSE is typing
+            <span className="flex gap-0.5">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="h-1 w-1 animate-bounce rounded-full bg-slate-300" style={{ animationDelay: `${i * 0.15}s` }} />
+              ))}
+            </span>
+          </p>
+        )}
       </div>
-      <div className="flex shrink-0 gap-2 border-t border-white/[0.06] p-3">
+
+      <div className="relative flex shrink-0 gap-2 border-t border-white/[0.08] p-3 backdrop-blur-sm">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
           placeholder="Type a message…"
-          className="h-11 min-w-0 flex-1 rounded-full border border-white/12 bg-black/30 px-4 text-sm text-white placeholder:text-slate-500 focus:border-fuchsia-400 focus:outline-none"
+          className="h-11 min-w-0 flex-1 rounded-full border border-white/15 bg-black/40 px-4 text-sm text-white placeholder:text-slate-400 focus:border-fuchsia-400 focus:outline-none"
         />
         <button
           type="button"

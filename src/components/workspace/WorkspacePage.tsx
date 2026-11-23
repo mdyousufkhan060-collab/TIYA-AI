@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { SettingsBar, SettingsSelectBar, SettingsShell } from '../settings/SettingsShell';
 import { CrudConfig, CrudSection, CrudField, SingleRowForm } from './CrudSection';
 import { refreshModeContext } from '../../utils/modeContext';
+import { WriterPanel } from '../desktop/WriterPanel';
 
 type Mode = 'personal' | 'student' | 'business';
 
@@ -365,11 +366,13 @@ type View =
   | 'faqs'
   | 'discounts'
   | 'approvals'
-  | 'couriers';
+  | 'couriers'
+  | 'writer';
 
 const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
   mode: 'MODE',
+  writer: 'WRITER',
   tasks: TASKS.title,
   content: CONTENT.title,
   notes: NOTES.title,
@@ -470,8 +473,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
 
   let body: React.ReactNode = null;
   if (view === 'hub') {
-    const personal = [bar('01', 'tasks'), bar('02', 'content')];
-    const student = [bar('01', 'notes'), bar('02', 'routine'), bar('03', 'tests'), bar('04', 'tasks')];
+    const personal = [bar('01', 'tasks'), bar('02', 'content'), bar('03', 'writer')];
+    const student = [bar('01', 'notes'), bar('02', 'routine'), bar('03', 'tests'), bar('04', 'tasks'), bar('05', 'writer')];
     const business = [
       bar('01', 'biz_profile', businessId ? 'READY' : 'SET UP'),
       ...(businessId
@@ -486,6 +489,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             bar('09', 'expenses'),
             bar('10', 'couriers'),
             bar('11', 'biz_ai'),
+            bar('12', 'writer'),
           ]
         : []),
     ];
@@ -529,7 +533,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
         {modeMsg && <p className="pt-2 text-xs text-rose-300">{modeMsg}</p>}
       </div>
     );
-  } else if (view === 'tasks') body = <CrudSection config={TASKS} scope={uScope} />;
+  } else if (view === 'writer') body = <div className="h-[calc(100dvh-140px)]"><WriterPanel /></div>;
+  else if (view === 'tasks') body = <CrudSection config={TASKS} scope={uScope} />;
   else if (view === 'content') body = <CrudSection config={CONTENT} scope={uScope} />;
   else if (view === 'notes') body = <CrudSection config={NOTES} scope={uScope} />;
   else if (view === 'routine') body = <CrudSection config={ROUTINE} scope={uScope} />;

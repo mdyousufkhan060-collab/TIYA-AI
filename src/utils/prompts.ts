@@ -1,4 +1,4 @@
-import { getTiyaModeContext } from './modeContext';
+import { getTiyaModeContext, ROSE_SKILLS_BLOCK } from './modeContext';
 import {
   ADULT_ONLY_PERSONALITIES,
   BENGALI_DIALECTS,
@@ -198,6 +198,11 @@ export function buildTiyaSystemPrompt(
   if (isOwner) {
     lines.push(OWNER_EMOTIONAL_BLOCK);
     lines.push(ownerTimeContext(recentMessages));
+  }
+
+  lines.push(`\n${ROSE_SKILLS_BLOCK}`);
+  if (isOwner) {
+    lines.push('ADMIN: the owner has full access. When he asks about AI tools, give the newest launches and updates, free vs paid, and what each is good for (the app searches the web for this).');
   }
 
   // Personal / Student / Business mode (+ business data). Admin never has a mode.
