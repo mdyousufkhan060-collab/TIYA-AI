@@ -39,6 +39,7 @@ import {
   openTracked,
   extractActionFromText,
   getConfirmationPromptText,
+  requiresConfirmation,
 } from './utils/phoneActions';
 import {
   NavigationCommand,
@@ -528,6 +529,25 @@ export default function App() {
     },
     [sendActionFeedbackToLive, updateMessages],
   );
+
+  // Safe actions (open app, search YouTube/Google/Maps, close tabs) run at once.
+  // Calls and messages still wait for the user's Confirm.
+  const autoRunIdsRef = useRef<Set<string>>(new Set());
+  const autoRunSinceRef = useRef<number>(Date.now());
+  useEffect(() => {
+    for (const m of messages) {
+      if (
+        m.timestamp >= autoRunSinceRef.current &&
+        m.pendingAction &&
+        (m.actionStatus === 'pending' || !m.actionStatus) &&
+        !requiresConfirmation(m.pendingAction) &&
+        !autoRunIdsRef.current.has(m.id)
+      ) {
+        autoRunIdsRef.current.add(m.id);
+        void handleConfirmAction(m.id, m.pendingAction);
+      }
+    }
+  }, [messages, handleConfirmAction]);
 
   const handleCancelAction = useCallback(
     (msgId: string) => {
