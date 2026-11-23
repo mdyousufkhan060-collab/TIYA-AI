@@ -153,12 +153,12 @@ export function getConfirmationPromptText(action: PhoneAction): string {
     case 'messenger_message':
       return `${action.contact}-কে মেসেঞ্জারে "${action.text}" পাঠাবো?`;
     case 'open_app':
-      return `${action.app} অ্যাপটি খুলবো?`;
+      return `${action.app} খোলা হচ্ছে…`;
     case 'close_opened':
       return 'ROSE যেসব ট্যাব খুলেছিল সেগুলো বন্ধ করে ROSE-এ ফিরবো?';
     case 'web_search': {
       const site = SEARCH_SITES[normalizeSearchSite(action.site)];
-      return `${site.label}-এ "${action.query}" খুঁজে দেখাবো?`;
+      return `${site.label}-এ "${action.query}" খোলা হচ্ছে…`;
     }
   }
 }

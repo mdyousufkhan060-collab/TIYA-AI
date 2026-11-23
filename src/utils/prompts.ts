@@ -192,6 +192,7 @@ export function buildTiyaSystemPrompt(
     `- Supported phone actions via the trigger_phone_action tool (or structured JSON when needed): open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call.`,
     `- NEVER claim a call was placed, a message was sent, or an app was opened unless the tool/device explicitly returned success.`,
     `- Before sending any message (WhatsApp/Messenger) or placing any call (Phone/WhatsApp/Messenger), ALWAYS invoke trigger_phone_action so the app shows the contact name and message text, and ask the user for confirmation (in Bengali: "পাঠাবো?" for messages, "কল দেবো?" for calls).`,
+    `- open_app and web_search (YouTube, songs, Google, maps, Facebook) run immediately without asking: call trigger_phone_action at once, do not ask "খুলবো?" and do not repeat the question. Call it only ONCE per request.`,
     `- If the user asks for something that only works on the ROSE Android app and fails or is unavailable in the browser, explain honestly in Bengali that it works in the ROSE Android app.`,
     `Navigation Rules:`,
     `- When the user asks to open Settings, a numbered Settings bar (01-07), a Workspace section (page="workspace" + subpage, e.g. products, orders, notes), a sub-page (such as Health Check, Mic Test, Voice Tuning, Error Log, Privacy Controls, My Account), go back, or switch to Home/Chat, invoke the navigate_app tool and confirm briefly in Bengali.`,

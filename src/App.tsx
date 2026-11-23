@@ -40,6 +40,7 @@ import {
   extractActionFromText,
   getConfirmationPromptText,
   requiresConfirmation,
+  normalizeSearchSite,
 } from './utils/phoneActions';
 import {
   NavigationCommand,
@@ -502,6 +503,43 @@ export default function App() {
 
   const handleConfirmAction = useCallback(
     async (msgId: string, action: PhoneAction) => {
+      // YouTube / song: find the first video and PLAY it (not just a results list).
+      if (action.action === 'web_search') {
+        const site = normalizeSearchSite(action.site);
+        if (site === 'youtube' || site === 'music') {
+          let videoId: string | null = null;
+          try {
+            const call = supabase.functions.invoke('rose-yt', { body: { query: action.query } });
+            const timeout = new Promise<null>((r) => setTimeout(() => r(null), 5000));
+            const res = (await Promise.race([call, timeout])) as { data?: { videoId?: string | null } } | null;
+            videoId = res?.data?.videoId || null;
+          } catch {
+            videoId = null;
+          }
+          if (videoId) {
+            const url =
+              site === 'music'
+                ? `https://music.youtube.com/watch?v=${videoId}`
+                : `https://www.youtube.com/watch?v=${videoId}`;
+            if (typeof window !== 'undefined' && window.TiyaNative) {
+              // ROSE Android app: this link opens straight in the YouTube app and plays.
+              window.location.href = url;
+            } else {
+              openTracked(url);
+            }
+            setActionLinks((prev) => ({ ...prev, [msgId]: url }));
+            updateMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId
+                  ? { ...m, actionStatus: 'executed', actionNote: `"${action.query}" চালানো হচ্ছে।` }
+                  : m,
+              ),
+            );
+            sendActionFeedbackToLive(`Action result: SUCCESS — "${action.query}" is now playing on YouTube.`);
+            return;
+          }
+        }
+      }
       const result = await executePhoneAction(
         action,
         typeof window !== 'undefined' ? window.TiyaNative : undefined,
