@@ -72,6 +72,8 @@ import {
 } from './components/settings/AboutLookPhonePages';
 import { PrivacyControlsPage } from './components/settings/DeveloperPrivacyPages';
 import { WorkspacePage } from './components/workspace/WorkspacePage';
+import { TeamPanel } from './components/team/TeamPanel';
+import { agentById, parseAgentCommand, runAgentTask } from './lib/agents';
 import { clearModeContext, refreshModeContext } from './utils/modeContext';
 
 function makeId(): string {
@@ -528,9 +530,49 @@ export default function App() {
     [isOwner, memories, messages, settings, userAge],
   );
 
+  // ROSE team (business users + admin): "আরিনকে বলো ..." in chat gives the task to that agent
+  const teamRef = useRef<{ userId: string | null; enabled: boolean }>({ userId: null, enabled: false });
+  teamRef.current = {
+    userId: session?.user?.id ?? null,
+    enabled: Boolean(session?.user?.id) && (isAdmin || profile?.account_mode === 'business'),
+  };
+
   const handleSendChat = useCallback(
     async (text: string) => {
       setChatError('');
+
+      const agentCmd = teamRef.current.enabled ? parseAgentCommand(text) : null;
+      if (agentCmd && teamRef.current.userId) {
+        const who = agentById(agentCmd.agent);
+        updateMessages((prev) => [
+          ...prev,
+          { id: makeId(), role: 'user', text, timestamp: Date.now(), source: 'chat' },
+          {
+            id: makeId(),
+            role: 'assistant',
+            text: `ঠিক আছে, কাজটা ${who.nameBn}কে দিলাম। শেষ হলে ${who.nameBn} এখানে রিপোর্ট দেবে।`,
+            timestamp: Date.now() + 1,
+            source: 'chat',
+          },
+        ]);
+        void runAgentTask(teamRef.current.userId, agentCmd.agent, agentCmd.task, 'chat').then((done) => {
+          if (!done) return;
+          updateMessages((prev) => [
+            ...prev,
+            {
+              id: makeId(),
+              role: 'assistant',
+              text:
+                done.status === 'done'
+                  ? `【${who.name}】 ${done.result || ''}`
+                  : `【${who.name}】 কাজটা করতে পারিনি: ${done.result || 'unknown error'}`,
+              timestamp: Date.now(),
+              source: 'chat',
+            },
+          ]);
+        });
+        return;
+      }
 
       // Check deterministic navigation commands first (works offline/without wasting reply quota)
       const navCmd = parseNavigationCommand(text);
@@ -990,7 +1032,7 @@ export default function App() {
 
   return (
     <div
-      className={`flex min-h-[100dvh] w-full items-center justify-center bg-[#05070B] min-[481px]:p-3 ${
+      className={`flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] min-[481px]:p-3 ${
         settings.reduceMotion ? 'reduce-motion' : ''
       }`}
     >
@@ -1291,6 +1333,11 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* PC (wide screen): live ROSE team board beside the app — business users and admin */}
+      {session?.user?.id && profileLoaded && !needsOnboarding && (isAdmin || profile?.account_mode === 'business') && (
+        <TeamPanel userId={session.user.id} ownerEmail={session.user.email} />
+      )}
     </div>
   );
 }
