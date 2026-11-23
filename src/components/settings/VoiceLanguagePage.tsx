@@ -10,15 +10,10 @@ import {
   FemaleVoiceId,
   Personality,
   TIYA_FIXED_NAME,
+  languageCode,
   TiyaSettings,
 } from '../../types/tiya';
-import { computeRmsEnergy } from '../../utils/audioPcm';
-import {
-  DEFAULT_PUBLIC_CHARACTER_ID,
-  getSelectableCharacters,
-  resolveActiveCharacter,
-} from '../../utils/characters';
-import { computeNaturalPlaybackRate, decodeAudioChunkPayload } from '../../utils/voiceAudioPipeline';
+import { base64Pcm16ToFloat32, computeRmsEnergy } from '../../utils/audioPcm';
 import { appendErrorLog } from '../../utils/storage';
 import { LiveModelPage } from './LiveModelPage';
 import { SettingsBar, SettingsSelectBar, SettingsShell, SettingsToggleBar } from './SettingsShell';
@@ -31,8 +26,6 @@ interface VoiceLanguagePageProps {
   onBack: () => void;
   /** under-18 users cannot pick GF Mode / Companion or emotion levels */
   isMinorUser?: boolean;
-  /** backend-verified Admin flag */
-  isAdmin?: boolean;
 }
 
 const PERSONALITY_INFO: Record<Personality, string> = {
@@ -63,7 +56,6 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
   onUpdateSettings,
   onBack,
   isMinorUser = false,
-  isAdmin = false,
 }) => {
   // Voice preview state
   const [previewingVoice, setPreviewingVoice] = useState<FemaleVoiceId | null>(null);
@@ -150,6 +142,31 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
     }
   };
 
+  const speakWithPhoneVoice = (): boolean => {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return false;
+      const dialect = BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect);
+      const text =
+        settings.language === 'Bengali'
+          ? dialect?.sample || 'হ্যালো, আমি টিয়া।'
+          : `Hello, I am TIYA.`;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = settings.language === 'Bengali' ? 'bn-BD' : languageCode(settings.language);
+      const female = synth
+        .getVoices()
+        .find((v) => v.lang.toLowerCase().startsWith(u.lang.slice(0, 2).toLowerCase()) && /female|woman/i.test(v.name));
+      if (female) u.voice = female;
+      u.rate = settings.speechSpeed;
+      u.volume = settings.volume;
+      synth.cancel();
+      synth.speak(u);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handlePreviewVoice = async (voiceId: FemaleVoiceId) => {
     const key = settings.apiKey.trim();
     if (!key) {
@@ -188,9 +205,12 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
       };
 
       if (!res.ok || !data.ok || !data.audioBase64) {
-        // NEVER silently substitute browser SpeechSynthesis (keeps TIYA's single female voice consistent)
+        // Google voice failed on this key → let the phone's own voice say it
+        const said = speakWithPhoneVoice();
         setPreviewStatus(
-          data.detail || 'Gemini voice preview is unavailable on this key right now.',
+          said
+            ? 'Google voice is not available on this key, so the phone voice played instead.'
+            : 'Voice preview is not available on this key right now.',
         );
         setPreviewingVoice(null);
         return;
@@ -207,8 +227,8 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
       const playBuffer = (buffer: AudioBuffer) => {
         const src = ctx.createBufferSource();
         src.buffer = buffer;
-        src.playbackRate.value = computeNaturalPlaybackRate(settings.speechSpeed);
-        if (typeof src.detune !== 'undefined' && Math.abs(settings.pitch - 1.0) > 0.005) {
+        src.playbackRate.value = settings.speechSpeed;
+        if (typeof src.detune !== 'undefined' && settings.pitch !== 1.0) {
           src.detune.value = (settings.pitch - 1.0) * 1200;
         }
         src.connect(gainNode);
@@ -222,16 +242,16 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
         };
       };
 
-      if (data.mimeType?.includes('mp3')) {
+      if (data.mimeType?.includes('wav') || data.mimeType?.includes('mp3')) {
         const binary = atob(data.audioBase64);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         const decoded = await ctx.decodeAudioData(bytes.buffer);
         playBuffer(decoded);
       } else {
-        const { samples, sampleRate } = decodeAudioChunkPayload(data.audioBase64, data.mimeType);
-        const buffer = ctx.createBuffer(1, samples.length, sampleRate);
-        buffer.getChannelData(0).set(samples);
+        const float32 = base64Pcm16ToFloat32(data.audioBase64);
+        const buffer = ctx.createBuffer(1, float32.length, 24000);
+        buffer.getChannelData(0).set(float32);
         playBuffer(buffer);
       }
 
@@ -269,45 +289,9 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
 
   if (subpage === 'personality') {
     const locked = (p: Personality) => ADULT_ONLY_PERSONALITIES.includes(p) && isMinorUser;
-    const selectableChars = getSelectableCharacters(isMinorUser);
-    const activePublicCharId = settings.selectedCharacterId || DEFAULT_PUBLIC_CHARACTER_ID;
     return (
       <SettingsShell title="PERSONALITY" onBack={() => onSelectSubpage(null)}>
         <div className="space-y-1.5 pb-3">
-          {isAdmin ? (
-            <div
-              data-testid="admin-personality-notice"
-              className="mb-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3.5"
-            >
-              <p className="text-[10px] font-semibold tracking-wider text-amber-300">
-                VERIFIED ADMIN COMPANION ACTIVE
-              </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-200">
-                Your dedicated protected Admin Companion personality, proactive voice mode, and private Admin memory are automatically active for your authenticated Admin account, independent of ordinary user character settings.
-              </p>
-            </div>
-          ) : (
-            <div className="mb-2 space-y-1.5">
-              <p className="px-1 text-[10px] font-semibold tracking-wider text-slate-400">
-                CHARACTER
-              </p>
-              {selectableChars.map((char, i) => (
-                <SettingsSelectBar
-                  key={char.id}
-                  badge={String(i + 1).padStart(2, '0')}
-                  title={char.displayLabel}
-                  value={char.tagline}
-                  selected={activePublicCharId === char.id}
-                  onSelect={() => onUpdateSettings({ selectedCharacterId: char.id })}
-                  testId={`character-${char.id}`}
-                />
-              ))}
-              <p className="px-1 pt-2 text-[10px] font-semibold tracking-wider text-slate-400">
-                PERSONALITY STYLE
-              </p>
-            </div>
-          )}
-
           {ALL_PERSONALITIES.map((p, i) => (
             <SettingsSelectBar
               key={p}
@@ -673,17 +657,10 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
   const activeLiveModel =
     settings.customLiveModel.trim() || settings.selectedLiveModel;
 
-  const resolvedChar = resolveActiveCharacter(settings, isAdmin, isMinorUser);
-  const personalitySummary = isAdmin
-    ? 'Admin Companion'
-    : resolvedChar.id !== DEFAULT_PUBLIC_CHARACTER_ID
-      ? `${resolvedChar.displayLabel} · ${settings.personality}`
-      : settings.personality;
-
   const bars: Array<{ num: string; id: string; title: string; value: string; locked?: boolean }> = [
     { num: '01', id: 'assistant_name', title: 'ASSISTANT NAME', value: TIYA_FIXED_NAME, locked: true },
     { num: '02', id: 'your_name', title: 'YOUR NAME', value: settings.yourName.trim() || 'Not set' },
-    { num: '03', id: 'personality', title: 'PERSONALITY', value: personalitySummary },
+    { num: '03', id: 'personality', title: 'PERSONALITY', value: settings.personality },
     { num: '04', id: 'response_style', title: 'RESPONSE STYLE', value: settings.responseStyle },
     {
       num: '05',

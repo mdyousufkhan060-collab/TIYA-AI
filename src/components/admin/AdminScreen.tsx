@@ -26,6 +26,7 @@ import { DeveloperToolsPage } from '../settings/DeveloperPrivacyPages';
 import { PremiumGrantCard } from './PremiumGrantCard';
 import { AdminGiftCodesPage, AdminIncomePage, AdminPaymentsPage, AdminPlansPage } from './AdminSalesPages';
 import { SettingsBar } from '../settings/SettingsShell';
+import { AdminGivePremiumPage, AdminLoginActivityPage, ForceLogoutButton } from './AdminUserControl';
 
 type AdminView =
   | 'hub'
@@ -33,6 +34,8 @@ type AdminView =
   | 'users'
   | 'user_detail'
   | 'notify_all'
+  | 'give_premium'
+  | 'logins'
   | 'payments'
   | 'plans'
   | 'gifts'
@@ -378,11 +381,13 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             {
               dashboard: '01 Dashboard',
               users: '02 Users',
-              payments: '03 Payments',
-              plans: '04 Plans & Prices',
-              gifts: '05 Gift Codes',
-              income: '06 Income',
-              notify_all: '07 Notify All',
+              give_premium: '03 Give Premium',
+              payments: '04 Payments',
+              plans: '05 Plans & Prices',
+              gifts: '06 Gift Codes',
+              income: '07 Income',
+              logins: '08 Login Activity',
+              notify_all: '09 Notify All',
             } as Record<string, string>
           )[view] || 'Admin';
 
@@ -465,23 +470,25 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
           <div className="space-y-1.5">
             <SettingsBar badge="01" title="DASHBOARD" onClick={() => setView('dashboard')} testId="admin-bar-dashboard" />
             <SettingsBar badge="02" title="USERS" onClick={() => setView('users')} testId="admin-bar-users" />
+            <SettingsBar badge="03" title="GIVE PREMIUM" value="GMAIL" tone="accent" onClick={() => setView('give_premium')} testId="admin-bar-give-premium" />
             <SettingsBar
-              badge="03"
+              badge="04"
               title="PAYMENTS"
               value={pendingPayments > 0 ? `${pendingPayments} NEW` : undefined}
               tone={pendingPayments > 0 ? 'accent' : 'default'}
               onClick={() => setView('payments')}
               testId="admin-bar-payments"
             />
-            <SettingsBar badge="04" title="PLANS & PRICES" onClick={() => setView('plans')} testId="admin-bar-plans" />
-            <SettingsBar badge="05" title="GIFT CODES" onClick={() => setView('gifts')} testId="admin-bar-gifts" />
-            <SettingsBar badge="06" title="INCOME" onClick={() => setView('income')} testId="admin-bar-income" />
-            <SettingsBar badge="07" title="NOTIFY ALL" onClick={() => setView('notify_all')} testId="admin-bar-notify" />
+            <SettingsBar badge="05" title="PLANS & PRICES" onClick={() => setView('plans')} testId="admin-bar-plans" />
+            <SettingsBar badge="06" title="GIFT CODES" onClick={() => setView('gifts')} testId="admin-bar-gifts" />
+            <SettingsBar badge="07" title="INCOME" onClick={() => setView('income')} testId="admin-bar-income" />
+            <SettingsBar badge="08" title="LOGIN ACTIVITY" onClick={() => setView('logins')} testId="admin-bar-logins" />
+            <SettingsBar badge="09" title="NOTIFY ALL" onClick={() => setView('notify_all')} testId="admin-bar-notify" />
             {onOpenMotivation && (
-              <SettingsBar badge="08" title="MOTIVATION" onClick={onOpenMotivation} testId="admin-motivation-btn" />
+              <SettingsBar badge="10" title="MOTIVATION" onClick={onOpenMotivation} testId="admin-motivation-btn" />
             )}
             <SettingsBar
-              badge="09"
+              badge="11"
               title="DEVELOPER TOOLS"
               onClick={() => {
                 setDevSubpage(null);
@@ -496,6 +503,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'plans' && <AdminPlansPage />}
         {view === 'gifts' && <AdminGiftCodesPage />}
         {view === 'income' && <AdminIncomePage />}
+        {view === 'give_premium' && <AdminGivePremiumPage />}
+        {view === 'logins' && <AdminLoginActivityPage />}
 
         {view === 'dashboard' && (
           <div className="space-y-4">
@@ -789,6 +798,9 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                 setUsers((prev) => prev.map((u) => (u.id === upd.id ? upd : u)));
               }}
             />
+
+            {/* FORCE LOGOUT */}
+            <ForceLogoutButton user={selectedUser} />
 
             {/* SEND NOTIFICATION TO USER */}
             <form

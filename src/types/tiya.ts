@@ -227,67 +227,10 @@ export interface MicListeningSettings {
   voiceDebug: boolean;
 }
 
-export type MemoryCategory =
-  | 'preference'
-  | 'addressing'
-  | 'project'
-  | 'conversation'
-  | 'context'
-  | 'general';
-
-export type MemoryScope = 'admin' | 'user';
-
 export interface MemoryItem {
   id: string;
   text: string;
   createdAt: number;
-  updatedAt?: number;
-  category?: MemoryCategory;
-  scope?: MemoryScope;
-}
-
-export interface CharacterInitiationBehavior {
-  enabled: boolean;
-  allowVoiceOpening: boolean;
-  allowIdleFollowUp: boolean;
-  idleCheckInMinMs: number;
-  maxConsecutiveProactiveTurns: number;
-  guidance: string;
-}
-
-export interface CharacterMemorySettings {
-  namespace: MemoryScope;
-  maxRecentMessages: number;
-  maxSavedMemories: number;
-  autoExtractMemories: boolean;
-  guidance: string;
-}
-
-export interface CharacterCapabilities {
-  phoneActions: boolean;
-  navigation: boolean;
-  motivation: boolean;
-  cameraVisualContext: boolean;
-  fullReasoningAndTools: boolean;
-}
-
-export interface CharacterProfile {
-  id: string;
-  name: string;
-  displayLabel: string;
-  tagline: string;
-  access: 'public' | 'admin_only';
-  adultOnly?: boolean;
-  personalityDescription: string;
-  conversationalStyle: string;
-  emotionalExpression: string;
-  defaultVoice: FemaleVoiceId;
-  preferredLanguage: LanguageOption;
-  initiationBehavior: CharacterInitiationBehavior;
-  responseStyle: ResponseStyle;
-  memorySettings: CharacterMemorySettings;
-  characterRules: string[];
-  capabilities: CharacterCapabilities;
 }
 
 export interface ErrorLogEntry {
@@ -325,8 +268,6 @@ export type VoiceState =
   | 'listening'
   | 'thinking'
   | 'speaking'
-  | 'interrupted'
-  | 'stopped'
   | 'error';
 
 export type ConnectionStatus = 'untested' | 'testing' | 'ready' | 'error';
@@ -408,8 +349,6 @@ export interface TiyaSettings {
   voiceModel: string;
   assistantName: string;
   yourName: string;
-  /** Selected public character ID for ordinary users (Admin character is protected & automatic) */
-  selectedCharacterId?: string;
   personality: Personality;
   customPersonalityPrompt: string;
   affection: AffectionLevel;

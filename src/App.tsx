@@ -25,7 +25,6 @@ import {
   saveChats,
   saveMemories,
   saveSettings,
-  StorageAccountScope,
 } from './utils/storage';
 import {
   calculateAge,
@@ -34,12 +33,7 @@ import {
   ReplyUsageDecision,
   setCachedBirthYear,
 } from './utils/authErrors';
-import {
-  buildCleanUrlAfterAuthCallback,
-  extractOAuthCallbackError,
-} from './utils/authRedirect';
-import { extractExplicitMemories, mergeMemories } from './utils/memoryEngine';
-import { buildTiyaSystemPrompt, enforceAdminAddressingText } from './utils/prompts';
+import { buildTiyaSystemPrompt, isTiyaOwnerEmail } from './utils/prompts';
 import {
   executePhoneAction,
   extractActionFromText,
@@ -86,8 +80,8 @@ function makeId(): string {
 
 export default function App() {
   const [settings, setSettings] = useState<TiyaSettings>(() => loadSettings());
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [memories, setMemories] = useState<MemoryItem[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadChats());
+  const [memories, setMemories] = useState<MemoryItem[]>(() => loadMemories());
   const [errorLog, setErrorLog] = useState<ErrorLogEntry[]>(() => loadErrorLog());
   const [activeTab, setActiveTab] = useState<MainTab>('home');
   const [settingsPage, setSettingsPage] = useState<SettingsPageId>('hub');
@@ -112,7 +106,6 @@ export default function App() {
   // Supabase Auth & Account State
   const [authReady, setAuthReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [authCallbackError, setAuthCallbackError] = useState('');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [cachedBirthYear, setCachedBirthYearState] = useState<number | null>(null);
@@ -149,41 +142,11 @@ export default function App() {
   // Restore persisted Supabase session & listen to auth changes
   useEffect(() => {
     let mounted = true;
-
-    const cleanAuthUrlAfterSdk = () => {
-      if (typeof window === 'undefined') return;
-      const cleanUrl = buildCleanUrlAfterAuthCallback(window.location.href);
-      if (cleanUrl) {
-        try {
-          window.history.replaceState(window.history.state, document.title, cleanUrl);
-        } catch {
-          // Ignore history errors in restricted WebViews
-        }
-      }
-    };
-
-    // Wait for Supabase SDK to finish detectSessionInUrl (#access_token or ?code)
-    // before cleaning sensitive tokens/params from the address bar.
-    supabase.auth.getSession().then(({ data, error }) => {
+    supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
-      const callbackErr =
-        typeof window !== 'undefined'
-          ? extractOAuthCallbackError(window.location.search, window.location.hash)
-          : null;
-
+      setSession(data.session ?? null);
       if (data.session?.user?.id) {
-        setSession(data.session);
-        setAuthCallbackError('');
         setCachedBirthYearState(getCachedBirthYear(data.session.user.id));
-        cleanAuthUrlAfterSdk();
-      } else {
-        setSession(null);
-        if (callbackErr) {
-          setAuthCallbackError(callbackErr);
-          cleanAuthUrlAfterSdk();
-        } else if (error?.message) {
-          setAuthCallbackError(error.message);
-        }
       }
       setAuthReady(true);
     });
@@ -192,9 +155,7 @@ export default function App() {
       if (!mounted) return;
       setSession(nextSession ?? null);
       if (nextSession?.user?.id) {
-        setAuthCallbackError('');
         setCachedBirthYearState(getCachedBirthYear(nextSession.user.id));
-        cleanAuthUrlAfterSdk();
       } else {
         setProfile(null);
         setProfileLoaded(false);
@@ -262,30 +223,8 @@ export default function App() {
       : cachedBirthYear;
 
   const userAge = calculateAge(effectiveBirthYear);
-  // Backend-verified Admin identity strictly from Supabase is_admin RPC + active authenticated session
-  // (NEVER derived from a client-side email string, display name, or client-editable settings)
-  const isVerifiedAdmin = Boolean(session?.user?.id) && isAdmin === true;
-
-  const accountScope: StorageAccountScope = useMemo(
-    () => ({
-      userId: session?.user?.id,
-      isVerifiedAdmin,
-    }),
-    [session?.user?.id, isVerifiedAdmin],
-  );
-  const accountScopeRef = useRef<StorageAccountScope>(accountScope);
-  accountScopeRef.current = accountScope;
-
-  // Reload isolated per-account chats & memories whenever authenticated user or verified Admin status changes
-  useEffect(() => {
-    if (!session?.user?.id) {
-      setMessages([]);
-      setMemories([]);
-      return;
-    }
-    setMessages(loadChats(accountScope));
-    setMemories(loadMemories(accountScope));
-  }, [session?.user?.id, accountScope]);
+  // Owner (his Gmail + admin) always gets the emotional persona
+  const isOwner = isAdmin && isTiyaOwnerEmail(session?.user?.email);
 
   const checkReplyUsage = useCallback(async (): Promise<ReplyUsageDecision> => {
     try {
@@ -307,21 +246,8 @@ export default function App() {
   const updateMessages = useCallback((updater: (prev: ChatMessage[]) => ChatMessage[]) => {
     setMessages((prev) => {
       const next = updater(prev);
-      saveChats(next, accountScopeRef.current);
+      saveChats(next);
       return next;
-    });
-  }, []);
-
-  const ingestExplicitMemory = useCallback((utterance: string) => {
-    const scope = accountScopeRef.current;
-    if (!scope.userId) return;
-    const memScope = scope.isVerifiedAdmin ? 'admin' : 'user';
-    setMemories((prev) => {
-      const extracted = extractExplicitMemories(utterance, prev, memScope);
-      if (extracted.length === 0) return prev;
-      const merged = mergeMemories(prev, extracted);
-      saveMemories(merged, scope);
-      return merged;
     });
   }, []);
 
@@ -450,22 +376,18 @@ export default function App() {
     errorLabel,
     errorDetail,
     audioLevel,
-    cameraActive,
-    cameraError,
     toggleVoice,
     stopVoice,
-    toggleCamera,
     sendActionFeedbackToLive,
   } = useTiyaLiveVoice({
     settings,
     messages,
     memories,
     userAge,
-    isOwner: isVerifiedAdmin,
+    isOwner,
     checkReplyUsage,
     onAppendVoiceMessage: handleAppendVoiceMessage,
     onUpdateLastVoiceMessage: handleUpdateLastVoiceMessage,
-    onUserTranscriptFinalized: ingestExplicitMemory,
     onPhoneAction: handleLivePhoneAction,
     onNavigate: handleNavigateCommand,
     onRequestLatestMotivation: fetchLatestPublishedMotivation,
@@ -572,7 +494,7 @@ export default function App() {
           'chat',
           userAge,
           memories,
-          isVerifiedAdmin,
+          isOwner,
         );
         const titlePart = (post.title || '').trim()
           ? `Title: ${post.title?.trim()}\n`
@@ -592,8 +514,7 @@ export default function App() {
         });
         const data = (await res.json()) as { ok?: boolean; text?: string };
         if (res.ok && data.ok && data.text?.trim()) {
-          const cleanMot = data.text.trim();
-          return isVerifiedAdmin ? enforceAdminAddressingText(cleanMot) : cleanMot;
+          return data.text.trim();
         }
       } catch {
         // Fallback to direct formatted Bengali response
@@ -601,7 +522,7 @@ export default function App() {
 
       return formatMotivationReplyBn(post);
     },
-    [isVerifiedAdmin, memories, messages, settings, userAge],
+    [isOwner, memories, messages, settings, userAge],
   );
 
   const handleSendChat = useCallback(
@@ -696,7 +617,6 @@ export default function App() {
         .map((m) => ({ role: m.role as 'user' | 'assistant', text: m.text }));
 
       updateMessages((prev) => [...prev, userMsg]);
-      ingestExplicitMemory(text);
       setIsSendingChat(true);
 
       try {
@@ -720,7 +640,7 @@ export default function App() {
           'chat',
           userAge,
           memories,
-          isVerifiedAdmin,
+          isOwner,
         );
         if (usePremiumServer) {
           const premiumSystem =
@@ -763,19 +683,12 @@ export default function App() {
             );
           }
           const { cleanText: pClean, action: pAction } = extractActionFromText(pr.text || '');
-          const pRaw =
-            pClean ||
-            (pAction
-              ? getConfirmationPromptText(pAction)
-              : isVerifiedAdmin
-                ? 'স্যার, বলুন না, আপনার কী কথা আছে?'
-                : 'বলুন, কীভাবে সাহায্য করতে পারি?');
           updateMessages((prev) => [
             ...prev,
             {
               id: makeId(),
               role: 'assistant',
-              text: isVerifiedAdmin ? enforceAdminAddressingText(pRaw) : pRaw,
+              text: pClean || (pAction ? getConfirmationPromptText(pAction) : 'বলুন, কীভাবে সাহায্য করতে পারি?'),
               timestamp: Date.now(),
               source: 'chat',
               ...(pAction ? { pendingAction: pAction, actionStatus: 'pending' as const } : {}),
@@ -839,16 +752,13 @@ export default function App() {
 
         const { cleanText, action: inlineAction } = extractActionFromText(data.text || '');
         const pendingAction = data.action || inlineAction || undefined;
-        const rawReplyText =
+        const replyText =
           cleanText ||
           (pendingAction
             ? getConfirmationPromptText(pendingAction)
             : parsedNav
               ? parsedNav.confirmBn
-              : isVerifiedAdmin
-                ? 'স্যার, বলুন না, আপনার কী কথা আছে?'
-                : 'বলুন, কীভাবে সাহায্য করতে পারি?');
-        const replyText = isVerifiedAdmin ? enforceAdminAddressingText(rawReplyText) : rawReplyText;
+              : 'বলুন, কীভাবে সাহায্য করতে পারি?');
 
         const assistantMsg: ChatMessage = {
           id: makeId(),
@@ -874,9 +784,8 @@ export default function App() {
       deliverMotivationInChat,
       fetchLatestPublishedMotivation,
       handleNavigateCommand,
-      ingestExplicitMemory,
       isAdmin,
-      isVerifiedAdmin,
+      isOwner,
       profile,
       memories,
       messages,
@@ -895,7 +804,7 @@ export default function App() {
   );
 
   const handleClearAllChats = useCallback(() => {
-    clearAllChatsStorage(accountScopeRef.current);
+    clearAllChatsStorage();
     setMessages([]);
     setActionLinks({});
   }, []);
@@ -903,35 +812,27 @@ export default function App() {
   const handleAddMemory = useCallback((text: string) => {
     const clean = text.trim();
     if (!clean) return;
-    const scope = accountScopeRef.current;
     setMemories((prev) => {
       const next: MemoryItem[] = [
         ...prev,
-        {
-          id: makeId(),
-          text: clean,
-          createdAt: Date.now(),
-          category: 'general',
-          scope: scope.isVerifiedAdmin ? 'admin' : 'user',
-        },
+        { id: makeId(), text: clean, createdAt: Date.now() },
       ];
-      saveMemories(next, scope);
+      saveMemories(next);
       return next;
     });
   }, []);
 
   const handleDeleteMemory = useCallback((id: string) => {
-    const scope = accountScopeRef.current;
     setMemories((prev) => {
       const next = prev.filter((m) => m.id !== id);
-      saveMemories(next, scope);
+      saveMemories(next);
       return next;
     });
   }, []);
 
   const handleClearMemories = useCallback(() => {
     setMemories([]);
-    saveMemories([], accountScopeRef.current);
+    saveMemories([]);
   }, []);
 
   const openConnections = useCallback(() => {
@@ -999,8 +900,11 @@ export default function App() {
 
   const handleSignOut = useCallback(async () => {
     stopVoice();
-    setMessages([]);
-    setMemories([]);
+    try {
+      await supabase.rpc('log_login_event', { p_event: 'logout', p_device: null, p_platform: 'web' });
+    } catch {
+      /* ignore */
+    }
     await supabase.auth.signOut();
     setShowAdminScreen(false);
     setShowMotivationScreen(false);
@@ -1009,6 +913,46 @@ export default function App() {
     setSettingsSubpage(null);
     navHistoryRef.current = [];
   }, [stopVoice]);
+
+  // Log the login once, then check every minute whether Admin logged this user out.
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) return;
+    const isNative = typeof window !== 'undefined' && typeof (window as any).TiyaNative?.run === 'function';
+    void supabase
+      .rpc('log_login_event', {
+        p_event: 'login',
+        p_device: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 180) : null,
+        p_platform: isNative ? 'android' : 'web',
+      })
+      .then(() => undefined, () => undefined);
+
+    let stopped = false;
+    const check = async () => {
+      if (stopped || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+      const { data, error } = await supabase.rpc('tiya_session_alive');
+      if (!stopped && !error && data === false) {
+        stopped = true;
+        stopVoice();
+        await supabase.auth.signOut({ scope: 'local' });
+        setShowAdminScreen(false);
+        setActiveTab('home');
+        setSettingsPage('hub');
+        setSettingsSubpage(null);
+      }
+    };
+    const timer = window.setInterval(check, 60000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void check();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    void check();
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [session?.user?.id, stopVoice]);
 
   const chatSessionCount = useMemo(
     () => groupMessagesIntoChatSessions(messages).length,
@@ -1036,7 +980,7 @@ export default function App() {
             Loading TIYA...
           </div>
         ) : !session ? (
-          <LoginScreen initialError={authCallbackError} />
+          <LoginScreen />
         ) : needsAgeCheck ? (
           <AgeCheckScreen
             userId={session.user.id}
@@ -1099,11 +1043,8 @@ export default function App() {
                 messages={messages}
                 actionLinks={actionLinks}
                 unreadNotifications={unreadNotifications}
-                isAdmin={isVerifiedAdmin}
-                canUseWithoutKey={isVerifiedAdmin || isProfilePremium(profile)}
-                cameraActive={cameraActive}
-                cameraError={cameraError}
-                onToggleCamera={toggleCamera}
+                isAdmin={isAdmin}
+                canUseWithoutKey={isAdmin || isProfilePremium(profile)}
                 onToggleVoice={toggleVoice}
                 onOpenConnections={openConnections}
                 onOpenNotifications={handleOpenNotifications}
@@ -1137,7 +1078,7 @@ export default function App() {
                 onCancelAction={handleCancelAction}
                 onClearChats={handleClearAllChats}
                 onOpenConnections={openConnections}
-                isVoiceOn={['connecting', 'listening', 'thinking', 'speaking', 'interrupted'].includes(voiceState)}
+                isVoiceOn={['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState)}
                 onToggleVoice={toggleVoice}
                 onOpenHome={() => navigateTo('home', 'hub', null)}
                 onOpenChatHistory={() => navigateTo('settings', 'chats_memory', null)}
@@ -1152,7 +1093,7 @@ export default function App() {
                 profile={profile}
                 chatCount={chatSessionCount}
                 userEmail={session.user.email}
-                isAdmin={isVerifiedAdmin}
+                isAdmin={isAdmin}
                 onOpenPage={handleOpenSettingsPage}
               />
             )}
@@ -1162,8 +1103,8 @@ export default function App() {
                 settings={settings}
                 voiceState={voiceState}
                 hasSession={Boolean(session)}
-                isAdmin={isVerifiedAdmin}
-                canUseWithoutKey={isVerifiedAdmin || isProfilePremium(profile)}
+                isAdmin={isAdmin}
+                canUseWithoutKey={isAdmin || isProfilePremium(profile)}
                 subpage={settingsSubpage}
                 onSelectSubpage={handleSelectSettingsSubpage}
                 onOpenConnections={() => handleOpenSettingsPage('connections')}
@@ -1191,7 +1132,6 @@ export default function App() {
               <VoiceLanguagePage
                 settings={settings}
                 isMinorUser={typeof userAge === 'number' && userAge < 18}
-                isAdmin={isVerifiedAdmin}
                 subpage={settingsSubpage}
                 onSelectSubpage={handleSelectSettingsSubpage}
                 onUpdateSettings={updateSettings}
@@ -1217,9 +1157,7 @@ export default function App() {
               <ChatsMemoryPage
                 messages={messages}
                 memories={memories}
-                isAdmin={isVerifiedAdmin}
                 onDeleteSessionMessages={handleDeleteSessionMessages}
-                onDeleteMemory={handleDeleteMemory}
                 onClearAll={handleClearAllChats}
                 onBack={() => {
                   setSettingsPage('hub');

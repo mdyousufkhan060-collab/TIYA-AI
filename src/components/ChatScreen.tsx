@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Home, Mic, Send, Square, Trash2 } from 'lucide-react';
 import { ChatMessage, PhoneAction, TiyaSettings } from '../types/tiya';
-import { useRealtimeDictation } from '../hooks/useRealtimeDictation';
 import { ActionConfirmCard } from './ActionConfirmCard';
 import { TiyaNeonNav } from './TiyaNeonNav';
 
@@ -43,20 +42,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onOpenMore,
 }) => {
   const [input, setInput] = useState('');
-
-  const {
-    isRecordingMic,
-    isTranscribing,
-    micError,
-    toggleMicInput: toggleRealtimeMic,
-    stopMicInput,
-    syncManualEdit,
-  } = useRealtimeDictation({
-    settings,
-    onTranscriptChange: setInput,
-  });
+  const [isRecordingMic, setIsRecordingMic] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [micError, setMicError] = useState('');
 
   const listEndRef = useRef<HTMLDivElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -67,16 +59,87 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSending) return;
-    const finalText = isRecordingMic ? await stopMicInput() : input;
-    const trimmed = finalText.trim();
-    if (!trimmed) return;
+    const trimmed = input.trim();
+    if (!trimmed || isSending) return;
     setInput('');
     await onSendMessage(trimmed);
   };
 
-  const toggleMicInput = () => {
-    void toggleRealtimeMic(input);
+  const stopRecordingAndTranscribe = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecordingMic(false);
+  };
+
+  const toggleMicInput = async () => {
+    setMicError('');
+    if (isRecordingMic) {
+      stopRecordingAndTranscribe();
+      return;
+    }
+
+    if (!settings.apiKey.trim()) {
+      setMicError('No API key. Add your key in Connections.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = async () => {
+        for (const track of stream.getTracks()) track.stop();
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        if (blob.size < 100) return;
+
+        setIsTranscribing(true);
+        try {
+          const buffer = await blob.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          let binary = '';
+          const step = 0x8000;
+          for (let i = 0; i < bytes.length; i += step) {
+            binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + step, bytes.length)));
+          }
+          const audioBase64 = btoa(binary);
+
+          const res = await fetch('/api/gemini/transcribe', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-gemini-api-key': settings.apiKey.trim(),
+            },
+            body: JSON.stringify({
+              audioBase64,
+              mimeType: blob.type || 'audio/webm',
+              language: settings.language,
+            }),
+          });
+          const data = (await res.json()) as { ok?: boolean; text?: string; detail?: string };
+          if (data.ok && data.text) {
+            setInput((prev) => (prev ? `${prev} ${data.text}` : data.text!));
+          } else {
+            setMicError(data.detail || 'Could not transcribe audio.');
+          }
+        } catch {
+          setMicError('Transcription request failed.');
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      recorder.start();
+      setIsRecordingMic(true);
+    } catch {
+      setMicError('Microphone permission denied.');
+    }
   };
 
   const assistantTitle = settings.assistantName.trim() || 'TIYA';
@@ -220,10 +283,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           <input
             type="text"
             value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              syncManualEdit(e.target.value);
-            }}
+            onChange={(e) => setInput(e.target.value)}
             placeholder={isTranscribing ? 'Transcribing...' : isRecordingMic ? 'Recording... tap stop' : `Message ${assistantTitle}...`}
             aria-label="Chat message input"
             className="h-11 min-w-0 flex-1 rounded-full border border-cyan-400/30 bg-[#06122A]/90 px-4 text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300 focus:outline-none"

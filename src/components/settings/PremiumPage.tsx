@@ -64,6 +64,9 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  // Admin can open the CUSTOMER PANEL to see exactly what buyers see
+  const [customerView, setCustomerView] = useState(false);
+  const showCustomer = !isAdmin || customerView;
 
   const load = useCallback(async () => {
     const [{ data: p }, { data: info }, { data: reqs }] = await Promise.all([
@@ -157,13 +160,35 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
           ))}
         </div>
 
+        {isAdmin && (
+          <SettingsBar
+            badge="CP"
+            title="CUSTOMER PANEL"
+            value={customerView ? 'OPEN' : 'VIEW'}
+            tone={customerView ? 'accent' : 'default'}
+            onClick={() => {
+              setCustomerView((v) => !v);
+              setBuying(null);
+              setMsg(null);
+            }}
+            testId="premium-customer-panel"
+          />
+        )}
+
+        {showCustomer && (
+          <div className="rounded-xl border border-teal-500/25 bg-teal-500/[0.06] px-3 py-2 text-[10.5px] leading-relaxed text-teal-200">
+            <b>AUTO:</b> Pay, then send your TrxID. Premium turns on by itself as soon as it is approved, and you get a notification.
+            {isAdmin && <span className="block text-amber-300">Preview only: you are Admin, buttons are off.</span>}
+          </div>
+        )}
+
         {msg && (
           <p className={`rounded-xl border px-3 py-2 text-[11px] ${msg.ok ? 'border-teal-500/30 text-teal-300' : 'border-rose-500/30 text-rose-300'}`}>
             {msg.text}
           </p>
         )}
 
-        {!isAdmin && plans.length > 0 && (
+        {showCustomer && plans.length > 0 && (
           <>
             <p className="px-1 pt-1 text-[10px] font-semibold tracking-wider text-slate-400">BUY PREMIUM</p>
             <div className="space-y-1.5">
@@ -217,7 +242,7 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
                 <input className={`${inputCls} font-mono-code uppercase`} value={trx} onChange={(e) => setTrx(e.target.value)} placeholder="Transaction ID (TrxID)" />
                 <button
                   type="button"
-                  disabled={busy || !trx.trim()}
+                  disabled={busy || !trx.trim() || isAdmin}
                   onClick={submit}
                   className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-teal-600 text-[11px] font-semibold text-white disabled:opacity-50"
                 >
@@ -228,14 +253,14 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
           </div>
         )}
 
-        {!isAdmin && (
+        {showCustomer && (
           <>
             <p className="px-1 pt-1 text-[10px] font-semibold tracking-wider text-slate-400">GIFT CODE</p>
             <div className="flex gap-2">
               <input className={`${inputCls} font-mono-code uppercase`} value={code} onChange={(e) => setCode(e.target.value)} placeholder="TIYA-XXXXXX" />
               <button
                 type="button"
-                disabled={busy || !code.trim()}
+                disabled={busy || !code.trim() || isAdmin}
                 onClick={redeem}
                 className="flex h-10 shrink-0 items-center gap-1 rounded-xl bg-teal-600 px-3 text-[11px] font-semibold text-white disabled:opacity-50"
               >
@@ -245,7 +270,7 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
           </>
         )}
 
-        {!isAdmin && myReqs.length > 0 && (
+        {showCustomer && myReqs.length > 0 && (
           <>
             <p className="px-1 pt-1 text-[10px] font-semibold tracking-wider text-slate-400">MY PAYMENTS</p>
             <div className="space-y-1.5">
