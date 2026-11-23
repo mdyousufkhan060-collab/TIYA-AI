@@ -52,6 +52,7 @@ import {
 import { useTiyaLiveVoice } from './hooks/useTiyaLiveVoice';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { AgeCheckScreen } from './components/auth/AgeCheckScreen';
+import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { HomeScreen } from './components/HomeScreen';
 import { ChatScreen } from './components/ChatScreen';
 import { BottomNav } from './components/BottomNav';
@@ -960,9 +961,18 @@ export default function App() {
   );
 
   const unreadNotifications = notifications.filter((n) => !n.read_at).length;
+  // Admin goes straight in. Everyone else picks Personal/Student/Business (+ age) once.
+  const needsOnboarding =
+    Boolean(session?.user) &&
+    profileLoaded &&
+    !isAdmin &&
+    Boolean(profile) &&
+    !profile?.onboarding_done;
   const needsAgeCheck =
     Boolean(session?.user) &&
     profileLoaded &&
+    !isAdmin &&
+    !needsOnboarding &&
     effectiveBirthYear === null;
 
   const isInSettingsSubpage = activeTab === 'settings' && settingsPage !== 'hub';
@@ -981,6 +991,26 @@ export default function App() {
           </div>
         ) : !session ? (
           <LoginScreen />
+        ) : needsOnboarding ? (
+          <OnboardingScreen
+            userId={session.user.id}
+            knownBirthYear={effectiveBirthYear}
+            onComplete={(mode, year, dob) => {
+              if (year !== null) setCachedBirthYearState(year);
+              setProfile((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      account_mode: mode,
+                      onboarding_done: true,
+                      birth_year: prev.birth_year ?? year,
+                      date_of_birth: prev.date_of_birth ?? dob,
+                    }
+                  : prev,
+              );
+            }}
+            onSignOut={handleSignOut}
+          />
         ) : needsAgeCheck ? (
           <AgeCheckScreen
             userId={session.user.id}

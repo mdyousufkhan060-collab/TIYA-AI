@@ -303,6 +303,9 @@ export interface UserProfile {
   admin_note: string | null;
   last_seen_at?: string | null;
   created_at?: string | null;
+  account_mode?: 'personal' | 'student' | 'business' | null;
+  date_of_birth?: string | null;
+  onboarding_done?: boolean | null;
 }
 
 export interface NotificationItem {
