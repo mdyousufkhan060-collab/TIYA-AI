@@ -28,7 +28,8 @@ export const LoginScreen: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/app`,
+          // ROSE Android app: Google sign-in runs in Chrome and comes back through com.myrosebd.rose://auth
+          redirectTo: (window as any).TiyaNative ? 'com.myrosebd.rose://auth' : `${window.location.origin}/app`,
         },
       });
       if (error) {
