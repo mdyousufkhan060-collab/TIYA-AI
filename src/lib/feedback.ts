@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { premiumTts } from './premium';
+import { generateContent, pickTtsModels, responseAudio } from './geminiRest';
 
 /** 👍 / 👎 on a ROSE reply (admin sees totals in 18 REPORTS & FEEDBACK). */
 export async function sendFeedback(vote: 1 | -1, replyText: string, questionText?: string) {
@@ -63,7 +64,24 @@ function pcmWav(b64: string, rate = 24000) {
  * (free), otherwise ROSE Premium voice from the server.
  * Returns an error text, or null when it started speaking.
  */
-export async function speakText(text: string, voiceName = 'Leda', onEnd?: () => void): Promise<string | null> {
+async function playB64(b64: string, onEnd?: () => void) {
+  const url = pcmWav(b64);
+  const a = new Audio(url);
+  currentAudio = a;
+  a.onended = () => {
+    URL.revokeObjectURL(url);
+    currentAudio = null;
+    onEnd?.();
+  };
+  await a.play().catch(() => onEnd?.());
+}
+
+export async function speakText(
+  text: string,
+  voiceName = 'Leda',
+  onEnd?: () => void,
+  apiKey?: string,
+): Promise<string | null> {
   stopSpeaking();
   const clean = text.replace(/[*#_`>~]/g, '').replace(/\{[\s\S]*\}\s*$/, '').trim().slice(0, 2500);
   if (!clean) return 'পড়ার মতো লেখা নেই।';
@@ -81,19 +99,41 @@ export async function speakText(text: string, voiceName = 'Leda', onEnd?: () => 
     synth.speak(u);
     return null;
   }
-  const res = await premiumTts(clean, voiceName);
-  if (!res.ok || !res.audio) {
-    onEnd?.();
-    return res.message || 'এই ডিভাইসে বাংলা কণ্ঠ নেই। ROSE Premium থাকলে সার্ভারের কণ্ঠে শোনা যাবে।';
+  // 1) the user's own Gemini key (free tier)
+  const key = (apiKey || '').trim();
+  if (key) {
+    try {
+      for (const model of await pickTtsModels(key)) {
+        try {
+          const r = await generateContent(key, model, {
+            contents: [{ role: 'user', parts: [{ text: clean }] }],
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Leda' } } },
+            },
+          });
+          const audio = responseAudio(r);
+          if (audio?.data) {
+            await playB64(audio.data, onEnd);
+            return null;
+          }
+        } catch {
+          /* try the next model */
+        }
+      }
+    } catch {
+      /* fall through */
+    }
   }
-  const url = pcmWav(res.audio);
-  const a = new Audio(url);
-  currentAudio = a;
-  a.onended = () => {
-    URL.revokeObjectURL(url);
-    currentAudio = null;
-    onEnd?.();
-  };
-  await a.play().catch(() => onEnd?.());
-  return null;
+  // 2) ROSE Premium voice from the server
+  const res = await premiumTts(clean, voiceName);
+  if (res.ok && res.audio) {
+    await playB64(res.audio, onEnd);
+    return null;
+  }
+  onEnd?.();
+  if (/api key|key not valid|invalid/i.test(res.message || '')) {
+    return 'শোনানো যাচ্ছে না: ROSE সার্ভারের Google key কাজ করছে না। Admin-কে জানানো হয়েছে।';
+  }
+  return 'এই ডিভাইসে বাংলা কণ্ঠ নেই। Connections-এ নিজের ফ্রি key দিন অথবা ROSE Premium নিন।';
 }

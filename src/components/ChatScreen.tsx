@@ -5,6 +5,7 @@ import { ActionConfirmCard } from './ActionConfirmCard';
 import { TiyaNeonNav } from './TiyaNeonNav';
 import { MessageActions } from './MessageActions';
 import { ReportSheet } from './ReportSheet';
+import { MiniFace } from './MiniFace';
 
 interface ChatScreenProps {
   settings: TiyaSettings;
@@ -23,6 +24,7 @@ interface ChatScreenProps {
   onOpenChatHistory: () => void;
   onOpenTools: () => void;
   onOpenMore: () => void;
+  userAvatar?: string | null;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
@@ -42,6 +44,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onOpenChatHistory,
   onOpenTools,
   onOpenMore,
+  userAvatar = null,
 }) => {
   const [input, setInput] = useState('');
   const [isRecordingMic, setIsRecordingMic] = useState(false);
@@ -218,8 +221,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 <span aria-hidden="true">·</span>
                 <span>{msg.source === 'voice' ? 'Voice' : 'Text'}</span>
               </div>
+              <div className={`flex max-w-full items-end gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              {msg.role === 'user' ? (
+                <MiniFace src={userAvatar} name={settings.yourName || 'You'} />
+              ) : (
+                <MiniFace src="/agents/rose.png?v=3" name="ROSE" rose />
+              )}
               <div
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed backdrop-blur-sm ${
+                className={`max-w-[80vw] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed backdrop-blur-sm sm:max-w-[320px] ${
                   msg.role === 'user'
                     ? 'bg-gradient-to-br from-sky-500/90 to-blue-700/90 text-white'
                     : 'border border-cyan-400/25 bg-[#06122A]/80 text-slate-100'
@@ -227,11 +236,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               >
                 <p className="whitespace-pre-wrap break-words">{msg.text}</p>
               </div>
+              </div>
               {msg.role === 'assistant' && msg.text.trim() && (() => {
                 const i = messages.findIndex((m) => m.id === msg.id);
                 const prevUser = [...messages.slice(0, i)].reverse().find((m) => m.role === 'user');
                 return (
                   <MessageActions
+                    apiKey={settings.apiKey}
                     text={msg.text}
                     question={prevUser?.text}
                     voiceName={settings.voiceName}

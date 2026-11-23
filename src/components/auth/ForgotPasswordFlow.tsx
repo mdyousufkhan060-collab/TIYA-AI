@@ -329,7 +329,7 @@ export const ForgotPasswordFlow: React.FC<{
       {/* Mobile: picture on top, card below */}
       <div className="relative flex h-[100dvh] flex-col overflow-hidden lg:hidden">
         <div className="absolute inset-x-0 top-0 h-[62%] overflow-hidden">
-          <img src="/auth/login-mobile.jpg?v=3" alt="ROSE" className="h-full w-full origin-[82%_72%] scale-[1.22] object-cover object-[center_18%]" />
+          <img src="/auth/login-mobile.jpg?v=4" alt="ROSE" className="h-full w-full origin-[82%_72%] scale-[1.22] object-cover object-[center_18%]" />
           <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-b from-transparent via-[#030814]/70 to-[#030814]" />
         </div>
         {script('absolute right-3 top-[10%] z-10 text-right [&>span]:ml-auto [&>p:last-child]:ml-auto')}

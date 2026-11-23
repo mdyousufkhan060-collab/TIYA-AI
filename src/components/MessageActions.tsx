@@ -7,9 +7,10 @@ export const MessageActions: React.FC<{
   text: string;
   question?: string;
   voiceName?: string;
+  apiKey?: string;
   onRegenerate?: () => void;
   compact?: boolean;
-}> = ({ text, question, voiceName, onRegenerate, compact = false }) => {
+}> = ({ text, question, voiceName, apiKey, onRegenerate, compact = false }) => {
   const [speaking, setSpeaking] = useState(false);
   const [copied, setCopied] = useState(false);
   const [vote, setVote] = useState<0 | 1 | -1>(0);
@@ -26,7 +27,7 @@ export const MessageActions: React.FC<{
     }
     setNote('');
     setSpeaking(true);
-    const err = await speakText(text, voiceName, () => setSpeaking(false));
+    const err = await speakText(text, voiceName, () => setSpeaking(false), apiKey);
     if (err) {
       setSpeaking(false);
       setNote(err);

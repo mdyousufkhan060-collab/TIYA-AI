@@ -70,7 +70,7 @@ DAILY WORK:
 07 ORDERS (subpage="orders"): customer, items, total, payment (COD or advance), courier, tracking, status.
 08 CUSTOMERS (subpage="customers"): name, phone, address, notes.
 09 CUSTOMER CHECK (subpage="customer_check"): type a phone number to see the customer's courier history (GOOD / RISKY / NEW); for risky customers send the advance-payment message.
-10 APPROVAL REQUESTS (subpage="approvals"): discounts or orders waiting for the owner's yes / no.
+10 APPROVAL REQUESTS (subpage="approvals"): discounts or orders waiting for the owner's yes / no. Each new request is also emailed to the owner with YES / NO buttons (YES = order confirmed and ready for the courier, NO = cancelled).
 MONEY & REPORTS:
 11 DASHBOARD (subpage="biz_dashboard"): sales today / 7 / 30 days, profit, orders, customers, low stock.
 12 EXPENSES (subpage="expenses"): rent, ads, packaging, salary; profit is worked out for you.

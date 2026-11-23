@@ -338,12 +338,17 @@ export const LoginScreen: React.FC = () => {
       <div className="relative flex h-[100dvh] flex-col overflow-hidden lg:hidden">
         <div className="absolute inset-x-0 top-0 h-[66%] overflow-hidden">
           <img
-            src="/auth/login-mobile.jpg?v=3"
+            src="/auth/login-mobile.jpg?v=4"
             alt="ROSE"
             className="h-full w-full origin-[82%_72%] scale-[1.22] object-cover object-[center_18%]"
           />
           <div className="absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-b from-transparent via-[#030814]/70 to-[#030814]" />
         </div>
+        <img
+          src="/auth/rose-neon-logo.png?v=1"
+          alt="ROSE · Your AI Assistant"
+          className="pointer-events-none absolute right-3 top-[max(12px,env(safe-area-inset-top))] z-10 w-[33vw] max-w-[150px] drop-shadow-[0_0_14px_rgba(34,211,238,0.45)]"
+        />
         <div className="relative mx-auto mt-auto w-full max-w-[460px] px-3 pb-[max(12px,env(safe-area-inset-bottom))]">{card}</div>
       </div>
     </div>

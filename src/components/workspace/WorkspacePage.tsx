@@ -738,7 +738,14 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     else if (view === 'expenses') body = <CrudSection config={EXPENSES} scope={bScope} />;
     else if (view === 'faqs') body = <CrudSection config={FAQS} scope={bScope} onChanged={refreshAi} />;
     else if (view === 'discounts') body = <CrudSection config={DISCOUNTS} scope={bScope} />;
-    else if (view === 'approvals') body = <CrudSection config={APPROVALS} scope={bScope} />;
+    else if (view === 'approvals')
+      body = (
+        <CrudSection
+          config={APPROVALS}
+          scope={bScope}
+          onChanged={() => void supabase.functions.invoke('rose-approval', { body: { action: 'notify' } }).catch(() => undefined)}
+        />
+      );
     else if (view === 'couriers') body = <CrudSection config={COURIERS} scope={bScope} />;
     else if (view === 'customer_check') body = <CustomerCheck shopName={bizInfo?.name} bkash={(bizInfo?.pay || '').match(/01\d{9}/)?.[0] || null} />;
   }

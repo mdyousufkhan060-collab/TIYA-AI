@@ -26,6 +26,7 @@ import {
   Wallet,
   XCircle,
   Flag,
+  Trash2,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { loadProfilesByEmail, loadProfilesById } from '../admin/UserAvatar';
@@ -34,6 +35,7 @@ import { ChatMessage, VoiceState } from '../../types/tiya';
 import { TeamPanel } from '../team/TeamPanel';
 import { MessageActions } from '../MessageActions';
 import { ReportSheet } from '../ReportSheet';
+import { MiniFace } from '../MiniFace';
 
 /**
  * PC layout (wide screens). One top bar (no duplicate buttons), the centre shows
@@ -576,7 +578,12 @@ export const DesktopRosePanel: React.FC<{
   onVoice: () => void;
   /** send a ROSE reply into the WRITER */
   onToWriter?: (text: string) => void;
-}> = ({ messages, isSending, voiceState, onSend, onVoice, onToWriter }) => {
+  onClear?: () => void;
+  userAvatar?: string | null;
+  userName?: string;
+  apiKey?: string;
+  voiceName?: string;
+}> = ({ messages, isSending, voiceState, onSend, onVoice, onToWriter, onClear, userAvatar, userName, apiKey, voiceName }) => {
   const [reportOpen, setReportOpen] = useState(false);
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -610,7 +617,19 @@ export const DesktopRosePanel: React.FC<{
             {voiceOn ? voiceState.toUpperCase() : 'ONLINE'}
           </p>
         </div>
-        <VoiceOrb on={voiceOn} state={voiceState} onClick={onVoice} />
+        {onClear && recent.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('Delete all chat messages?')) onClear();
+            }}
+            title="Delete chat"
+            aria-label="Delete chat"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/30 text-slate-300 hover:border-rose-400/60 hover:text-rose-300"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <div ref={listRef} className="tiya-scroll relative min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
@@ -618,8 +637,13 @@ export const DesktopRosePanel: React.FC<{
           <p className="py-6 text-center text-xs text-slate-400">Say hello to ROSE.</p>
         ) : (
           recent.map((m) => (
-            <div key={m.id} className={`group flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className="max-w-[88%]">
+            <div key={m.id} className={`group flex items-end gap-2 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              {m.role === 'user' ? (
+                <MiniFace src={userAvatar} name={userName} />
+              ) : (
+                <MiniFace src="/agents/rose.png?v=3" name="ROSE" rose />
+              )}
+              <div className="max-w-[82%]">
                 <p
                   className={`whitespace-pre-wrap rounded-[12px] px-3 py-2 text-[13px] leading-relaxed shadow-lg ${
                     m.role === 'user'
@@ -635,6 +659,8 @@ export const DesktopRosePanel: React.FC<{
                   return (
                     <MessageActions
                       compact
+                      apiKey={apiKey}
+                      voiceName={voiceName}
                       text={m.text}
                       question={prevUser?.text}
                       onRegenerate={prevUser && !isSending ? () => onSend(prevUser.text) : undefined}

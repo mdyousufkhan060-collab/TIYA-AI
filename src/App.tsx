@@ -411,6 +411,19 @@ export default function App() {
     welcomeAskedRef.current = true;
     void supabase.functions.invoke('rose-welcome', { body: {} }).catch(() => undefined);
   }, [session?.user?.id, profile]);
+  const userAvatarUrl: string | null =
+    (profile as any)?.avatar_url ||
+    (session?.user?.user_metadata as any)?.avatar_url ||
+    (session?.user?.user_metadata as any)?.picture ||
+    null;
+  // Business owners: email YES / NO for any new approval requests (once per app open).
+  const approvalAskedRef = useRef(false);
+  useEffect(() => {
+    if (!session?.user?.id || approvalAskedRef.current) return;
+    if (profile?.account_mode !== 'business' && !isAdmin) return;
+    approvalAskedRef.current = true;
+    void supabase.functions.invoke('rose-approval', { body: { action: 'notify' } }).catch(() => undefined);
+  }, [session?.user?.id, profile?.account_mode, isAdmin]);
   const pwResetOpen = usePwResetFlag();
   const hasOwnVoiceKey = Boolean(
     settings.apiKey.trim() || (settings.providerConnections?.groq?.apiKey || '').trim(),
@@ -1367,6 +1380,7 @@ export default function App() {
                 onConfirmAction={handleConfirmAction}
                 onCancelAction={handleCancelAction}
                 onClearChats={handleClearAllChats}
+                userAvatar={userAvatarUrl}
                 onOpenConnections={openConnections}
                 isVoiceOn={['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState)}
                 onToggleVoice={toggleVoice}
@@ -1556,6 +1570,11 @@ export default function App() {
             voiceState={voiceState}
             onSend={(t) => void handleSendChat(t)}
             onVoice={toggleVoice}
+            onClear={handleClearAllChats}
+            userAvatar={userAvatarUrl}
+            userName={settings.yourName || session?.user?.email || ''}
+            apiKey={settings.apiKey}
+            voiceName={settings.voiceName}
             onToWriter={(t) => {
               setWriterInbox(t);
               setDesktopTab('writer');
