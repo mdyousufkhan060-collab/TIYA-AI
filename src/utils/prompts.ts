@@ -1,3 +1,4 @@
+import { getTiyaModeContext } from './modeContext';
 import {
   ADULT_ONLY_PERSONALITIES,
   BENGALI_DIALECTS,
@@ -197,6 +198,12 @@ export function buildTiyaSystemPrompt(
   if (isOwner) {
     lines.push(OWNER_EMOTIONAL_BLOCK);
     lines.push(ownerTimeContext(recentMessages));
+  }
+
+  // Personal / Student / Business mode (+ business data). Admin never has a mode.
+  const modeContext = getTiyaModeContext();
+  if (modeContext && !isOwner) {
+    lines.push(`\n${modeContext}`);
   }
 
   if (memoryBlock) {

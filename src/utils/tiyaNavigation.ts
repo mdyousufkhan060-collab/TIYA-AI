@@ -436,6 +436,17 @@ const KEYWORD_ROUTES: Array<{
     },
   },
   {
+    patterns: [/(ওয়ার্কস্পেস|workspace|বিজনেস প্রোফাইল|business profile|আমার নোট|study notes|টাস্ক লিস্ট|অর্ডার লিস্ট)/i],
+    requireActionHint: true,
+    command: {
+      type: 'open',
+      tab: 'settings',
+      page: 'workspace',
+      subpage: null,
+      confirmBn: '07 Workspace খোলা হয়েছে।',
+    },
+  },
+  {
     patterns: [/(মাই অ্যাকাউন্ট|my account|অ্যাকাউন্ট পেজ|অ্যাকাউন্ট)/i],
     requireActionHint: true,
     command: {
@@ -546,6 +557,7 @@ export function validateNavigateToolArgs(args: unknown): NavigationCommand | nul
     'premium',
     'privacy_controls',
     'my_account',
+    'workspace',
   ];
 
   const page = validPages.includes(obj.page as SettingsPageId)

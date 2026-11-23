@@ -71,6 +71,8 @@ import {
   PhoneControlPage,
 } from './components/settings/AboutLookPhonePages';
 import { PrivacyControlsPage } from './components/settings/DeveloperPrivacyPages';
+import { WorkspacePage } from './components/workspace/WorkspacePage';
+import { clearModeContext, refreshModeContext } from './utils/modeContext';
 
 function makeId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -955,6 +957,15 @@ export default function App() {
     };
   }, [session?.user?.id, stopVoice]);
 
+  // Keep TIYA's prompt in step with the account mode (Personal / Student / Business)
+  useEffect(() => {
+    if (!session?.user?.id || isAdmin) {
+      clearModeContext();
+      return;
+    }
+    void refreshModeContext(profile?.account_mode ?? null, session.user.id);
+  }, [session?.user?.id, isAdmin, profile?.account_mode]);
+
   const chatSessionCount = useMemo(
     () => groupMessagesIntoChatSessions(messages).length,
     [messages],
@@ -1201,6 +1212,21 @@ export default function App() {
                 profile={profile}
                 isAdmin={isAdmin}
                 onRefreshProfile={() => {
+                  if (session?.user?.id) loadAccountData(session.user.id);
+                }}
+                onBack={() => {
+                  setSettingsPage('hub');
+                  setSettingsSubpage(null);
+                }}
+              />
+            )}
+
+            {activeTab === 'settings' && settingsPage === 'workspace' && session?.user?.id && (
+              <WorkspacePage
+                userId={session.user.id}
+                mode={profile?.account_mode ?? 'personal'}
+                isMinor={typeof userAge === 'number' && userAge < 18}
+                onModeChanged={() => {
                   if (session?.user?.id) loadAccountData(session.user.id);
                 }}
                 onBack={() => {

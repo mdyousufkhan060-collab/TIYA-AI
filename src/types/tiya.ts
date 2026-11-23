@@ -283,7 +283,8 @@ export type SettingsPageId =
   | 'chats_memory'
   | 'premium'
   | 'privacy_controls'
-  | 'my_account';
+  | 'my_account'
+  | 'workspace';
 
 export interface UserProfile {
   id: string;

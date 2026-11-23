@@ -27,6 +27,7 @@ import { PremiumGrantCard } from './PremiumGrantCard';
 import { AdminGiftCodesPage, AdminIncomePage, AdminPaymentsPage, AdminPlansPage } from './AdminSalesPages';
 import { SettingsBar } from '../settings/SettingsShell';
 import { AdminGivePremiumPage, AdminLoginActivityPage, ForceLogoutButton } from './AdminUserControl';
+import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
   | 'hub'
@@ -35,6 +36,9 @@ type AdminView =
   | 'user_detail'
   | 'notify_all'
   | 'give_premium'
+  | 'api_providers'
+  | 'system_logs'
+  | 'deletions'
   | 'logins'
   | 'payments'
   | 'plans'
@@ -388,6 +392,9 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               income: '07 Income',
               logins: '08 Login Activity',
               notify_all: '09 Notify All',
+              api_providers: '12 API Providers',
+              system_logs: '13 System Logs',
+              deletions: '14 Delete Requests',
             } as Record<string, string>
           )[view] || 'Admin';
 
@@ -496,6 +503,9 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               }}
               testId="admin-developer-tools-btn"
             />
+            <SettingsBar badge="12" title="API PROVIDERS" onClick={() => setView('api_providers')} testId="admin-bar-api" />
+            <SettingsBar badge="13" title="SYSTEM LOGS" onClick={() => setView('system_logs')} testId="admin-bar-logs" />
+            <SettingsBar badge="14" title="DELETE REQUESTS" onClick={() => setView('deletions')} testId="admin-bar-deletions" />
           </div>
         )}
 
@@ -505,6 +515,9 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'income' && <AdminIncomePage />}
         {view === 'give_premium' && <AdminGivePremiumPage />}
         {view === 'logins' && <AdminLoginActivityPage />}
+        {view === 'api_providers' && <AdminApiProvidersPage />}
+        {view === 'system_logs' && <AdminSystemLogsPage />}
+        {view === 'deletions' && <AdminDeletionRequestsPage />}
 
         {view === 'dashboard' && (
           <div className="space-y-4">
@@ -544,6 +557,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                 ))}
               </div>
             ) : null}
+            <AdminOverviewTiles />
           </div>
         )}
 

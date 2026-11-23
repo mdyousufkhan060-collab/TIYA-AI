@@ -74,6 +74,16 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
       title: 'PREMIUM',
       value: premiumValue,
     },
+    ...(isAdmin
+      ? []
+      : [
+          {
+            num: '07',
+            id: 'workspace' as SettingsPageId,
+            title: 'WORKSPACE',
+            value: (profile?.account_mode || 'personal').toUpperCase(),
+          },
+        ]),
   ];
 
   return (
@@ -85,7 +95,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
       </header>
 
       <div className="tiya-scroll flex-1 space-y-3 overflow-y-auto px-3.5 py-3">
-        {/* Main Numbered Bars (01 to 06) */}
+        {/* Main Numbered Bars (01 to 07) */}
         <div className="space-y-1.5">
           {mainItems.map((item) => (
             <SettingsBar
