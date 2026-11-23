@@ -28,6 +28,7 @@ import { AdminGiftCodesPage, AdminIncomePage, AdminPaymentsPage, AdminPlansPage 
 import { SettingsBar } from '../settings/SettingsShell';
 import { AdminGivePremiumPage, AdminLoginActivityPage, ForceLogoutButton } from './AdminUserControl';
 import { AdminDeveloperProfilePage } from './AdminDeveloperProfilePage';
+import { AdminBusinessesPage, AdminTeamActivityPage } from './AdminBusinessPages';
 import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
@@ -41,6 +42,8 @@ type AdminView =
   | 'system_logs'
   | 'deletions'
   | 'dev_profile'
+  | 'businesses'
+  | 'team_activity'
   | 'logins'
   | 'payments'
   | 'plans'
@@ -398,6 +401,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               system_logs: '13 System Logs',
               deletions: '14 Delete Requests',
               dev_profile: '15 Developers',
+              businesses: '16 Businesses',
+              team_activity: '17 Team Activity',
             } as Record<string, string>
           )[view] || 'Admin';
 
@@ -510,6 +515,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="13" title="SYSTEM LOGS" onClick={() => setView('system_logs')} testId="admin-bar-logs" />
             <SettingsBar badge="14" title="DELETE REQUESTS" onClick={() => setView('deletions')} testId="admin-bar-deletions" />
             <SettingsBar badge="15" title="DEVELOPERS" value="PUBLIC" onClick={() => setView('dev_profile')} testId="admin-bar-dev-profile" />
+            <SettingsBar badge="16" title="BUSINESSES" onClick={() => setView('businesses')} testId="admin-bar-businesses" />
+            <SettingsBar badge="17" title="TEAM ACTIVITY" onClick={() => setView('team_activity')} testId="admin-bar-team" />
           </div>
         )}
 
@@ -523,6 +530,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'system_logs' && <AdminSystemLogsPage />}
         {view === 'deletions' && <AdminDeletionRequestsPage />}
         {view === 'dev_profile' && <AdminDeveloperProfilePage />}
+        {view === 'businesses' && <AdminBusinessesPage />}
+        {view === 'team_activity' && <AdminTeamActivityPage />}
 
         {view === 'dashboard' && (
           <div className="space-y-4">
