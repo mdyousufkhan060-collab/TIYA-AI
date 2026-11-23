@@ -7,8 +7,13 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Crown,
+  KeyRound,
+  Mic,
+  Type,
 } from 'lucide-react';
-import { ConnectionStatus, TiyaSettings } from '../../types/tiya';
+import { ConnectionStatus, TiyaSettings, UserProfile } from '../../types/tiya';
+import { isProfilePremium } from './PremiumPage';
 import { appendErrorLog } from '../../utils/storage';
 import { SettingsBar, SettingsShell } from './SettingsShell';
 
@@ -18,6 +23,9 @@ interface ConnectionsPageProps {
   onSelectSubpage: (subpage: string | null) => void;
   onUpdateSettings: (partial: Partial<TiyaSettings>) => void;
   onBack: () => void;
+  profile?: UserProfile | null;
+  isAdmin?: boolean;
+  onOpenPremium?: () => void;
 }
 
 type ConnectionKeyId = 'gemini' | 'groq';
@@ -53,6 +61,9 @@ export const ConnectionsPage: React.FC<ConnectionsPageProps> = ({
   onSelectSubpage,
   onUpdateSettings,
   onBack,
+  profile = null,
+  isAdmin = false,
+  onOpenPremium,
 }) => {
   const activeProvider = PROVIDERS.find((p) => p.id === subpage) || null;
 
@@ -107,6 +118,68 @@ export const ConnectionsPage: React.FC<ConnectionsPageProps> = ({
   return (
     <SettingsShell title="02 CONNECTIONS" onBack={onBack}>
       <div className="space-y-3">
+        {(() => {
+          const ownKey = Boolean(settings.apiKey.trim() || (settings.providerConnections?.groq?.apiKey || '').trim());
+          const prem = isProfilePremium(profile);
+          const textLeft = Math.max(0, profile?.premium_text_left ?? 0);
+          const voiceLeft = Math.max(0, profile?.premium_voice_left ?? 0);
+          const using = isAdmin ? 'ADMIN · UNLIMITED' : ownKey ? 'FREE · YOUR OWN KEY' : prem ? 'ROSE PREMIUM' : 'NOTHING YET';
+          return (
+            <>
+              <div className="flex items-center justify-between rounded-[4px] border border-white/[0.08] bg-[#11151E] px-3 py-2">
+                <span className="text-[10px] font-bold tracking-wider text-slate-400">NOW USING</span>
+                <span className={`text-[11px] font-extrabold tracking-wider ${using === 'NOTHING YET' ? 'text-rose-300' : 'text-teal-300'}`}>{using}</span>
+              </div>
+
+              {/* 1. ROSE PREMIUM: no key needed */}
+              <div className="rounded-[4px] border border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-transparent p-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-[6px] bg-gradient-to-br from-amber-400 to-orange-500 text-white">
+                    <Crown className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-extrabold tracking-wider text-amber-200">1 · ROSE PREMIUM</p>
+                    <p className="text-[10.5px] text-slate-400">No API key needed. Uses ROSE credits.</p>
+                  </div>
+                  <span className={`rounded-[3px] px-2 py-0.5 text-[9.5px] font-bold ${prem || isAdmin ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-slate-300'}`}>
+                    {isAdmin ? 'ADMIN' : prem ? 'ACTIVE' : 'OFF'}
+                  </span>
+                </div>
+                <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+                  <div className="rounded-[3px] bg-black/30 px-2.5 py-2">
+                    <p className="flex items-center gap-1 text-[9.5px] font-bold tracking-wider text-slate-400"><Type className="h-3 w-3" /> TEXT CREDITS</p>
+                    <p className={`font-mono text-lg font-bold ${textLeft > 0 || isAdmin ? 'text-white' : 'text-rose-300'}`}>{isAdmin ? '∞' : textLeft}</p>
+                  </div>
+                  <div className="rounded-[3px] bg-black/30 px-2.5 py-2">
+                    <p className="flex items-center gap-1 text-[9.5px] font-bold tracking-wider text-slate-400"><Mic className="h-3 w-3" /> VOICE CREDITS</p>
+                    <p className={`font-mono text-lg font-bold ${voiceLeft > 0 || isAdmin ? 'text-white' : 'text-rose-300'}`}>{isAdmin ? '∞' : voiceLeft}</p>
+                  </div>
+                </div>
+                <p className="mt-2 text-[10.5px] leading-snug text-slate-400">
+                  1 typed reply = 1 text credit. 1 voice reply = 1 voice credit. If one runs out, the other still works.
+                </p>
+                {!isAdmin && onOpenPremium && (
+                  <button
+                    type="button"
+                    onClick={onOpenPremium}
+                    className="mt-2.5 flex h-10 w-full items-center justify-center gap-2 rounded-[4px] bg-gradient-to-r from-amber-400 to-orange-500 text-xs font-extrabold tracking-wider text-black"
+                  >
+                    <Crown className="h-4 w-4" /> {prem ? 'BUY MORE CREDITS' : 'GET PREMIUM'}
+                  </button>
+                )}
+              </div>
+
+              {/* 2. FREE: own key */}
+              <div className="flex items-center gap-2 px-1 pt-1">
+                <KeyRound className="h-3.5 w-3.5 text-teal-300" />
+                <p className="text-[11px] font-extrabold tracking-wider text-teal-200">2 · FREE · YOUR OWN KEY</p>
+              </div>
+              <p className="-mt-1 px-1 text-[10.5px] text-slate-400">
+                Free keys from Google and Groq. With a key ROSE uses your key and no credits are spent (daily free limit applies).
+              </p>
+            </>
+          );
+        })()}
         <div className="space-y-1.5">
           {PROVIDERS.map((provider) => {
             const state = getProviderState(provider.id);

@@ -147,14 +147,17 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
   const rows = [
     { id: 'plan', label: 'PLAN', value: planLabel, accent: isPremium || isAdmin },
     { id: 'valid_until', label: 'VALID UNTIL', value: validUntil, accent: false },
-    { id: 'voice_left', label: 'VOICE REPLIES LEFT', value: voiceLeft, accent: false },
-    { id: 'text_left', label: 'TEXT REPLIES LEFT', value: textLeft, accent: false },
+    { id: 'voice_left', label: 'VOICE CREDITS LEFT', value: voiceLeft, accent: false },
+    { id: 'text_left', label: 'TEXT CREDITS LEFT', value: textLeft, accent: false },
     { id: 'daily', label: 'DAILY LIMIT', value: repliesLeft, accent: false },
   ];
 
   return (
     <SettingsShell title="06 PREMIUM" onBack={onBack}>
       <div className="space-y-3 pb-3">
+        <p className="rounded-[4px] border border-white/[0.08] bg-[#11151E] px-3 py-2 text-[10.5px] leading-relaxed text-slate-300">
+          <b className="text-amber-300">How credits work:</b> 1 typed reply = 1 text credit, 1 voice reply = 1 voice credit. If text runs out you can still talk by voice, and if voice runs out you can still type.
+        </p>
         <div className="space-y-1.5">
           {rows.map((row) => (
             <div
@@ -210,7 +213,7 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
                 <SettingsBar
                   key={pl.id}
                   badge={String(i + 1).padStart(2, '0')}
-                  title={`${pl.name} · ${pl.months}M`}
+                  title={`${pl.name} · ${pl.text_credits ? `T${pl.text_credits}` : ''}${pl.text_credits && pl.voice_credits ? ' · ' : ''}${pl.voice_credits ? `V${pl.voice_credits}` : ''}`}
                   value={`৳${pl.price_bdt}`}
                   tone={buying?.id === pl.id ? 'accent' : 'default'}
                   onClick={() => {
@@ -227,7 +230,7 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
         {buying && (
           <div className="space-y-2 rounded-2xl border border-teal-500/40 bg-[#0B1A1C] p-3.5">
             <p className="text-[11px] text-slate-300">
-              {buying.voice_credits} voice + {buying.text_credits} text replies, {buying.months} month
+              {buying.text_credits} text credits (typing) + {buying.voice_credits} voice credits, valid {buying.months} month
             </p>
             {methods.length === 0 ? (
               <p className="text-[11px] text-amber-300">Payment numbers are not set yet. Please try later.</p>

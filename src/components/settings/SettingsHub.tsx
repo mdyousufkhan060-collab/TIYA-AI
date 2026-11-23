@@ -29,7 +29,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
 
   const geminiReady = settings.connectionStatus === 'ready';
   const groqReady = settings.providerConnections.groq?.status === 'ready';
-  const connectionValue = geminiReady || groqReady ? 'READY' : 'NO KEY';
+  const connectionValue = geminiReady || groqReady ? 'FREE KEY' : isAdmin || isProfilePremium(profile) ? 'PREMIUM' : 'NO KEY';
 
   const premiumValue = isAdmin ? 'ADMIN' : isProfilePremium(profile) ? 'PREMIUM' : 'FREE';
 
@@ -82,7 +82,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
             num: '07',
             id: 'workspace' as SettingsPageId,
             title: 'WORKSPACE',
-            value: isAdmin ? 'ADMIN · BUSINESS' : (profile?.account_mode || 'personal').toUpperCase(),
+            value: isAdmin ? 'BUSINESS' : (profile?.account_mode || 'personal').toUpperCase(),
           },
         ],
   ];

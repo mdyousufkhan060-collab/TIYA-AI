@@ -271,8 +271,8 @@ export const AdminPlansPage: React.FC = () => {
               [
                 ['price_bdt', 'PRICE ৳'],
                 ['months', 'MONTHS'],
-                ['voice_credits', 'VOICE REPLIES'],
-                ['text_credits', 'TEXT REPLIES'],
+                ['voice_credits', 'VOICE CREDITS (0 = TEXT ONLY PACK)'],
+                ['text_credits', 'TEXT CREDITS (0 = VOICE ONLY PACK)'],
               ] as const
             ).map(([k, l]) => (
               <div key={k}>
@@ -377,8 +377,8 @@ export const AdminGiftCodesPage: React.FC = () => {
             [
               ['months', 'MONTHS'],
               ['max_uses', 'HOW MANY USERS'],
-              ['voice_credits', 'VOICE REPLIES'],
-              ['text_credits', 'TEXT REPLIES'],
+              ['voice_credits', 'VOICE CREDITS (0 = TEXT ONLY PACK)'],
+              ['text_credits', 'TEXT CREDITS (0 = VOICE ONLY PACK)'],
               ['days_valid', 'VALID FOR (DAYS)'],
             ] as const
           ).map(([k, l]) => (

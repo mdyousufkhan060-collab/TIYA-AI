@@ -40,6 +40,8 @@ export async function premiumChat(
         ok: false,
         reason: body?.reason || 'server_error',
         message: body?.message || 'Premium সার্ভারে সমস্যা হয়েছে, একটু পরে চেষ্টা করুন।',
+        voiceLeft: body?.voice_left ?? null,
+        textLeft: body?.text_left ?? null,
       };
     }
     if (!data?.ok || !String(data?.text || '').trim()) {
@@ -102,4 +104,29 @@ export async function loadPremiumPayments(userId: string): Promise<PremiumPaymen
     .limit(20);
   if (error || !Array.isArray(data)) return [];
   return data as PremiumPayment[];
+}
+
+/** ROSE PREMIUM voice: Gemini TTS on the server. Returns base64 16-bit PCM (24 kHz mono). */
+export async function premiumTts(
+  text: string,
+  voiceName: string,
+): Promise<{ ok: boolean; audio?: string; message?: string; reason?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('tiya-premium', {
+      body: { action: 'tts', text: text.slice(0, 3000), voiceName },
+    });
+    if (error) {
+      let body: any = null;
+      try {
+        body = await (error as any)?.context?.json?.();
+      } catch {
+        body = null;
+      }
+      return { ok: false, reason: body?.reason, message: body?.message || 'ভয়েস তৈরি করা যায়নি।' };
+    }
+    if (!data?.ok || !data?.audio) return { ok: false, message: data?.message || 'ভয়েস তৈরি করা যায়নি।' };
+    return { ok: true, audio: String(data.audio) };
+  } catch {
+    return { ok: false, message: 'নেট সংযোগে সমস্যা।' };
+  }
 }

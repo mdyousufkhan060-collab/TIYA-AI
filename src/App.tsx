@@ -50,6 +50,7 @@ import {
   isMotivationRequest,
 } from './utils/motivation';
 import { useTiyaLiveVoice } from './hooks/useTiyaLiveVoice';
+import { usePremiumVoice } from './hooks/usePremiumVoice';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { AgeCheckScreen } from './components/auth/AgeCheckScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
@@ -378,12 +379,12 @@ export default function App() {
   }, []);
 
   const {
-    voiceState,
-    errorLabel,
-    errorDetail,
+    voiceState: liveVoiceState,
+    errorLabel: liveErrorLabel,
+    errorDetail: liveErrorDetail,
     audioLevel,
-    toggleVoice,
-    stopVoice,
+    toggleVoice: liveToggleVoice,
+    stopVoice: liveStopVoice,
     sendActionFeedbackToLive,
   } = useTiyaLiveVoice({
     settings,
@@ -398,6 +399,43 @@ export default function App() {
     onNavigate: handleNavigateCommand,
     onRequestLatestMotivation: fetchLatestPublishedMotivation,
   });
+
+  // ROSE PREMIUM voice: no own key + Premium credits -> server voice (uses VOICE credits).
+  const hasOwnVoiceKey = Boolean(
+    settings.apiKey.trim() || (settings.providerConnections?.groq?.apiKey || '').trim(),
+  );
+  const premiumVoiceMode = !hasOwnVoiceKey && isProfilePremium(profile);
+  const premiumVoice = usePremiumVoice({
+    language: settings.language,
+    voiceName: settings.voiceName,
+    volume: settings.volume,
+    speechSpeed: settings.speechSpeed,
+    buildSystemPrompt: () => buildTiyaSystemPrompt(settings, messages, 'chat', userAge, memories, isOwner),
+    getHistory: () =>
+      messages
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .map((m) => ({ role: m.role as 'user' | 'assistant', text: m.text })),
+    onAppend: (role, text) => handleAppendVoiceMessage(role, text),
+    onCredits: (v, t) =>
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              premium_voice_left: v ?? prev.premium_voice_left,
+              premium_text_left: t ?? prev.premium_text_left,
+            }
+          : prev,
+      ),
+  });
+  const voiceState = premiumVoiceMode ? premiumVoice.state : liveVoiceState;
+  const errorLabel = premiumVoiceMode ? premiumVoice.errorText : liveErrorLabel;
+  const errorDetail = premiumVoiceMode ? '' : liveErrorDetail;
+  const toggleVoice = premiumVoiceMode ? premiumVoice.toggle : liveToggleVoice;
+  const premiumVoiceStop = premiumVoice.stop;
+  const stopVoice = useCallback(() => {
+    liveStopVoice();
+    premiumVoiceStop();
+  }, [liveStopVoice, premiumVoiceStop]);
 
   // Sync voice errors into state error log
   useEffect(() => {
@@ -660,7 +698,7 @@ export default function App() {
       // No own key: Premium customers (and the admin) use the ROSE PREMIUM server
       const usePremiumServer = !key && (isAdmin || isProfilePremium(profile));
       if (!key && !usePremiumServer) {
-        setChatError('No API key. Add your Gemini API key in Settings > Connections.');
+        setChatError('No API key. Settings > Connections: add your free key, or buy ROSE Premium credits.');
         return;
       }
 
@@ -1356,6 +1394,9 @@ export default function App() {
             {activeTab === 'settings' && settingsPage === 'connections' && (
               <ConnectionsPage
                 settings={settings}
+                profile={profile}
+                isAdmin={isAdmin}
+                onOpenPremium={() => navigateTo('settings', 'premium')}
                 subpage={settingsSubpage}
                 onSelectSubpage={handleSelectSettingsSubpage}
                 onUpdateSettings={updateSettings}

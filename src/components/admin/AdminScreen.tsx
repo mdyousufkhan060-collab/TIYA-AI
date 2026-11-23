@@ -660,6 +660,11 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                           {u.blocked ? (
                             <span className="text-rose-500"> · Blocked</span>
                           ) : null}
+                          {(u.premium_text_left || u.premium_voice_left) ? (
+                            <span className="font-normal text-amber-500 dark:text-amber-300">
+                              {' '}· T {u.premium_text_left ?? 0} · V {u.premium_voice_left ?? 0}
+                            </span>
+                          ) : null}
                         </p>
                         <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
                           {u.email || u.id}
@@ -705,6 +710,17 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                 <span>Used today: {selectedUser.used_today ?? 0}</span>
               </div>
             </div>
+
+            {/* GRANT PREMIUM (months + voice/text replies + payment record) */}
+            <PremiumGrantCard
+              user={selectedUser}
+              onUpdated={(patchP) => {
+                const upd: UserProfile = { ...selectedUser, ...patchP };
+                setSelectedUser(upd);
+                setDraftPremium(true);
+                setUsers((prev) => prev.map((u) => (u.id === upd.id ? upd : u)));
+              }}
+            />
 
             {/* Editable Controls */}
             <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/[0.08] dark:bg-[#11151E]">
@@ -859,16 +875,6 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               </button>
             </div>
 
-            {/* GRANT PREMIUM (months + voice/text replies + payment record) */}
-            <PremiumGrantCard
-              user={selectedUser}
-              onUpdated={(patchP) => {
-                const upd: UserProfile = { ...selectedUser, ...patchP };
-                setSelectedUser(upd);
-                setDraftPremium(true);
-                setUsers((prev) => prev.map((u) => (u.id === upd.id ? upd : u)));
-              }}
-            />
 
             {/* FORCE LOGOUT */}
             <ForceLogoutButton user={selectedUser} />

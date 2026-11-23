@@ -14,7 +14,7 @@ const inputCls =
 const labelCls = 'block text-[10px] font-semibold tracking-wider text-slate-500 dark:text-slate-400';
 
 export const PremiumGrantCard: React.FC<PremiumGrantCardProps> = ({ user, onUpdated }) => {
-  const [months, setMonths] = useState<0 | 1 | 3 | 6 | 12>(1);
+  const [months, setMonths] = useState<0 | 1 | 3 | 6 | 12>(0);
   const [voice, setVoice] = useState('');
   const [text, setText] = useState('');
   const [amount, setAmount] = useState('');
@@ -42,7 +42,7 @@ export const PremiumGrantCard: React.FC<PremiumGrantCardProps> = ({ user, onUpda
     const v = toInt(voice);
     const t = toInt(text);
     if (months === 0 && v === 0 && t === 0) {
-      setMsg('Choose months or enter voice/text replies.');
+      setMsg('Choose months or enter text / voice credits.');
       return;
     }
     setBusy(true);
@@ -72,7 +72,7 @@ export const PremiumGrantCard: React.FC<PremiumGrantCardProps> = ({ user, onUpda
     setAmount('');
     setTrx('');
     setNote('');
-    setMsg('Premium granted.');
+    setMsg(`Done. Text ${res.textLeft ?? 0} · Voice ${res.voiceLeft ?? 0}. The user got a notification.`);
     setPayments(await loadPremiumPayments(user.id));
   };
 
@@ -82,13 +82,13 @@ export const PremiumGrantCard: React.FC<PremiumGrantCardProps> = ({ user, onUpda
     <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/[0.08] dark:bg-[#11151E]">
       <div className="flex items-center gap-2">
         <Crown className="h-4 w-4 text-amber-400" />
-        <p className="text-xs font-semibold tracking-wide text-slate-900 dark:text-slate-100">GRANT PREMIUM</p>
+        <p className="text-xs font-semibold tracking-wide text-slate-900 dark:text-slate-100">GIVE PREMIUM & CREDITS</p>
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-center">
         {[
-          { l: 'VOICE LEFT', v: user.premium_voice_left ?? 0 },
-          { l: 'TEXT LEFT', v: user.premium_text_left ?? 0 },
+          { l: 'TEXT CREDITS', v: user.premium_text_left ?? 0 },
+          { l: 'VOICE CREDITS', v: user.premium_voice_left ?? 0 },
           { l: 'VALID UNTIL', v: until },
         ].map((c) => (
           <div key={c.l} className="rounded-xl bg-slate-50 py-2 dark:bg-white/[0.04]">
@@ -118,15 +118,32 @@ export const PremiumGrantCard: React.FC<PremiumGrantCardProps> = ({ user, onUpda
         </div>
       </div>
 
+      {([
+        ['+ TEXT CREDITS (TYPING)', text, setText],
+        ['+ VOICE CREDITS', voice, setVoice],
+      ] as Array<[string, string, (v: string) => void]>).map(([label, val, set]) => (
+        <div key={label}>
+          <p className={labelCls}>{label}</p>
+          <div className="mt-1 grid grid-cols-[1fr_auto_auto_auto] gap-1.5">
+            <input type="number" min={0} value={val} onChange={(e) => set(e.target.value)} placeholder="0" className={`${inputCls} !mt-0`} />
+            {[100, 500, 1000].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => set(String((Number(val) || 0) + n))}
+                className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-bold text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200"
+              >
+                +{n}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
+        Only text, only voice, or both. Credits without months on a free account also turn Premium on for 1 month.
+      </p>
+
       <div className="grid grid-cols-2 gap-2">
-        <label className={labelCls}>
-          + VOICE REPLIES
-          <input type="number" min={0} value={voice} onChange={(e) => setVoice(e.target.value)} placeholder="0" className={inputCls} />
-        </label>
-        <label className={labelCls}>
-          + TEXT REPLIES
-          <input type="number" min={0} value={text} onChange={(e) => setText(e.target.value)} placeholder="0" className={inputCls} />
-        </label>
         <label className={labelCls}>
           AMOUNT (BDT)
           <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={inputCls} />
@@ -160,7 +177,7 @@ export const PremiumGrantCard: React.FC<PremiumGrantCardProps> = ({ user, onUpda
         className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-amber-500 text-xs font-semibold text-slate-900 hover:bg-amber-400 disabled:opacity-60"
       >
         {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-        <span>GRANT PREMIUM</span>
+        <span>GIVE NOW</span>
       </button>
 
       {payments.length > 0 && (

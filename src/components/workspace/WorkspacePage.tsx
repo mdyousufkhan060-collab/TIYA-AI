@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SettingsBar, SettingsSelectBar, SettingsShell } from '../settings/SettingsShell';
 import { CrudConfig, CrudSection, CrudField, SingleRowForm } from './CrudSection';
@@ -381,13 +381,15 @@ type View =
   | 'approvals'
   | 'couriers'
   | 'writer'
-  | 'customer_check';
+  | 'customer_check'
+  | 'biz_guide';
 
 const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
   mode: 'MODE',
   writer: 'WRITER',
   customer_check: 'CUSTOMER CHECK',
+  biz_guide: 'START HERE · GUIDE',
   tasks: TASKS.title,
   content: CONTENT.title,
   notes: NOTES.title,
@@ -404,6 +406,146 @@ const TITLES: Record<View, string> = {
   discounts: DISCOUNTS.title,
   approvals: APPROVALS.title,
   couriers: COURIERS.title,
+};
+
+/** Quick numbers on top of the business hub. */
+const BusinessGlance: React.FC<{ onOpen: (v: View) => void }> = ({ onOpen }) => {
+  const [d, setD] = useState<any>(null);
+  useEffect(() => {
+    void supabase.rpc('business_dashboard').then(({ data }) => setD(data || null));
+  }, []);
+  if (!d?.ok) return null;
+  const tk = (n: number) => `৳${Number(n || 0).toLocaleString('en-IN')}`;
+  const cells: Array<[string, string | number, View, boolean]> = [
+    ['SALES TODAY', tk(d.sales_today), 'biz_dashboard', false],
+    ['PENDING ORDERS', d.orders_pending ?? 0, 'orders', Number(d.orders_pending) > 0],
+    ['WAITING APPROVAL', d.approvals_pending ?? 0, 'approvals', Number(d.approvals_pending) > 0],
+    ['LOW STOCK', d.low_stock ?? 0, 'products', Number(d.low_stock) > 0],
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-1.5">
+      {cells.map(([l, v, to, warn]) => (
+        <button
+          key={l}
+          type="button"
+          onClick={() => onOpen(to)}
+          className={`rounded-[4px] border px-3 py-2 text-left ${warn ? 'border-amber-400/50 bg-amber-500/10' : 'border-white/[0.08] bg-[#11151E]'}`}
+        >
+          <p className="text-[9px] font-bold tracking-wider text-slate-400">{l}</p>
+          <p className={`font-mono text-base font-bold ${warn ? 'text-amber-300' : 'text-white'}`}>{v}</p>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+/** START HERE: what to add, in what order, and what is already done. */
+const BusinessGuide: React.FC<{ businessId: string | null; onOpen: (v: View) => void }> = ({ businessId, onOpen }) => {
+  const [c, setC] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    if (!businessId) {
+      setC({});
+      return;
+    }
+    const count = (t: string) =>
+      supabase.from(t).select('id', { count: 'exact', head: true }).eq('business_id', businessId).then(({ count: n }) => n || 0);
+    void Promise.all([
+      count('business_products'),
+      count('business_faqs'),
+      count('business_couriers'),
+      count('business_discount_rules'),
+      count('business_ai_settings'),
+      count('business_orders'),
+      count('business_customers'),
+    ]).then(([products, faqs, couriers, discounts, ai, orders, customers]) =>
+      setC({ products, faqs, couriers, discounts, ai, orders, customers }),
+    );
+  }, [businessId]);
+
+  if (!c)
+    return (
+      <div className="flex items-center justify-center py-10 text-xs text-slate-500">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
+      </div>
+    );
+
+  const steps: Array<[View, string, string, boolean, string]> = [
+    ['biz_profile', 'BUSINESS PROFILE', 'Shop name, owner, mobile, Gmail, address, payment numbers.', Boolean(businessId), businessId ? 'DONE' : 'START'],
+    ['products', 'PRODUCTS & PRICES', 'Every item with price and stock. ROSE answers prices from here.', (c.products || 0) > 0, `${c.products || 0}`],
+    ['faqs', 'CUSTOMER FAQ', 'Delivery time, charge, return policy. ROSE replies to customers from here.', (c.faqs || 0) > 0, `${c.faqs || 0}`],
+    ['couriers', 'COURIERS', 'Steadfast, Pathao, RedX... with charge inside / outside Dhaka.', (c.couriers || 0) > 0, `${c.couriers || 0}`],
+    ['discounts', 'DISCOUNT RULES', 'How much discount ROSE may give, and when to ask you first.', (c.discounts || 0) > 0, `${c.discounts || 0}`],
+    ['biz_ai', 'ROSE AI REPLY CONTROL', 'Tone, language, what ROSE may and may not say.', (c.ai || 0) > 0, (c.ai || 0) > 0 ? 'DONE' : 'SET'],
+  ];
+  const done = steps.filter((s) => s[3]).length;
+  const pct = Math.round((done / steps.length) * 100);
+
+  const daily: Array<[View, string, string]> = [
+    ['orders', 'ORDERS', 'Add each order, payment (COD / advance), courier and tracking.'],
+    ['customers', 'CUSTOMERS', 'Name, phone, address. Saved once, used every time.'],
+    ['customer_check', 'CUSTOMER CHECK', 'Type a phone number: see courier history before sending.'],
+    ['approvals', 'APPROVALS', 'Discounts or big orders ROSE asked you to approve.'],
+    ['expenses', 'EXPENSES', 'Rent, ads, packaging. Profit is worked out for you.'],
+    ['biz_dashboard', 'DASHBOARD', 'Sales today, 7 and 30 days, profit, low stock.'],
+    ['writer', 'WRITER', 'Posts, captions, invoices, messages. Copy, download or send.'],
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-[4px] border border-teal-500/40 bg-teal-500/[0.07] p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-extrabold tracking-wider text-teal-200">SETUP {done}/{steps.length}</p>
+          <p className="font-mono text-sm font-bold text-teal-300">{pct}%</p>
+        </div>
+        <div className="mt-2 h-1.5 w-full bg-white/10">
+          <div className="h-full bg-gradient-to-r from-teal-400 to-cyan-400" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="mt-2 text-[10.5px] text-slate-300">Finish these once. After that ROSE can answer your customers and help with orders.</p>
+      </div>
+
+      <p className="px-1 text-[10px] font-bold tracking-wider text-slate-400">STEP BY STEP</p>
+      <div className="space-y-1.5">
+        {steps.map(([v, t, d, ok, val], i) => (
+          <button
+            key={v}
+            type="button"
+            disabled={!businessId && v !== 'biz_profile'}
+            onClick={() => onOpen(v)}
+            className="flex w-full items-start gap-2.5 rounded-[4px] border border-white/[0.08] bg-[#11151E] px-3 py-2.5 text-left disabled:opacity-40"
+          >
+            {ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />}
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11.5px] font-bold text-white">{String(i + 1).padStart(2, '0')} · {t}</span>
+              <span className="block text-[10.5px] leading-snug text-slate-400">{d}</span>
+            </span>
+            <span className={`shrink-0 font-mono text-[10px] font-bold ${ok ? 'text-emerald-300' : 'text-amber-300'}`}>{val}</span>
+          </button>
+        ))}
+      </div>
+
+      <p className="px-1 pt-1 text-[10px] font-bold tracking-wider text-slate-400">EVERY DAY</p>
+      <div className="space-y-1.5">
+        {daily.map(([v, t, d]) => (
+          <button
+            key={v}
+            type="button"
+            disabled={!businessId}
+            onClick={() => onOpen(v)}
+            className="w-full rounded-[4px] border border-white/[0.08] bg-[#11151E] px-3 py-2 text-left disabled:opacity-40"
+          >
+            <span className="block text-[11.5px] font-bold text-white">{t}</span>
+            <span className="block text-[10.5px] text-slate-400">{d}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-[4px] border border-fuchsia-400/30 bg-fuchsia-500/[0.06] p-3 text-[10.5px] leading-relaxed text-slate-300">
+        <p className="mb-1 text-[11px] font-extrabold tracking-wider text-fuchsia-200">TALK TO ROSE</p>
+        "আজকে কত বিক্রি হলো?" · "কোন প্রোডাক্টের স্টক কম?" · "এই নম্বরের কাস্টমারের কুরিয়ার হিস্ট্রি দেখো" · "নতুন পোস্টের ক্যাপশন লেখো"
+        <p className="mt-1 text-slate-400">Totals so far: {c.orders || 0} orders · {c.customers || 0} customers.</p>
+      </div>
+    </div>
+  );
 };
 
 const BusinessDashboard: React.FC = () => {
@@ -492,21 +634,32 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   if (view === 'hub') {
     const personal = [bar('01', 'tasks'), bar('02', 'content'), bar('03', 'writer')];
     const student = [bar('01', 'notes'), bar('02', 'routine'), bar('03', 'tests'), bar('04', 'tasks'), bar('05', 'writer')];
+    const label = (t: string) => (
+      <p key={`l_${t}`} className="px-1 pt-2 text-[10px] font-bold tracking-wider text-slate-400">
+        {t}
+      </p>
+    );
     const business = [
+      <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
+      ...(businessId ? [<div key="glance" className="pt-1.5"><BusinessGlance onOpen={setView} /></div>] : []),
+      label('SETUP'),
       bar('01', 'biz_profile', businessId ? 'READY' : 'SET UP'),
       ...(businessId
         ? [
-            bar('02', 'biz_dashboard'),
-            bar('03', 'products'),
-            bar('04', 'orders'),
-            bar('05', 'customers'),
-            bar('06', 'customer_check', 'COURIER HISTORY'),
-            bar('07', 'approvals'),
-            bar('08', 'discounts'),
-            bar('09', 'faqs'),
-            bar('10', 'expenses'),
-            bar('11', 'couriers'),
-            bar('12', 'biz_ai'),
+            bar('02', 'products'),
+            bar('03', 'faqs'),
+            bar('04', 'couriers'),
+            bar('05', 'discounts'),
+            bar('06', 'biz_ai'),
+            label('DAILY WORK'),
+            bar('07', 'orders'),
+            bar('08', 'customers'),
+            bar('09', 'customer_check', 'COURIER HISTORY'),
+            bar('10', 'approvals'),
+            label('MONEY & REPORTS'),
+            bar('11', 'biz_dashboard'),
+            bar('12', 'expenses'),
+            label('TOOLS'),
             bar('13', 'writer'),
           ]
         : []),
@@ -570,6 +723,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
       />
     );
   else if (view === 'biz_dashboard') body = <BusinessDashboard />;
+  else if (view === 'biz_guide') body = <BusinessGuide businessId={businessId} onOpen={setView} />;
   else if (bScope) {
     if (view === 'biz_ai')
       body = <SingleRowForm table="business_ai_settings" match={bScope} fields={AI_FIELDS} onSaved={refreshAi} />;
