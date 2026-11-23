@@ -277,6 +277,13 @@ export default function App() {
     [],
   );
 
+  // ROSE Android app: user came back with the floating ROSE button -> show ROSE home.
+  useEffect(() => {
+    const onReturn = () => navigateTo('home');
+    window.addEventListener('rose-native-return', onReturn);
+    return () => window.removeEventListener('rose-native-return', onReturn);
+  }, [navigateTo]);
+
   const handleNavigateBack = useCallback(() => {
     const cur = navStateRef.current;
     if (cur.tab === 'settings' && cur.subpage) {
