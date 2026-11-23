@@ -614,6 +614,44 @@ export default function App() {
     [sendActionFeedbackToLive, updateMessages],
   );
 
+  // Voice "হ্যাঁ" / "না" answers the waiting Confirm card (calls and messages).
+  const voiceDecidedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    let lastUser: ChatMessage | undefined;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUser = messages[i];
+        break;
+      }
+    }
+    if (!lastUser || voiceDecidedRef.current.has(lastUser.id)) return;
+    const pending = [...messages]
+      .reverse()
+      .find(
+        (m) =>
+          m.pendingAction &&
+          (m.actionStatus === 'pending' || !m.actionStatus) &&
+          m.timestamp <= lastUser!.timestamp &&
+          lastUser!.timestamp - m.timestamp < 120000,
+      );
+    if (!pending?.pendingAction) return;
+    const said = lastUser.text
+      .toLowerCase()
+      .replace(/[.,!?।"'“”‘’¿¡]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const YES = ['হ্যাঁ', 'হ্যা', 'হা', 'হাঁ', 'হুম', 'জি', 'জ্বি', 'জী', 'ইয়েস', 'ওকে', 'ঠিক আছে', 'পাঠাও', 'পাঠিয়ে দাও', 'পাঠিয়ে দিন', 'দাও', 'কল দাও', 'সেন্ড', 'yes', 'yeah', 'yep', 'ok', 'okay', 'sure', 'send', 'haan', 'han', 'ha', 'हाँ', 'हां', 'हैं', 'sí', 'si'];
+    const NO = ['না', 'নাহ', 'না থাক', 'বাতিল', 'থাক', 'cancel', 'no', 'nope', 'नहीं'];
+    const starts = (words: string[]) => words.some((w) => said === w || said.startsWith(`${w} `));
+    if (starts(NO)) {
+      voiceDecidedRef.current.add(lastUser.id);
+      handleCancelAction(pending.id);
+    } else if (starts(YES)) {
+      voiceDecidedRef.current.add(lastUser.id);
+      void handleConfirmAction(pending.id, pending.pendingAction);
+    }
+  }, [messages, handleConfirmAction, handleCancelAction]);
+
   const deliverMotivationInChat = useCallback(
     async (post: MotivationPost | null): Promise<string> => {
       if (!post || !post.body?.trim()) {
