@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Home, Mic, Send, Square, Trash2 } from 'lucide-react';
+import { Flag, Home, Mic, Send, Square, Trash2 } from 'lucide-react';
 import { ChatMessage, PhoneAction, TiyaSettings } from '../types/tiya';
 import { ActionConfirmCard } from './ActionConfirmCard';
 import { TiyaNeonNav } from './TiyaNeonNav';
+import { MessageActions } from './MessageActions';
+import { ReportSheet } from './ReportSheet';
 
 interface ChatScreenProps {
   settings: TiyaSettings;
@@ -45,6 +47,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [isRecordingMic, setIsRecordingMic] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [micError, setMicError] = useState('');
+  const [reportOpen, setReportOpen] = useState(false);
 
   const listEndRef = useRef<HTMLDivElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -224,6 +227,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               >
                 <p className="whitespace-pre-wrap break-words">{msg.text}</p>
               </div>
+              {msg.role === 'assistant' && msg.text.trim() && (() => {
+                const i = messages.findIndex((m) => m.id === msg.id);
+                const prevUser = [...messages.slice(0, i)].reverse().find((m) => m.role === 'user');
+                return (
+                  <MessageActions
+                    text={msg.text}
+                    question={prevUser?.text}
+                    voiceName={settings.voiceName}
+                    onRegenerate={prevUser && !isSending ? () => void onSendMessage(prevUser.text) : undefined}
+                  />
+                );
+              })()}
               {msg.pendingAction && (
                 <div className="w-full max-w-[85%]">
                   <ActionConfirmCard
@@ -289,6 +304,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             className="h-11 min-w-0 flex-1 rounded-full border border-cyan-400/30 bg-[#06122A]/90 px-4 text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300 focus:outline-none"
           />
           <button
+            type="button"
+            onClick={() => setReportOpen(true)}
+            aria-label="Report a problem"
+            title="Report a problem"
+            className="flex h-11 w-9 shrink-0 items-center justify-center rounded-full text-cyan-100/50 hover:text-rose-300 active:scale-95"
+          >
+            <Flag className="h-4 w-4" />
+          </button>
+          <button
             type="submit"
             disabled={!input.trim() || isSending}
             aria-label="Send message"
@@ -298,6 +322,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           </button>
         </form>
       </div>
+
+      <ReportSheet open={reportOpen} onClose={() => setReportOpen(false)} page="chat" />
 
       {/* Same bottom bar as HOME, fixed to the screen bottom */}
       <TiyaNeonNav

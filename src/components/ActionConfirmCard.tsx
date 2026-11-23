@@ -33,6 +33,8 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
         return <MessageSquare className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
       case 'web_search':
         return <Search className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
+      case 'close_opened':
+        return <X className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
     }
   };
 
@@ -52,6 +54,8 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
         return `Messenger Call · ${action.contact}`;
       case 'web_search':
         return `Search ${action.site.toUpperCase()} · ${action.query}`;
+      case 'close_opened':
+        return 'Close & back to ROSE';
     }
   };
 

@@ -30,6 +30,7 @@ import { AdminGivePremiumPage, AdminLoginActivityPage, ForceLogoutButton } from 
 import { AdminDeveloperProfilePage } from './AdminDeveloperProfilePage';
 import { AdminBusinessesPage, AdminTeamActivityPage } from './AdminBusinessPages';
 import { UserAvatar } from './UserAvatar';
+import { AdminReportsPage } from './AdminReportsPage';
 import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
@@ -45,6 +46,7 @@ type AdminView =
   | 'dev_profile'
   | 'businesses'
   | 'team_activity'
+  | 'reports'
   | 'logins'
   | 'payments'
   | 'plans'
@@ -84,6 +86,14 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
 }) => {
   const [view, setView] = useState<AdminView>((controlledView as AdminView) || 'hub');
   const [pendingPayments, setPendingPayments] = useState(0);
+  const [openReports, setOpenReports] = useState(0);
+  useEffect(() => {
+    void supabase
+      .from('user_reports')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'open')
+      .then(({ count }) => setOpenReports(count || 0));
+  }, [view]);
 
   // PC: right pane follows the bar picked on the left; never shows the bar list itself
   useEffect(() => {
@@ -423,6 +433,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               dev_profile: '15 Developers',
               businesses: '16 Businesses',
               team_activity: '17 Team Activity',
+              reports: '18 Reports & Feedback',
             } as Record<string, string>
           )[view] || 'Admin';
 
@@ -441,8 +452,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               badge="04"
               title="PAYMENTS"
               value={pendingPayments > 0 ? `${pendingPayments} NEW` : undefined}
-              tone={pendingPayments > 0 ? 'accent' : 'default'}
-              tone={activeView === 'payments' ? 'accent' : 'default'} onClick={() => go('payments')}
+              tone={pendingPayments > 0 || activeView === 'payments' ? 'accent' : 'default'}
+              onClick={() => go('payments')}
               testId="admin-bar-payments"
             />
             <SettingsBar badge="05" title="PLANS & PRICES" tone={activeView === 'plans' ? 'accent' : 'default'} onClick={() => go('plans')} testId="admin-bar-plans" />
@@ -468,6 +479,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="15" title="DEVELOPERS" value="PUBLIC" tone={activeView === 'dev_profile' ? 'accent' : 'default'} onClick={() => go('dev_profile')} testId="admin-bar-dev-profile" />
             <SettingsBar badge="16" title="BUSINESSES" tone={activeView === 'businesses' ? 'accent' : 'default'} onClick={() => go('businesses')} testId="admin-bar-businesses" />
             <SettingsBar badge="17" title="TEAM ACTIVITY" tone={activeView === 'team_activity' ? 'accent' : 'default'} onClick={() => go('team_activity')} testId="admin-bar-team" />
+            <SettingsBar badge="18" title="REPORTS & FEEDBACK" value={openReports > 0 ? `${openReports} NEW` : undefined} tone={openReports > 0 || activeView === 'reports' ? 'accent' : 'default'} onClick={() => go('reports')} testId="admin-bar-reports" />
           </div>
   );
 
@@ -569,6 +581,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'dev_profile' && <AdminDeveloperProfilePage />}
         {view === 'businesses' && <AdminBusinessesPage />}
         {view === 'team_activity' && <AdminTeamActivityPage />}
+        {view === 'reports' && <AdminReportsPage />}
 
         {view === 'dashboard' && (
           <div className="space-y-4">

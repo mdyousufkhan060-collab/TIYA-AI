@@ -25,12 +25,15 @@ import {
   Users,
   Wallet,
   XCircle,
+  Flag,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { loadProfilesByEmail, loadProfilesById } from '../admin/UserAvatar';
 import { AGENTS, AgentTask, agentById } from '../../lib/agents';
 import { ChatMessage, VoiceState } from '../../types/tiya';
 import { TeamPanel } from '../team/TeamPanel';
+import { MessageActions } from '../MessageActions';
+import { ReportSheet } from '../ReportSheet';
 
 /**
  * PC layout (wide screens). One top bar (no duplicate buttons), the centre shows
@@ -574,6 +577,7 @@ export const DesktopRosePanel: React.FC<{
   /** send a ROSE reply into the WRITER */
   onToWriter?: (text: string) => void;
 }> = ({ messages, isSending, voiceState, onSend, onVoice, onToWriter }) => {
+  const [reportOpen, setReportOpen] = useState(false);
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement | null>(null);
   const recent = messages.slice(-60);
@@ -625,6 +629,18 @@ export const DesktopRosePanel: React.FC<{
                 >
                   {m.text}
                 </p>
+                {m.role !== 'user' && m.text.trim() && (() => {
+                  const i = recent.findIndex((x) => x.id === m.id);
+                  const prevUser = [...recent.slice(0, i)].reverse().find((x) => x.role === 'user');
+                  return (
+                    <MessageActions
+                      compact
+                      text={m.text}
+                      question={prevUser?.text}
+                      onRegenerate={prevUser && !isSending ? () => onSend(prevUser.text) : undefined}
+                    />
+                  );
+                })()}
                 {m.role !== 'user' && onToWriter && m.text.length > 40 && (
                   <button
                     type="button"
@@ -650,7 +666,17 @@ export const DesktopRosePanel: React.FC<{
         )}
       </div>
 
+      <ReportSheet open={reportOpen} onClose={() => setReportOpen(false)} page="pc-chat" />
       <div className="relative flex shrink-0 gap-2 border-t border-white/[0.08] p-3 backdrop-blur-sm">
+        <button
+          type="button"
+          onClick={() => setReportOpen(true)}
+          title="Report a problem"
+          aria-label="Report a problem"
+          className="flex h-11 w-8 shrink-0 items-center justify-center text-slate-400 hover:text-rose-300"
+        >
+          <Flag className="h-4 w-4" />
+        </button>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}

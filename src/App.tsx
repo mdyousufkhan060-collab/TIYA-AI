@@ -36,6 +36,7 @@ import {
 import { buildTiyaSystemPrompt, isTiyaOwnerEmail } from './utils/prompts';
 import {
   executePhoneAction,
+  openTracked,
   extractActionFromText,
   getConfirmationPromptText,
 } from './utils/phoneActions';
@@ -490,13 +491,7 @@ export default function App() {
         typeof window !== 'undefined' ? window.TiyaNative : undefined,
         (url) => {
           setActionLinks((prev) => ({ ...prev, [msgId]: url }));
-          if (/^https?:\/\//.test(url)) {
-            try {
-              window.open(url, '_blank', 'noopener');
-            } catch {
-              /* the link stays in the chat */
-            }
-          }
+          if (/^https?:\/\//.test(url)) openTracked(url);
         },
       );
 

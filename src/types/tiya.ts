@@ -248,7 +248,8 @@ export type PhoneAction =
   | { action: 'whatsapp_message'; contact: string; text: string }
   | { action: 'messenger_message'; contact: string; text: string }
   | { action: 'messenger_call'; contact: string }
-  | { action: 'web_search'; site: string; query: string };
+  | { action: 'web_search'; site: string; query: string }
+  | { action: 'close_opened' };
 
 export type ActionStatus = 'pending' | 'confirmed' | 'cancelled' | 'executed' | 'failed';
 

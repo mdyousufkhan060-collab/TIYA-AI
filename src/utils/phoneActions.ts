@@ -41,7 +41,13 @@ export const SUPPORTED_PHONE_ACTIONS_META = [
     action: 'web_search',
     label: 'Search / Play',
     example: '{"action":"web_search","site":"youtube","query":"..."}',
-    description: 'Searches or plays on Google, YouTube, YouTube Music, Facebook videos, Google Maps or Wikipedia.',
+    description: 'Searches or plays on Google, YouTube, YouTube Music, Facebook videos, Google Maps, directions, flights, hotels or Wikipedia.',
+  },
+  {
+    action: 'close_opened',
+    label: 'Close & Come Back',
+    example: '{"action":"close_opened"}',
+    description: 'Closes the tabs ROSE opened (YouTube, Maps...) and comes back to ROSE.',
   },
 ] as const;
 
@@ -54,10 +60,53 @@ const SEARCH_SITES: Record<string, { label: string; url: (q: string) => string }
   wikipedia: { label: 'Wikipedia', url: (q) => `https://bn.wikipedia.org/w/index.php?search=${q}` },
   images: { label: 'Google Images', url: (q) => `https://www.google.com/search?tbm=isch&q=${q}` },
   news: { label: 'Google News', url: (q) => `https://news.google.com/search?q=${q}` },
+  directions: { label: 'Google Maps directions', url: (q) => `https://www.google.com/maps/dir/?api=1&destination=${q}` },
+  flights: { label: 'Google Flights', url: (q) => `https://www.google.com/travel/flights?q=${q}` },
+  hotels: { label: 'Google Hotels', url: (q) => `https://www.google.com/travel/hotels?q=${q}` },
 };
+
+/* Tabs / windows ROSE opened, so "বন্ধ করো" can close them again. */
+const openedWindows: Window[] = [];
+
+export function openTracked(url: string): boolean {
+  try {
+    const w = window.open(url, '_blank');
+    if (w) {
+      openedWindows.push(w);
+      return true;
+    }
+  } catch {
+    /* blocked */
+  }
+  return false;
+}
+
+export function closeOpenedWindows(): number {
+  let n = 0;
+  while (openedWindows.length) {
+    const w = openedWindows.pop();
+    try {
+      if (w && !w.closed) {
+        w.close();
+        n++;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  try {
+    window.focus();
+  } catch {
+    /* ignore */
+  }
+  return n;
+}
 
 export function normalizeSearchSite(site: unknown): string {
   const s = String(site || '').toLowerCase();
+  if (/direction|route|navigat|যাব|যাওয়া|দিকনির্দেশ|রাস্তা দেখাও/.test(s)) return 'directions';
+  if (/flight|plane|air|টিকেট|টিকিট|বিমান|ফ্লাইট/.test(s)) return 'flights';
+  if (/hotel|হোটেল|resort/.test(s)) return 'hotels';
   if (/music|gaan|গান|song|spotify/.test(s)) return 'music';
   if (/you ?tube|ইউটিউব|ytb|yt/.test(s)) return 'youtube';
   if (/face ?book|ফেসবুক|fb/.test(s)) return 'facebook';
@@ -105,6 +154,8 @@ export function getConfirmationPromptText(action: PhoneAction): string {
       return `${action.contact}-কে মেসেঞ্জারে "${action.text}" পাঠাবো?`;
     case 'open_app':
       return `${action.app} অ্যাপটি খুলবো?`;
+    case 'close_opened':
+      return 'ROSE যেসব ট্যাব খুলেছিল সেগুলো বন্ধ করে ROSE-এ ফিরবো?';
     case 'web_search': {
       const site = SEARCH_SITES[normalizeSearchSite(action.site)];
       return `${site.label}-এ "${action.query}" খুঁজে দেখাবো?`;
@@ -165,6 +216,10 @@ export function validatePhoneAction(raw: unknown): PhoneAction | null {
         return { action: 'messenger_call', contact: obj.contact.trim() };
       }
       return null;
+    case 'close_opened':
+    case 'close_app':
+    case 'go_home':
+      return { action: 'close_opened' };
     case 'web_search': {
       const query = typeof obj.query === 'string' ? obj.query.trim() : typeof obj.text === 'string' ? obj.text.trim() : '';
       if (!query) return null;
@@ -265,6 +320,15 @@ export function buildWebFallback(action: PhoneAction): ActionExecutionResult {
       messageBn: digits
         ? `${action.contact}-এর জন্য হোয়াটসঅ্যাপ চ্যাট লিংক তৈরি করা হয়েছে। পাঠাতে লিংকটি ওপেন করুন।`
         : `ব্রাউজারে সরাসরি কনট্যাক্ট খুঁজে পাঠানো যায় না—এটি ROSE Android অ্যাপে কাজ করে। তবে মেসেজসহ WhatsApp লিংক নিচে দেওয়া হলো।`,
+    };
+  }
+
+  if (action.action === 'close_opened') {
+    const n = closeOpenedWindows();
+    return {
+      success: true,
+      via: 'web_fallback',
+      messageBn: n > 0 ? `${n}টা ট্যাব বন্ধ করে ROSE-এ ফিরে এসেছি।` : 'ROSE-এ ফিরে এসেছি। অন্য অ্যাপ নিজে বন্ধ করতে হলে ROSE Android অ্যাপ লাগবে।',
     };
   }
 
