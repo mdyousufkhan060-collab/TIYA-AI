@@ -15,14 +15,16 @@ export interface AgentInfo {
   role: string;
   color: string;
   skills: string;
+  /** round photo in public/agents */
+  photo: string;
 }
 
 export const AGENTS: AgentInfo[] = [
-  { id: 'rose', name: 'ROSE', nameBn: 'রোজ', role: 'Chief Manager', color: '#FF4D8D', skills: 'Plans the work, gives tasks to the team and reports to the owner.' },
-  { id: 'mira', name: 'MIRA', nameBn: 'মিরা', role: 'Customer Communication', color: '#2DD4BF', skills: 'Writes replies to customers, follow-up messages, offers and FAQ answers.' },
-  { id: 'arin', name: 'ARIN', nameBn: 'আরিন', role: 'Sales & Orders', color: '#60A5FA', skills: 'Checks orders, prices, stock and sales; prepares order summaries.' },
-  { id: 'zayan', name: 'ZAYAN', nameBn: 'জায়ান', role: 'Parcel & Delivery', color: '#FBBF24', skills: 'Plans deliveries, writes delivery notes and tracking updates.' },
-  { id: 'naira', name: 'NAIRA', nameBn: 'নাইরা', role: 'Audit & Analytics', color: '#A78BFA', skills: 'Checks accounts, expenses and profit, finds problems, writes reports.' },
+  { id: 'rose', name: 'ROSE', nameBn: 'রোজ', role: 'Chief Manager', color: '#FF4D8D', skills: 'Plans the work, gives tasks to the team and reports to the owner.', photo: '/agents/rose.png' },
+  { id: 'mira', name: 'MIRA', nameBn: 'মিরা', role: 'Customer Communication', color: '#2DD4BF', skills: 'Writes replies to customers, follow-up messages, offers and FAQ answers.', photo: '/agents/mira.png' },
+  { id: 'arin', name: 'ARIN', nameBn: 'আরিন', role: 'Sales & Orders', color: '#60A5FA', skills: 'Checks orders, prices, stock and sales; prepares order summaries.', photo: '/agents/arin.png' },
+  { id: 'zayan', name: 'ZAYAN', nameBn: 'জায়ান', role: 'Parcel & Delivery', color: '#FBBF24', skills: 'Plans deliveries, writes delivery notes and tracking updates.', photo: '/agents/zayan.png' },
+  { id: 'naira', name: 'NAIRA', nameBn: 'নাইরা', role: 'Audit & Analytics', color: '#A78BFA', skills: 'Checks accounts, expenses and profit, finds problems, writes reports.', photo: '/agents/naira.png' },
 ];
 
 export const agentById = (id: string) => AGENTS.find((a) => a.id === id) || AGENTS[0];

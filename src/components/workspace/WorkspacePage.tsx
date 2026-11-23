@@ -195,6 +195,35 @@ export const CUSTOMERS: CrudConfig = {
   ],
 };
 
+export const COURIER_OPTS = [
+  { value: 'pathao', label: 'PATHAO' },
+  { value: 'steadfast', label: 'STEADFAST' },
+  { value: 'redx', label: 'REDX' },
+  { value: 'paperfly', label: 'PAPERFLY' },
+  { value: 'sundarban', label: 'SUNDARBAN' },
+  { value: 'ecourier', label: 'ECOURIER' },
+  { value: 'sa_paribahan', label: 'SA PARIBAHAN' },
+  { value: 'own', label: 'OWN DELIVERY' },
+];
+
+const COURIERS: CrudConfig = {
+  table: 'business_couriers',
+  title: 'COURIERS',
+  titleKey: 'courier',
+  subKey: 'account_name',
+  badgeKey: 'is_default',
+  orderBy: { column: 'created_at', ascending: true },
+  emptyText: 'Add the couriers you use. When you APPROVE an order it is marked ready for your default courier.',
+  fields: [
+    { key: 'courier', label: 'COURIER', type: 'select', required: true, options: COURIER_OPTS },
+    { key: 'account_name', label: 'MERCHANT / SHOP NAME', type: 'text' },
+    { key: 'merchant_id', label: 'MERCHANT ID', type: 'text' },
+    { key: 'pickup_address', label: 'PICKUP ADDRESS', type: 'textarea' },
+    { key: 'pickup_phone', label: 'PICKUP PHONE', type: 'text' },
+    { key: 'is_default', label: 'DEFAULT COURIER', type: 'bool', defaultValue: false },
+  ],
+};
+
 const STATUS_OPTS = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((v) => ({ value: v, label: v.toUpperCase() }));
 export const ORDERS: CrudConfig = {
   table: 'business_orders',
@@ -218,6 +247,14 @@ export const ORDERS: CrudConfig = {
       options: ['unpaid', 'paid', 'refunded'].map((v) => ({ value: v, label: v.toUpperCase() })),
     },
     { key: 'delivery_address', label: 'DELIVERY ADDRESS', type: 'textarea' },
+    { key: 'courier', label: 'COURIER', type: 'select', options: COURIER_OPTS },
+    {
+      key: 'courier_status',
+      label: 'COURIER STATUS',
+      type: 'select',
+      defaultValue: 'not_sent',
+      options: ['not_sent', 'ready', 'booked', 'picked', 'delivered', 'returned'].map((v) => ({ value: v, label: v.replace('_', ' ').toUpperCase() })),
+    },
     { key: 'tracking_code', label: 'TRACKING CODE', type: 'text' },
     {
       key: 'source',
@@ -292,6 +329,7 @@ const APPROVALS: CrudConfig = {
       options: ['discount', 'refund', 'cancel', 'other'].map((v) => ({ value: v, label: v.toUpperCase() })),
     },
     { key: 'customer_id', label: 'CUSTOMER', type: 'ref', refTable: 'business_customers', refLabel: 'name' },
+    { key: 'order_id', label: 'ORDER (APPROVE = CONFIRM + COURIER, REJECT = CANCEL)', type: 'ref', refTable: 'business_orders', refLabel: 'note' },
     { key: 'requested_percent', label: 'REQUESTED DISCOUNT %', type: 'number' },
     { key: 'requested_amount', label: 'REQUESTED AMOUNT (TK)', type: 'number' },
     { key: 'message', label: 'DETAILS', type: 'textarea', required: true },
@@ -326,7 +364,8 @@ type View =
   | 'expenses'
   | 'faqs'
   | 'discounts'
-  | 'approvals';
+  | 'approvals'
+  | 'couriers';
 
 const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
@@ -346,6 +385,7 @@ const TITLES: Record<View, string> = {
   faqs: FAQS.title,
   discounts: DISCOUNTS.title,
   approvals: APPROVALS.title,
+  couriers: COURIERS.title,
 };
 
 const BusinessDashboard: React.FC = () => {
@@ -444,7 +484,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             bar('07', 'discounts'),
             bar('08', 'faqs'),
             bar('09', 'expenses'),
-            bar('10', 'biz_ai'),
+            bar('10', 'couriers'),
+            bar('11', 'biz_ai'),
           ]
         : []),
     ];
@@ -516,6 +557,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     else if (view === 'faqs') body = <CrudSection config={FAQS} scope={bScope} onChanged={refreshAi} />;
     else if (view === 'discounts') body = <CrudSection config={DISCOUNTS} scope={bScope} />;
     else if (view === 'approvals') body = <CrudSection config={APPROVALS} scope={bScope} />;
+    else if (view === 'couriers') body = <CrudSection config={COURIERS} scope={bScope} />;
   }
 
   return (

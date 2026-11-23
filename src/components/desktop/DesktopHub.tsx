@@ -11,6 +11,7 @@ import {
   Mic,
   MicOff,
   Send,
+  Settings,
   ShoppingCart,
   Smartphone,
   Users,
@@ -46,7 +47,7 @@ export const DesktopTopBar: React.FC<{
   const tabs: Array<[DesktopTab, string, React.ReactNode]> = [
     ['dashboard', 'Dashboard', <LayoutDashboard key="d" className="h-4 w-4" />],
     ['team', 'Team & Tasks', <ListChecks key="t" className="h-4 w-4" />],
-    ['app', 'App & Settings', <Smartphone key="a" className="h-4 w-4" />],
+    ['app', 'Settings', <Settings key="a" className="h-4 w-4" />],
   ];
   return (
     <header className="col-span-2 flex h-14 items-center gap-3 rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]/90 px-3">
@@ -263,7 +264,7 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
   );
 
   return (
-    <div className="tiya-scroll h-full space-y-3 overflow-y-auto pr-1">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       {/* stat tiles */}
       {tiles === null ? (
         <div className="flex h-24 items-center justify-center text-xs text-slate-500">
@@ -288,8 +289,8 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
       )}
 
       {/* feed + chart */}
-      <div className="grid grid-cols-[1fr_1.25fr] gap-3">
-        <section className="rounded-[10px] border border-white/[0.08] bg-[#120F22] p-4">
+      <div className="grid min-h-0 flex-1 grid-cols-[1fr_1.25fr] gap-3">
+        <section className="tiya-scroll min-h-0 overflow-y-auto rounded-[10px] border border-white/[0.08] bg-[#120F22] p-4">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-bold text-white">
               <Activity className="h-4 w-4 text-fuchsia-400" /> Live Activity
@@ -302,13 +303,11 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
             <p className="py-10 text-center text-xs text-slate-500">No activity yet. Give the team a task.</p>
           ) : (
             <div className="space-y-1">
-              {tasks.slice(0, 6).map((t) => {
+              {tasks.slice(0, 20).map((t) => {
                 const a = agentById(t.agent);
                 return (
                   <div key={t.id} className="flex items-center gap-2.5 rounded-[6px] px-1.5 py-2 hover:bg-white/[0.03]">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-xs font-extrabold text-black" style={{ background: a.color }}>
-                      {a.name[0]}
-                    </span>
+                    <img src={a.photo} alt={a.name} className="h-8 w-8 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: a.color }} />
                     <span className="min-w-0 flex-1 truncate text-xs text-slate-200">
                       <b style={{ color: a.color }}>{a.name}</b> {t.title}
                     </span>
@@ -335,46 +334,31 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
         </section>
       </div>
 
-      {/* team status */}
-      <section className="rounded-[10px] border border-white/[0.08] bg-[#120F22] p-4">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
-          <Users className="h-4 w-4 text-fuchsia-400" /> Team Status
-        </h3>
-        <div className="grid grid-cols-5 gap-2.5">
+      {/* team status (compact) */}
+      <section className="shrink-0 rounded-[10px] border border-white/[0.08] bg-[#120F22] px-3 py-2.5">
+        <div className="grid grid-cols-5 gap-2">
           {agentStats.map(({ a, total, working, pct }) => (
             <button
               key={a.id}
               type="button"
               onClick={onOpenTeam}
-              className="rounded-[10px] border border-white/[0.08] bg-black/20 p-3 text-left hover:border-white/25"
-              style={working ? { borderColor: a.color, boxShadow: `0 0 22px -10px ${a.color}` } : undefined}
+              className="flex items-center gap-2 rounded-[8px] border border-white/[0.08] bg-black/20 px-2 py-1.5 text-left hover:border-white/25"
+              style={working ? { borderColor: a.color, boxShadow: `0 0 18px -8px ${a.color}` } : undefined}
             >
-              <div className="flex items-center gap-2.5">
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-extrabold text-black ring-2 ring-offset-2 ring-offset-[#120F22]"
-                  style={{ background: a.color, ['--tw-ring-color' as any]: a.color }}
-                >
-                  {a.name[0]}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-xs font-extrabold tracking-wider text-white">{a.name}</span>
-                  <span className="block truncate text-[10px] text-slate-400">{a.role}</span>
-                </span>
-              </div>
-              <span
-                className={`mt-2.5 inline-block rounded-full px-2 py-0.5 text-[9.5px] font-bold ${
-                  working ? 'bg-amber-400/15 text-amber-300' : 'bg-emerald-400/15 text-emerald-300'
-                }`}
-              >
-                {working ? 'WORKING' : 'READY'}
+              <span className="relative shrink-0">
+                <img src={a.photo} alt={a.name} className="h-9 w-9 rounded-full border-2 object-cover" style={{ borderColor: a.color }} />
+                <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#120F22] ${working ? 'animate-pulse bg-amber-300' : 'bg-emerald-400'}`} />
               </span>
-              <div className="mt-2 flex items-center gap-2">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: a.color }} />
-                </div>
-                <span className="text-[10px] text-slate-300">{pct}%</span>
-              </div>
-              <p className="mt-1 text-[10px] text-slate-500">Tasks: {total}</p>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between gap-1">
+                  <span className="truncate text-[11px] font-extrabold tracking-wider text-white">{a.name}</span>
+                  <span className="text-[9.5px] text-slate-400">{total}</span>
+                </span>
+                <span className="block truncate text-[9.5px] text-slate-400">{working ? 'Working…' : a.role}</span>
+                <span className="mt-1 block h-1 overflow-hidden rounded-full bg-white/10">
+                  <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: a.color }} />
+                </span>
+              </span>
             </button>
           ))}
         </div>

@@ -130,10 +130,10 @@ export const TeamPanel: React.FC<TeamPanelProps> = ({ userId, ownerEmail, full =
             >
               <div className="flex items-center gap-2">
                 <span
-                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] text-sm font-extrabold text-black"
-                  style={{ background: a.color, boxShadow: working ? `0 0 18px ${a.color}` : undefined }}
+                  className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                  style={{ boxShadow: working ? `0 0 18px ${a.color}` : undefined }}
                 >
-                  {a.name[0]}
+                  <img src={a.photo} alt={a.name} className="h-10 w-10 rounded-full border-2 object-cover" style={{ borderColor: a.color }} />
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#07090D] ${working ? 'animate-pulse bg-amber-300' : 'bg-emerald-400'}`}
                   />

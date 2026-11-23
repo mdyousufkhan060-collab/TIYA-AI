@@ -1087,7 +1087,14 @@ export default function App() {
         <>
           <DesktopTopBar
             tab={desktopTab}
-            onTab={setDesktopTab}
+            onTab={(t) => {
+              setDesktopTab(t);
+              if (t === 'app') {
+                setShowAdminScreen(false);
+                setShowMotivationScreen(false);
+                navigateTo('settings', 'hub', null);
+              }
+            }}
             isAdmin={isAdmin}
             onAdmin={() => {
               setDesktopTab('app');

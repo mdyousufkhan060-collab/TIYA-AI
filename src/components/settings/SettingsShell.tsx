@@ -1,5 +1,106 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Lock, Check } from 'lucide-react';
+import {
+  Activity,
+  BarChart3,
+  Bell,
+  BookOpen,
+  Briefcase,
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Code2,
+  Crown,
+  FileText,
+  Gift,
+  HelpCircle,
+  KeyRound,
+  Languages,
+  LayoutDashboard,
+  ListChecks,
+  Lock,
+  LogIn,
+  Mail,
+  MessageSquare,
+  Mic,
+  Package,
+  Percent,
+  Plug,
+  Quote,
+  Receipt,
+  ScrollText,
+  Server,
+  ShieldCheck,
+  ShoppingCart,
+  Smartphone,
+  Sparkles,
+  Store,
+  Trash2,
+  Truck,
+  User,
+  Users,
+  Video,
+  Wallet,
+  Wrench,
+} from 'lucide-react';
+
+/** Small logo for each bar, picked from its title (shown next to the number). */
+const BAR_ICONS: Array<[RegExp, React.ElementType, string]> = [
+  [/ABOUT|GUIDE|HOW TO/, BookOpen, '#38bdf8'],
+  [/HEALTH/, Activity, '#34d399'],
+  [/CONNECTION|API PROVIDER/, Plug, '#a78bfa'],
+  [/VOICE|MIC|SPEECH/, Mic, '#f472b6'],
+  [/LANGUAGE|DIALECT/, Languages, '#60a5fa'],
+  [/PERSONALITY|EMOTION/, Sparkles, '#f9a8d4'],
+  [/PHONE/, Smartphone, '#22d3ee'],
+  [/CHATS|MEMORY|INBOX/, MessageSquare, '#93c5fd'],
+  [/PREMIUM|PLANS|PRICE/, Crown, '#fbbf24'],
+  [/WORKSPACE/, Briefcase, '#f59e0b'],
+  [/PRIVACY|SECURITY/, ShieldCheck, '#34d399'],
+  [/BUSINESS/, Store, '#f59e0b'],
+  [/DEVELOPER TOOLS/, Wrench, '#94a3b8'],
+  [/ACCOUNT|PROFILE|DEVELOPER/, User, '#c4b5fd'],
+  [/DASHBOARD|OVERVIEW/, LayoutDashboard, '#a78bfa'],
+  [/USERS|CUSTOMER|TEAM/, Users, '#60a5fa'],
+  [/GIVE PREMIUM|GIFT/, Gift, '#f472b6'],
+  [/PAYMENT|INCOME|EXPENSE/, Wallet, '#34d399'],
+  [/LOGIN/, LogIn, '#93c5fd'],
+  [/NOTIFY|NOTIFICATION/, Bell, '#fbbf24'],
+  [/MOTIVATION/, Quote, '#f9a8d4'],
+  [/DEVELOPER TOOLS|TOOLS/, Wrench, '#94a3b8'],
+  [/LOG|ACTIVITY/, ScrollText, '#94a3b8'],
+  [/DELETE/, Trash2, '#fb7185'],
+  [/PRODUCT/, Package, '#a78bfa'],
+  [/ORDER/, ShoppingCart, '#60a5fa'],
+  [/APPROVAL/, ClipboardList, '#fbbf24'],
+  [/DISCOUNT/, Percent, '#f472b6'],
+  [/FAQ/, HelpCircle, '#38bdf8'],
+  [/COURIER|DELIVERY/, Truck, '#fb923c'],
+  [/AI REPLY|REPLY/, KeyRound, '#2dd4bf'],
+  [/TASK/, ListChecks, '#34d399'],
+  [/CONTENT|VIDEO/, Video, '#f472b6'],
+  [/NOTES/, FileText, '#93c5fd'],
+  [/ROUTINE/, CalendarDays, '#60a5fa'],
+  [/TEST/, BarChart3, '#a78bfa'],
+  [/MODE/, Sparkles, '#2dd4bf'],
+  [/EMAIL/, Mail, '#93c5fd'],
+  [/RECEIPT|INVOICE/, Receipt, '#34d399'],
+  [/SERVER|SYSTEM/, Server, '#94a3b8'],
+  [/CODE/, Code2, '#94a3b8'],
+];
+
+export function barIcon(title: string): React.ReactNode {
+  const t = title.toUpperCase();
+  const hit = BAR_ICONS.find(([re]) => re.test(t));
+  if (!hit) return null;
+  const [, Icon, color] = hit;
+  return (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: `${color}1f`, color }}>
+      <Icon className="h-4 w-4" />
+    </span>
+  );
+}
 
 interface SettingsShellProps {
   title: string;
@@ -72,13 +173,15 @@ export const SettingsBar: React.FC<SettingsBarProps> = ({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className="flex h-11 w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 dark:border-white/[0.08] dark:bg-[#11151E] dark:hover:bg-white/[0.05] dark:active:bg-white/[0.08]"
+      className="flex h-12 w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 dark:border-white/[0.08] dark:bg-[#11151E] dark:hover:bg-white/[0.05] dark:active:bg-white/[0.08]"
     >
       {badge !== undefined && (
         <span className="font-mono-code flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-md bg-slate-100 px-1.5 text-[10px] font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
           {badge}
         </span>
       )}
+
+      {barIcon(title)}
 
       <span className={`min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide uppercase ${titleColor}`}>
         {title}
