@@ -154,7 +154,7 @@ const AI_FIELDS: CrudField[] = [
   { key: 'reply_style', label: 'CUSTOM REPLY STYLE', type: 'text' },
 ];
 
-const PRODUCTS: CrudConfig = {
+export const PRODUCTS: CrudConfig = {
   table: 'business_products',
   title: 'PRODUCTS & SERVICES',
   titleKey: 'name',
@@ -176,7 +176,7 @@ const PRODUCTS: CrudConfig = {
   ],
 };
 
-const CUSTOMERS: CrudConfig = {
+export const CUSTOMERS: CrudConfig = {
   table: 'business_customers',
   title: 'CUSTOMERS',
   titleKey: 'name',
@@ -196,7 +196,7 @@ const CUSTOMERS: CrudConfig = {
 };
 
 const STATUS_OPTS = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((v) => ({ value: v, label: v.toUpperCase() }));
-const ORDERS: CrudConfig = {
+export const ORDERS: CrudConfig = {
   table: 'business_orders',
   title: 'ORDERS',
   titleKey: 'note',
@@ -228,7 +228,7 @@ const ORDERS: CrudConfig = {
   ],
 };
 
-const EXPENSES: CrudConfig = {
+export const EXPENSES: CrudConfig = {
   table: 'business_expenses',
   title: 'EXPENSES',
   titleKey: 'title',

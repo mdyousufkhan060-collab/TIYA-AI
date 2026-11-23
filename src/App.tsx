@@ -72,7 +72,7 @@ import {
 } from './components/settings/AboutLookPhonePages';
 import { PrivacyControlsPage } from './components/settings/DeveloperPrivacyPages';
 import { WorkspacePage } from './components/workspace/WorkspacePage';
-import { TeamPanel } from './components/team/TeamPanel';
+import { DesktopDashboard, DesktopRosePanel, DesktopTab, DesktopTeam, DesktopTopBar } from './components/desktop/DesktopHub';
 import { agentById, parseAgentCommand, runAgentTask } from './lib/agents';
 import { clearModeContext, refreshModeContext } from './utils/modeContext';
 
@@ -1055,16 +1055,69 @@ export default function App() {
     }
   }, [buyPlanId, session?.user?.id, profileLoaded, needsOnboarding, needsAgeCheck]);
 
+  // PC layout: wide window + business user or admin. Small windows keep the mobile app.
+  const [isWide, setIsWide] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1100px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia?.('(min-width: 1100px)');
+    if (!mq) return;
+    const on = () => setIsWide(mq.matches);
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  const [desktopTab, setDesktopTab] = useState<DesktopTab>('dashboard');
+  const desktopMode =
+    isWide &&
+    Boolean(session?.user?.id) &&
+    profileLoaded &&
+    !needsOnboarding &&
+    !needsAgeCheck &&
+    (isAdmin || profile?.account_mode === 'business');
+
   const isInSettingsSubpage = activeTab === 'settings' && settingsPage !== 'hub';
 
   return (
     <div
-      className={`flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] min-[481px]:p-3 ${
-        settings.reduceMotion ? 'reduce-motion' : ''
-      }`}
+      className={`${
+        desktopMode
+          ? 'grid h-[100dvh] w-full grid-cols-[minmax(0,1fr)_380px] grid-rows-[auto_minmax(0,1fr)] gap-3 bg-[#07060F] p-3'
+          : 'flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] min-[481px]:p-3'
+      } ${settings.reduceMotion ? 'reduce-motion' : ''}`}
     >
+      {desktopMode && session?.user && (
+        <>
+          <DesktopTopBar
+            tab={desktopTab}
+            onTab={setDesktopTab}
+            isAdmin={isAdmin}
+            onAdmin={() => {
+              setDesktopTab('app');
+              setShowMotivationScreen(false);
+              setShowAdminScreen(true);
+            }}
+            unread={unreadNotifications}
+            onBell={() => {
+              setDesktopTab('app');
+              handleOpenNotifications();
+            }}
+            voiceOn={['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState)}
+            onVoice={toggleVoice}
+            email={session.user.email}
+            avatar={(session.user.user_metadata as any)?.avatar_url || null}
+            onSignOut={handleSignOut}
+          />
+          {desktopTab !== 'app' && (
+            <div className="col-start-1 row-start-2 min-h-0">
+              {desktopTab === 'dashboard' ? (
+                <DesktopDashboard userId={session.user.id} isAdmin={isAdmin} onOpenTeam={() => setDesktopTab('team')} />
+              ) : (
+                <DesktopTeam userId={session.user.id} email={session.user.email} />
+              )}
+            </div>
+          )}
+        </>
+      )}
       {/* Portrait Phone Container */}
-      <main className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7]">
+      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' ? 'col-start-1 row-start-2 justify-self-center min-[481px]:!h-full' : 'hidden') : ''}`}>
         {!authReady ? (
           <div className="flex flex-1 items-center justify-center text-xs text-slate-500 dark:text-slate-400">
             Loading ROSE...
@@ -1363,9 +1416,17 @@ export default function App() {
         )}
       </main>
 
-      {/* PC (wide screen): live ROSE team board beside the app — business users and admin */}
-      {session?.user?.id && profileLoaded && !needsOnboarding && (isAdmin || profile?.account_mode === 'business') && (
-        <TeamPanel userId={session.user.id} ownerEmail={session.user.email} />
+      {/* PC: ROSE picture + chat box on the right */}
+      {desktopMode && (
+        <div className="col-start-2 row-start-2 flex min-h-0">
+          <DesktopRosePanel
+            messages={messages}
+            isSending={isSendingChat}
+            voiceState={voiceState}
+            onSend={(t) => void handleSendChat(t)}
+            onVoice={toggleVoice}
+          />
+        </div>
       )}
     </div>
   );

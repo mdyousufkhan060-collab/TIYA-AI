@@ -10,6 +10,8 @@ import { AGENTS, AgentId, AgentTask, agentById, runAgentTask } from '../../lib/a
 interface TeamPanelProps {
   userId: string;
   ownerEmail?: string | null;
+  /** fill the parent (PC Team tab) instead of the side-panel size */
+  full?: boolean;
 }
 
 const statusIcon = (s: AgentTask['status']) =>
@@ -31,7 +33,7 @@ const ago = (iso: string) => {
   return new Date(iso).toLocaleDateString('en-GB');
 };
 
-export const TeamPanel: React.FC<TeamPanelProps> = ({ userId, ownerEmail }) => {
+export const TeamPanel: React.FC<TeamPanelProps> = ({ userId, ownerEmail, full = false }) => {
   const [tasks, setTasks] = useState<AgentTask[]>([]);
   const [agent, setAgent] = useState<AgentId>('arin');
   const [text, setText] = useState('');
@@ -92,7 +94,7 @@ export const TeamPanel: React.FC<TeamPanelProps> = ({ userId, ownerEmail }) => {
   const feed = tasks.filter((t) => filter === 'all' || t.agent === filter);
 
   return (
-    <aside className="hidden h-[min(calc(100dvh-24px),900px)] w-full max-w-[760px] flex-col overflow-hidden rounded-[10px] border border-white/[0.1] bg-[#07090D] text-white shadow-2xl lg:flex">
+    <aside className={`${full ? 'flex h-full w-full' : 'hidden h-[min(calc(100dvh-24px),900px)] w-full max-w-[760px] lg:flex'} flex-col overflow-hidden rounded-[10px] border border-white/[0.1] bg-[#07090D] text-white shadow-2xl`}>
       {/* header */}
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.08] px-5">
         <div className="flex items-center gap-2">
