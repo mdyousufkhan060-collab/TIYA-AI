@@ -397,7 +397,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               api_providers: '12 API Providers',
               system_logs: '13 System Logs',
               deletions: '14 Delete Requests',
-              dev_profile: '15 Developer Profile',
+              dev_profile: '15 Developers',
             } as Record<string, string>
           )[view] || 'Admin';
 
@@ -509,7 +509,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="12" title="API PROVIDERS" onClick={() => setView('api_providers')} testId="admin-bar-api" />
             <SettingsBar badge="13" title="SYSTEM LOGS" onClick={() => setView('system_logs')} testId="admin-bar-logs" />
             <SettingsBar badge="14" title="DELETE REQUESTS" onClick={() => setView('deletions')} testId="admin-bar-deletions" />
-            <SettingsBar badge="15" title="DEVELOPER PROFILE" value="PUBLIC" onClick={() => setView('dev_profile')} testId="admin-bar-dev-profile" />
+            <SettingsBar badge="15" title="DEVELOPERS" value="PUBLIC" onClick={() => setView('dev_profile')} testId="admin-bar-dev-profile" />
           </div>
         )}
 

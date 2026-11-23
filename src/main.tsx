@@ -8,6 +8,7 @@ import './index.css';
 installClientApi();
 
 const Landing = lazy(() => import('./components/site/Landing'));
+const DevelopersPage = lazy(() => import('./components/site/DevelopersPage'));
 
 /**
  * myrosebd.com shows the public website; the app lives at /app.
@@ -28,8 +29,14 @@ function shouldOpenApp(): boolean {
   return false;
 }
 
+const isDevelopersPage = window.location.pathname.startsWith('/developers');
+
 createRoot(document.getElementById('root')!).render(
-  shouldOpenApp() ? (
+  isDevelopersPage ? (
+    <Suspense fallback={<div style={{ background: '#000', height: '100dvh' }} />}>
+      <DevelopersPage />
+    </Suspense>
+  ) : shouldOpenApp() ? (
     <App />
   ) : (
     <Suspense fallback={<div style={{ background: '#000', height: '100dvh' }} />}>

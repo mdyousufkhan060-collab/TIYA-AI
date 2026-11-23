@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Lock, RefreshCw } from 'lucide-react';
 import { TiyaSettings, VoiceState } from '../../types/tiya';
 import { SUPPORTED_PHONE_ACTIONS_META } from '../../utils/phoneActions';
-import { DeveloperDetails, useDeveloperProfile } from '../site/DeveloperProfile';
+import { useDevelopers } from '../site/DevelopersPage';
 import { SettingsBar, SettingsShell } from './SettingsShell';
 
 interface AboutPageProps {
@@ -489,13 +489,29 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
   );
 };
 
-/** DEVELOPER card in About ROSE: same public details as the website (Admin → 15 DEVELOPER PROFILE). */
+/** DEVELOPERS in About ROSE: same list as the website (Admin → 15 DEVELOPERS). */
 const AppDeveloperCard: React.FC = () => {
-  const dev = useDeveloperProfile();
-  if (!dev) return null;
+  const devs = useDevelopers();
+  if (!devs) return null;
   return (
-    <div className="mt-2 rounded-[4px] border border-white/[0.08] bg-[#11151E] p-4">
-      <DeveloperDetails p={dev} />
+    <div className="mt-2 space-y-1.5">
+      <p className="px-1 pt-1 text-[10px] font-semibold tracking-wider text-slate-400">DEVELOPERS</p>
+      {devs.map((d) => (
+        <a
+          key={d.id}
+          href={`/developers#${d.slug || d.id}`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-3 rounded-[4px] border border-white/[0.08] bg-[#11151E] p-2.5"
+        >
+          <img src={d.photo_url || '/tiya-avatar.png'} alt="" className="h-12 w-12 rounded-[4px] object-cover" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-bold text-white">{d.full_name}</span>
+            <span className="block truncate text-[11px] text-slate-400">{d.title || 'Developer'}</span>
+          </span>
+          <span className="text-[10px] font-bold tracking-wider text-teal-300">PROFILE →</span>
+        </a>
+      ))}
     </div>
   );
 };

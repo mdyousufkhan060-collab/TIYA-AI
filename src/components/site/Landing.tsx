@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { DeveloperModal, useDeveloperProfile } from './DeveloperProfile';
+import { useDevelopers } from './DevelopersPage';
 
 /** Public website for ROSE (myrosebd.com). The app itself lives at /app. */
 
@@ -80,7 +80,7 @@ export const Landing: React.FC = () => {
   const [open, setOpen] = useState<number | null>(0);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [installEvt, setInstallEvt] = useState<any>(null);
-  const dev = useDeveloperProfile();
+  const devs = useDevelopers();
   const signedIn = (() => {
     try {
       for (let i = 0; i < window.localStorage.length; i++) {
@@ -92,7 +92,6 @@ export const Landing: React.FC = () => {
     }
     return false;
   })();
-  const [showDev, setShowDev] = useState(false);
 
   useEffect(() => {
     document.title = 'ROSE – Bangla Voice AI Assistant';
@@ -320,25 +319,27 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* FOUNDER */}
+      {/* DEVELOPERS */}
       <section className="mx-auto max-w-6xl px-5 py-16">
-        <div className="grid items-center gap-6 rounded-[4px] border border-white/[0.08] bg-white/[0.03] p-6 md:grid-cols-[auto_1fr_auto]">
-          <img src={dev?.photo_url || '/tiya-avatar.png'} alt="" className="h-20 w-20 rounded-[6px] object-cover" />
-          <div>
-            <p className="text-xs font-bold tracking-[0.3em] text-pink-300">THE MAKER</p>
-            <h3 className="mt-1 text-xl font-extrabold">{dev?.full_name || 'MD Yousuf Khan'}</h3>
-            <p className="mt-1 text-sm text-slate-400">{dev?.title || 'Founder & Developer, ROSE'}</p>
+        <a
+          href="/developers"
+          className="group grid items-center gap-6 rounded-[4px] border border-white/[0.08] bg-white/[0.03] p-6 hover:border-pink-400/50 md:grid-cols-[auto_1fr_auto]"
+        >
+          <div className="flex -space-x-4">
+            {(devs || []).slice(0, 3).map((d) => (
+              <img key={d.id} src={d.photo_url || '/tiya-avatar.png'} alt={d.full_name} className="h-20 w-16 rounded-[6px] border-2 border-black object-cover" />
+            ))}
           </div>
-          <button
-            type="button"
-            onClick={() => setShowDev(true)}
-            className="inline-flex h-11 items-center justify-center rounded-[4px] border border-pink-400/60 px-5 text-xs font-bold tracking-widest text-pink-200"
-          >
-            VIEW FULL PROFILE
-          </button>
-        </div>
+          <div>
+            <p className="text-xs font-bold tracking-[0.3em] text-pink-300">THE DEVELOPERS</p>
+            <h3 className="mt-1 text-xl font-extrabold">{(devs || []).map((d) => d.full_name).join(' · ') || 'MD Yousuf Khan'}</h3>
+            <p className="mt-1 text-sm text-slate-400">Web Developers · Made in Bangladesh</p>
+          </div>
+          <span className="inline-flex h-11 items-center justify-center rounded-[4px] border border-pink-400/60 px-5 text-xs font-bold tracking-widest text-pink-200 group-hover:bg-pink-500/10">
+            MEET THE DEVELOPERS →
+          </span>
+        </a>
       </section>
-      {showDev && dev && <DeveloperModal p={dev} onClose={() => setShowDev(false)} />}
 
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-3xl px-5 pb-16">
@@ -375,7 +376,7 @@ export const Landing: React.FC = () => {
           <div className="flex items-center gap-2">
             <img src="/icons/icon-192.png" alt="" className="h-6 w-6 rounded-[4px]" />
             <span className="font-bold tracking-[0.25em] text-slate-300">ROSE</span>
-            <span>© {new Date().getFullYear()} {dev?.full_name || 'MD Yousuf Khan'}</span>
+            <span>© {new Date().getFullYear()} {devs?.[0]?.full_name || 'MD Yousuf Khan'}</span>
           </div>
           <div className="flex flex-wrap gap-5">
             <a href="/privacy.html" className="flex items-center gap-1 hover:text-white">
@@ -384,10 +385,10 @@ export const Landing: React.FC = () => {
             <a href="/delete-account.html" className="hover:text-white">
               Delete account
             </a>
-            <button type="button" onClick={() => setShowDev(true)} className="hover:text-white">
-              Developer
-            </button>
-            <a href={`mailto:${dev?.email || 'md.yousuf.khan060@gmail.com'}`} className="hover:text-white">
+            <a href="/developers" className="hover:text-white">
+              Developers
+            </a>
+            <a href={`mailto:${devs?.[0]?.email || 'md.yousuf.khan060@gmail.com'}`} className="hover:text-white">
               Contact
             </a>
           </div>
