@@ -10,6 +10,8 @@ interface PremiumPageProps {
   onBack: () => void;
   /** reload the profile after a gift code turns Premium on */
   onRefreshProfile?: () => void;
+  /** plan chosen on the website (GET STANDARD…) — opened ready to pay */
+  initialPlanId?: string | null;
 }
 
 interface PlanRow {
@@ -53,7 +55,7 @@ function formatRepliesLeft(profile: UserProfile | null): string {
   return 'Unlimited';
 }
 
-export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = false, onBack, onRefreshProfile }) => {
+export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = false, onBack, onRefreshProfile, initialPlanId = null }) => {
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [payInfo, setPayInfo] = useState<{ bkash?: string; nagad?: string; rocket?: string; note?: string } | null>(null);
   const [myReqs, setMyReqs] = useState<any[]>([]);
@@ -85,6 +87,18 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
 
   const numberFor = (m: string) => (m === 'bKash' ? payInfo?.bkash : m === 'Nagad' ? payInfo?.nagad : payInfo?.rocket) || '';
   const methods = (['bKash', 'Nagad', 'Rocket'] as const).filter((m) => numberFor(m));
+
+  // open the plan picked on the website, once the plans are loaded
+  const [autoPicked, setAutoPicked] = useState(false);
+  useEffect(() => {
+    if (autoPicked || !initialPlanId || isAdmin || plans.length === 0) return;
+    const pl = plans.find((x) => x.id === initialPlanId);
+    if (pl) {
+      setBuying(pl);
+      setMethod(methods[0] || 'bKash');
+    }
+    setAutoPicked(true);
+  }, [autoPicked, initialPlanId, isAdmin, plans, methods]);
 
   const submit = async () => {
     if (!buying) return;

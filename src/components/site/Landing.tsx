@@ -81,6 +81,7 @@ export const Landing: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [installEvt, setInstallEvt] = useState<any>(null);
   const devs = useDevelopers();
+  const [pick, setPick] = useState<string | null>(null);
   const signedIn = (() => {
     try {
       for (let i = 0; i < window.localStorage.length; i++) {
@@ -261,29 +262,50 @@ export const Landing: React.FC = () => {
         <p className="text-xs font-bold tracking-[0.3em] text-pink-300">PRICING</p>
         <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">Start free. Go Premium anytime.</h2>
         <div className="mt-8 grid gap-3 md:grid-cols-4">
-          <div className="rounded-[4px] border border-white/[0.08] bg-white/[0.03] p-5">
-            <h3 className="text-sm font-extrabold tracking-[0.2em]">FREE</h3>
-            <p className="mt-3 text-3xl font-extrabold">৳0</p>
-            <p className="mt-1 text-xs text-slate-400">Daily free replies</p>
-            <a href={APP_URL} className="mt-5 flex h-11 items-center justify-center rounded-[4px] border border-white/20 text-xs font-bold">
-              START FREE
-            </a>
-          </div>
-          {plans.map((p, i) => (
-            <div
-              key={p.id}
-              className={`rounded-[4px] border p-5 ${i === 1 ? 'border-pink-400 bg-pink-500/[0.07] shadow-[0_0_40px_-12px_#FF4D8D]' : 'border-white/[0.08] bg-white/[0.03]'}`}
-            >
-              <h3 className="text-sm font-extrabold uppercase tracking-[0.2em]">{p.name}</h3>
-              <p className="mt-3 text-3xl font-extrabold">৳{Number(p.price_bdt)}</p>
-              <p className="mt-1 text-xs text-slate-400">
-                {p.months} month{p.months > 1 ? 's' : ''} · {p.voice_credits} voice · {p.text_credits} text
-              </p>
-              <a href={APP_URL} className={`mt-5 flex h-11 items-center justify-center rounded-[4px] text-xs font-bold ${i === 1 ? 'bg-[#FF4D8D] text-white' : 'border border-white/20'}`}>
-                GET {String(p.name).toUpperCase()}
-              </a>
-            </div>
-          ))}
+          {(() => {
+            const selected = pick ?? (plans[1]?.id || plans[0]?.id || 'free');
+            const cards = [
+              { id: 'free', name: 'FREE', price: 0, line: 'Daily free replies', href: APP_URL },
+              ...plans.map((p) => ({
+                id: p.id,
+                name: String(p.name).toUpperCase(),
+                price: Number(p.price_bdt),
+                line: `${p.months} month${p.months > 1 ? 's' : ''} · ${p.voice_credits} voice · ${p.text_credits} text`,
+                href: `${APP_URL}?buy=${p.id}`,
+              })),
+            ];
+            return cards.map((c) => {
+              const on = selected === c.id;
+              return (
+                <div
+                  key={c.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setPick(c.id)}
+                  onKeyDown={(e) => e.key === 'Enter' && setPick(c.id)}
+                  className={`cursor-pointer rounded-[4px] border p-5 transition-all ${
+                    on ? 'border-pink-400 bg-pink-500/[0.07] shadow-[0_0_40px_-12px_#FF4D8D]' : 'border-white/[0.08] bg-white/[0.03] hover:border-white/25'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-extrabold tracking-[0.2em]">{c.name}</h3>
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-[3px] border ${on ? 'border-pink-400 bg-pink-400' : 'border-white/25'}`}>
+                      {on && <span className="h-2 w-2 bg-black" />}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-3xl font-extrabold">৳{c.price}</p>
+                  <p className="mt-1 text-xs text-slate-400">{c.line}</p>
+                  <a
+                    href={c.href}
+                    onClick={(e) => e.stopPropagation()}
+                    className={`mt-5 flex h-11 items-center justify-center rounded-[4px] text-xs font-bold ${on ? 'bg-[#FF4D8D] text-white' : 'border border-white/20'}`}
+                  >
+                    {c.id === 'free' ? 'START FREE' : `GET ${c.name}`}
+                  </a>
+                </div>
+              );
+            });
+          })()}
         </div>
         <p className="mt-3 text-xs text-slate-500">Pay with bKash · Nagad · Rocket · Gift code</p>
       </section>
@@ -325,11 +347,7 @@ export const Landing: React.FC = () => {
           href="/developers"
           className="group grid items-center gap-6 rounded-[4px] border border-white/[0.08] bg-white/[0.03] p-6 hover:border-pink-400/50 md:grid-cols-[auto_1fr_auto]"
         >
-          <div className="flex -space-x-4">
-            {(devs || []).slice(0, 3).map((d) => (
-              <img key={d.id} src={d.photo_url || '/tiya-avatar.png'} alt={d.full_name} className="h-20 w-16 rounded-[6px] border-2 border-black object-cover" />
-            ))}
-          </div>
+          <img src="/team/devs-round.jpg" alt="ROSE developers" className="h-20 w-20 rounded-full border-2 border-pink-400/60 object-cover shadow-[0_0_30px_-8px_#FF4D8D]" />
           <div>
             <p className="text-xs font-bold tracking-[0.3em] text-pink-300">THE DEVELOPERS</p>
             <h3 className="mt-1 text-xl font-extrabold">{(devs || []).map((d) => d.full_name).join(' · ') || 'MD Yousuf Khan'}</h3>

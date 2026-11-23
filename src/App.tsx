@@ -530,6 +530,21 @@ export default function App() {
     [isOwner, memories, messages, settings, userAge],
   );
 
+  // Plan picked on the website (/app?buy=<plan>): kept through Google login, then PREMIUM opens with it
+  const [buyPlanId, setBuyPlanId] = useState<string | null>(() => {
+    try {
+      const fromUrl = new URLSearchParams(window.location.search).get('buy');
+      if (fromUrl) {
+        window.sessionStorage.setItem('rose_buy_plan', fromUrl);
+        window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+        return fromUrl;
+      }
+      return window.sessionStorage.getItem('rose_buy_plan');
+    } catch {
+      return null;
+    }
+  });
+
   // ROSE team (business users + admin): "আরিনকে বলো ..." in chat gives the task to that agent
   const teamRef = useRef<{ userId: string | null; enabled: boolean }>({ userId: null, enabled: false });
   teamRef.current = {
@@ -1028,6 +1043,18 @@ export default function App() {
     !needsOnboarding &&
     effectiveBirthYear === null;
 
+  useEffect(() => {
+    if (!buyPlanId || !session?.user?.id || !profileLoaded || needsOnboarding || needsAgeCheck) return;
+    setActiveTab('settings');
+    setSettingsPage('premium');
+    setSettingsSubpage(null);
+    try {
+      window.sessionStorage.removeItem('rose_buy_plan');
+    } catch {
+      /* ignore */
+    }
+  }, [buyPlanId, session?.user?.id, profileLoaded, needsOnboarding, needsAgeCheck]);
+
   const isInSettingsSubpage = activeTab === 'settings' && settingsPage !== 'hub';
 
   return (
@@ -1253,10 +1280,12 @@ export default function App() {
               <PremiumPage
                 profile={profile}
                 isAdmin={isAdmin}
+                initialPlanId={buyPlanId}
                 onRefreshProfile={() => {
                   if (session?.user?.id) loadAccountData(session.user.id);
                 }}
                 onBack={() => {
+                  setBuyPlanId(null);
                   setSettingsPage('hub');
                   setSettingsSubpage(null);
                 }}

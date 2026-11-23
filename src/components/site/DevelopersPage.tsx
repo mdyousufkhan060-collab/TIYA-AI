@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ArrowLeft,
   AtSign,
   Camera,
   Code2,
@@ -92,75 +91,36 @@ function socialLinks(d: Developer) {
   ].filter((s) => s.url && String(s.url).trim());
 }
 
-const DevCard: React.FC<{ d: Developer; accent: string; onOpen: () => void }> = ({ d, accent, onOpen }) => (
-  <button
-    type="button"
-    onClick={onOpen}
-    className="group relative block w-full overflow-hidden rounded-[6px] border border-white/10 bg-[#0A0C12] text-left transition-transform hover:-translate-y-1"
-    style={{ boxShadow: `0 30px 60px -30px ${accent}` }}
-  >
-    <div className="relative aspect-[4/5] overflow-hidden">
-      <img src={d.photo_url || '/tiya-avatar.png'} alt={d.full_name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0A0C12] via-[#0A0C12]/10 to-transparent" />
-      <span className="absolute left-4 top-4 rounded-[3px] px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-black" style={{ background: accent }}>
-        {(d.title || 'Developer').toUpperCase()}
-      </span>
-    </div>
-    <div className="relative -mt-16 p-5">
-      <h3 className="text-2xl font-extrabold text-white">{d.full_name}</h3>
-      {d.skills && <p className="mt-1 text-xs text-slate-400">{d.skills}</p>}
-      <p className="mt-4 inline-flex items-center gap-1 text-xs font-bold tracking-widest" style={{ color: accent }}>
-        VIEW PROFILE →
-      </p>
-    </div>
-  </button>
-);
+const ACCENTS = ['#FFC93C', '#2DD4BF', '#60A5FA', '#FF4D8D'];
 
-const DevDetail: React.FC<{ d: Developer; accent: string; onBack: () => void }> = ({ d, accent, onBack }) => {
+/** One developer in the list: small header (photo left, name right), then all details below. */
+const DevSection: React.FC<{ d: Developer; accent: string }> = ({ d, accent }) => {
   const rows = contactRows(d);
   const socials = socialLinks(d);
   return (
-    <div className="mx-auto max-w-5xl px-5 pb-20 pt-6">
-      <button type="button" onClick={onBack} className="mb-6 inline-flex h-10 items-center gap-2 rounded-[4px] border border-white/15 px-4 text-xs font-bold text-slate-200">
-        <ArrowLeft className="h-4 w-4" /> ALL DEVELOPERS
-      </button>
-      <div className="grid gap-8 md:grid-cols-[340px_1fr]">
-        <div>
-          <div className="overflow-hidden rounded-[6px] border border-white/10" style={{ boxShadow: `0 30px 70px -30px ${accent}` }}>
-            <img src={d.photo_url || '/tiya-avatar.png'} alt={d.full_name} className="aspect-[4/5] w-full object-cover" />
-          </div>
-          {socials.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {socials.map((s) => (
-                <a
-                  key={s.label}
-                  href={link(String(s.url))}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-10 items-center gap-2 rounded-[4px] border border-white/12 px-3 text-xs font-semibold text-slate-200 hover:border-white/40"
-                >
-                  {s.icon} {s.label}
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-        <div>
-          <p className="text-[11px] font-bold tracking-[0.3em]" style={{ color: accent }}>
-            {(d.title || 'Developer').toUpperCase()}
+    <section id={d.slug || d.id} className="scroll-mt-24 overflow-hidden rounded-[6px] border border-white/10 bg-[#0A0C12]">
+      {/* small banner */}
+      <div className="relative flex items-center gap-4 border-b border-white/[0.08] p-4 sm:gap-5 sm:p-5" style={{ background: `linear-gradient(90deg, ${accent}22, transparent 70%)` }}>
+        <span className="absolute inset-y-0 left-0 w-1" style={{ background: accent }} />
+        <img
+          src={d.photo_url || '/tiya-avatar.png'}
+          alt={d.full_name}
+          className="h-20 w-20 shrink-0 rounded-[6px] border-2 object-cover object-top sm:h-24 sm:w-24"
+          style={{ borderColor: accent }}
+        />
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold tracking-[0.3em]" style={{ color: accent }}>
+            {(d.title || 'Web Developer').toUpperCase()}
           </p>
-          <h1 className="mt-2 text-4xl font-extrabold text-white md:text-5xl">{d.full_name}</h1>
-          {d.about && <p className="mt-4 text-base leading-relaxed text-slate-300">{d.about}</p>}
-          {d.skills && (
-            <div className="mt-5 flex flex-wrap gap-2">
-              {d.skills.split(',').map((s) => (
-                <span key={s} className="rounded-[3px] bg-white/[0.06] px-2.5 py-1 text-xs text-slate-200">
-                  {s.trim()}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="mt-8 grid gap-2 sm:grid-cols-2">
+          <h2 className="mt-1 truncate text-2xl font-extrabold text-white sm:text-3xl">{d.full_name}</h2>
+          {d.skills && <p className="mt-1 text-xs text-slate-400">{d.skills}</p>}
+        </div>
+      </div>
+      {/* details */}
+      <div className="p-4 sm:p-5">
+        {d.about && <p className="text-sm leading-relaxed text-slate-300">{d.about}</p>}
+        {rows.length > 0 ? (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {rows.map((r) => {
               const inner = (
                 <>
@@ -185,34 +145,40 @@ const DevDetail: React.FC<{ d: Developer; accent: string; onBack: () => void }> 
               );
             })}
           </div>
-          {rows.length === 0 && <p className="mt-8 text-sm text-slate-500">Contact details coming soon.</p>}
-        </div>
+        ) : (
+          <p className="mt-4 text-sm text-slate-500">Contact details coming soon.</p>
+        )}
+        {socials.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {socials.map((x) => (
+              <a
+                key={x.label}
+                href={link(String(x.url))}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center gap-2 rounded-[4px] border border-white/12 px-3 text-xs font-semibold text-slate-200 hover:border-white/40"
+              >
+                {x.icon} {x.label}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </section>
   );
 };
 
-const ACCENTS = ['#FF4D8D', '#2DD4BF', '#60A5FA', '#FBBF24'];
-
 export const DevelopersPage: React.FC = () => {
   const list = useDevelopers();
-  const [slug, setSlug] = useState<string | null>(() => window.location.hash.replace('#', '') || null);
-
   useEffect(() => {
     document.title = 'Developers – ROSE';
-    const onHash = () => setSlug(window.location.hash.replace('#', '') || null);
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const go = (s: string | null) => {
-    window.location.hash = s || '';
-    setSlug(s);
-    document.getElementById('dev-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const idx = list ? list.findIndex((d) => (d.slug || d.id) === slug) : -1;
-  const current = idx >= 0 && list ? list[idx] : null;
+  // /developers#imtiaz jumps to that person once the list is loaded
+  useEffect(() => {
+    const id = window.location.hash.replace('#', '');
+    if (list && id) window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }), 100);
+  }, [list]);
 
   return (
     <div id="dev-scroll" className="h-[100dvh] overflow-y-auto bg-black text-white" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -230,26 +196,22 @@ export const DevelopersPage: React.FC = () => {
 
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_20%_10%,rgba(255,77,141,0.18),transparent_50%),radial-gradient(ellipse_at_80%_90%,rgba(45,212,191,0.12),transparent_50%)]" />
 
-      <div className="relative">
-        {!list ? (
-          <p className="py-32 text-center text-sm text-slate-500">Loading…</p>
-        ) : current ? (
-          <DevDetail d={current} accent={ACCENTS[idx % ACCENTS.length]} onBack={() => go(null)} />
-        ) : (
-          <div className="mx-auto max-w-6xl px-5 pb-20 pt-14">
-            <p className="text-xs font-bold tracking-[0.3em] text-pink-300">THE TEAM BEHIND ROSE</p>
-            <h1 className="mt-3 text-4xl font-extrabold leading-tight md:text-6xl">
-              Developers
-              <span className="block bg-gradient-to-r from-pink-400 to-teal-300 bg-clip-text text-transparent">building Bangla AI.</span>
-            </h1>
-            <p className="mt-4 max-w-xl text-slate-400">ROSE is designed, built and looked after in Bangladesh. Tap a developer to see the full profile and contact details.</p>
-            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:max-w-4xl">
-              {list.map((d, i) => (
-                <DevCard key={d.id} d={d} accent={ACCENTS[i % ACCENTS.length]} onOpen={() => go(d.slug || d.id)} />
-              ))}
-            </div>
-          </div>
-        )}
+      <div className="relative mx-auto max-w-5xl px-4 pb-16 pt-6 sm:px-5">
+        {/* big banner */}
+        <div className="overflow-hidden rounded-[6px] border border-white/10 shadow-[0_30px_80px_-30px_#1d4ed8]">
+          <img src="/team/banner.jpg" alt="ROSE Web Developers" className="block w-full" />
+        </div>
+
+        <p className="mt-10 text-xs font-bold tracking-[0.3em] text-amber-300">THE TEAM BEHIND ROSE</p>
+        <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">Developers</h1>
+
+        <div className="mt-6 space-y-5">
+          {!list ? (
+            <p className="py-16 text-center text-sm text-slate-500">Loading…</p>
+          ) : (
+            list.map((d, i) => <DevSection key={d.id} d={d} accent={ACCENTS[i % ACCENTS.length]} />)
+          )}
+        </div>
       </div>
 
       <footer className="relative border-t border-white/[0.06] px-5 py-8 text-center text-xs text-slate-500">
