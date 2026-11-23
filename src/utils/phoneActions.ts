@@ -17,7 +17,7 @@ export const SUPPORTED_PHONE_ACTIONS_META = [
     action: 'whatsapp_call',
     label: 'WhatsApp Call',
     example: '{"action":"whatsapp_call","contact":"..."}',
-    description: 'Starts a WhatsApp voice/video call in the TIYA Android app.',
+    description: 'Starts a WhatsApp voice/video call in the ROSE Android app.',
   },
   {
     action: 'whatsapp_message',
@@ -29,13 +29,13 @@ export const SUPPORTED_PHONE_ACTIONS_META = [
     action: 'messenger_message',
     label: 'Messenger Message',
     example: '{"action":"messenger_message","contact":"...","text":"..."}',
-    description: 'Sends a Facebook Messenger message in the TIYA Android app.',
+    description: 'Sends a Facebook Messenger message in the ROSE Android app.',
   },
   {
     action: 'messenger_call',
     label: 'Messenger Call',
     example: '{"action":"messenger_call","contact":"..."}',
-    description: 'Places a Facebook Messenger call in the TIYA Android app.',
+    description: 'Places a Facebook Messenger call in the ROSE Android app.',
   },
 ] as const;
 
@@ -196,7 +196,7 @@ export function buildWebFallback(action: PhoneAction): ActionExecutionResult {
       success: false,
       via: 'unsupported',
       messageBn:
-        'ব্রাউজার থেকে নাম দিয়ে সরাসরি কল দেওয়া যায় না—এটি TIYA Android অ্যাপে কাজ করে। নম্বর বললে কল লিংক খুলতে পারি।',
+        'ব্রাউজার থেকে নাম দিয়ে সরাসরি কল দেওয়া যায় না—এটি ROSE Android অ্যাপে কাজ করে। নম্বর বললে কল লিংক খুলতে পারি।',
     };
   }
 
@@ -213,14 +213,14 @@ export function buildWebFallback(action: PhoneAction): ActionExecutionResult {
       fallbackUrl: waUrl,
       messageBn: digits
         ? `${action.contact}-এর জন্য হোয়াটসঅ্যাপ চ্যাট লিংক তৈরি করা হয়েছে। পাঠাতে লিংকটি ওপেন করুন।`
-        : `ব্রাউজারে সরাসরি কনট্যাক্ট খুঁজে পাঠানো যায় না—এটি TIYA Android অ্যাপে কাজ করে। তবে মেসেজসহ WhatsApp লিংক নিচে দেওয়া হলো।`,
+        : `ব্রাউজারে সরাসরি কনট্যাক্ট খুঁজে পাঠানো যায় না—এটি ROSE Android অ্যাপে কাজ করে। তবে মেসেজসহ WhatsApp লিংক নিচে দেওয়া হলো।`,
     };
   }
 
   return {
     success: false,
     via: 'unsupported',
-    messageBn: 'এই কাজটি কেবল TIYA Android অ্যাপে কাজ করে। ব্রাউজার থেকে এটি সরাসরি চালানো সম্ভব নয়।',
+    messageBn: 'এই কাজটি কেবল ROSE Android অ্যাপে কাজ করে। ব্রাউজার থেকে এটি সরাসরি চালানো সম্ভব নয়।',
   };
 }
 

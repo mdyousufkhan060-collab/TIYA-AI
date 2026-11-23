@@ -46,7 +46,7 @@ export const TiyaNeonNav: React.FC<TiyaNeonNavProps> = ({
           type="button"
           onClick={onToggleVoice}
           data-testid="tiya-voice-orb"
-          aria-label={isVoiceOn ? 'Turn TIYA voice off' : 'Turn TIYA voice on'}
+          aria-label={isVoiceOn ? 'Turn ROSE voice off' : 'Turn ROSE voice on'}
           aria-pressed={isVoiceOn}
           className={`-mt-7 flex h-[66px] w-[66px] items-center justify-center rounded-full border-4 border-[#020714] transition-all active:scale-95 ${
             isVoiceOn

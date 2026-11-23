@@ -150,7 +150,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
       const text =
         settings.language === 'Bengali'
           ? dialect?.sample || 'হ্যালো, আমি টিয়া।'
-          : `Hello, I am TIYA.`;
+          : `Hello, I am ROSE.`;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = settings.language === 'Bengali' ? 'bn-BD' : languageCode(settings.language);
       const female = synth
@@ -187,7 +187,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
         },
         body: JSON.stringify({
           voiceName: voiceId,
-          assistantName: settings.assistantName || 'TIYA',
+          assistantName: settings.assistantName || 'ROSE',
           yourName: settings.yourName,
           language: settings.language,
           bengaliDialect: settings.bengaliDialect,
@@ -383,7 +383,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
             placeholder="Enter your name"
             className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-[#090B10] px-3 text-xs text-white focus:border-teal-500 focus:outline-none"
           />
-          <p className="mt-2 text-[10px] text-slate-500">Saved automatically. TIYA will call you by this name.</p>
+          <p className="mt-2 text-[10px] text-slate-500">Saved automatically. ROSE will call you by this name.</p>
         </div>
       </SettingsShell>
     );

@@ -599,7 +599,7 @@ export default function App() {
       }
 
       const key = settings.apiKey.trim();
-      // No own key: Premium customers (and the admin) use the TIYA PREMIUM server
+      // No own key: Premium customers (and the admin) use the ROSE PREMIUM server
       const usePremiumServer = !key && (isAdmin || isProfilePremium(profile));
       if (!key && !usePremiumServer) {
         setChatError('No API key. Add your Gemini API key in Settings > Connections.');
@@ -957,7 +957,7 @@ export default function App() {
     };
   }, [session?.user?.id, stopVoice]);
 
-  // Keep TIYA's prompt in step with the account mode (Personal / Student / Business)
+  // Keep ROSE's prompt in step with the account mode (Personal / Student / Business)
   useEffect(() => {
     if (!session?.user?.id || isAdmin) {
       clearModeContext();
@@ -998,7 +998,7 @@ export default function App() {
       <main className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7]">
         {!authReady ? (
           <div className="flex flex-1 items-center justify-center text-xs text-slate-500 dark:text-slate-400">
-            Loading TIYA...
+            Loading ROSE...
           </div>
         ) : !session ? (
           <LoginScreen />

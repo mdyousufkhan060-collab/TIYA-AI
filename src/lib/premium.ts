@@ -12,7 +12,7 @@ export interface PremiumChatResult {
 }
 
 /**
- * TIYA PREMIUM: replies come from the admin's keys on the server
+ * ROSE PREMIUM: replies come from the admin's keys on the server
  * (Supabase Edge Function "tiya-premium"). Customers never see the keys.
  */
 export async function premiumChat(

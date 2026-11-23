@@ -1,5 +1,5 @@
 /**
- * Mode context (Personal / Student / Business) that is added to TIYA's system prompt.
+ * Mode context (Personal / Student / Business) that is added to ROSE's system prompt.
  * Kept outside the voice code: buildTiyaSystemPrompt() just reads getTiyaModeContext().
  */
 import { supabase } from '../lib/supabase';

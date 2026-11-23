@@ -1,7 +1,7 @@
 /**
- * TIYA client-side "server".
+ * ROSE client-side "server".
  *
- * TIYA used to send every AI request through server.ts (Express + WebSocket). That
+ * ROSE used to send every AI request through server.ts (Express + WebSocket). That
  * server only runs inside the AI Studio preview, NOT on Vercel or inside the Android
  * app — so on tiya-ai.vercel.app key tests, chat, mic and live voice all failed.
  *
@@ -59,7 +59,7 @@ function buildNavigateAppTool(nonBlocking: boolean): Record<string, unknown> {
   return {
     name: 'navigate_app',
     description:
-      'Opens a TIYA screen or settings page/subpage, or navigates back. Use whenever the user asks to open Settings, a numbered Settings bar, Home, Chat, Mic Test, Privacy Controls, etc.',
+      'Opens a ROSE screen or settings page/subpage, or navigates back. Use whenever the user asks to open Settings, a numbered Settings bar, Home, Chat, Mic Test, Privacy Controls, etc.',
     ...(nonBlocking ? { behavior: 'NON_BLOCKING' } : {}),
     parameters: {
       type: 'OBJECT',
@@ -82,7 +82,7 @@ function buildGetLatestMotivationTool(nonBlocking: boolean): Record<string, unkn
   return {
     name: 'get_latest_motivation',
     description:
-      'Fetches the latest published motivation post so TIYA can read it to the user in Bengali. Call this whenever the user asks for daily or today’s motivation.',
+      'Fetches the latest published motivation post so ROSE can read it to the user in Bengali. Call this whenever the user asks for daily or today’s motivation.',
     ...(nonBlocking ? { behavior: 'NON_BLOCKING' } : {}),
     parameters: { type: 'OBJECT', properties: {} },
   };
@@ -179,7 +179,7 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         .slice(-16)
         .map((h: any) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', text: String(h.text || '') }))
         .filter((h: any) => h.text.trim());
-      const system = String(body?.systemInstruction || 'You are TIYA, a helpful Bengali-default AI assistant.');
+      const system = String(body?.systemInstruction || 'You are ROSE, a helpful Bengali-default AI assistant.');
       let lastErr: unknown = null;
       const groqKey = getGroqKey();
 
@@ -298,7 +298,7 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
     }
     case '/api/gemini/voice-check': {
       if (!key) return fail(401, 'No API key', 'Add your Gemini API key in Settings > Connections.');
-      const name = String(body?.assistantName || '').trim() || 'তিয়া';
+      const name = String(body?.assistantName || '').trim() || 'রোজ';
       const userPart = String(body?.yourName || '').trim() ? ` ${String(body.yourName).trim()},` : '';
       const samples: Record<string, string> = {
         Bengali: `হ্যালো${userPart} আমি ${name}। আপনার ভয়েস সেটআপ একদম ঠিক আছে!`,
@@ -575,7 +575,7 @@ export class LocalLiveSocket {
   private apiKey = '';
   private voiceName = 'Zephyr';
   private language = 'Bengali';
-  private systemInstruction = 'You are TIYA.';
+  private systemInstruction = 'You are ROSE.';
   private turnHistory: Array<{ role: 'user' | 'assistant'; text: string }> = [];
   private turnChunks: Int16Array[] = [];
   private turnSpeech = false;
@@ -633,7 +633,7 @@ export class LocalLiveSocket {
 
   private startTurnMode() {
     this.turnMode = true;
-    this.emit({ type: 'ready', model: 'TIYA Voice (standard)' });
+    this.emit({ type: 'ready', model: 'ROSE Voice (standard)' });
   }
 
   private async connect(apiKey: string, models: string[], voiceName: string, systemInstruction: string) {
@@ -951,7 +951,7 @@ export class LocalLiveSocket {
           ? [primary, ...msg.fallbackModels.filter((m: string) => m !== primary)]
           : [primary];
       this.language = String(msg.language || 'Bengali');
-      void this.connect(String(msg.apiKey || '').trim(), candidates, msg.voiceName || 'Zephyr', msg.systemInstruction || 'You are TIYA.');
+      void this.connect(String(msg.apiKey || '').trim(), candidates, msg.voiceName || 'Zephyr', msg.systemInstruction || 'You are ROSE.');
     } else if (msg.type === 'motivation_response' && msg.callId && this.session) {
       const pending = this.pendingMotivation.get(msg.callId);
       if (pending) {

@@ -32,7 +32,7 @@ export const ForceLogoutButton: React.FC<{ user: UserProfile }> = ({ user }) => 
   return (
     <div className={card}>
       <p className="text-xs font-semibold tracking-wide text-slate-100">FORCE LOGOUT</p>
-      <p className="text-[11px] text-slate-400">Signs this user out of TIYA on every phone. They can log in again.</p>
+      <p className="text-[11px] text-slate-400">Signs this user out of ROSE on every phone. They can log in again.</p>
       {msg && <p className="text-xs text-teal-400">{msg}</p>}
       <button
         type="button"
@@ -70,7 +70,7 @@ export const AdminGivePremiumPage: React.FC = () => {
     setBusy(false);
     if (error) return setErr(error.message);
     const row = Array.isArray(data) ? data[0] : data;
-    if (!row) return setErr('No account with this Gmail. Ask them to sign in to TIYA once first.');
+    if (!row) return setErr('No account with this Gmail. Ask them to sign in to ROSE once first.');
     setUser({ ...row, blocked: row.is_blocked });
   };
 

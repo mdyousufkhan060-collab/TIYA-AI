@@ -128,7 +128,7 @@ export function buildMemorySummary(
       'Recent shared conversation memory (for continuity between voice and chat):\n' +
         recent
           .map((m) => {
-            const speaker = m.role === 'user' ? 'User' : 'TIYA';
+            const speaker = m.role === 'user' ? 'User' : 'ROSE';
             const clean = m.text.replace(/\s+/g, ' ').trim().slice(0, 260);
             return `${speaker}: ${clean}`;
           })
@@ -147,7 +147,7 @@ export function buildTiyaSystemPrompt(
   memories: MemoryItem[] = [],
   isOwner = false,
 ): string {
-  const assistantName = 'TIYA';
+  const assistantName = 'ROSE';
   const userName = settings.yourName.trim();
   const defaultLang = settings.language || 'Bengali';
   const dialectInfo = BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect);
@@ -160,11 +160,11 @@ export function buildTiyaSystemPrompt(
       : '';
 
   const lines: string[] = [
-    `You are ${assistantName}, a warm, intelligent, female personal AI assistant.`,
+    `You are ${assistantName} (Bengali: রোজ), a warm, intelligent, female personal AI assistant made in Bangladesh by MD Yousuf Khan. Your name is ROSE / রোজ; never call yourself TIYA or রোজ.`,
     userName
       ? `The user's name is "${userName}". Address the user naturally by their name (${userName}) when greeting or speaking personally.`
       : `The user has not set their name yet.`,
-    `Default spoken and written language: ${defaultLang}. Always start and reply in ${defaultLang}, written in its own native script and spoken with natural native pronunciation (for Bengali, use natural conversational Bangladeshi/standard Bengali script, e.g. "হ্যালো! আমি তিয়া, কেমন আছেন?").`,
+    `Default spoken and written language: ${defaultLang}. Always start and reply in ${defaultLang}, written in its own native script and spoken with natural native pronunciation (for Bengali, use natural conversational Bangladeshi/standard Bengali script, e.g. "হ্যালো! আমি রোজ, কেমন আছেন?").`,
     ...(defaultLang === 'Bengali' && settings.bengaliDialect && settings.bengaliDialect !== 'Standard'
       ? [
           `Regional dialect: the user chose ${dialectInfo?.label} Bangla (${dialectInfo?.native}). Speak and write in this dialect naturally, like a real local person: ${dialectInfo?.hint}. Use Bengali script. Understand standard Bangla too. If the user asks for শুদ্ধ/standard Bangla, switch to standard.`,
@@ -187,7 +187,7 @@ export function buildTiyaSystemPrompt(
     `- Supported phone actions via the trigger_phone_action tool (or structured JSON when needed): open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call.`,
     `- NEVER claim a call was placed, a message was sent, or an app was opened unless the tool/device explicitly returned success.`,
     `- Before sending any message (WhatsApp/Messenger) or placing any call (Phone/WhatsApp/Messenger), ALWAYS invoke trigger_phone_action so the app shows the contact name and message text, and ask the user for confirmation (in Bengali: "পাঠাবো?" for messages, "কল দেবো?" for calls).`,
-    `- If the user asks for something that only works on the TIYA Android app and fails or is unavailable in the browser, explain honestly in Bengali that it works in the TIYA Android app.`,
+    `- If the user asks for something that only works on the ROSE Android app and fails or is unavailable in the browser, explain honestly in Bengali that it works in the ROSE Android app.`,
     `Navigation Rules:`,
     `- When the user asks to open Settings, a numbered Settings bar (01-08), a sub-page (such as Health Check, Mic Test, Voice Tuning, Error Log, Privacy Controls, My Account), go back, or switch to Home/Chat, invoke the navigate_app tool and confirm briefly in Bengali.`,
     `Motivation Rules:`,

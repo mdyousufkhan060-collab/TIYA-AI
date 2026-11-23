@@ -142,11 +142,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     }
   };
 
-  const assistantTitle = settings.assistantName.trim() || 'TIYA';
+  const assistantTitle = settings.assistantName.trim() || 'ROSE';
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#020714] text-slate-100">
-      {/* Same TIYA picture as HOME, blurred and darkened behind the chat */}
+      {/* Same ROSE picture as HOME, blurred and darkened behind the chat */}
       <img
         src="/tiya-home.jpg"
         alt=""
@@ -156,7 +156,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[#020714]/70" />
 
-      {/* Top row: HOME · TIYA · clear */}
+      {/* Top row: HOME · ROSE · clear */}
       <header className="relative z-20 grid shrink-0 grid-cols-3 items-center px-3 pt-[env(safe-area-inset-top)] [min-height:calc(3.5rem+env(safe-area-inset-top))]">
         <div className="flex justify-start">
           <button
@@ -175,7 +175,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           <button
             type="button"
             onClick={onToggleVoice}
-            aria-label={isVoiceOn ? 'Stop talking with TIYA' : 'Talk with TIYA'}
+            aria-label={isVoiceOn ? 'Stop talking with ROSE' : 'Talk with ROSE'}
             aria-pressed={isVoiceOn}
             className={`flex h-9 w-9 items-center justify-center rounded-full ring-1 backdrop-blur-sm active:scale-95 ${
               isVoiceOn

@@ -31,8 +31,8 @@ interface HomeScreenProps {
 }
 
 /**
- * TIYA HOME — Rose-style: full-screen TIYA picture, small ADMIN pill (admin only),
- * TIYA title, bell, live caption, and a bottom bar with two buttons on each side of
+ * ROSE HOME — Rose-style: full-screen ROSE picture, small ADMIN pill (admin only),
+ * ROSE title, bell, live caption, and a bottom bar with two buttons on each side of
  * the round voice button. The round button ONLY turns voice on/off.
  */
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -64,7 +64,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     voiceState === 'speaking';
   const isSpeaking = voiceState === 'speaking';
   const hasKey = Boolean(settings.apiKey.trim());
-  const assistantTitle = (settings.assistantName.trim() || 'TIYA').toUpperCase();
+  const assistantTitle = (settings.assistantName.trim() || 'ROSE').toUpperCase();
 
   const status = (() => {
     switch (voiceState) {
@@ -107,7 +107,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#020714] text-slate-100">
-      {/* Full-screen TIYA picture */}
+      {/* Full-screen ROSE picture */}
       <img
         src="/tiya-home.jpg"
         alt=""
@@ -121,7 +121,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#020714]/85 to-transparent" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#020714] via-[#020714]/80 to-transparent" />
 
-      {/* Top row: small ADMIN (admin only) · TIYA · bell */}
+      {/* Top row: small ADMIN (admin only) · ROSE · bell */}
       <header className="relative z-20 grid shrink-0 grid-cols-3 items-center px-3 pt-[env(safe-area-inset-top)] [min-height:calc(3.5rem+env(safe-area-inset-top))]">
         <div className="flex justify-start">
           {isAdmin && (

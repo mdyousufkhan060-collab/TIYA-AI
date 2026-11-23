@@ -333,7 +333,7 @@ export const TiyaHologramStage: React.FC<TiyaHologramStageProps> = ({
       {/* Base Hologram Hero Image */}
       <img
         src="/tiya-hologram.png"
-        alt="TIYA Hologram"
+        alt="ROSE Hologram"
         draggable={false}
         className="h-full w-full select-none object-cover object-[50%_42%]"
       />

@@ -24,7 +24,7 @@ const TASKS: CrudConfig = {
   subKey: 'due_at',
   badgeKey: 'done',
   orderBy: { column: 'created_at', ascending: false },
-  emptyText: 'No tasks yet. Tap ADD NEW, or tell TIYA "remind me…".',
+  emptyText: 'No tasks yet. Tap ADD NEW, or tell ROSE "remind me…".',
   fields: [
     { key: 'title', label: 'TASK', type: 'text', required: true, placeholder: 'e.g. Pay electricity bill' },
     { key: 'notes', label: 'NOTES', type: 'textarea' },
@@ -40,7 +40,7 @@ const CONTENT: CrudConfig = {
   titleKey: 'title',
   subKey: 'hashtags',
   badgeKey: 'platform',
-  emptyText: 'Save video titles, captions, hashtags and scripts here. Ask TIYA in chat to write them.',
+  emptyText: 'Save video titles, captions, hashtags and scripts here. Ask ROSE in chat to write them.',
   fields: [
     {
       key: 'platform',
@@ -69,7 +69,7 @@ const NOTES: CrudConfig = {
   titleKey: 'title',
   subKey: 'subject',
   badgeKey: 'chapter',
-  emptyText: 'No notes yet. Ask TIYA to summarise a chapter, then save it here.',
+  emptyText: 'No notes yet. Ask ROSE to summarise a chapter, then save it here.',
   fields: [
     { key: 'subject', label: 'SUBJECT', type: 'text', placeholder: 'e.g. Physics' },
     { key: 'chapter', label: 'CHAPTER', type: 'text' },
@@ -102,7 +102,7 @@ const TESTS: CrudConfig = {
   titleKey: 'title',
   subKey: 'subject',
   badgeKey: 'score',
-  emptyText: 'Keep your MCQ / test scores here. Ask TIYA "give me 10 MCQ on …" in chat.',
+  emptyText: 'Keep your MCQ / test scores here. Ask ROSE "give me 10 MCQ on …" in chat.',
   fields: [
     { key: 'subject', label: 'SUBJECT', type: 'text' },
     { key: 'title', label: 'TEST NAME', type: 'text', required: true },
@@ -156,7 +156,7 @@ const PRODUCTS: CrudConfig = {
   subKey: 'category',
   badgeKey: 'price',
   orderBy: { column: 'name', ascending: true },
-  emptyText: 'Add your products. TIYA uses these prices to answer customers.',
+  emptyText: 'Add your products. ROSE uses these prices to answer customers.',
   fields: [
     { key: 'name', label: 'NAME', type: 'text', required: true },
     { key: 'kind', label: 'TYPE', type: 'select', defaultValue: 'product', options: [{ value: 'product', label: 'PRODUCT' }, { value: 'service', label: 'SERVICE' }] },
@@ -244,7 +244,7 @@ const FAQS: CrudConfig = {
   titleKey: 'question',
   subKey: 'answer',
   orderBy: { column: 'sort', ascending: true },
-  emptyText: 'Add common customer questions. TIYA answers from these.',
+  emptyText: 'Add common customer questions. ROSE answers from these.',
   fields: [
     { key: 'question', label: 'QUESTION', type: 'text', required: true },
     { key: 'answer', label: 'ANSWER', type: 'textarea', required: true },

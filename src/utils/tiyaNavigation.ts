@@ -70,13 +70,13 @@ const KEYWORD_ROUTES: Array<{
     },
   },
   {
-    patterns: [/(অ্যাপ ইনফো|অ্যাবাউট তিয়া|অ্যাবাউট তিয়া|app info|about tiya)/i],
+    patterns: [/(অ্যাপ ইনফো|অ্যাবাউট রোজ|অ্যাবাউট রোজ|app info|about tiya|about rose|অ্যাবাউট রোজ)/i],
     command: {
       type: 'open',
       tab: 'settings',
       page: 'about',
       subpage: 'app_info',
-      confirmBn: 'About TIYA খোলা হয়েছে।',
+      confirmBn: 'About ROSE খোলা হয়েছে।',
     },
   },
   {
@@ -87,7 +87,7 @@ const KEYWORD_ROUTES: Array<{
       tab: 'settings',
       page: 'about',
       subpage: 'app_info',
-      confirmBn: 'About TIYA খোলা হয়েছে।',
+      confirmBn: 'About ROSE খোলা হয়েছে।',
     },
   },
   {
@@ -108,7 +108,7 @@ const KEYWORD_ROUTES: Array<{
       tab: 'settings',
       page: 'about',
       subpage: 'app_info',
-      confirmBn: 'About TIYA খোলা হয়েছে।',
+      confirmBn: 'About ROSE খোলা হয়েছে।',
     },
   },
 
@@ -339,14 +339,14 @@ const KEYWORD_ROUTES: Array<{
     },
   },
   {
-    patterns: [/(তিয়ার মেমোরি|তিয়ার মেমোরি|tiya's memory|tiya memory)/i],
+    patterns: [/(রোজের মেমোরি|রোজের মেমোরি|tiya's memory|tiya memory|rose's memory|rose memory)/i],
     requireActionHint: true,
     command: {
       type: 'open',
       tab: 'settings',
       page: 'privacy_controls',
       subpage: 'tiya_memory',
-      confirmBn: "TIYA's Memory খোলা হয়েছে।",
+      confirmBn: "ROSE's Memory খোলা হয়েছে।",
     },
   },
   {
@@ -574,10 +574,10 @@ export function validateNavigateToolArgs(args: unknown): NavigationCommand | nul
 }
 
 export const TIYA_SETTINGS_MAP_DESCRIPTION = [
-  'TIYA App & Settings Map (you can open any screen/subpage using navigate_app):',
+  'ROSE App & Settings Map (you can open any screen/subpage using navigate_app):',
   '- Tabs: home, chat, settings',
   '- Settings Hub (page="hub"):',
-  '  01 ABOUT & GUIDE (page="about", subpages: health_check, how_to_use, app_info = ABOUT TIYA with developer & help)',
+  '  01 ABOUT & GUIDE (page="about", subpages: health_check, how_to_use, app_info = ABOUT ROSE with developer & help)',
   '  02 CONNECTIONS (page="connections", subpages: gemini, groq)',
   '  03 VOICE & LANGUAGE (page="voice_language", subpages: assistant_name (locked), your_name, personality, response_style, language, voice, voice_model, custom_model, chat_model_override, speech_speed, volume, mic_listening, mic_test, mic_sensitivity)',
   '  04 PHONE CONTROL (page="phone_control", subpages: quick_actions)',

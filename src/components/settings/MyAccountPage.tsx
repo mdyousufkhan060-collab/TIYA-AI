@@ -36,7 +36,7 @@ export const MyAccountPage: React.FC<MyAccountPageProps> = ({
     (typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : '') ||
     (typeof user.user_metadata?.name === 'string' ? user.user_metadata.name : '') ||
     user.email?.split('@')[0] ||
-    'TIYA User';
+    'ROSE User';
 
   const avatarUrl =
     profile?.avatar_url ||
@@ -218,7 +218,7 @@ export const MyAccountPage: React.FC<MyAccountPageProps> = ({
             DELETE ACCOUNT
           </p>
           <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-            Permanently removes your TIYA account and profile data.
+            Permanently removes your ROSE account and profile data.
           </p>
 
           {deleteError && (

@@ -47,7 +47,7 @@ export const DEFAULT_SETTINGS: TiyaSettings = {
   availableChatModels: [],
   ttsModel: 'gemini-3.8-flash-lite-tts',
   voiceModel: 'gemini-live-native',
-  assistantName: 'TIYA',
+  assistantName: 'ROSE',
   yourName: '',
   personality: 'Friendly',
   customPersonalityPrompt: '',

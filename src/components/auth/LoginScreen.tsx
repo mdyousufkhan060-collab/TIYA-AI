@@ -1,15 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { getAuthRedirectUrl, supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { mapAuthErrorToBengali } from '../../utils/authErrors';
 
 type AuthTab = 'signin' | 'signup';
 
-interface LoginScreenProps {
-  initialError?: string;
-}
-
-export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = '' }) => {
+export const LoginScreen: React.FC = () => {
   const [tab, setTab] = useState<AuthTab>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -19,16 +15,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = '' }) =
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [errorBn, setErrorBn] = useState(() =>
-    initialError ? mapAuthErrorToBengali(initialError) : '',
-  );
+  const [errorBn, setErrorBn] = useState('');
   const [infoBn, setInfoBn] = useState('');
-
-  useEffect(() => {
-    if (initialError) {
-      setErrorBn(mapAuthErrorToBengali(initialError));
-    }
-  }, [initialError]);
 
   const handleGoogleSignIn = async () => {
     setErrorBn('');
@@ -38,7 +26,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = '' }) =
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: getAuthRedirectUrl(),
+          redirectTo: window.location.origin,
         },
       });
       if (error) {
@@ -97,7 +85,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = '' }) =
           email: trimmedEmail,
           password,
           options: {
-            emailRedirectTo: getAuthRedirectUrl(),
+            emailRedirectTo: window.location.origin,
             data: { full_name: trimmedName },
           },
         });
@@ -128,7 +116,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = '' }) =
             </span>
           </div>
           <h1 className="font-display text-base font-bold tracking-[0.2em] text-slate-900 dark:text-[#F4F5F7]">
-            TIYA
+            ROSE
           </h1>
           <p className="mt-0.5 truncate text-[10px] text-slate-500 dark:text-slate-400">
             Sign in to continue to your voice assistant

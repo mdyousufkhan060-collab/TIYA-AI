@@ -314,7 +314,7 @@ interface Gift {
   note: string | null;
 }
 
-const randomCode = () => 'TIYA-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+const randomCode = () => 'ROSE-' + Math.random().toString(36).slice(2, 8).toUpperCase();
 
 export const AdminGiftCodesPage: React.FC = () => {
   const [codes, setCodes] = useState<Gift[]>([]);

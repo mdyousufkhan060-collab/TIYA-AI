@@ -257,7 +257,7 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ profile, isAdmin = fal
           <>
             <p className="px-1 pt-1 text-[10px] font-semibold tracking-wider text-slate-400">GIFT CODE</p>
             <div className="flex gap-2">
-              <input className={`${inputCls} font-mono-code uppercase`} value={code} onChange={(e) => setCode(e.target.value)} placeholder="TIYA-XXXXXX" />
+              <input className={`${inputCls} font-mono-code uppercase`} value={code} onChange={(e) => setCode(e.target.value)} placeholder="ROSE-XXXXXX" />
               <button
                 type="button"
                 disabled={busy || !code.trim() || isAdmin}

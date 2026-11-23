@@ -35,8 +35,8 @@ export const VoiceOrb: React.FC<VoiceOrbProps> = ({
         : 1;
 
   const ariaLabel = isActive
-    ? `Stop TIYA voice conversation (currently ${voiceState})`
-    : 'Start TIYA live voice conversation';
+    ? `Stop ROSE voice conversation (currently ${voiceState})`
+    : 'Start ROSE live voice conversation';
 
   const ringColor =
     voiceState === 'error'

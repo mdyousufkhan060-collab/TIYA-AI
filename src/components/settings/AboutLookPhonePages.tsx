@@ -119,10 +119,10 @@ export const AboutGuidePage: React.FC<AboutPageProps> = ({
       value: canUseWithoutKey || settings.connectionStatus === 'ready' ? 'READY' : 'CHECK',
     },
     { num: '02', id: 'how_to_use', title: 'HOW TO USE' },
-    { num: '03', id: 'app_info', title: 'ABOUT TIYA', value: 'v1.0' },
+    { num: '03', id: 'app_info', title: 'ABOUT ROSE', value: 'v1.0' },
   ];
 
-  // Old bar ids (developer, help_contact, about_tiya, contact_help) now live inside ABOUT TIYA
+  // Old bar ids (developer, help_contact, about_tiya, contact_help) now live inside ABOUT ROSE
   const resolvedSubpage =
     subpage === 'about_tiya' || subpage === 'developer' || subpage === 'help_contact' || subpage === 'contact_help'
       ? 'app_info'
@@ -221,11 +221,11 @@ export const AboutGuidePage: React.FC<AboutPageProps> = ({
         '1. Talk: tap the round button at the bottom of Home and speak. Tap STOP to end.',
         '2. Chat: open CHAT and type, or tap the mic to speak your message.',
         '3. Open settings by voice: "ভয়েস সেটিং খোলো", "কানেকশন খোলো".',
-        '4. Phone actions: "মাকে কল দাও", "হোয়াটসঅ্যাপে রাকিবকে মেসেজ দাও". TIYA always asks before it acts.',
+        '4. Phone actions: "মাকে কল দাও", "হোয়াটসঅ্যাপে রাকিবকে মেসেজ দাও". ROSE always asks before it acts.',
         '5. Not working? Run HEALTH CHECK and fix the yellow rows.',
       ],
       app_info: [
-        'TIYA is a mobile-only Bengali voice and chat assistant.',
+        'ROSE is a mobile-only Bengali voice and chat assistant.',
         'Live voice, text chat, memory, and phone actions that always ask before acting.',
         'Help: if voice or chat stops, run HEALTH CHECK first.',
       ],
@@ -298,7 +298,7 @@ const PHONE_PERMISSIONS: Array<{ id: PermissionItemId; label: string }> = [
   { id: 'phone_calls', label: 'Phone calls' },
   { id: 'sms', label: 'SMS' },
   { id: 'notification_access', label: 'Notification access' },
-  { id: 'tiya_accessibility', label: 'TIYA Access (Accessibility)' },
+  { id: 'tiya_accessibility', label: 'ROSE Access (Accessibility)' },
   { id: 'display_over_apps', label: 'Display over other apps' },
   { id: 'battery_unrestricted', label: 'Battery (no restriction)' },
 ];
@@ -358,7 +358,7 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
       return;
     }
 
-    setNotice('Phone control works in the TIYA Android app.');
+    setNotice('Phone control works in the ROSE Android app.');
   };
 
   const getPermissionStatus = (id: PermissionItemId): { text: string; allowed: boolean } => {
@@ -396,7 +396,7 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
         <div className="space-y-1.5 pb-3">
           {!hasNativeBridge && (
             <p className="px-1 pb-1 text-[11px] text-slate-400">
-              Phone control works in the TIYA Android app.
+              Phone control works in the ROSE Android app.
             </p>
           )}
           {actionsList.map((item) => (
@@ -425,7 +425,7 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
             data-testid="phone-control-browser-note"
             className="px-1 text-[11.5px] font-medium text-teal-400"
           >
-            Phone control works in the TIYA Android app.
+            Phone control works in the ROSE Android app.
           </p>
         )}
 

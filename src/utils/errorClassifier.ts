@@ -83,7 +83,7 @@ export function classifyGeminiError(rawMessage?: string, statusCode?: number): {
   if (msg.includes('microphone') || msg.includes('notallowederror') || msg.includes('permission')) {
     return {
       label: 'Microphone permission denied',
-      detail: 'Allow microphone access to talk with TIYA.',
+      detail: 'Allow microphone access to talk with ROSE.',
       shouldFallback: false,
     };
   }

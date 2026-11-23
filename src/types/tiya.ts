@@ -112,7 +112,7 @@ export const BENGALI_DIALECTS: BengaliDialectInfo[] = [
 ];
 
 /** The assistant's name is fixed and cannot be changed by users. */
-export const TIYA_FIXED_NAME = 'TIYA';
+export const TIYA_FIXED_NAME = 'ROSE';
 export type ThemeMode = 'dark' | 'light';
 export type OrbStyle = 'Classic' | 'Pulse' | 'Wave';
 

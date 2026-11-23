@@ -46,7 +46,7 @@ export const DeveloperToolsPage: React.FC<DeveloperToolsPageProps> = ({
       const res = await fetch('/api/health');
       if (!res.ok) found.push(`Backend /api/health returned HTTP ${res.status}.`);
     } catch {
-      found.push('Cannot reach TIYA backend server.');
+      found.push('Cannot reach ROSE backend server.');
     }
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -178,7 +178,7 @@ export const DeveloperToolsPage: React.FC<DeveloperToolsPageProps> = ({
 
   if (subpage === 'system_info') {
     const infoRows = [
-      { label: 'APP', val: 'TIYA Web' },
+      { label: 'APP', val: 'ROSE Web' },
       { label: 'VIEWPORT', val: `${window.innerWidth}×${window.innerHeight}` },
       { label: 'ONLINE', val: navigator.onLine ? 'Yes' : 'No' },
       { label: 'STORAGE KEYS', val: String(localStorage.length) },
@@ -359,7 +359,7 @@ export const PrivacyControlsPage: React.FC<PrivacyControlsPageProps> = ({
   if (subpage === 'tiya_memory') {
     return (
       <SettingsShell
-        title="TIYA'S MEMORY"
+        title="ROSE'S MEMORY"
         onBack={() => onSelectSubpage(null)}
         rightAction={
           memories.length > 0 ? (
@@ -387,7 +387,7 @@ export const PrivacyControlsPage: React.FC<PrivacyControlsPageProps> = ({
               type="text"
               value={newMemory}
               onChange={(e) => setNewMemory(e.target.value)}
-              placeholder="Add memory note for TIYA..."
+              placeholder="Add memory note for ROSE..."
               className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-xs dark:border-white/10 dark:bg-[#11151E] dark:text-white"
             />
             <button
@@ -430,7 +430,7 @@ export const PrivacyControlsPage: React.FC<PrivacyControlsPageProps> = ({
 
   if (subpage === 'stored_info') {
     const items = [
-      { k: 'Assistant Name', v: settings.assistantName || 'TIYA' },
+      { k: 'Assistant Name', v: settings.assistantName || 'ROSE' },
       { k: 'Your Name', v: settings.yourName.trim() || 'Not set' },
       { k: 'Saved Messages', v: String(messages.length) },
       { k: 'Saved Memories', v: String(memories.length) },
@@ -461,7 +461,7 @@ export const PrivacyControlsPage: React.FC<PrivacyControlsPageProps> = ({
             Keys stay only on this phone.
           </p>
           <p>
-            Your Gemini and Groq API keys are saved strictly inside your device localStorage and never stored in remote TIYA databases.
+            Your Gemini and Groq API keys are saved strictly inside your device localStorage and never stored in remote ROSE databases.
           </p>
         </div>
       </SettingsShell>
@@ -473,7 +473,7 @@ export const PrivacyControlsPage: React.FC<PrivacyControlsPageProps> = ({
       <SettingsShell title="PRIVACY POLICY & TERMS" onBack={() => onSelectSubpage(null)}>
         <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-700 dark:border-white/[0.08] dark:bg-[#11151E] dark:text-slate-200">
           <p>
-            TIYA processes voice and text requests using your configured AI provider key. Microphone audio is streamed only while a voice session or mic test is active.
+            ROSE processes voice and text requests using your configured AI provider key. Microphone audio is streamed only while a voice session or mic test is active.
           </p>
           <p>
             Strict safety rules apply to all users, with additional teen-safe protections for accounts under 18.
@@ -488,7 +488,7 @@ export const PrivacyControlsPage: React.FC<PrivacyControlsPageProps> = ({
       <SettingsShell title="ACCOUNT & DATA DELETE" onBack={() => onSelectSubpage(null)}>
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/[0.08] dark:bg-[#11151E]">
           <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-            Delete local chats & memories here, or open MY ACCOUNT to permanently delete your TIYA account.
+            Delete local chats & memories here, or open MY ACCOUNT to permanently delete your ROSE account.
           </p>
           <button
             type="button"

@@ -42,7 +42,7 @@ const API_PROVIDERS: CrudConfig = {
   subKey: 'model',
   badgeKey: 'tier',
   orderBy: { column: 'priority', ascending: true },
-  emptyText: 'List the AI providers TIYA uses. Keys stay in Supabase Secrets, never here.',
+  emptyText: 'List the AI providers ROSE uses. Keys stay in Supabase Secrets, never here.',
   fields: [
     { key: 'name', label: 'NAME', type: 'text', required: true, placeholder: 'Gemini main' },
     {

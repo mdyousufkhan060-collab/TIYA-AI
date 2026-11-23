@@ -164,7 +164,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
             <ArrowLeft className="h-4 w-4" /> BACK
           </button>
         ) : (
-          <span className="font-display text-sm font-bold tracking-[0.2em] text-white">TIYA</span>
+          <span className="font-display text-sm font-bold tracking-[0.2em] text-white">ROSE</span>
         )}
         <span className="text-[10px] font-semibold tracking-widest text-slate-400">
           STEP {step} / {knownBirthYear !== null ? 1 : 2}
@@ -181,7 +181,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         {step === 1 ? (
           <>
             <h1 className="font-display text-2xl font-bold text-white">Choose your mode</h1>
-            <p className="mt-1.5 text-xs text-slate-400">How will you use TIYA? You can change it later.</p>
+            <p className="mt-1.5 text-xs text-slate-400">How will you use ROSE? You can change it later.</p>
 
             <div className="mt-5 space-y-3">
               {MODES.map((m) => {
@@ -230,7 +230,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
           <>
             <h1 className="font-display text-2xl font-bold text-white">Your age</h1>
             <p className="mt-1.5 text-xs text-slate-400">
-              Asked only once so TIYA can keep conversations safe for your age.
+              Asked only once so ROSE can keep conversations safe for your age.
             </p>
 
             {/* Tabs */}
@@ -345,7 +345,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
           className="flex h-12 w-full items-center justify-center gap-2 rounded-[4px] bg-teal-500 text-xs font-bold tracking-widest text-black disabled:opacity-40"
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {step === 1 && knownBirthYear === null ? 'CONTINUE' : 'START TIYA'}
+          {step === 1 && knownBirthYear === null ? 'CONTINUE' : 'START ROSE'}
         </button>
         <button type="button" onClick={onSignOut} className="h-9 w-full text-[11px] font-medium text-slate-500">
           Sign out

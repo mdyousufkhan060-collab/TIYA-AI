@@ -97,7 +97,7 @@ test('browser fallbacks use tel:/wa.me for phone numbers and honest Bengali noti
   const nameCallFallback = buildWebFallback({ action: 'call', contact: 'Abbu' });
   assert.equal(nameCallFallback.success, false);
   assert.equal(nameCallFallback.via, 'unsupported');
-  assert.match(nameCallFallback.messageBn, /TIYA Android/);
+  assert.match(nameCallFallback.messageBn, /ROSE Android/);
 
   const waFallback = buildWebFallback({
     action: 'whatsapp_message',
@@ -109,5 +109,5 @@ test('browser fallbacks use tel:/wa.me for phone numbers and honest Bengali noti
 
   const messengerFallback = buildWebFallback({ action: 'messenger_call', contact: 'Rana' });
   assert.equal(messengerFallback.success, false);
-  assert.match(messengerFallback.messageBn, /TIYA Android/);
+  assert.match(messengerFallback.messageBn, /ROSE Android/);
 });

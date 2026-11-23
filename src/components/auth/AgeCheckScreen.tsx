@@ -103,7 +103,7 @@ export const AgeCheckScreen: React.FC<AgeCheckScreenProps> = ({
             Birth year
           </h1>
           <p className="mt-2 text-balance text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-            Asked only once so TIYA can keep conversations age-appropriate.
+            Asked only once so ROSE can keep conversations age-appropriate.
           </p>
         </div>
 
