@@ -2,6 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   Bell,
+  Camera,
+  CameraOff,
+  CreditCard,
+  LogIn,
+  Package,
+  UserPlus,
+  X,
   CheckCircle2,
   Crown,
   LayoutDashboard,
@@ -30,6 +37,73 @@ import { TeamPanel } from '../team/TeamPanel';
  */
 export type DesktopTab = 'dashboard' | 'team' | 'app';
 
+// ---------- camera preview (real camera, nothing is recorded or uploaded) ----------
+const CameraModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [err, setErr] = useState('');
+  const [facing, setFacing] = useState<'user' | 'environment'>('user');
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    navigator.mediaDevices
+      ?.getUserMedia({ video: { facingMode: facing }, audio: false })
+      .then((s) => {
+        stream = s;
+        if (videoRef.current) videoRef.current.srcObject = s;
+      })
+      .catch(() => setErr('Camera blocked. Allow camera access in the browser (lock icon next to the address).'));
+    return () => stream?.getTracks().forEach((t) => t.stop());
+  }, [facing]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-[560px] overflow-hidden rounded-[12px] border border-white/10 bg-[#120F22]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3">
+          <p className="flex items-center gap-2 text-sm font-bold text-white">
+            <Camera className="h-4 w-4 text-fuchsia-300" /> Camera
+          </p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))} className="h-8 rounded-[6px] border border-white/15 px-3 text-[11px] text-slate-200">
+              SWITCH
+            </button>
+            <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-white/15 text-slate-200">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        {err ? (
+          <p className="px-4 pb-6 text-sm text-rose-300">{err}</p>
+        ) : (
+          <video ref={videoRef} autoPlay playsInline muted className="aspect-video w-full bg-black object-cover" />
+        )}
+      </div>
+    </div>
+  );
+};
+
+/** Round voice orb: tap to talk; dots bounce while ROSE listens or speaks */
+const VoiceOrb: React.FC<{ on: boolean; state: string; onClick: () => void }> = ({ on, state, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={on ? 'Stop voice' : 'Talk to ROSE'}
+    className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-all ${
+      on
+        ? 'bg-gradient-to-br from-fuchsia-500 to-violet-700 shadow-[0_0_26px_#c026d3]'
+        : 'bg-gradient-to-br from-violet-600/70 to-fuchsia-700/70 shadow-[0_0_14px_-4px_#a855f7] hover:shadow-[0_0_20px_#a855f7]'
+    }`}
+  >
+    {on && <span className="absolute inset-0 animate-ping rounded-full bg-fuchsia-500/30" />}
+    <span className="relative flex h-4 items-end gap-[3px]">
+      {[0, 1, 2, 3].map((i) => (
+        <span
+          key={i}
+          className={`w-[3px] rounded-full bg-white ${on ? 'animate-bounce' : ''}`}
+          style={{ height: on ? `${[10, 16, 12, 8][i]}px` : '5px', animationDelay: `${i * 0.12}s`, animationDuration: state === 'speaking' ? '0.6s' : '0.9s' }}
+        />
+      ))}
+    </span>
+  </button>
+);
+
 // ---------- top bar ----------
 export const DesktopTopBar: React.FC<{
   tab: DesktopTab;
@@ -39,24 +113,37 @@ export const DesktopTopBar: React.FC<{
   unread: number;
   onBell: () => void;
   voiceOn: boolean;
+  voiceState?: string;
   onVoice: () => void;
+  onMicSettings: () => void;
   email?: string | null;
   avatar?: string | null;
   onSignOut: () => void;
-}> = ({ tab, onTab, isAdmin, onAdmin, unread, onBell, voiceOn, onVoice, email, avatar, onSignOut }) => {
+}> = ({ tab, onTab, isAdmin, onAdmin, unread, onBell, voiceOn, voiceState = 'idle', onVoice, onMicSettings, email, avatar, onSignOut }) => {
+  const [camOpen, setCamOpen] = useState(false);
   const tabs: Array<[DesktopTab, string, React.ReactNode]> = [
     ['dashboard', 'Dashboard', <LayoutDashboard key="d" className="h-4 w-4" />],
     ['team', 'Team & Tasks', <ListChecks key="t" className="h-4 w-4" />],
     ['app', 'Settings', <Settings key="a" className="h-4 w-4" />],
   ];
+  const round = 'flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-slate-200 hover:border-white/35';
   return (
     <header className="col-span-2 flex h-14 items-center gap-3 rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]/90 px-3">
-      <div className="flex items-center gap-2 pr-2">
+      <div className="flex items-center gap-2 pr-1">
         <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[8px]" />
         <div className="leading-tight">
           <p className="text-sm font-extrabold tracking-[0.25em] text-white">ROSE</p>
           <p className="text-[9.5px] text-slate-400">Live Operations Hub</p>
         </div>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={onAdmin}
+            className="ml-1 flex h-6 items-center gap-1 rounded-[5px] border border-amber-300/50 px-2 text-[10px] font-bold tracking-wider text-amber-200 hover:bg-amber-300/10"
+          >
+            <Crown className="h-3 w-3" /> ADMIN
+          </button>
+        )}
       </div>
       <nav className="flex items-center gap-1">
         {tabs.map(([id, label, icon]) => (
@@ -73,26 +160,14 @@ export const DesktopTopBar: React.FC<{
         ))}
       </nav>
       <div className="ml-auto flex items-center gap-2">
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={onAdmin}
-            className="flex h-9 items-center gap-1.5 rounded-[6px] bg-gradient-to-r from-rose-500 to-orange-500 px-3 text-xs font-extrabold text-white"
-          >
-            <Crown className="h-4 w-4" /> ADMIN
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onVoice}
-          title={voiceOn ? 'Stop voice' : 'Talk to ROSE'}
-          className={`flex h-9 w-9 items-center justify-center rounded-full border ${
-            voiceOn ? 'border-fuchsia-400 bg-fuchsia-600 text-white shadow-[0_0_18px_#c026d3]' : 'border-white/15 text-slate-200'
-          }`}
-        >
-          {voiceOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+        <button type="button" onClick={() => setCamOpen(true)} title="Camera" className={round}>
+          {camOpen ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
         </button>
-        <button type="button" onClick={onBell} className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-slate-200">
+        <button type="button" onClick={onMicSettings} title="Microphone settings" className={round}>
+          {voiceOn ? <Mic className="h-4 w-4 text-fuchsia-300" /> : <MicOff className="h-4 w-4" />}
+        </button>
+        <VoiceOrb on={voiceOn} state={voiceState} onClick={onVoice} />
+        <button type="button" onClick={onBell} className={`relative ${round}`}>
           <Bell className="h-4 w-4" />
           {unread > 0 && (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
@@ -104,10 +179,11 @@ export const DesktopTopBar: React.FC<{
           {avatar ? <img src={avatar} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="h-7 w-7 rounded-full bg-violet-600" />}
           <span className="max-w-[150px] truncate text-[11px] text-slate-300">{email}</span>
         </div>
-        <button type="button" onClick={onSignOut} title="Sign out" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-slate-300 hover:text-rose-300">
+        <button type="button" onClick={onSignOut} title="Sign out" className={`${round} hover:text-rose-300`}>
           <LogOut className="h-4 w-4" />
         </button>
       </div>
+      {camOpen && <CameraModal onClose={() => setCamOpen(false)} />}
     </header>
   );
 };
@@ -120,8 +196,20 @@ interface Tile {
   grad: string;
 }
 
+export interface FeedItem {
+  id: string;
+  at: string;
+  text: string;
+  who: string;
+  color: string;
+  photo?: string;
+  icon?: React.ReactNode;
+  state?: 'done' | 'failed' | 'working' | 'info';
+}
+
 function useDashboardData(userId: string, isAdmin: boolean) {
   const [tiles, setTiles] = useState<Tile[] | null>(null);
+  const [feed, setFeed] = useState<FeedItem[]>([]);
   const [series, setSeries] = useState<{ label: string; value: number }[]>([]);
   const [seriesName, setSeriesName] = useState('');
   const [tasks, setTasks] = useState<AgentTask[]>([]);
@@ -136,6 +224,18 @@ function useDashboardData(userId: string, isAdmin: boolean) {
       if (!alive) return;
       const taskList = (t as AgentTask[]) || [];
       setTasks(taskList);
+      const items: FeedItem[] = taskList.slice(0, 30).map((x) => {
+        const a = agentById(x.agent);
+        return {
+          id: `t_${x.id}`,
+          at: x.updated_at,
+          who: a.name,
+          color: a.color,
+          photo: a.photo,
+          text: x.title,
+          state: x.status === 'done' ? 'done' : x.status === 'failed' ? 'failed' : 'working',
+        };
+      });
       const pending = taskList.filter((x) => x.status === 'working' || x.status === 'queued').length;
       const tk = (n: number) => `৳${Number(n || 0).toLocaleString('en-IN')}`;
       const days = Array.from({ length: 7 }, (_, i) => {
@@ -163,6 +263,33 @@ function useDashboardData(userId: string, isAdmin: boolean) {
           .neq('status', 'cancelled')
           .limit(2000);
         if (!alive) return;
+        const [{ data: recentOrders }, { data: appr }] = await Promise.all([
+          supabase.from('business_orders').select('id,total,status,note,created_at,updated_at').order('updated_at', { ascending: false }).limit(15),
+          supabase.from('business_approvals').select('id,kind,message,status,created_at').order('created_at', { ascending: false }).limit(10),
+        ]);
+        if (!alive) return;
+        (recentOrders || []).forEach((o: any) =>
+          items.push({
+            id: `o_${o.id}`,
+            at: o.updated_at || o.created_at,
+            who: 'ORDER',
+            color: '#60A5FA',
+            icon: <Package className="h-4 w-4" />,
+            text: `${tk(o.total)} · ${String(o.status).toUpperCase()}${o.note ? ` · ${String(o.note).slice(0, 40)}` : ''}`,
+            state: o.status === 'cancelled' ? 'failed' : o.status === 'delivered' ? 'done' : 'info',
+          }),
+        );
+        (appr || []).forEach((a: any) =>
+          items.push({
+            id: `a_${a.id}`,
+            at: a.created_at,
+            who: 'APPROVAL',
+            color: '#FBBF24',
+            icon: <CheckCircle2 className="h-4 w-4" />,
+            text: `${String(a.kind).toUpperCase()} · ${String(a.message || '').slice(0, 50)} · ${String(a.status).toUpperCase()}`,
+            state: a.status === 'approved' ? 'done' : a.status === 'rejected' ? 'failed' : 'working',
+          }),
+        );
         setSeriesName('Sales, last 7 days (৳)');
         setSeries(
           days.map((d) => ({
@@ -181,18 +308,61 @@ function useDashboardData(userId: string, isAdmin: boolean) {
           { label: 'Active (24h)', value: String(o.active_24h ?? 0), icon: <Activity className="h-5 w-5" />, grad: 'from-amber-500 to-orange-500' },
           { label: 'Team Tasks Running', value: String(pending), icon: <ListChecks className="h-5 w-5" />, grad: 'from-cyan-500 to-sky-600' },
         ]);
-        setSeriesName('Team tasks, last 7 days');
-        setSeries(days.map((d) => ({ label: dayLabel(d), value: taskList.filter((x) => x.created_at.slice(0, 10) === dayKey(d)).length })));
+        const since = dayKey(days[0]);
+        const [{ data: logins }, { data: pays }, { data: newUsers }] = await Promise.all([
+          supabase.from('login_events').select('id,email,event,platform,created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(500),
+          supabase.from('payment_requests').select('id,plan_name,amount_bdt,method,status,created_at').order('created_at', { ascending: false }).limit(10),
+          supabase.from('profiles').select('id,email,created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(20),
+        ]);
+        if (!alive) return;
+        (logins || []).slice(0, 25).forEach((l: any) =>
+          items.push({
+            id: `l_${l.id}`,
+            at: l.created_at,
+            who: l.event === 'login' ? 'LOGIN' : l.event === 'signup' ? 'SIGN UP' : String(l.event).toUpperCase().replace('_', ' '),
+            color: l.event === 'forced_logout' ? '#FB7185' : '#34D399',
+            icon: <LogIn className="h-4 w-4" />,
+            text: `${l.email || 'user'}${l.platform ? ` · ${l.platform}` : ''}`,
+            state: 'info',
+          }),
+        );
+        (newUsers || []).forEach((u: any) =>
+          items.push({ id: `u_${u.id}`, at: u.created_at, who: 'NEW USER', color: '#A78BFA', icon: <UserPlus className="h-4 w-4" />, text: u.email || 'new account', state: 'info' }),
+        );
+        (pays || []).forEach((p: any) =>
+          items.push({
+            id: `p_${p.id}`,
+            at: p.created_at,
+            who: 'PAYMENT',
+            color: '#FBBF24',
+            icon: <CreditCard className="h-4 w-4" />,
+            text: `${p.plan_name} · ${tk(p.amount_bdt)} · ${p.method} · ${String(p.status).toUpperCase()}`,
+            state: p.status === 'approved' ? 'done' : p.status === 'rejected' ? 'failed' : 'working',
+          }),
+        );
+        setSeriesName('Logins, last 7 days');
+        setSeries(
+          days.map((d) => ({
+            label: dayLabel(d),
+            value: (logins || []).filter((l: any) => l.event === 'login' && l.created_at.slice(0, 10) === dayKey(d)).length,
+          })),
+        );
       } else {
         setTiles([]);
       }
+      items.sort((a, b) => (a.at < b.at ? 1 : -1));
+      if (alive) setFeed(items.slice(0, 40));
     };
     void load();
     const ch = supabase
       .channel(`dash_${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agent_tasks', filter: `user_id=eq.${userId}` }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'business_orders' }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'business_approvals' }, () => void load())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'login_events' }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_requests' }, () => void load())
       .subscribe();
-    const timer = window.setInterval(load, 60000);
+    const timer = window.setInterval(load, 30000);
     return () => {
       alive = false;
       window.clearInterval(timer);
@@ -200,7 +370,7 @@ function useDashboardData(userId: string, isAdmin: boolean) {
     };
   }, [userId, isAdmin]);
 
-  return { tiles, series, seriesName, tasks };
+  return { tiles, series, seriesName, tasks, feed };
 }
 
 // ---------- small SVG area chart ----------
@@ -250,7 +420,7 @@ const ago = (iso: string) => {
 
 // ---------- dashboard ----------
 export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOpenTeam: () => void }> = ({ userId, isAdmin, onOpenTeam }) => {
-  const { tiles, series, seriesName, tasks } = useDashboardData(userId, isAdmin);
+  const { tiles, series, seriesName, tasks, feed } = useDashboardData(userId, isAdmin);
 
   const agentStats = useMemo(
     () =>
@@ -272,7 +442,7 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
         </div>
       ) : tiles.length === 0 ? (
         <div className="rounded-[10px] border border-white/[0.08] bg-[#120F22] p-4 text-sm text-slate-300">
-          Set up your Business Profile (App &amp; Settings → Settings → 07 WORKSPACE) to see sales, orders and customers here.
+          Set up your Business Profile (Settings → 07 WORKSPACE) to see sales, orders and customers here.
         </div>
       ) : (
         <div className="grid grid-cols-5 gap-3">
@@ -294,34 +464,40 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
           <div className="mb-2 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-bold text-white">
               <Activity className="h-4 w-4 text-fuchsia-400" /> Live Activity
+              <span className="relative ml-1 flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" /></span>
             </h3>
             <button type="button" onClick={onOpenTeam} className="text-[11px] font-bold text-fuchsia-300">
               View all →
             </button>
           </div>
-          {tasks.length === 0 ? (
-            <p className="py-10 text-center text-xs text-slate-500">No activity yet. Give the team a task.</p>
+          {feed.length === 0 ? (
+            <p className="py-10 text-center text-xs text-slate-500">Nothing yet. New logins, orders, payments and team work appear here live.</p>
           ) : (
             <div className="space-y-1">
-              {tasks.slice(0, 20).map((t) => {
-                const a = agentById(t.agent);
-                return (
-                  <div key={t.id} className="flex items-center gap-2.5 rounded-[6px] px-1.5 py-2 hover:bg-white/[0.03]">
-                    <img src={a.photo} alt={a.name} className="h-8 w-8 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: a.color }} />
-                    <span className="min-w-0 flex-1 truncate text-xs text-slate-200">
-                      <b style={{ color: a.color }}>{a.name}</b> {t.title}
+              {feed.map((f) => (
+                <div key={f.id} className="flex items-center gap-2.5 rounded-[6px] px-1.5 py-2 hover:bg-white/[0.03]">
+                  {f.photo ? (
+                    <img src={f.photo} alt={f.who} className="h-8 w-8 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: f.color }} />
+                  ) : (
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: `${f.color}26`, color: f.color }}>
+                      {f.icon}
                     </span>
-                    {t.status === 'done' ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    ) : t.status === 'failed' ? (
-                      <XCircle className="h-4 w-4 text-rose-400" />
-                    ) : (
-                      <Loader2 className="h-4 w-4 animate-spin text-amber-300" />
-                    )}
-                    <span className="w-14 shrink-0 text-right text-[10px] text-slate-500">{ago(t.updated_at)}</span>
-                  </div>
-                );
-              })}
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-xs text-slate-200">
+                    <b style={{ color: f.color }}>{f.who}</b> {f.text}
+                  </span>
+                  {f.state === 'done' ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  ) : f.state === 'failed' ? (
+                    <XCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                  ) : f.state === 'working' ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-amber-300" />
+                  ) : (
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: f.color }} />
+                  )}
+                  <span className="w-14 shrink-0 text-right text-[10px] text-slate-500">{ago(f.at)}</span>
+                </div>
+              ))}
             </div>
           )}
         </section>

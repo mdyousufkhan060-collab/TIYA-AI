@@ -96,8 +96,14 @@ export function barIcon(title: string): React.ReactNode {
   if (!hit) return null;
   const [, Icon, color] = hit;
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: `${color}1f`, color }}>
-      <Icon className="h-4 w-4" />
+    <span
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] text-white"
+      style={{
+        background: `linear-gradient(135deg, ${color}, ${color}99)`,
+        boxShadow: `0 4px 14px -4px ${color}, inset 0 1px 0 rgba(255,255,255,0.35)`,
+      }}
+    >
+      <Icon className="h-[17px] w-[17px] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]" strokeWidth={2.2} />
     </span>
   );
 }

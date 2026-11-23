@@ -1073,6 +1073,15 @@ export default function App() {
     !needsAgeCheck &&
     (isAdmin || profile?.account_mode === 'business');
 
+  useEffect(() => {
+    if (!desktopMode || desktopTab !== 'app' || showAdminScreen || showMotivationScreen) return;
+    if (activeTab !== 'settings' || settingsPage === 'hub') {
+      setActiveTab('settings');
+      setSettingsPage('about');
+      setSettingsSubpage(null);
+    }
+  }, [desktopMode, desktopTab, showAdminScreen, showMotivationScreen, activeTab, settingsPage]);
+
   const isInSettingsSubpage = activeTab === 'settings' && settingsPage !== 'hub';
 
   return (
@@ -1107,11 +1116,34 @@ export default function App() {
               handleOpenNotifications();
             }}
             voiceOn={['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState)}
+            voiceState={voiceState}
             onVoice={toggleVoice}
+            onMicSettings={() => {
+              setDesktopTab('app');
+              setShowAdminScreen(false);
+              navigateTo('settings', 'voice_language', null);
+            }}
             email={session.user.email}
             avatar={(session.user.user_metadata as any)?.avatar_url || null}
             onSignOut={handleSignOut}
           />
+          {desktopTab === 'app' && (
+            <div className="col-start-1 row-start-2 min-h-0 w-[330px] overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]">
+              <SettingsHub
+                settings={settings}
+                profile={profile}
+                chatCount={chatSessionCount}
+                userEmail={session.user.email}
+                isAdmin={isAdmin}
+                activePage={showAdminScreen ? null : settingsPage}
+                onOpenPage={(pg) => {
+                  setShowAdminScreen(false);
+                  setShowMotivationScreen(false);
+                  handleOpenSettingsPage(pg);
+                }}
+              />
+            </div>
+          )}
           {desktopTab !== 'app' && (
             <div className="col-start-1 row-start-2 min-h-0">
               {desktopTab === 'dashboard' ? (
@@ -1124,7 +1156,7 @@ export default function App() {
         </>
       )}
       {/* Portrait Phone Container */}
-      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' ? 'col-start-1 row-start-2 justify-self-center min-[481px]:!h-full' : 'hidden') : ''}`}>
+      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' ? 'col-start-1 row-start-2 ml-[342px] !w-auto min-[481px]:!h-full min-[481px]:!max-w-none min-[481px]:!rounded-[10px]' : 'hidden') : ''}`}>
         {!authReady ? (
           <div className="flex flex-1 items-center justify-center text-xs text-slate-500 dark:text-slate-400">
             Loading ROSE...
@@ -1404,7 +1436,7 @@ export default function App() {
               />
             )}
 
-            {activeTab !== 'home' && activeTab !== 'chat' && !isInSettingsSubpage && (
+            {!desktopMode && activeTab !== 'home' && activeTab !== 'chat' && !isInSettingsSubpage && (
               <BottomNav
                 activeTab={activeTab}
                 voiceState={voiceState}

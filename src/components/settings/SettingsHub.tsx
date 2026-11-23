@@ -11,6 +11,8 @@ interface SettingsHubProps {
   userEmail?: string | null;
   isAdmin?: boolean;
   onOpenPage: (page: SettingsPageId) => void;
+  /** PC two-pane view: highlight the open page */
+  activePage?: SettingsPageId | null;
 }
 
 export const SettingsHub: React.FC<SettingsHubProps> = ({
@@ -20,6 +22,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
   userEmail,
   isAdmin = false,
   onOpenPage,
+  activePage = null,
 }) => {
   const hasNativeBridge =
     typeof window !== 'undefined' && typeof window.TiyaNative?.run === 'function';
@@ -104,6 +107,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
               title={item.title}
               value={item.value}
               onClick={() => onOpenPage(item.id)}
+              tone={activePage === item.id ? 'accent' : 'default'}
               testId={`settings-item-${item.id}`}
             />
           ))}
@@ -118,6 +122,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
             badge={<ShieldCheck className="h-3.5 w-3.5" />}
             title="PRIVACY CONTROLS"
             onClick={() => onOpenPage('privacy_controls')}
+            tone={activePage === 'privacy_controls' ? 'accent' : 'default'}
             testId="settings-item-privacy_controls"
           />
         </section>
@@ -132,6 +137,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
             title="MY ACCOUNT"
             value={userEmail || undefined}
             onClick={() => onOpenPage('my_account')}
+            tone={activePage === 'my_account' ? 'accent' : 'default'}
             testId="settings-item-my_account"
           />
         </section>
