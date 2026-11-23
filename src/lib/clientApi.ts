@@ -37,15 +37,17 @@ function buildPhoneActionTool(nonBlocking: boolean): Record<string, unknown> {
   return {
     name: 'trigger_phone_action',
     description:
-      'Requests a structured phone action (open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call). Always call this when the user wants to open an app, call someone, or send a WhatsApp/Messenger message.',
+      'Requests a structured phone action (open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call, web_search). Always call this when the user wants to open an app, call someone, send a WhatsApp/Messenger message, or search / play something on Google, YouTube, YouTube Music, Facebook videos or Google Maps (use web_search with site + query).',
     ...(nonBlocking ? { behavior: 'NON_BLOCKING' } : {}),
     parameters: {
       type: 'OBJECT',
       properties: {
         action: {
           type: 'STRING',
-          description: 'One of: open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call',
+          description: 'One of: open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call, web_search',
         },
+        site: { type: 'STRING', description: 'For web_search: google, youtube, music, facebook, maps, images, news or wikipedia' },
+        query: { type: 'STRING', description: 'For web_search: what to search or play' },
         app: { type: 'STRING', description: 'App name when action is open_app (e.g. YouTube)' },
         contact: { type: 'STRING', description: 'Contact name or phone number for call/message actions' },
         text: { type: 'STRING', description: 'Message text for whatsapp_message or messenger_message' },

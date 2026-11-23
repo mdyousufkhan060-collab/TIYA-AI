@@ -16,6 +16,8 @@ interface WorkspacePageProps {
   onBack: () => void;
   /** reload the profile after the mode changes */
   onModeChanged: () => void;
+  /** open a section directly (ROSE voice/chat navigation), e.g. "products" */
+  subpage?: string | null;
 }
 
 // ---------- Personal / Student tables ----------
@@ -587,8 +589,11 @@ const BusinessDashboard: React.FC = () => {
   );
 };
 
-export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMinor, onBack, onModeChanged }) => {
+export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMinor, onBack, onModeChanged, subpage = null }) => {
   const [view, setView] = useState<View>('hub');
+  useEffect(() => {
+    if (subpage && subpage in TITLES) setView(subpage as View);
+  }, [subpage]);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [bizLoaded, setBizLoaded] = useState(false);
   const [bizInfo, setBizInfo] = useState<{ name: string | null; pay: string | null } | null>(null);

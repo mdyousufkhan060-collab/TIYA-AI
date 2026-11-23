@@ -170,24 +170,24 @@ export const LoginScreen: React.FC = () => {
   );
 
   const card = (
-    <div className="relative w-full rounded-[22px] border border-cyan-400/60 bg-[#06101D]/90 px-5 pb-5 pt-4 shadow-[0_0_28px_rgba(34,211,238,0.35),inset_0_0_24px_rgba(34,211,238,0.06)] backdrop-blur-xl sm:px-8 lg:px-10 lg:pb-9 lg:pt-10">
+    <div className="relative w-full rounded-[22px] border border-cyan-400/60 bg-[#06101D]/90 px-4 pb-4 pt-3 shadow-[0_0_28px_rgba(34,211,238,0.35),inset_0_0_24px_rgba(34,211,238,0.06)] backdrop-blur-xl sm:px-8 lg:px-10 lg:pb-9 lg:pt-10">
       {/* Logo */}
       <div className="flex flex-col items-center text-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-cyan-400 bg-cyan-500/10 shadow-[0_0_18px_rgba(34,211,238,0.5)] lg:h-20 lg:w-20">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 [@media(max-height:700px)]:hidden border-cyan-400 bg-cyan-500/10 shadow-[0_0_18px_rgba(34,211,238,0.5)] lg:h-20 lg:w-20">
           <span className="flex scale-[0.62] items-center gap-[3px] lg:scale-100" aria-hidden="true">
             {[8, 16, 24, 16, 8].map((h, i) => (
               <span key={i} className="w-[4px] rounded-full bg-cyan-300 lg:w-[5px]" style={{ height: h }} />
             ))}
           </span>
         </div>
-        <h1 className="mt-2 pl-[0.6em] font-display text-xl font-medium tracking-[0.6em] text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] lg:mt-3 lg:text-5xl">
+        <h1 className="mt-1.5 pl-[0.6em] font-display text-lg font-medium tracking-[0.6em] text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] lg:mt-3 lg:text-5xl">
           ROSE
         </h1>
-        <p className="mt-1 text-[11px] text-slate-300 lg:mt-2 lg:text-sm">Sign in to continue to your voice assistant</p>
+        <p className="mt-0.5 text-[10.5px] text-slate-300 lg:mt-2 lg:text-sm [@media(max-height:640px)]:hidden">Sign in to continue to your voice assistant</p>
       </div>
 
       {/* Tabs */}
-      <div role="tablist" aria-label="Authentication mode" className="mt-3 grid grid-cols-2 border-b border-white/10 lg:mt-5">
+      <div role="tablist" aria-label="Authentication mode" className="mt-2 grid grid-cols-2 border-b border-white/10 lg:mt-5">
         {(['signin', 'signup'] as AuthTab[]).map((t) => (
           <button
             key={t}
@@ -205,7 +205,7 @@ export const LoginScreen: React.FC = () => {
         ))}
       </div>
 
-      <form onSubmit={handleEmailSubmit} className="rose-auth mt-4 space-y-2.5 lg:mt-5 lg:space-y-3" noValidate>
+      <form onSubmit={handleEmailSubmit} className="rose-auth mt-3 space-y-2 lg:mt-5 lg:space-y-3" noValidate>
         {tab === 'signup' && (
           <label className={field}>
             <User className="h-5 w-5 shrink-0 text-slate-300" />
@@ -320,7 +320,7 @@ export const LoginScreen: React.FC = () => {
   );
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-[#030814] text-white">
+    <div className="fixed inset-0 z-[60] overflow-hidden overscroll-none bg-[#030814] text-white lg:overflow-y-auto">
       {/* ---------- PC: picture left, card right ---------- */}
       <div className="hidden min-h-full lg:grid lg:grid-cols-2">
         <div className="relative min-h-screen overflow-hidden">
@@ -334,12 +334,17 @@ export const LoginScreen: React.FC = () => {
       </div>
 
       {/* ---------- Mobile / tablet: picture on top, card overlapping below ---------- */}
-      <div className="relative min-h-full lg:hidden">
-        <div className="absolute inset-x-0 top-0 h-[68vh] max-h-[720px] overflow-hidden">
-          <img src="/auth/login-mobile.jpg?v=3" alt="ROSE" className="h-full w-full object-cover object-top" />
-          <div className="absolute inset-x-0 bottom-0 h-[34%] bg-gradient-to-b from-transparent via-[#030814]/70 to-[#030814]" />
+      {/* fixed one-screen layout: nothing scrolls, the card always sits at the bottom */}
+      <div className="relative flex h-[100dvh] flex-col overflow-hidden lg:hidden">
+        <div className="absolute inset-x-0 top-0 h-[66%] overflow-hidden">
+          <img
+            src="/auth/login-mobile.jpg?v=3"
+            alt="ROSE"
+            className="h-full w-full origin-[82%_72%] scale-[1.22] object-cover object-[center_18%]"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-b from-transparent via-[#030814]/70 to-[#030814]" />
         </div>
-        <div className="relative mx-auto w-full max-w-[460px] px-4 pb-5 pt-[min(52vh,470px)]">{card}</div>
+        <div className="relative mx-auto mt-auto w-full max-w-[460px] px-3 pb-[max(12px,env(safe-area-inset-bottom))]">{card}</div>
       </div>
     </div>
   );

@@ -139,7 +139,7 @@ export const ForgotPasswordFlow: React.FC<{
   const head = HEAD[step];
 
   const card = (
-    <div className="rose-auth relative w-full rounded-[22px] border border-cyan-400/60 bg-[#06101D]/90 px-5 pb-6 pt-8 shadow-[0_0_28px_rgba(34,211,238,0.35),inset_0_0_24px_rgba(34,211,238,0.06)] backdrop-blur-xl sm:px-8 lg:px-10 lg:pb-9 lg:pt-10">
+    <div className="rose-auth relative w-full rounded-[22px] border border-cyan-400/60 bg-[#06101D]/90 px-4 pb-4 pt-8 shadow-[0_0_28px_rgba(34,211,238,0.35),inset_0_0_24px_rgba(34,211,238,0.06)] backdrop-blur-xl sm:px-8 lg:px-10 lg:pb-9 lg:pt-10">
       <span className="absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full border-2 border-cyan-400 bg-[#06101D] text-cyan-300 shadow-[0_0_20px_rgba(34,211,238,0.6)]">
         <Lock className="h-6 w-6" />
       </span>
@@ -309,7 +309,7 @@ export const ForgotPasswordFlow: React.FC<{
   );
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-[#030814] text-white">
+    <div className="fixed inset-0 z-[60] overflow-hidden overscroll-none bg-[#030814] text-white lg:overflow-y-auto">
       {/* PC: picture left, card right */}
       <div className="hidden min-h-full lg:grid lg:grid-cols-2">
         <div className="relative min-h-screen overflow-hidden">
@@ -327,15 +327,15 @@ export const ForgotPasswordFlow: React.FC<{
       </div>
 
       {/* Mobile: picture on top, card below */}
-      <div className="relative min-h-full lg:hidden">
-        <div className="absolute inset-x-0 top-0 h-[60vh] max-h-[620px] overflow-hidden">
-          <img src="/auth/login-mobile.jpg?v=3" alt="ROSE" className="h-full w-full object-cover object-top" />
+      <div className="relative flex h-[100dvh] flex-col overflow-hidden lg:hidden">
+        <div className="absolute inset-x-0 top-0 h-[62%] overflow-hidden">
+          <img src="/auth/login-mobile.jpg?v=3" alt="ROSE" className="h-full w-full origin-[82%_72%] scale-[1.22] object-cover object-[center_18%]" />
           <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-b from-transparent via-[#030814]/70 to-[#030814]" />
         </div>
-        {script('absolute right-3 top-[14vh] z-10 text-right [&>span]:ml-auto [&>p:last-child]:ml-auto')}
-        <div className="relative mx-auto w-full max-w-[460px] px-4 pb-6 pt-[min(46vh,430px)]">
+        {script('absolute right-3 top-[10%] z-10 text-right [&>span]:ml-auto [&>p:last-child]:ml-auto')}
+        <div className="relative mx-auto mt-auto w-full max-w-[460px] px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-8">
           {card}
-          {footer}
+          <div className="[@media(max-height:720px)]:hidden">{footer}</div>
         </div>
       </div>
     </div>

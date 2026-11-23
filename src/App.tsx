@@ -490,6 +490,13 @@ export default function App() {
         typeof window !== 'undefined' ? window.TiyaNative : undefined,
         (url) => {
           setActionLinks((prev) => ({ ...prev, [msgId]: url }));
+          if (/^https?:\/\//.test(url)) {
+            try {
+              window.open(url, '_blank', 'noopener');
+            } catch {
+              /* the link stays in the chat */
+            }
+          }
         },
       );
 
@@ -1475,6 +1482,7 @@ export default function App() {
 
             {activeTab === 'settings' && settingsPage === 'workspace' && session?.user?.id && (
               <WorkspacePage
+                subpage={settingsSubpage}
                 userId={session.user.id}
                 mode={isAdmin ? 'business' : profile?.account_mode ?? 'personal'}
                 isMinor={typeof userAge === 'number' && userAge < 18}

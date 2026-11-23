@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, ExternalLink, Phone, MessageSquare, Smartphone, X } from 'lucide-react';
+import { Check, ExternalLink, Phone, MessageSquare, Search, Smartphone, X } from 'lucide-react';
 import { ActionStatus, PhoneAction } from '../types/tiya';
 import { getConfirmationPromptText } from '../utils/phoneActions';
 
@@ -31,6 +31,8 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
       case 'whatsapp_message':
       case 'messenger_message':
         return <MessageSquare className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
+      case 'web_search':
+        return <Search className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
     }
   };
 
@@ -48,6 +50,8 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
         return `Messenger Message · ${action.contact}`;
       case 'messenger_call':
         return `Messenger Call · ${action.contact}`;
+      case 'web_search':
+        return `Search ${action.site.toUpperCase()} · ${action.query}`;
     }
   };
 

@@ -37,7 +37,49 @@ export const SUPPORTED_PHONE_ACTIONS_META = [
     example: '{"action":"messenger_call","contact":"..."}',
     description: 'Places a Facebook Messenger call in the ROSE Android app.',
   },
+  {
+    action: 'web_search',
+    label: 'Search / Play',
+    example: '{"action":"web_search","site":"youtube","query":"..."}',
+    description: 'Searches or plays on Google, YouTube, YouTube Music, Facebook videos, Google Maps or Wikipedia.',
+  },
 ] as const;
+
+const SEARCH_SITES: Record<string, { label: string; url: (q: string) => string }> = {
+  google: { label: 'Google', url: (q) => `https://www.google.com/search?q=${q}` },
+  youtube: { label: 'YouTube', url: (q) => `https://www.youtube.com/results?search_query=${q}` },
+  music: { label: 'YouTube Music', url: (q) => `https://music.youtube.com/search?q=${q}` },
+  facebook: { label: 'Facebook', url: (q) => `https://www.facebook.com/search/videos/?q=${q}` },
+  maps: { label: 'Google Maps', url: (q) => `https://www.google.com/maps/search/${q}` },
+  wikipedia: { label: 'Wikipedia', url: (q) => `https://bn.wikipedia.org/w/index.php?search=${q}` },
+  images: { label: 'Google Images', url: (q) => `https://www.google.com/search?tbm=isch&q=${q}` },
+  news: { label: 'Google News', url: (q) => `https://news.google.com/search?q=${q}` },
+};
+
+export function normalizeSearchSite(site: unknown): string {
+  const s = String(site || '').toLowerCase();
+  if (/music|gaan|গান|song|spotify/.test(s)) return 'music';
+  if (/you ?tube|ইউটিউব|ytb|yt/.test(s)) return 'youtube';
+  if (/face ?book|ফেসবুক|fb/.test(s)) return 'facebook';
+  if (/map|ম্যাপ|location|রাস্তা/.test(s)) return 'maps';
+  if (/wiki/.test(s)) return 'wikipedia';
+  if (/image|photo|ছবি/.test(s)) return 'images';
+  if (/news|খবর/.test(s)) return 'news';
+  return 'google';
+}
+
+const APP_WEB_URLS: Array<[RegExp, string]> = [
+  [/you ?tube|ইউটিউব/i, 'https://www.youtube.com/'],
+  [/music|গান/i, 'https://music.youtube.com/'],
+  [/face ?book|ফেসবুক/i, 'https://www.facebook.com/'],
+  [/messenger|মেসেঞ্জার/i, 'https://www.messenger.com/'],
+  [/whats ?app|হোয়াটস/i, 'https://web.whatsapp.com/'],
+  [/gmail|জিমেইল|mail/i, 'https://mail.google.com/'],
+  [/map|ম্যাপ/i, 'https://www.google.com/maps'],
+  [/chrome|google|গুগল|browser|ব্রাউজার/i, 'https://www.google.com/'],
+  [/insta/i, 'https://www.instagram.com/'],
+  [/tik ?tok|টিকটক/i, 'https://www.tiktok.com/'],
+];
 
 export function requiresConfirmation(action: PhoneAction): boolean {
   return (
@@ -63,6 +105,10 @@ export function getConfirmationPromptText(action: PhoneAction): string {
       return `${action.contact}-কে মেসেঞ্জারে "${action.text}" পাঠাবো?`;
     case 'open_app':
       return `${action.app} অ্যাপটি খুলবো?`;
+    case 'web_search': {
+      const site = SEARCH_SITES[normalizeSearchSite(action.site)];
+      return `${site.label}-এ "${action.query}" খুঁজে দেখাবো?`;
+    }
   }
 }
 
@@ -119,6 +165,11 @@ export function validatePhoneAction(raw: unknown): PhoneAction | null {
         return { action: 'messenger_call', contact: obj.contact.trim() };
       }
       return null;
+    case 'web_search': {
+      const query = typeof obj.query === 'string' ? obj.query.trim() : typeof obj.text === 'string' ? obj.text.trim() : '';
+      if (!query) return null;
+      return { action: 'web_search', site: normalizeSearchSite(obj.site ?? obj.app), query };
+    }
     default:
       return null;
   }
@@ -217,6 +268,37 @@ export function buildWebFallback(action: PhoneAction): ActionExecutionResult {
     };
   }
 
+  if (action.action === 'web_search') {
+    const site = SEARCH_SITES[normalizeSearchSite(action.site)];
+    return {
+      success: true,
+      via: 'web_fallback',
+      fallbackUrl: site.url(encodeURIComponent(action.query)),
+      messageBn: `${site.label}-এ "${action.query}" খোলা হচ্ছে।`,
+    };
+  }
+
+  if (action.action === 'open_app') {
+    const hit = APP_WEB_URLS.find(([re]) => re.test(action.app));
+    if (hit) {
+      return { success: true, via: 'web_fallback', fallbackUrl: hit[1], messageBn: `${action.app} খোলা হচ্ছে।` };
+    }
+  }
+
+  if (action.action === 'messenger_message') {
+    try {
+      void navigator.clipboard?.writeText(action.text);
+    } catch {
+      /* ignore */
+    }
+    return {
+      success: true,
+      via: 'web_fallback',
+      fallbackUrl: 'https://www.messenger.com/',
+      messageBn: `Messenger খোলা হচ্ছে। মেসেজটা কপি করা আছে, ${action.contact}-এর চ্যাটে গিয়ে Paste করে পাঠান।`,
+    };
+  }
+
   return {
     success: false,
     via: 'unsupported',
@@ -251,6 +333,11 @@ export async function executePhoneAction(
           via: 'android_native',
           messageBn: parsed.message || 'কাজটি সফলভাবে সম্পন্ন হয়েছে।',
         };
+      }
+      if (action.action === 'web_search') {
+        const fb = buildWebFallback(action);
+        if (fb.fallbackUrl && onOpenFallbackUrl) onOpenFallbackUrl(fb.fallbackUrl);
+        return fb;
       }
       return {
         success: false,

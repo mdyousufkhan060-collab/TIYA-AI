@@ -247,7 +247,8 @@ export type PhoneAction =
   | { action: 'whatsapp_call'; contact: string }
   | { action: 'whatsapp_message'; contact: string; text: string }
   | { action: 'messenger_message'; contact: string; text: string }
-  | { action: 'messenger_call'; contact: string };
+  | { action: 'messenger_call'; contact: string }
+  | { action: 'web_search'; site: string; query: string };
 
 export type ActionStatus = 'pending' | 'confirmed' | 'cancelled' | 'executed' | 'failed';
 

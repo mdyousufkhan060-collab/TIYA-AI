@@ -5,6 +5,11 @@
 import { supabase } from '../lib/supabase';
 
 let current = '';
+let currentMode = '';
+
+export function getTiyaMode(): string {
+  return currentMode;
+}
 
 export function getTiyaModeContext(): string {
   return current;
@@ -25,6 +30,7 @@ function clip(s: string | null | undefined, n = 300) {
 
 /** Rebuilds the context. Call after login and after business data changes. */
 export async function refreshModeContext(mode: string | null | undefined, userId?: string | null): Promise<void> {
+  currentMode = mode || '';
   if (!mode || !MODE_TEXT[mode]) {
     current = '';
     return;
@@ -74,6 +80,7 @@ export async function refreshModeContext(mode: string | null | undefined, userId
 
 export function clearModeContext() {
   current = '';
+  currentMode = '';
 }
 
 /** Always-on skills for every user (and the admin): live search + social media growth know-how. */

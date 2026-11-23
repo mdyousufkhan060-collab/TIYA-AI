@@ -1,4 +1,5 @@
-import { getTiyaModeContext, ROSE_SKILLS_BLOCK } from './modeContext';
+import { getTiyaMode, getTiyaModeContext, ROSE_SKILLS_BLOCK } from './modeContext';
+import { getRoseGuide } from './roseGuides';
 import {
   ADULT_ONLY_PERSONALITIES,
   BENGALI_DIALECTS,
@@ -189,10 +190,11 @@ export function buildTiyaSystemPrompt(
     `- Before sending any message (WhatsApp/Messenger) or placing any call (Phone/WhatsApp/Messenger), ALWAYS invoke trigger_phone_action so the app shows the contact name and message text, and ask the user for confirmation (in Bengali: "পাঠাবো?" for messages, "কল দেবো?" for calls).`,
     `- If the user asks for something that only works on the ROSE Android app and fails or is unavailable in the browser, explain honestly in Bengali that it works in the ROSE Android app.`,
     `Navigation Rules:`,
-    `- When the user asks to open Settings, a numbered Settings bar (01-08), a sub-page (such as Health Check, Mic Test, Voice Tuning, Error Log, Privacy Controls, My Account), go back, or switch to Home/Chat, invoke the navigate_app tool and confirm briefly in Bengali.`,
+    `- When the user asks to open Settings, a numbered Settings bar (01-07), a Workspace section (page="workspace" + subpage, e.g. products, orders, notes), a sub-page (such as Health Check, Mic Test, Voice Tuning, Error Log, Privacy Controls, My Account), go back, or switch to Home/Chat, invoke the navigate_app tool and confirm briefly in Bengali.`,
     `Motivation Rules:`,
     `- When the user asks for today's motivation (e.g. "আজকের মোটিভেশন বলো", "মোটিভেশন শোনাও", "today's motivation"), ALWAYS invoke get_latest_motivation and read the returned post warmly in Bengali.`,
     TIYA_SETTINGS_MAP_DESCRIPTION,
+    getRoseGuide(getTiyaMode(), Boolean(isOwner)),
   ];
 
   if (isOwner) {
