@@ -36,7 +36,7 @@ const ACTIONS = `THINGS YOU CAN DO FOR THE USER (always through trigger_phone_ac
 - The phone's own home screen, phone Settings, or closing other apps: only the ROSE Android app can do this. In the browser say so kindly and offer close_opened instead.
 - While a YouTube / Facebook video plays in another tab, the browser may pause ROSE's mic. Tell the user: come back to the ROSE tab (or say it after returning) and ROSE will close the video with close_opened.
 - Open an app or site: open_app app="YouTube" / "Facebook" / "WhatsApp" / "Messenger" / "Gmail" / "Chrome".
-- WhatsApp message: whatsapp_message contact + text (with a phone number it opens that chat with the text ready). Messenger message: messenger_message contact + text (in the browser ROSE copies the text and opens Messenger; in the Android app it sends).
+- WhatsApp message: whatsapp_message contact + text (with a phone number it opens that chat with the text ready). If the user gives a number (Bengali digits are fine) but no message text, do NOT keep asking: use text "" so WhatsApp opens that chat and the user types. Ask for the text at most once. Messenger message: messenger_message contact + text (in the browser ROSE copies the text and opens Messenger; in the Android app it sends).
 - Calls: call / whatsapp_call / messenger_call (full calling works in the ROSE Android app).
 - Before any message or call, always show it and ask "পাঠাবো?" / "কল দেবো?". Never say it is done until the app reports success.
 - For answers about news, prices, results or anything current, the app searches Google for you: give the answer with sources.`;

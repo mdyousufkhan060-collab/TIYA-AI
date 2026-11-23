@@ -272,8 +272,15 @@ export function extractActionFromText(text: string): {
   return { cleanText: text, action: null };
 }
 
+/** Bengali digits (০১২…৯) -> 0-9, so "০১৬৭…" works as a phone number. */
+export function toLatinDigits(text: string): string {
+  return String(text || '').replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d)));
+}
+
 export function normalizePhoneDigits(contact: string): string | null {
-  const stripped = contact.replace(/[\s\-().]/g, '');
+  let stripped = toLatinDigits(contact).replace(/[\s\-().]/g, '');
+  // Bangladesh mobile 01XXXXXXXXX -> +8801XXXXXXXXX (WhatsApp needs the country code)
+  if (/^01\d{9}$/.test(stripped)) stripped = `+88${stripped}`;
   if (/^\+?\d{6,15}$/.test(stripped)) {
     return stripped;
   }
@@ -375,6 +382,10 @@ export async function executePhoneAction(
   nativeBridge?: { run: (json: string) => Promise<string | TiyaNativeResult> | string | TiyaNativeResult },
   onOpenFallbackUrl?: (url: string) => void,
 ): Promise<ActionExecutionResult> {
+  // contacts spoken/typed in Bengali digits must reach the phone as 0-9
+  if ('contact' in action && typeof action.contact === 'string') {
+    action = { ...action, contact: toLatinDigits(action.contact) } as PhoneAction;
+  }
   const actionJson = JSON.stringify(action);
 
   if (nativeBridge && typeof nativeBridge.run === 'function') {
