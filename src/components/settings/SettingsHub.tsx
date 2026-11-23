@@ -77,16 +77,14 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
       title: 'PREMIUM',
       value: premiumValue,
     },
-    ...(isAdmin
-      ? []
-      : [
+    ...[
           {
             num: '07',
             id: 'workspace' as SettingsPageId,
             title: 'WORKSPACE',
-            value: (profile?.account_mode || 'personal').toUpperCase(),
+            value: isAdmin ? 'ADMIN · BUSINESS' : (profile?.account_mode || 'personal').toUpperCase(),
           },
-        ]),
+        ],
   ];
 
   return (

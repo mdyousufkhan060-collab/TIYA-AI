@@ -1130,7 +1130,7 @@ export default function App() {
             onSignOut={handleSignOut}
           />
           {desktopTab === 'app' && (
-            <div className="col-start-1 row-start-2 min-h-0 w-[330px] overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]">
+            <div className="col-start-1 row-start-2 flex min-h-0 w-[330px] flex-col overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]">
               <SettingsHub
                 settings={settings}
                 profile={profile}
@@ -1391,7 +1391,7 @@ export default function App() {
             {activeTab === 'settings' && settingsPage === 'workspace' && session?.user?.id && (
               <WorkspacePage
                 userId={session.user.id}
-                mode={profile?.account_mode ?? 'personal'}
+                mode={isAdmin ? 'business' : profile?.account_mode ?? 'personal'}
                 isMinor={typeof userAge === 'number' && userAge < 18}
                 onModeChanged={() => {
                   if (session?.user?.id) loadAccountData(session.user.id);

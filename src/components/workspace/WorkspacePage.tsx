@@ -5,6 +5,7 @@ import { SettingsBar, SettingsSelectBar, SettingsShell } from '../settings/Setti
 import { CrudConfig, CrudSection, CrudField, SingleRowForm } from './CrudSection';
 import { refreshModeContext } from '../../utils/modeContext';
 import { WriterPanel } from '../desktop/WriterPanel';
+import { CustomerCheck } from './CustomerCheck';
 
 type Mode = 'personal' | 'student' | 'business';
 
@@ -247,6 +248,18 @@ export const ORDERS: CrudConfig = {
       defaultValue: 'unpaid',
       options: ['unpaid', 'paid', 'refunded'].map((v) => ({ value: v, label: v.toUpperCase() })),
     },
+    {
+      key: 'payment_mode',
+      label: 'PAYMENT MODE',
+      type: 'select',
+      defaultValue: 'cod',
+      options: [
+        { value: 'cod', label: 'CASH ON DELIVERY' },
+        { value: 'advance', label: 'ADVANCE REQUIRED' },
+        { value: 'paid', label: 'FULLY PAID' },
+      ],
+    },
+    { key: 'advance_amount', label: 'ADVANCE (TK)', type: 'number', defaultValue: 0 },
     { key: 'delivery_address', label: 'DELIVERY ADDRESS', type: 'textarea' },
     { key: 'courier', label: 'COURIER', type: 'select', options: COURIER_OPTS },
     {
@@ -367,12 +380,14 @@ type View =
   | 'discounts'
   | 'approvals'
   | 'couriers'
-  | 'writer';
+  | 'writer'
+  | 'customer_check';
 
 const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
   mode: 'MODE',
   writer: 'WRITER',
+  customer_check: 'CUSTOMER CHECK',
   tasks: TASKS.title,
   content: CONTENT.title,
   notes: NOTES.title,
@@ -434,13 +449,15 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   const [view, setView] = useState<View>('hub');
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [bizLoaded, setBizLoaded] = useState(false);
+  const [bizInfo, setBizInfo] = useState<{ name: string | null; pay: string | null } | null>(null);
   const [modeBusy, setModeBusy] = useState(false);
   const [modeMsg, setModeMsg] = useState('');
 
   const loadBusiness = useCallback(async () => {
     if (mode !== 'business') return;
-    const { data } = await supabase.from('businesses').select('id').eq('owner_id', userId).maybeSingle();
+    const { data } = await supabase.from('businesses').select('id,name,payment_methods').eq('owner_id', userId).maybeSingle();
     setBusinessId(data?.id ?? null);
+    setBizInfo(data ? { name: data.name, pay: data.payment_methods } : null);
     setBizLoaded(true);
   }, [mode, userId]);
 
@@ -483,13 +500,14 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             bar('03', 'products'),
             bar('04', 'orders'),
             bar('05', 'customers'),
-            bar('06', 'approvals'),
-            bar('07', 'discounts'),
-            bar('08', 'faqs'),
-            bar('09', 'expenses'),
-            bar('10', 'couriers'),
-            bar('11', 'biz_ai'),
-            bar('12', 'writer'),
+            bar('06', 'customer_check', 'COURIER HISTORY'),
+            bar('07', 'approvals'),
+            bar('08', 'discounts'),
+            bar('09', 'faqs'),
+            bar('10', 'expenses'),
+            bar('11', 'couriers'),
+            bar('12', 'biz_ai'),
+            bar('13', 'writer'),
           ]
         : []),
     ];
@@ -563,6 +581,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     else if (view === 'discounts') body = <CrudSection config={DISCOUNTS} scope={bScope} />;
     else if (view === 'approvals') body = <CrudSection config={APPROVALS} scope={bScope} />;
     else if (view === 'couriers') body = <CrudSection config={COURIERS} scope={bScope} />;
+    else if (view === 'customer_check') body = <CustomerCheck shopName={bizInfo?.name} bkash={(bizInfo?.pay || '').match(/01\d{9}/)?.[0] || null} />;
   }
 
   return (
