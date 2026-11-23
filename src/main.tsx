@@ -12,7 +12,8 @@ const Landing = lazy(() => import('./components/site/Landing'));
 /**
  * myrosebd.com shows the public website; the app lives at /app.
  * Go straight to the app when: path is /app, a Google login is returning,
- * the user is already signed in, it runs as an installed app, or inside the Android app.
+ * it runs as an installed app, or inside the Android app. Signed-in visitors of / see the
+ * website with an OPEN ROSE button.
  */
 function shouldOpenApp(): boolean {
   try {
@@ -21,10 +22,6 @@ function shouldOpenApp(): boolean {
     if (/access_token|refresh_token|error_description|error=/.test(hash) || /[?&](code|error)=/.test(search)) return true;
     if ((window as any).TiyaNative) return true;
     if (window.matchMedia?.('(display-mode: standalone)').matches) return true;
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const k = window.localStorage.key(i) || '';
-      if (k.startsWith('sb-') && k.endsWith('-auth-token')) return true;
-    }
   } catch {
     return true;
   }

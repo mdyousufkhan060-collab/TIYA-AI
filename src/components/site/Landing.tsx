@@ -81,6 +81,17 @@ export const Landing: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [installEvt, setInstallEvt] = useState<any>(null);
   const dev = useDeveloperProfile();
+  const signedIn = (() => {
+    try {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i) || '';
+        if (k.startsWith('sb-') && k.endsWith('-auth-token')) return true;
+      }
+    } catch {
+      /* ignore */
+    }
+    return false;
+  })();
   const [showDev, setShowDev] = useState(false);
 
   useEffect(() => {
@@ -138,8 +149,8 @@ export const Landing: React.FC = () => {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <a href={APP_URL} className="hidden h-10 items-center rounded-[4px] bg-white px-4 text-xs font-bold text-black md:inline-flex">
-              GET STARTED
+            <a href={APP_URL} className="inline-flex h-10 items-center rounded-[4px] bg-white px-4 text-xs font-bold text-black">
+              {signedIn ? 'OPEN ROSE' : 'GET STARTED'}
             </a>
             <button type="button" aria-label="Menu" onClick={() => setMenu((m) => !m)} className="flex h-10 w-10 items-center justify-center md:hidden">
               {menu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -175,7 +186,7 @@ export const Landing: React.FC = () => {
             <p className="mt-4 text-base text-slate-300">আপনার বাংলা AI সহকারী — কথা বলুন, লিখুন, কাজ করান। পড়াশোনা থেকে ব্যবসা, সব এক জায়গায়।</p>
             <div className="mt-7 flex flex-wrap gap-3">
               <a href={APP_URL} className={btnMain}>
-                Start free <ArrowRight className="h-4 w-4" />
+                {signedIn ? 'Open ROSE' : 'Start free'} <ArrowRight className="h-4 w-4" />
               </a>
               <a href="#pricing" className={btnGhost}>
                 See plans
