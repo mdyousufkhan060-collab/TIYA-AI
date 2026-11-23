@@ -32,6 +32,7 @@ import { AdminBusinessesPage, AdminTeamActivityPage } from './AdminBusinessPages
 import { UserAvatar } from './UserAvatar';
 import { AdminReportsPage } from './AdminReportsPage';
 import { TeamChecklist } from '../settings/TeamChecklist';
+import { AdminVideosPage, AdminGuidePage } from './AdminGuideVideos';
 import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
@@ -49,6 +50,9 @@ type AdminView =
   | 'team_activity'
   | 'reports'
   | 'team_list'
+  | 'store'
+  | 'videos'
+  | 'guide'
   | 'logins'
   | 'payments'
   | 'plans'
@@ -437,6 +441,9 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               team_activity: '17 Team Activity',
               reports: '18 Reports & Feedback',
               team_list: '19 Imtiaz List',
+              store: '20 Store Readiness',
+              videos: '21 Tutorial Videos',
+              guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
 
@@ -448,6 +455,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   };
   const hubBars = (
           <div className="space-y-1.5">
+            <SettingsBar badge="00" title="ADMIN GUIDE" value="WHAT IS WHERE" tone={activeView === 'guide' ? 'accent' : 'default'} onClick={() => go('guide')} testId="admin-bar-guide" />
             <SettingsBar badge="01" title="DASHBOARD" tone={activeView === 'dashboard' ? 'accent' : 'default'} onClick={() => go('dashboard')} testId="admin-bar-dashboard" />
             <SettingsBar badge="02" title="USERS" tone={activeView === 'users' ? 'accent' : 'default'} onClick={() => go('users')} testId="admin-bar-users" />
             <SettingsBar badge="03" title="GIVE PREMIUM" value="GMAIL" tone="accent" onClick={() => go('give_premium')} testId="admin-bar-give-premium" />
@@ -484,6 +492,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="17" title="TEAM ACTIVITY" tone={activeView === 'team_activity' ? 'accent' : 'default'} onClick={() => go('team_activity')} testId="admin-bar-team" />
             <SettingsBar badge="18" title="REPORTS & FEEDBACK" value={openReports > 0 ? `${openReports} NEW` : undefined} tone={openReports > 0 || activeView === 'reports' ? 'accent' : 'default'} onClick={() => go('reports')} testId="admin-bar-reports" />
             <SettingsBar badge="19" title="IMTIAZ LIST" value="PC & APP" tone={activeView === 'team_list' ? 'accent' : 'default'} onClick={() => go('team_list')} testId="admin-bar-team-list" />
+            <SettingsBar badge="20" title="STORE READINESS" value="PLAY · MS" tone={activeView === 'store' ? 'accent' : 'default'} onClick={() => go('store')} testId="admin-bar-store" />
+            <SettingsBar badge="21" title="TUTORIAL VIDEOS" value="YOUTUBE" tone={activeView === 'videos' ? 'accent' : 'default'} onClick={() => go('videos')} testId="admin-bar-videos" />
           </div>
   );
 
@@ -586,7 +596,10 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'businesses' && <AdminBusinessesPage />}
         {view === 'team_activity' && <AdminTeamActivityPage />}
         {view === 'reports' && <AdminReportsPage />}
-        {view === 'team_list' && <TeamChecklist canEdit />}
+        {view === 'team_list' && <TeamChecklist canEdit listName="IMTIAZ LIST" />}
+        {view === 'store' && <TeamChecklist canEdit listName="STORE READINESS" />}
+        {view === 'videos' && <AdminVideosPage />}
+        {view === 'guide' && <AdminGuidePage onOpen={(v) => setView(v as AdminView)} />}
 
         {view === 'dashboard' && (
           <div className="space-y-4">

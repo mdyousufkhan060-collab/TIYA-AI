@@ -19,7 +19,7 @@ interface Item {
  * Work checklist (e.g. "IMTIAZ LIST"): what to install on the PC and what to do.
  * Admin can add / edit / delete. The assigned person ticks items done.
  */
-export const TeamChecklist: React.FC<{ canEdit?: boolean }> = ({ canEdit = false }) => {
+export const TeamChecklist: React.FC<{ canEdit?: boolean; listName?: string }> = ({ canEdit = false, listName }) => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
@@ -28,10 +28,12 @@ export const TeamChecklist: React.FC<{ canEdit?: boolean }> = ({ canEdit = false
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('team_checklist').select('*').order('sort').order('created_at');
+    let q = supabase.from('team_checklist').select('*');
+    if (listName) q = q.eq('list_name', listName);
+    const { data } = await q.order('sort').order('created_at');
     setItems((data as Item[]) || []);
     setLoading(false);
-  }, []);
+  }, [listName]);
 
   useEffect(() => {
     void load();
@@ -52,6 +54,7 @@ export const TeamChecklist: React.FC<{ canEdit?: boolean }> = ({ canEdit = false
     if (!form.title.trim()) return setMsg('Write a title.');
     const emails = form.emails.split(/[,\s]+/).map((e) => e.trim().toLowerCase()).filter((e) => e.includes('@'));
     const { error } = await supabase.from('team_checklist').insert({
+      list_name: listName || 'IMTIAZ LIST',
       section: form.section.trim() || 'GENERAL',
       title: form.title.trim(),
       details: form.details.trim() || null,

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useDevelopers } from './DevelopersPage';
+import { YouTubeCard, useTutorialVideos } from '../TutorialVideos';
 
 /** Public website for ROSE (myrosebd.com). The app itself lives at /app. */
 
@@ -74,6 +75,22 @@ interface Plan {
   voice_credits: number;
   text_credits: number;
 }
+
+const LandingVideos: React.FC = () => {
+  const list = useTutorialVideos(null);
+  if (!list.length) return null;
+  return (
+    <section id="videos" className="mx-auto max-w-6xl px-5 pb-16">
+      <p className="text-xs font-bold tracking-[0.3em] text-red-300">WATCH</p>
+      <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">See ROSE in action.</h2>
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {list.slice(0, 6).map((v) => (
+          <YouTubeCard key={v.id} video={v} />
+        ))}
+      </div>
+    </section>
+  );
+};
 
 export const Landing: React.FC = () => {
   const [menu, setMenu] = useState(false);
@@ -253,6 +270,9 @@ export const Landing: React.FC = () => {
           <span className="block text-pink-300">It's someone who listens."</span>
         </p>
       </section>
+
+      {/* VIDEOS */}
+      <LandingVideos />
 
       {/* PRICING */}
       <section id="pricing" className="mx-auto max-w-6xl px-5 pb-16">
@@ -443,6 +463,9 @@ export const Landing: React.FC = () => {
           <div className="flex flex-wrap gap-5">
             <a href="/privacy.html" className="flex items-center gap-1 hover:text-white">
               <Lock className="h-3 w-3" /> Privacy
+            </a>
+            <a href="/terms.html" className="flex items-center gap-1 hover:text-white">
+              <Lock className="h-3 w-3" /> Terms
             </a>
             <a href="/delete-account.html" className="hover:text-white">
               Delete account

@@ -20,6 +20,7 @@ SESSION > MY ACCOUNT (page="my_account"): name, photo, sign out.
 CREDITS: 1 typed reply = 1 Text credit, 1 voice reply = 1 Voice credit. If Text runs out the user can still talk by voice, and if Voice runs out they can still type. To get more: 06 PREMIUM.
 UNDER EVERY ROSE REPLY there are buttons: speaker (listen to the reply), Copy, Download, 👍, 👎, and Ask again (new answer). Users can tap 👍 / 👎 to tell the team.
 REPORT A PROBLEM: the small flag button next to the message box opens REPORT A PROBLEM (App problem, Wrong answer, Voice / Mic, Payment, Idea, Other). The team reads it and replies; the reply comes as a notification. When a user is unhappy or something does not work, tell them about this flag button.
+HOW-TO VIDEOS: the ROSE YouTube channel has a video for each mode (Personal, Student, Business). It shows at the top of Settings > 07 WORKSPACE and on the website. Suggest it when a user is confused.
 FORGOT PASSWORD: on the sign-in page tap "Forgot password?", enter the email, type the 6-digit code from the email, then set a new password.`;
 
 const ACTIONS = `THINGS YOU CAN DO FOR THE USER (always through trigger_phone_action; the user taps once to confirm, then it opens):
@@ -81,7 +82,7 @@ const ADMIN = `ADMIN GUIDE (only for the owner / admin). On a PC tap the small A
 01 DASHBOARD: users, premium, business, active today, income. 02 USERS: search, tap a user's Gmail to open them: photo, plan, block, note, GIVE PREMIUM & CREDITS (+TEXT and +VOICE credits with +100 / +500 / +1000, months, amount, method), FORCE LOGOUT.
 03 GIVE PREMIUM: find by Gmail and give premium. 04 PAYMENTS: bKash / Nagad requests, APPROVE or REJECT (approve adds the package credits automatically).
 05 PLANS & PRICES: payment numbers, free daily limit, AI MODELS & COST PER REPLY, every package (price, months, text credits, voice credits, show / hide) with MAX AI COST and MIN PROFIT.
-06 GIFT CODES. 07 INCOME. 08 LOGIN ACTIVITY. 09 NOTIFY ALL. 10 MOTIVATION. 11 DEVELOPER TOOLS. 12 API PROVIDERS. 13 SYSTEM LOGS. 14 DELETE REQUESTS. 15 DEVELOPERS (public developer profiles and photos). 16 BUSINESSES (owners, call / email, business access ON / OFF). 17 TEAM ACTIVITY. 18 REPORTS & FEEDBACK (user reports with REPLY / SEEN / FIXED / CLOSE, and 👍 / 👎 totals).
+06 GIFT CODES. 07 INCOME. 08 LOGIN ACTIVITY. 09 NOTIFY ALL. 10 MOTIVATION. 11 DEVELOPER TOOLS. 12 API PROVIDERS. 13 SYSTEM LOGS. 14 DELETE REQUESTS. 15 DEVELOPERS (public developer profiles and photos). 16 BUSINESSES (owners, call / email, business access ON / OFF). 17 TEAM ACTIVITY. 18 REPORTS & FEEDBACK (user reports with REPLY / SEEN / FIXED / CLOSE, and 👍 / 👎 totals). 19 IMTIAZ LIST (PC install and app work list). 20 STORE READINESS (Play Store and Microsoft Store checklist). 21 TUTORIAL VIDEOS (YouTube links for Personal, Student and Business how-to videos). 00 ADMIN GUIDE explains every bar.
 The admin has no credit limit and can use every mode's tools.`;
 
 export function getRoseGuide(mode: string | null | undefined, isAdmin: boolean): string {

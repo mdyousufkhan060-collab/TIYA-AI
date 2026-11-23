@@ -43,6 +43,10 @@ import {
   Video,
   Wallet,
   Wrench,
+  Flag,
+  ClipboardCheck,
+  BadgeCheck,
+  Youtube,
 } from 'lucide-react';
 
 /** Small logo for each bar, picked from its title (shown next to the number). */
@@ -57,6 +61,11 @@ const BAR_ICONS: Array<[RegExp, React.ElementType, string]> = [
   [/CHATS|MEMORY|INBOX/, MessageSquare, '#93c5fd'],
   [/PREMIUM|PLANS|PRICE/, Crown, '#fbbf24'],
   [/WORKSPACE/, Briefcase, '#f59e0b'],
+  [/REPORT|FEEDBACK/, Flag, '#fb7185'],
+  [/IMTIAZ|CHECKLIST|TASK LIST/, ClipboardCheck, '#2dd4bf'],
+  [/STORE READINESS|POLICY/, BadgeCheck, '#22c55e'],
+  [/TUTORIAL|YOUTUBE/, Youtube, '#ef4444'],
+  [/ADMIN GUIDE|GUIDE/, BookOpen, '#38bdf8'],
   [/PRIVACY|SECURITY/, ShieldCheck, '#34d399'],
   [/BUSINESS/, Store, '#f59e0b'],
   [/DEVELOPER TOOLS/, Wrench, '#94a3b8'],

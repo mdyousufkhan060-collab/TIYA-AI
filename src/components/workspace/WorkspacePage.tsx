@@ -6,6 +6,7 @@ import { CrudConfig, CrudSection, CrudField, SingleRowForm } from './CrudSection
 import { refreshModeContext } from '../../utils/modeContext';
 import { WriterPanel } from '../desktop/WriterPanel';
 import { CustomerCheck } from './CustomerCheck';
+import { TutorialStrip } from '../TutorialVideos';
 
 type Mode = 'personal' | 'student' | 'business';
 
@@ -671,6 +672,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     ];
     body = (
       <div className="space-y-3">
+        <TutorialStrip audience={mode || 'personal'} />
         <SettingsBar badge="M" title="MODE" value={modeLabel} tone="accent" onClick={() => setView('mode')} testId="ws-mode" />
         <div className="space-y-1.5">
           {mode === 'business' && !bizLoaded ? (
