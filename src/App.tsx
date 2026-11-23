@@ -51,6 +51,7 @@ import {
 } from './utils/motivation';
 import { useTiyaLiveVoice } from './hooks/useTiyaLiveVoice';
 import { usePremiumVoice } from './hooks/usePremiumVoice';
+import { ForgotPasswordFlow, usePwResetFlag } from './components/auth/ForgotPasswordFlow';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { AgeCheckScreen } from './components/auth/AgeCheckScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
@@ -401,6 +402,15 @@ export default function App() {
   });
 
   // ROSE PREMIUM voice: no own key + Premium credits -> server voice (uses VOICE credits).
+  // Welcome email: sent once by the server the first time a user signs in.
+  const welcomeAskedRef = useRef(false);
+  useEffect(() => {
+    if (!session?.user?.id || !profile || welcomeAskedRef.current) return;
+    if ((profile as any).welcome_email_sent_at) return;
+    welcomeAskedRef.current = true;
+    void supabase.functions.invoke('rose-welcome', { body: {} }).catch(() => undefined);
+  }, [session?.user?.id, profile]);
+  const pwResetOpen = usePwResetFlag();
   const hasOwnVoiceKey = Boolean(
     settings.apiKey.trim() || (settings.providerConnections?.groq?.apiKey || '').trim(),
   );
@@ -1233,6 +1243,8 @@ export default function App() {
           </div>
         ) : !session ? (
           <LoginScreen />
+        ) : pwResetOpen ? (
+          <ForgotPasswordFlow initialStep="newpass" initialEmail={session.user.email || ''} onBack={() => undefined} />
         ) : needsOnboarding ? (
           <OnboardingScreen
             userId={session.user.id}

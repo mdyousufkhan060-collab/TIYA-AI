@@ -198,7 +198,7 @@ export const DevelopersPage: React.FC = () => {
 
       <div className="relative mx-auto max-w-5xl px-4 pb-16 pt-6 sm:px-5">
         {/* big banner */}
-        <div className="overflow-hidden rounded-[6px] border border-white/10 shadow-[0_30px_80px_-30px_#1d4ed8]">
+        <div className="-mx-4 -mt-6 overflow-hidden sm:mx-0 sm:mt-0 sm:rounded-[6px] sm:border sm:border-white/10 sm:shadow-[0_30px_80px_-30px_#1d4ed8]">
           <img src="/team/banner.jpg" alt="ROSE Web Developers" className="block w-full" />
         </div>
 

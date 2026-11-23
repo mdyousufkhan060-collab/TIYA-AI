@@ -174,7 +174,7 @@ export const Landing: React.FC = () => {
       {/* HERO */}
       <section id="top" className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,rgba(255,77,141,0.25),transparent_55%),radial-gradient(ellipse_at_20%_80%,rgba(45,212,191,0.15),transparent_50%)]" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 pb-16 pt-12 md:grid-cols-2 md:pt-20">
+        <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 pb-16 pt-0 md:grid-cols-2 md:gap-10 md:pt-20">
           <div>
             <p className="inline-flex items-center gap-2 rounded-[3px] border border-white/15 px-3 py-1 text-[11px] font-semibold tracking-widest text-pink-200">
               <span className="h-1.5 w-1.5 rounded-full bg-pink-400" /> MADE IN BANGLADESH
@@ -194,14 +194,11 @@ export const Landing: React.FC = () => {
             </div>
             <p className="mt-4 text-xs text-slate-500">Sign in with Google · No credit card · Works on any phone</p>
           </div>
-          <div className="relative mx-auto w-full max-w-sm">
-            <div className="absolute -inset-6 rounded-full bg-pink-500/20 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[6px] border border-white/10 shadow-2xl">
-              <img src="/tiya-home.jpg?v=3" alt="ROSE app home screen" className="aspect-[9/16] w-full object-cover" />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4">
-                <p className="text-xs font-bold tracking-[0.3em] text-pink-200">ROSE</p>
-                <p className="mt-1 text-sm text-slate-100">"আসসালামু আলাইকুম! আমি রোজ, আজ কীভাবে সাহায্য করতে পারি?"</p>
-              </div>
+          <div className="relative order-first -mx-5 md:order-none md:mx-auto md:w-full md:max-w-sm">
+            <div className="absolute -inset-6 hidden rounded-full bg-pink-500/20 blur-3xl md:block" />
+            <div className="relative overflow-hidden md:rounded-[6px] md:border md:border-white/10 md:shadow-2xl">
+              <img src="/tiya-home.jpg?v=3" alt="ROSE app home screen" className="block aspect-[9/16] w-full object-cover" />
+              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black to-transparent md:hidden" />
             </div>
           </div>
         </div>
@@ -261,52 +258,99 @@ export const Landing: React.FC = () => {
       <section id="pricing" className="mx-auto max-w-6xl px-5 pb-16">
         <p className="text-xs font-bold tracking-[0.3em] text-pink-300">PRICING</p>
         <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">Start free. Go Premium anytime.</h2>
-        <div className="mt-8 grid gap-3 md:grid-cols-4">
-          {(() => {
-            const selected = pick ?? (plans[1]?.id || plans[0]?.id || 'free');
-            const cards = [
-              { id: 'free', name: 'FREE', price: 0, line: 'Daily free replies', href: APP_URL },
-              ...plans.map((p) => ({
-                id: p.id,
-                name: String(p.name).toUpperCase(),
-                price: Number(p.price_bdt),
-                line: `${p.months} month${p.months > 1 ? 's' : ''} · ${p.voice_credits} voice · ${p.text_credits} text`,
-                href: `${APP_URL}?buy=${p.id}`,
-              })),
-            ];
-            return cards.map((c) => {
-              const on = selected === c.id;
-              return (
-                <div
-                  key={c.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setPick(c.id)}
-                  onKeyDown={(e) => e.key === 'Enter' && setPick(c.id)}
-                  className={`cursor-pointer rounded-[4px] border p-5 transition-all ${
-                    on ? 'border-pink-400 bg-pink-500/[0.07] shadow-[0_0_40px_-12px_#FF4D8D]' : 'border-white/[0.08] bg-white/[0.03] hover:border-white/25'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-extrabold tracking-[0.2em]">{c.name}</h3>
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-[3px] border ${on ? 'border-pink-400 bg-pink-400' : 'border-white/25'}`}>
-                      {on && <span className="h-2 w-2 bg-black" />}
-                    </span>
+        {(() => {
+          const isPack = (p: Plan) => Number(p.text_credits) === 0 || Number(p.voice_credits) === 0;
+          const main = plans.filter((p) => !isPack(p));
+          const packs = plans.filter(isPack);
+          const selected = pick ?? (main[1]?.id || main[0]?.id || 'free');
+          const n = (x: number) => Number(x || 0).toLocaleString('en-IN');
+          const cards = [
+            {
+              id: 'free',
+              name: 'FREE',
+              price: 0,
+              per: '',
+              lines: ['Daily free replies', 'Text + voice with your own free key', 'Personal, Student, Business modes'],
+              href: APP_URL,
+            },
+            ...main.map((p) => ({
+              id: p.id,
+              name: String(p.name).toUpperCase(),
+              price: Number(p.price_bdt),
+              per: p.months > 1 ? `/ ${p.months} months` : '/ month',
+              lines: [`${n(p.text_credits)} text replies`, `${n(p.voice_credits)} voice replies`, 'No API key needed'],
+              href: `${APP_URL}?buy=${p.id}`,
+            })),
+          ];
+          return (
+            <>
+              <div className={`mt-8 grid gap-3 sm:grid-cols-2 ${cards.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+                {cards.map((c) => {
+                  const on = selected === c.id;
+                  return (
+                    <div
+                      key={c.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setPick(c.id)}
+                      onKeyDown={(e) => e.key === 'Enter' && setPick(c.id)}
+                      className={`flex cursor-pointer flex-col rounded-[4px] border p-5 transition-all ${
+                        on ? 'border-pink-400 bg-pink-500/[0.07] shadow-[0_0_40px_-12px_#FF4D8D]' : 'border-white/[0.08] bg-white/[0.03] hover:border-white/25'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-extrabold tracking-[0.2em]">{c.name}</h3>
+                        <span className={`flex h-5 w-5 items-center justify-center rounded-[3px] border ${on ? 'border-pink-400 bg-pink-400' : 'border-white/25'}`}>
+                          {on && <span className="h-2 w-2 bg-black" />}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-3xl font-extrabold">
+                        ৳{n(c.price)} <span className="text-xs font-semibold text-slate-400">{c.per}</span>
+                      </p>
+                      <ul className="mt-3 flex-1 space-y-1.5 text-xs text-slate-300">
+                        {c.lines.map((l) => (
+                          <li key={l} className="flex items-start gap-2">
+                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 bg-pink-400" />
+                            {l}
+                          </li>
+                        ))}
+                      </ul>
+                      <a
+                        href={c.href}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`mt-5 flex h-11 items-center justify-center rounded-[4px] text-xs font-bold ${on ? 'bg-[#FF4D8D] text-white' : 'border border-white/20'}`}
+                      >
+                        {c.id === 'free' ? 'START FREE' : `GET ${c.name}`}
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+              {packs.length > 0 && (
+                <>
+                  <p className="mt-6 text-xs font-bold tracking-[0.25em] text-teal-300">NEED MORE? TOP-UP PACKS</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {packs.map((p) => (
+                      <a
+                        key={p.id}
+                        href={`${APP_URL}?buy=${p.id}`}
+                        className="flex items-center justify-between gap-3 rounded-[4px] border border-teal-400/30 bg-teal-500/[0.05] px-4 py-3 hover:border-teal-300/60"
+                      >
+                        <span>
+                          <span className="block text-sm font-extrabold tracking-wider">{String(p.name).toUpperCase()}</span>
+                          <span className="block text-xs text-slate-400">
+                            {Number(p.text_credits) > 0 ? `${n(p.text_credits)} text replies` : `${n(p.voice_credits)} voice replies`}
+                          </span>
+                        </span>
+                        <span className="text-xl font-extrabold">৳{n(Number(p.price_bdt))}</span>
+                      </a>
+                    ))}
                   </div>
-                  <p className="mt-3 text-3xl font-extrabold">৳{c.price}</p>
-                  <p className="mt-1 text-xs text-slate-400">{c.line}</p>
-                  <a
-                    href={c.href}
-                    onClick={(e) => e.stopPropagation()}
-                    className={`mt-5 flex h-11 items-center justify-center rounded-[4px] text-xs font-bold ${on ? 'bg-[#FF4D8D] text-white' : 'border border-white/20'}`}
-                  >
-                    {c.id === 'free' ? 'START FREE' : `GET ${c.name}`}
-                  </a>
-                </div>
-              );
-            });
-          })()}
-        </div>
+                </>
+              )}
+            </>
+          );
+        })()}
         <p className="mt-3 text-xs text-slate-500">Pay with bKash · Nagad · Rocket · Gift code</p>
       </section>
 

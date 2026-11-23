@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Loader2, Lock, Mail, User } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { mapAuthErrorToBengali } from '../../utils/authErrors';
+import { ForgotPasswordFlow } from './ForgotPasswordFlow';
 
 type AuthTab = 'signin' | 'signup';
 
@@ -17,6 +18,7 @@ export const LoginScreen: React.FC = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorBn, setErrorBn] = useState('');
   const [infoBn, setInfoBn] = useState('');
+  const [forgot, setForgot] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setErrorBn('');
@@ -120,6 +122,8 @@ export const LoginScreen: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (forgot) return <ForgotPasswordFlow initialEmail={email} onBack={() => setForgot(false)} />;
 
   const switchTab = (t: AuthTab) => {
     setTab(t);
@@ -278,7 +282,7 @@ export const LoginScreen: React.FC = () => {
 
         {tab === 'signin' && (
           <div className="flex justify-end">
-            <button type="button" onClick={handleForgot} className="text-[13px] font-medium text-cyan-300 hover:text-cyan-200">
+            <button type="button" onClick={() => setForgot(true)} className="text-[13px] font-medium text-cyan-300 hover:text-cyan-200">
               Forgot password?
             </button>
           </div>

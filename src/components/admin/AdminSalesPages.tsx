@@ -165,13 +165,14 @@ interface Plan {
 export const AdminPlansPage: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [pay, setPay] = useState({ bkash_number: '', nagad_number: '', rocket_number: '', payment_note: '', free_daily_limit: 20 });
+  const [ai, setAi] = useState({ text_engine: 'gemini', text_model: 'gemini-2.5-flash-lite', voice_model: 'gemini-2.5-flash-lite', tts_model: 'gemini-2.5-flash-preview-tts', rate_text_bdt: 0.06, rate_voice_bdt: 0.55 });
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [{ data: p }, { data: s }] = await Promise.all([
       supabase.from('premium_plans').select('*').order('sort'),
-      supabase.from('premium_settings').select('bkash_number,nagad_number,rocket_number,payment_note,free_daily_limit').eq('id', 1).maybeSingle(),
+      supabase.from('premium_settings').select('bkash_number,nagad_number,rocket_number,payment_note,free_daily_limit,text_engine,text_model,voice_model,tts_model,rate_text_bdt,rate_voice_bdt').eq('id', 1).maybeSingle(),
     ]);
     setPlans((p || []) as Plan[]);
     if (s) {
@@ -181,6 +182,14 @@ export const AdminPlansPage: React.FC = () => {
         rocket_number: (s as any).rocket_number || '',
         payment_note: (s as any).payment_note || '',
         free_daily_limit: Number((s as any).free_daily_limit ?? 20),
+      });
+      setAi({
+        text_engine: (s as any).text_engine || 'gemini',
+        text_model: (s as any).text_model || 'gemini-2.5-flash-lite',
+        voice_model: (s as any).voice_model || 'gemini-2.5-flash-lite',
+        tts_model: (s as any).tts_model || 'gemini-2.5-flash-preview-tts',
+        rate_text_bdt: Number((s as any).rate_text_bdt ?? 0.06),
+        rate_voice_bdt: Number((s as any).rate_voice_bdt ?? 0.55),
       });
     }
   }, []);
@@ -224,6 +233,13 @@ export const AdminPlansPage: React.FC = () => {
     setMsg(error ? error.message : 'Payment numbers saved.');
   };
 
+  const saveAi = async () => {
+    setSaving('ai');
+    const { error } = await supabase.from('premium_settings').update({ ...ai, updated_at: new Date().toISOString() }).eq('id', 1);
+    setSaving(null);
+    setMsg(error ? error.message : 'AI models and costs saved.');
+  };
+
   const setPlan = (id: string, patch: Partial<Plan>) => setPlans((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
 
   return (
@@ -257,6 +273,45 @@ export const AdminPlansPage: React.FC = () => {
         </button>
       </div>
 
+      <p className="px-1 pt-1 text-[10px] font-semibold tracking-wider text-slate-400">AI MODELS & COST PER REPLY</p>
+      <div className={`${card} space-y-2`}>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className={label}>TEXT ENGINE</span>
+            <select className={input} value={ai.text_engine} onChange={(e) => setAi({ ...ai, text_engine: e.target.value })}>
+              <option value="gemini">GEMINI</option>
+              <option value="groq">GROQ</option>
+            </select>
+          </div>
+          <div>
+            <span className={label}>TEXT MODEL</span>
+            <input className={input} value={ai.text_model} onChange={(e) => setAi({ ...ai, text_model: e.target.value })} />
+          </div>
+          <div>
+            <span className={label}>VOICE MODEL</span>
+            <input className={input} value={ai.voice_model} onChange={(e) => setAi({ ...ai, voice_model: e.target.value })} />
+          </div>
+          <div>
+            <span className={label}>SPEAKING (TTS) MODEL</span>
+            <input className={input} value={ai.tts_model} onChange={(e) => setAi({ ...ai, tts_model: e.target.value })} />
+          </div>
+          <div>
+            <span className={label}>COST / TEXT REPLY ৳</span>
+            <input className={input} type="number" step="0.01" min={0} value={ai.rate_text_bdt} onChange={(e) => setAi({ ...ai, rate_text_bdt: Number(e.target.value) })} />
+          </div>
+          <div>
+            <span className={label}>COST / VOICE REPLY ৳</span>
+            <input className={input} type="number" step="0.01" min={0} value={ai.rate_voice_bdt} onChange={(e) => setAi({ ...ai, rate_voice_bdt: Number(e.target.value) })} />
+          </div>
+        </div>
+        <p className="text-[10.5px] leading-snug text-slate-400">
+          Cost is your estimate of what Google or Groq charges you for one reply. Each package below shows its worst-case AI cost and profit from these numbers.
+        </p>
+        <button type="button" onClick={saveAi} disabled={saving === 'ai'} className={`${btn} w-full bg-teal-600`}>
+          {saving === 'ai' && <Loader2 className="h-3.5 w-3.5 animate-spin" />} SAVE
+        </button>
+      </div>
+
       <p className="px-1 pt-1 text-[10px] font-semibold tracking-wider text-slate-400">PACKAGES</p>
       {plans.map((pl) => (
         <div key={pl.id} className={`${card} space-y-2`}>
@@ -281,6 +336,27 @@ export const AdminPlansPage: React.FC = () => {
               </div>
             ))}
           </div>
+          {(() => {
+            const cost = Number(pl.text_credits || 0) * ai.rate_text_bdt + Number(pl.voice_credits || 0) * ai.rate_voice_bdt;
+            const fee = Number(pl.price_bdt || 0) * 0.02;
+            const profit = Number(pl.price_bdt || 0) - cost - fee;
+            return (
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                {(
+                  [
+                    ['MAX AI COST', `৳${cost.toFixed(0)}`, 'text-slate-200'],
+                    ['PAYMENT FEE ~2%', `৳${fee.toFixed(0)}`, 'text-slate-200'],
+                    ['MIN PROFIT', `৳${profit.toFixed(0)}`, profit >= 0 ? 'text-emerald-300' : 'text-rose-300'],
+                  ] as const
+                ).map(([l, v, c]) => (
+                  <div key={l} className="rounded-[4px] bg-white/[0.04] px-1 py-1.5">
+                    <p className="text-[8.5px] font-bold tracking-wider text-slate-500">{l}</p>
+                    <p className={`font-mono text-xs font-bold ${c}`}>{v}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-300">
               <input type="checkbox" checked={pl.is_active} onChange={(e) => setPlan(pl.id, { is_active: e.target.checked })} className="h-4 w-4 accent-teal-500" />
