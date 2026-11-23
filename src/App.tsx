@@ -534,6 +534,7 @@ export default function App() {
   // Calls and messages still wait for the user's Confirm.
   const autoRunIdsRef = useRef<Set<string>>(new Set());
   const autoRunSinceRef = useRef<number>(Date.now());
+  const autoRunLastRef = useRef<{ key: string; at: number } | null>(null);
   useEffect(() => {
     for (const m of messages) {
       if (
@@ -544,10 +545,18 @@ export default function App() {
         !autoRunIdsRef.current.has(m.id)
       ) {
         autoRunIdsRef.current.add(m.id);
+        // The voice model sometimes sends the same action 2-3 times: run it once.
+        const key = JSON.stringify(m.pendingAction);
+        const last = autoRunLastRef.current;
+        if (last && last.key === key && Date.now() - last.at < 15000) {
+          updateMessages((prev) => prev.filter((x) => x.id !== m.id));
+          continue;
+        }
+        autoRunLastRef.current = { key, at: Date.now() };
         void handleConfirmAction(m.id, m.pendingAction);
       }
     }
-  }, [messages, handleConfirmAction]);
+  }, [messages, handleConfirmAction, updateMessages]);
 
   const handleCancelAction = useCallback(
     (msgId: string) => {
