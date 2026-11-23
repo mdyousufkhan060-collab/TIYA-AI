@@ -36,7 +36,7 @@ import { TeamPanel } from '../team/TeamPanel';
  * DASHBOARD / TEAM / APP, the right side shows ROSE with the chat box.
  * Small windows and phones keep the normal mobile app.
  */
-export type DesktopTab = 'dashboard' | 'team' | 'writer' | 'app';
+export type DesktopTab = 'dashboard' | 'team' | 'writer' | 'app' | 'admin';
 
 // ---------- camera preview (real camera, nothing is recorded or uploaded) ----------
 const CameraModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -141,7 +141,7 @@ export const DesktopTopBar: React.FC<{
           <button
             type="button"
             onClick={onAdmin}
-            className="ml-1 flex h-6 items-center gap-1 rounded-[5px] border border-amber-300/50 px-2 text-[10px] font-bold tracking-wider text-amber-200 hover:bg-amber-300/10"
+            className={`ml-1 flex h-6 items-center gap-1 rounded-[5px] border px-2 text-[10px] font-bold tracking-wider ${tab === 'admin' ? 'border-amber-300 bg-amber-300 text-black' : 'border-amber-300/50 text-amber-200 hover:bg-amber-300/10'}`}
           >
             <Crown className="h-3 w-3" /> ADMIN
           </button>

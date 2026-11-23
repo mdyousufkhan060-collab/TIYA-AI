@@ -60,6 +60,12 @@ interface AdminScreenProps {
   /** Motivation writing page (moved here from HOME) */
   onOpenMotivation?: () => void;
   onLogout: () => void;
+  /** PC: show only the admin bars (left pane); picking one calls onPick */
+  navOnly?: boolean;
+  onPick?: (view: string) => void;
+  /** PC: the page chosen in the left pane (right pane follows it) */
+  controlledView?: string | null;
+  activeView?: string | null;
 }
 
 export const AdminScreen: React.FC<AdminScreenProps> = ({
@@ -70,9 +76,22 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   onBackToHome,
   onOpenMotivation,
   onLogout,
+  navOnly = false,
+  onPick,
+  controlledView = null,
+  activeView = null,
 }) => {
-  const [view, setView] = useState<AdminView>('hub');
+  const [view, setView] = useState<AdminView>((controlledView as AdminView) || 'hub');
   const [pendingPayments, setPendingPayments] = useState(0);
+
+  // PC: right pane follows the bar picked on the left; never shows the bar list itself
+  useEffect(() => {
+    if (controlledView && controlledView !== view) setView(controlledView as AdminView);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [controlledView]);
+  useEffect(() => {
+    if (controlledView && view === 'hub') setView((controlledView as AdminView) || 'dashboard');
+  }, [controlledView, view]);
 
   // show how many payments wait for approval on the PAYMENTS bar
   useEffect(() => {
@@ -408,6 +427,60 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
 
   const isRefreshing = statsLoading || usersLoading;
 
+  const go = (v: AdminView) => {
+    if (navOnly) onPick?.(v);
+    else setView(v);
+  };
+  const hubBars = (
+          <div className="space-y-1.5">
+            <SettingsBar badge="01" title="DASHBOARD" tone={activeView === 'dashboard' ? 'accent' : 'default'} onClick={() => go('dashboard')} testId="admin-bar-dashboard" />
+            <SettingsBar badge="02" title="USERS" tone={activeView === 'users' ? 'accent' : 'default'} onClick={() => go('users')} testId="admin-bar-users" />
+            <SettingsBar badge="03" title="GIVE PREMIUM" value="GMAIL" tone="accent" onClick={() => go('give_premium')} testId="admin-bar-give-premium" />
+            <SettingsBar
+              badge="04"
+              title="PAYMENTS"
+              value={pendingPayments > 0 ? `${pendingPayments} NEW` : undefined}
+              tone={pendingPayments > 0 ? 'accent' : 'default'}
+              tone={activeView === 'payments' ? 'accent' : 'default'} onClick={() => go('payments')}
+              testId="admin-bar-payments"
+            />
+            <SettingsBar badge="05" title="PLANS & PRICES" tone={activeView === 'plans' ? 'accent' : 'default'} onClick={() => go('plans')} testId="admin-bar-plans" />
+            <SettingsBar badge="06" title="GIFT CODES" tone={activeView === 'gifts' ? 'accent' : 'default'} onClick={() => go('gifts')} testId="admin-bar-gifts" />
+            <SettingsBar badge="07" title="INCOME" tone={activeView === 'income' ? 'accent' : 'default'} onClick={() => go('income')} testId="admin-bar-income" />
+            <SettingsBar badge="08" title="LOGIN ACTIVITY" tone={activeView === 'logins' ? 'accent' : 'default'} onClick={() => go('logins')} testId="admin-bar-logins" />
+            <SettingsBar badge="09" title="NOTIFY ALL" tone={activeView === 'notify_all' ? 'accent' : 'default'} onClick={() => go('notify_all')} testId="admin-bar-notify" />
+            {onOpenMotivation && (
+              <SettingsBar badge="10" title="MOTIVATION" onClick={onOpenMotivation} testId="admin-motivation-btn" />
+            )}
+            <SettingsBar
+              badge="11"
+              title="DEVELOPER TOOLS"
+              onClick={() => {
+                setDevSubpage(null);
+                go('developer_tools');
+              }}
+              testId="admin-developer-tools-btn"
+            />
+            <SettingsBar badge="12" title="API PROVIDERS" tone={activeView === 'api_providers' ? 'accent' : 'default'} onClick={() => go('api_providers')} testId="admin-bar-api" />
+            <SettingsBar badge="13" title="SYSTEM LOGS" tone={activeView === 'system_logs' ? 'accent' : 'default'} onClick={() => go('system_logs')} testId="admin-bar-logs" />
+            <SettingsBar badge="14" title="DELETE REQUESTS" tone={activeView === 'deletions' ? 'accent' : 'default'} onClick={() => go('deletions')} testId="admin-bar-deletions" />
+            <SettingsBar badge="15" title="DEVELOPERS" value="PUBLIC" tone={activeView === 'dev_profile' ? 'accent' : 'default'} onClick={() => go('dev_profile')} testId="admin-bar-dev-profile" />
+            <SettingsBar badge="16" title="BUSINESSES" tone={activeView === 'businesses' ? 'accent' : 'default'} onClick={() => go('businesses')} testId="admin-bar-businesses" />
+            <SettingsBar badge="17" title="TEAM ACTIVITY" tone={activeView === 'team_activity' ? 'accent' : 'default'} onClick={() => go('team_activity')} testId="admin-bar-team" />
+          </div>
+  );
+
+  if (navOnly) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-white/[0.08] px-4">
+          <span className="text-sm font-semibold tracking-wider text-amber-200">ADMIN</span>
+        </header>
+        <div className="tiya-scroll flex-1 overflow-y-auto px-3.5 py-3">{hubBars}</div>
+      </div>
+    );
+  }
+
   if (view === 'developer_tools') {
     return (
       <DeveloperToolsPage
@@ -481,44 +554,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         onTouchEnd={handleTouchEnd}
         className="tiya-scroll flex-1 overflow-y-auto px-4 py-4"
       >
-        {view === 'hub' && (
-          <div className="space-y-1.5">
-            <SettingsBar badge="01" title="DASHBOARD" onClick={() => setView('dashboard')} testId="admin-bar-dashboard" />
-            <SettingsBar badge="02" title="USERS" onClick={() => setView('users')} testId="admin-bar-users" />
-            <SettingsBar badge="03" title="GIVE PREMIUM" value="GMAIL" tone="accent" onClick={() => setView('give_premium')} testId="admin-bar-give-premium" />
-            <SettingsBar
-              badge="04"
-              title="PAYMENTS"
-              value={pendingPayments > 0 ? `${pendingPayments} NEW` : undefined}
-              tone={pendingPayments > 0 ? 'accent' : 'default'}
-              onClick={() => setView('payments')}
-              testId="admin-bar-payments"
-            />
-            <SettingsBar badge="05" title="PLANS & PRICES" onClick={() => setView('plans')} testId="admin-bar-plans" />
-            <SettingsBar badge="06" title="GIFT CODES" onClick={() => setView('gifts')} testId="admin-bar-gifts" />
-            <SettingsBar badge="07" title="INCOME" onClick={() => setView('income')} testId="admin-bar-income" />
-            <SettingsBar badge="08" title="LOGIN ACTIVITY" onClick={() => setView('logins')} testId="admin-bar-logins" />
-            <SettingsBar badge="09" title="NOTIFY ALL" onClick={() => setView('notify_all')} testId="admin-bar-notify" />
-            {onOpenMotivation && (
-              <SettingsBar badge="10" title="MOTIVATION" onClick={onOpenMotivation} testId="admin-motivation-btn" />
-            )}
-            <SettingsBar
-              badge="11"
-              title="DEVELOPER TOOLS"
-              onClick={() => {
-                setDevSubpage(null);
-                setView('developer_tools');
-              }}
-              testId="admin-developer-tools-btn"
-            />
-            <SettingsBar badge="12" title="API PROVIDERS" onClick={() => setView('api_providers')} testId="admin-bar-api" />
-            <SettingsBar badge="13" title="SYSTEM LOGS" onClick={() => setView('system_logs')} testId="admin-bar-logs" />
-            <SettingsBar badge="14" title="DELETE REQUESTS" onClick={() => setView('deletions')} testId="admin-bar-deletions" />
-            <SettingsBar badge="15" title="DEVELOPERS" value="PUBLIC" onClick={() => setView('dev_profile')} testId="admin-bar-dev-profile" />
-            <SettingsBar badge="16" title="BUSINESSES" onClick={() => setView('businesses')} testId="admin-bar-businesses" />
-            <SettingsBar badge="17" title="TEAM ACTIVITY" onClick={() => setView('team_activity')} testId="admin-bar-team" />
-          </div>
-        )}
+        {view === 'hub' && hubBars}
 
         {view === 'payments' && <AdminPaymentsPage onCountChange={setPendingPayments} />}
         {view === 'plans' && <AdminPlansPage />}

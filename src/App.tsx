@@ -1067,6 +1067,7 @@ export default function App() {
   }, []);
   const [desktopTab, setDesktopTab] = useState<DesktopTab>('dashboard');
   const [writerInbox, setWriterInbox] = useState<string | null>(null);
+  const [adminView, setAdminView] = useState<string>('dashboard');
   const desktopMode =
     isWide &&
     Boolean(session?.user?.id) &&
@@ -1099,6 +1100,7 @@ export default function App() {
           <DesktopTopBar
             tab={desktopTab}
             onTab={(t) => {
+              if (t !== 'admin') setShowAdminScreen(false);
               setDesktopTab(t);
               if (t === 'app') {
                 setShowAdminScreen(false);
@@ -1108,7 +1110,7 @@ export default function App() {
             }}
             isAdmin={isAdmin}
             onAdmin={() => {
-              setDesktopTab('app');
+              setDesktopTab('admin');
               setShowMotivationScreen(false);
               setShowAdminScreen(true);
             }}
@@ -1129,6 +1131,32 @@ export default function App() {
             avatar={(session.user.user_metadata as any)?.avatar_url || null}
             onSignOut={handleSignOut}
           />
+          {desktopTab === 'admin' && (
+            <div className="col-start-1 row-start-2 flex min-h-0 w-[330px] flex-col overflow-hidden rounded-[10px] border border-amber-300/20 bg-[#0D0B1A]">
+              <AdminScreen
+                navOnly
+                activeView={showMotivationScreen ? 'motivation' : adminView}
+                onPick={(v) => {
+                  setShowMotivationScreen(false);
+                  setShowAdminScreen(true);
+                  setAdminView(v);
+                }}
+                settings={settings}
+                voiceState={voiceState}
+                errorLog={errorLog}
+                onClearErrorLog={() => {
+                  clearErrorLog();
+                  setErrorLog([]);
+                }}
+                onBackToHome={() => setDesktopTab('dashboard')}
+                onOpenMotivation={() => {
+                  setShowAdminScreen(false);
+                  setShowMotivationScreen(true);
+                }}
+                onLogout={handleSignOut}
+              />
+            </div>
+          )}
           {desktopTab === 'app' && (
             <div className="col-start-1 row-start-2 flex min-h-0 w-[330px] flex-col overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]">
               <SettingsHub
@@ -1146,7 +1174,7 @@ export default function App() {
               />
             </div>
           )}
-          {desktopTab !== 'app' && (
+          {desktopTab !== 'app' && desktopTab !== 'admin' && (
             <div className="col-start-1 row-start-2 min-h-0">
               {desktopTab === 'dashboard' ? (
                 <DesktopDashboard userId={session.user.id} isAdmin={isAdmin} onOpenTeam={() => setDesktopTab('team')} />
@@ -1160,7 +1188,7 @@ export default function App() {
         </>
       )}
       {/* Portrait Phone Container */}
-      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' ? 'col-start-1 row-start-2 ml-[342px] !w-auto min-[481px]:!h-full min-[481px]:!max-w-none min-[481px]:!rounded-[10px]' : 'hidden') : ''}`}>
+      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' || desktopTab === 'admin' ? 'col-start-1 row-start-2 ml-[342px] !w-auto min-[481px]:!h-full min-[481px]:!max-w-none min-[481px]:!rounded-[10px]' : 'hidden') : ''}`}>
         {!authReady ? (
           <div className="flex flex-1 items-center justify-center text-xs text-slate-500 dark:text-slate-400">
             Loading ROSE...
@@ -1221,12 +1249,16 @@ export default function App() {
               clearErrorLog();
               setErrorLog([]);
             }}
-            onBackToHome={() => setShowAdminScreen(false)}
+            onBackToHome={() => {
+              setShowAdminScreen(false);
+              if (desktopMode) setDesktopTab('dashboard');
+            }}
             onOpenMotivation={() => {
               setShowAdminScreen(false);
               setShowMotivationScreen(true);
             }}
             onLogout={handleSignOut}
+            controlledView={desktopMode && desktopTab === 'admin' ? adminView : null}
           />
         ) : showMotivationScreen && isAdmin ? (
           <MotivationScreen
