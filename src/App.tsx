@@ -52,6 +52,8 @@ import {
 } from './utils/motivation';
 import { useTiyaLiveVoice } from './hooks/useTiyaLiveVoice';
 import { usePremiumVoice } from './hooks/usePremiumVoice';
+import { TeamChecklist } from './components/settings/TeamChecklist';
+import { SettingsShell } from './components/settings/SettingsShell';
 import { ForgotPasswordFlow, usePwResetFlag } from './components/auth/ForgotPasswordFlow';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { AgeCheckScreen } from './components/auth/AgeCheckScreen';
@@ -1489,6 +1491,13 @@ export default function App() {
               />
             )}
 
+            {activeTab === 'settings' && settingsPage === 'team_list' && (
+              <SettingsShell title="MY TASK LIST" onBack={() => { setSettingsPage('hub'); setSettingsSubpage(null); }}>
+                <div className="pb-4">
+                  <TeamChecklist canEdit={isAdmin} />
+                </div>
+              </SettingsShell>
+            )}
             {activeTab === 'settings' && settingsPage === 'workspace' && session?.user?.id && (
               <WorkspacePage
                 subpage={settingsSubpage}

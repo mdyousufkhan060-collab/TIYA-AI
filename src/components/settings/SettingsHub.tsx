@@ -3,6 +3,7 @@ import { ShieldCheck, User as UserIcon } from 'lucide-react';
 import { SettingsPageId, TiyaSettings, UserProfile } from '../../types/tiya';
 import { isProfilePremium } from './PremiumPage';
 import { SettingsBar } from './SettingsShell';
+import { supabase } from '../../lib/supabase';
 
 interface SettingsHubProps {
   settings: TiyaSettings;
@@ -30,6 +31,18 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
   const geminiReady = settings.connectionStatus === 'ready';
   const groqReady = settings.providerConnections.groq?.status === 'ready';
   const connectionValue = geminiReady || groqReady ? 'FREE KEY' : isAdmin || isProfilePremium(profile) ? 'PREMIUM' : 'NO KEY';
+
+  const [myTasks, setMyTasks] = React.useState<{ total: number; done: number }>({ total: 0, done: 0 });
+  React.useEffect(() => {
+    if (isAdmin) return;
+    void supabase
+      .from('team_checklist')
+      .select('done')
+      .then(({ data }) => {
+        const list = (data as Array<{ done: boolean }>) || [];
+        setMyTasks({ total: list.length, done: list.filter((x) => x.done).length });
+      });
+  }, [isAdmin, activePage]);
 
   const premiumValue = isAdmin ? 'ADMIN' : isProfilePremium(profile) ? 'PREMIUM' : 'FREE';
 
@@ -110,6 +123,20 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
             />
           ))}
         </div>
+
+        {myTasks.total > 0 && (
+          <section aria-label="My task list" className="space-y-1.5">
+            <p className="px-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">TEAM</p>
+            <SettingsBar
+              badge="T"
+              title="MY TASK LIST"
+              value={`${myTasks.done}/${myTasks.total}`}
+              onClick={() => onOpenPage('team_list')}
+              tone={activePage === 'team_list' ? 'accent' : 'default'}
+              testId="settings-item-team_list"
+            />
+          </section>
+        )}
 
         {/* ABOUT section */}
         <section aria-label="About and privacy" className="space-y-1.5 pt-0.5">

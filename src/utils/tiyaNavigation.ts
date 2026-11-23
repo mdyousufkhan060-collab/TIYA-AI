@@ -558,6 +558,7 @@ export function validateNavigateToolArgs(args: unknown): NavigationCommand | nul
     'privacy_controls',
     'my_account',
     'workspace',
+    'team_list',
   ];
 
   const page = validPages.includes(obj.page as SettingsPageId)

@@ -31,6 +31,7 @@ import { AdminDeveloperProfilePage } from './AdminDeveloperProfilePage';
 import { AdminBusinessesPage, AdminTeamActivityPage } from './AdminBusinessPages';
 import { UserAvatar } from './UserAvatar';
 import { AdminReportsPage } from './AdminReportsPage';
+import { TeamChecklist } from '../settings/TeamChecklist';
 import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
@@ -47,6 +48,7 @@ type AdminView =
   | 'businesses'
   | 'team_activity'
   | 'reports'
+  | 'team_list'
   | 'logins'
   | 'payments'
   | 'plans'
@@ -434,6 +436,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               businesses: '16 Businesses',
               team_activity: '17 Team Activity',
               reports: '18 Reports & Feedback',
+              team_list: '19 Imtiaz List',
             } as Record<string, string>
           )[view] || 'Admin';
 
@@ -480,6 +483,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="16" title="BUSINESSES" tone={activeView === 'businesses' ? 'accent' : 'default'} onClick={() => go('businesses')} testId="admin-bar-businesses" />
             <SettingsBar badge="17" title="TEAM ACTIVITY" tone={activeView === 'team_activity' ? 'accent' : 'default'} onClick={() => go('team_activity')} testId="admin-bar-team" />
             <SettingsBar badge="18" title="REPORTS & FEEDBACK" value={openReports > 0 ? `${openReports} NEW` : undefined} tone={openReports > 0 || activeView === 'reports' ? 'accent' : 'default'} onClick={() => go('reports')} testId="admin-bar-reports" />
+            <SettingsBar badge="19" title="IMTIAZ LIST" value="PC & APP" tone={activeView === 'team_list' ? 'accent' : 'default'} onClick={() => go('team_list')} testId="admin-bar-team-list" />
           </div>
   );
 
@@ -582,6 +586,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'businesses' && <AdminBusinessesPage />}
         {view === 'team_activity' && <AdminTeamActivityPage />}
         {view === 'reports' && <AdminReportsPage />}
+        {view === 'team_list' && <TeamChecklist canEdit />}
 
         {view === 'dashboard' && (
           <div className="space-y-4">

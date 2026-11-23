@@ -286,7 +286,8 @@ export type SettingsPageId =
   | 'premium'
   | 'privacy_controls'
   | 'my_account'
-  | 'workspace';
+  | 'workspace'
+  | 'team_list';
 
 export interface UserProfile {
   id: string;

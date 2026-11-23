@@ -649,7 +649,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
       ...(businessId ? [<div key="glance" className="pt-1.5"><BusinessGlance onOpen={setView} /></div>] : []),
       label('SETUP'),
       bar('01', 'biz_profile', businessId ? 'READY' : 'SET UP'),
-      ...(businessId
+      ...(true
         ? [
             bar('02', 'products'),
             bar('03', 'faqs'),
@@ -747,8 +747,18 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
         />
       );
     else if (view === 'couriers') body = <CrudSection config={COURIERS} scope={bScope} />;
-    else if (view === 'customer_check') body = <CustomerCheck shopName={bizInfo?.name} bkash={(bizInfo?.pay || '').match(/01\d{9}/)?.[0] || null} />;
   }
+  if (view === 'customer_check') body = <CustomerCheck shopName={bizInfo?.name} bkash={(bizInfo?.pay || '').match(/01\d{9}/)?.[0] || null} />;
+  if (!body && !bScope && mode === 'business' && view !== 'hub')
+    body = (
+      <div className="space-y-3 py-6 text-center">
+        <p className="text-sm font-bold text-white">Fill in your Business Profile first</p>
+        <p className="text-[11.5px] text-slate-400">Shop name, owner name, Gmail and mobile. After that this section opens.</p>
+        <button type="button" onClick={() => setView('biz_profile')} className="mx-auto flex h-10 items-center justify-center rounded-[4px] bg-teal-600 px-5 text-xs font-bold text-white">
+          OPEN BUSINESS PROFILE
+        </button>
+      </div>
+    );
 
   return (
     <SettingsShell title={view === 'hub' ? '07 WORKSPACE' : TITLES[view]} onBack={back}>
