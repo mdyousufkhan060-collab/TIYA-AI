@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { DeveloperModal, useDeveloperProfile } from './DeveloperProfile';
 
 /** Public website for ROSE (myrosebd.com). The app itself lives at /app. */
 
@@ -79,6 +80,8 @@ export const Landing: React.FC = () => {
   const [open, setOpen] = useState<number | null>(0);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [installEvt, setInstallEvt] = useState<any>(null);
+  const dev = useDeveloperProfile();
+  const [showDev, setShowDev] = useState(false);
 
   useEffect(() => {
     document.title = 'ROSE – Bangla Voice AI Assistant';
@@ -308,15 +311,23 @@ export const Landing: React.FC = () => {
 
       {/* FOUNDER */}
       <section className="mx-auto max-w-6xl px-5 py-16">
-        <div className="grid items-center gap-6 rounded-[4px] border border-white/[0.08] bg-white/[0.03] p-6 md:grid-cols-[auto_1fr]">
-          <img src="/tiya-avatar.png" alt="" className="h-20 w-20 rounded-[6px] object-cover" />
+        <div className="grid items-center gap-6 rounded-[4px] border border-white/[0.08] bg-white/[0.03] p-6 md:grid-cols-[auto_1fr_auto]">
+          <img src={dev?.photo_url || '/tiya-avatar.png'} alt="" className="h-20 w-20 rounded-[6px] object-cover" />
           <div>
             <p className="text-xs font-bold tracking-[0.3em] text-pink-300">THE MAKER</p>
-            <h3 className="mt-1 text-xl font-extrabold">MD Yousuf Khan</h3>
-            <p className="mt-1 text-sm text-slate-400">Built in Bangladesh, for Bangla speakers — so everyone can use AI in their own language.</p>
+            <h3 className="mt-1 text-xl font-extrabold">{dev?.full_name || 'MD Yousuf Khan'}</h3>
+            <p className="mt-1 text-sm text-slate-400">{dev?.title || 'Founder & Developer, ROSE'}</p>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowDev(true)}
+            className="inline-flex h-11 items-center justify-center rounded-[4px] border border-pink-400/60 px-5 text-xs font-bold tracking-widest text-pink-200"
+          >
+            VIEW FULL PROFILE
+          </button>
         </div>
       </section>
+      {showDev && dev && <DeveloperModal p={dev} onClose={() => setShowDev(false)} />}
 
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-3xl px-5 pb-16">
@@ -353,7 +364,7 @@ export const Landing: React.FC = () => {
           <div className="flex items-center gap-2">
             <img src="/icons/icon-192.png" alt="" className="h-6 w-6 rounded-[4px]" />
             <span className="font-bold tracking-[0.25em] text-slate-300">ROSE</span>
-            <span>© {new Date().getFullYear()} MD Yousuf Khan</span>
+            <span>© {new Date().getFullYear()} {dev?.full_name || 'MD Yousuf Khan'}</span>
           </div>
           <div className="flex flex-wrap gap-5">
             <a href="/privacy.html" className="flex items-center gap-1 hover:text-white">
@@ -362,7 +373,10 @@ export const Landing: React.FC = () => {
             <a href="/delete-account.html" className="hover:text-white">
               Delete account
             </a>
-            <a href="mailto:md.yousuf.khan060@gmail.com" className="hover:text-white">
+            <button type="button" onClick={() => setShowDev(true)} className="hover:text-white">
+              Developer
+            </button>
+            <a href={`mailto:${dev?.email || 'md.yousuf.khan060@gmail.com'}`} className="hover:text-white">
               Contact
             </a>
           </div>

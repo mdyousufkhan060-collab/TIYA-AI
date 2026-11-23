@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Lock, RefreshCw } from 'lucide-react';
 import { TiyaSettings, VoiceState } from '../../types/tiya';
 import { SUPPORTED_PHONE_ACTIONS_META } from '../../utils/phoneActions';
+import { DeveloperDetails, useDeveloperProfile } from '../site/DeveloperProfile';
 import { SettingsBar, SettingsShell } from './SettingsShell';
 
 interface AboutPageProps {
@@ -242,18 +243,7 @@ export const AboutGuidePage: React.FC<AboutPageProps> = ({
             </p>
           ))}
         </div>
-        {activeBar.id === 'app_info' && (
-          <div className="mt-2 flex items-center justify-between rounded-2xl border border-white/[0.08] bg-[#11151E] px-4 py-3">
-            <div>
-              <p className="text-[10px] font-semibold tracking-wider text-slate-400">DEVELOPER</p>
-              <p className="font-display text-sm font-bold text-white">MD YOUSUF KHAN</p>
-            </div>
-            <span className="flex items-center gap-1 text-[11px] text-slate-400">
-              <Lock className="h-3.5 w-3.5" />
-              <span>Locked</span>
-            </span>
-          </div>
-        )}
+        {activeBar.id === 'app_info' && <AppDeveloperCard />}
       </SettingsShell>
     );
   }
@@ -496,5 +486,16 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
         </div>
       </div>
     </SettingsShell>
+  );
+};
+
+/** DEVELOPER card in About ROSE: same public details as the website (Admin → 15 DEVELOPER PROFILE). */
+const AppDeveloperCard: React.FC = () => {
+  const dev = useDeveloperProfile();
+  if (!dev) return null;
+  return (
+    <div className="mt-2 rounded-[4px] border border-white/[0.08] bg-[#11151E] p-4">
+      <DeveloperDetails p={dev} />
+    </div>
   );
 };
