@@ -61,7 +61,7 @@ import { LoginScreen } from './components/auth/LoginScreen';
 import { AgeCheckScreen } from './components/auth/AgeCheckScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { HomeScreen } from './components/HomeScreen';
-import { CameraPreview } from './components/CameraPreview';
+import { CameraPreview, type CameraFacing } from './components/CameraPreview';
 import { ChatScreen } from './components/ChatScreen';
 import { BottomNav } from './components/BottomNav';
 import { NotificationsSheet } from './components/NotificationsSheet';
@@ -136,6 +136,8 @@ export default function App() {
   // Camera on / off (every user). Live preview only, nothing is saved.
   const [cameraOn, setCameraOn] = useState(false);
   const toggleCamera = useCallback(() => setCameraOn((v) => !v), []);
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('user');
+  const flipCamera = useCallback(() => setCameraFacing((f) => (f === 'user' ? 'environment' : 'user')), []);
   const [chatError, setChatError] = useState('');
   const [actionLinks, setActionLinks] = useState<Record<string, string>>({});
 
@@ -557,7 +559,13 @@ export default function App() {
     const t = lastUser.text.normalize('NFC').toLowerCase();
     const has = (words: string[]) => words.some((w) => t.includes(w.normalize('NFC')));
     if (!has(['ক্যামেরা', 'ক্যামরা', 'camera', 'kamera'])) return;
-    if (has(['অফ', 'বন্ধ', 'off', 'close'])) {
+    const wantBack = has(['পিছন', 'পেছন', 'পিছের', 'ব্যাক', 'back', 'rear']);
+    const wantFront = has(['সামনে', 'সামনের', 'ফ্রন্ট', 'front', 'সেলফি', 'selfie']);
+    if ((wantBack || wantFront) && !has(['অফ', 'বন্ধ', 'off', 'close'])) {
+      cameraCmdHandledRef.current = lastUser.id;
+      setCameraFacing(wantBack ? 'environment' : 'user');
+      setCameraOn(true);
+    } else if (has(['অফ', 'বন্ধ', 'off', 'close'])) {
       cameraCmdHandledRef.current = lastUser.id;
       setCameraOn(false);
     } else if (has(['অন', 'চালু', 'খোল', 'খুল', ' on', 'open'])) {
@@ -2169,6 +2177,8 @@ export default function App() {
             {cameraOn && (
               <CameraPreview
                 onClose={() => setCameraOn(false)}
+                facing={cameraFacing}
+                onFlip={flipCamera}
                 onFrame={
                   !premiumVoiceMode && ['listening', 'thinking', 'speaking'].includes(liveVoiceState)
                     ? sendVideoFrame

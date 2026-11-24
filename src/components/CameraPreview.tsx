@@ -1,17 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { SwitchCamera, X } from 'lucide-react';
 
 /**
  * Small live camera window (front / back). Nothing is recorded or saved.
  * While voice is on (onFrame given), a small JPEG frame goes to ROSE every
  * 1.5 s so she can see; frames stop as soon as voice or the camera turns off.
  */
+export type CameraFacing = 'user' | 'environment';
+
 export const CameraPreview: React.FC<{
   onClose: () => void;
   onFrame?: (jpegBase64: string) => void;
-}> = ({ onClose, onFrame }) => {
+  facing?: CameraFacing;
+  onFlip?: () => void;
+}> = ({ onClose, onFrame, facing = 'user', onFlip }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const facing = 'user' as const;
+  const [ready, setReady] = useState(false);
   const [err, setErr] = useState('');
   const onFrameRef = useRef(onFrame);
   onFrameRef.current = onFrame;
@@ -46,12 +50,13 @@ export const CameraPreview: React.FC<{
     let stream: MediaStream | null = null;
     let cancelled = false;
     setErr('');
+    setReady(false);
     if (!navigator.mediaDevices?.getUserMedia) {
       setErr('Camera is not available on this device.');
       return;
     }
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: facing }, audio: false })
+      .getUserMedia({ video: { facingMode: { ideal: facing } }, audio: false })
       .then((s) => {
         if (cancelled) {
           s.getTracks().forEach((t) => t.stop());
@@ -62,6 +67,7 @@ export const CameraPreview: React.FC<{
           videoRef.current.srcObject = s;
           void videoRef.current.play().catch(() => {});
         }
+        setReady(true);
       })
       .catch(() => setErr('Camera blocked. Allow camera permission for ROSE and try again.'));
     return () => {
@@ -70,18 +76,43 @@ export const CameraPreview: React.FC<{
     };
   }, [facing]);
 
-  // The picture is hidden (the user does not see himself); the red/normal camera
-  // button shows that the camera is on. Only an error message is shown.
+  // Small live window at the top so the user knows the camera is on
+  // (front camera is mirrored like a selfie). Flip = front / back camera.
   return (
     <>
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        aria-hidden="true"
-        className="pointer-events-none fixed left-0 top-0 h-[2px] w-[2px] opacity-[0.01]"
-      />
+      {!err && (
+        <div className="pointer-events-auto fixed right-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-40 h-32 w-24 overflow-hidden rounded-2xl border-2 border-cyan-300/70 bg-black shadow-[0_0_18px_rgba(56,212,255,0.45)]">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`h-full w-full object-cover ${facing === 'user' ? '-scale-x-100' : ''}`}
+          />
+          {!ready && (
+            <div className="absolute inset-0 flex items-center justify-center text-[10px] text-cyan-200">Starting…</div>
+          )}
+          <span className="absolute left-1.5 top-1.5 h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Camera off"
+            className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+          {onFlip && (
+            <button
+              type="button"
+              onClick={onFlip}
+              aria-label={facing === 'user' ? 'Back camera' : 'Front camera'}
+              className="absolute bottom-1 left-1/2 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full bg-black/60 text-white"
+            >
+              <SwitchCamera className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
       {err && (
         <div className="pointer-events-auto absolute right-3 top-[calc(4rem+env(safe-area-inset-top))] z-40 flex max-w-[220px] items-start gap-2 rounded-2xl border border-rose-400/40 bg-black/80 p-3">
           <p className="text-[11px] leading-snug text-rose-300">{err}</p>
