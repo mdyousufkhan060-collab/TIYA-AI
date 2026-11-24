@@ -61,6 +61,7 @@ import { LoginScreen } from './components/auth/LoginScreen';
 import { AgeCheckScreen } from './components/auth/AgeCheckScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { HomeScreen } from './components/HomeScreen';
+import { CameraPreview } from './components/CameraPreview';
 import { ChatScreen } from './components/ChatScreen';
 import { BottomNav } from './components/BottomNav';
 import { NotificationsSheet } from './components/NotificationsSheet';
@@ -130,6 +131,9 @@ export default function App() {
   const [notifOpen, setNotifOpen] = useState(false);
 
   const [isSendingChat, setIsSendingChat] = useState(false);
+  // Camera on / off (every user). Live preview only, nothing is saved.
+  const [cameraOn, setCameraOn] = useState(false);
+  const toggleCamera = useCallback(() => setCameraOn((v) => !v), []);
   const [chatError, setChatError] = useState('');
   const [actionLinks, setActionLinks] = useState<Record<string, string>>({});
 
@@ -1138,6 +1142,7 @@ export default function App() {
 
   const handleSignOut = useCallback(async () => {
     stopVoice();
+    setCameraOn(false);
     try {
       await supabase.rpc('log_login_event', { p_event: 'logout', p_device: null, p_platform: 'web' });
     } catch {
@@ -1480,6 +1485,8 @@ export default function App() {
                 onOpenMore={() => navigateTo('settings', 'hub', null)}
                 onConfirmAction={handleConfirmAction}
                 onCancelAction={handleCancelAction}
+                cameraOn={cameraOn}
+                onToggleCamera={toggleCamera}
               />
             )}
 
@@ -1669,8 +1676,12 @@ export default function App() {
                 voiceState={voiceState}
                 onSelectTab={handleSelectTab}
                 onToggleOrb={toggleVoice}
+                cameraOn={cameraOn}
+                onToggleCamera={toggleCamera}
               />
             )}
+
+            {cameraOn && <CameraPreview onClose={() => setCameraOn(false)} />}
 
             <NotificationsSheet
               open={notifOpen}

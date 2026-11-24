@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { Bell, Crown } from 'lucide-react';
+import { Bell, Camera, CameraOff, Crown } from 'lucide-react';
 import { ChatMessage, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
 import { ActionConfirmCard } from './ActionConfirmCard';
 import { TiyaNeonNav } from './TiyaNeonNav';
+import { RoseOrb } from './RoseOrb';
 
 interface HomeScreenProps {
   settings: TiyaSettings;
@@ -28,6 +29,8 @@ interface HomeScreenProps {
   onOpenMore: () => void;
   onConfirmAction: (msgId: string, action: PhoneAction) => void;
   onCancelAction: (msgId: string) => void;
+  cameraOn?: boolean;
+  onToggleCamera?: () => void;
 }
 
 /**
@@ -56,6 +59,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenMore,
   onConfirmAction,
   onCancelAction,
+  cameraOn = false,
+  onToggleCamera,
 }) => {
   const isVoiceOn =
     voiceState === 'connecting' ||
@@ -113,10 +118,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         alt=""
         aria-hidden="true"
         draggable={false}
-        className={`pointer-events-none absolute inset-0 h-full w-full object-cover object-top select-none transition-transform duration-700 ${
+        className={`pointer-events-none absolute inset-0 h-full w-full object-cover object-top select-none transition-all duration-700 ${
           isSpeaking && !settings.reduceMotion ? 'scale-[1.015]' : 'scale-100'
-        }`}
+        } ${isVoiceOn ? 'opacity-15 blur-[2px]' : 'opacity-100'}`}
       />
+      {/* Voice mode: the living ROSE ball (spins, grows and bounces with her voice) */}
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-0 top-[8%] bottom-[22%] z-10 transition-all duration-700 ${
+          isVoiceOn ? 'scale-100 opacity-100' : 'scale-75 opacity-0'
+        }`}
+      >
+        {isVoiceOn && <RoseOrb voiceState={voiceState} audioLevel={audioLevel} reduceMotion={settings.reduceMotion} />}
+      </div>
       {/* soft dark fade at top and bottom so text stays readable */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#020714]/85 to-transparent" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#020714] via-[#020714]/80 to-transparent" />
@@ -139,7 +153,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <h1 className="font-display text-center text-lg font-bold tracking-[0.35em] text-white drop-shadow-[0_0_10px_rgba(56,189,248,0.75)]">
           {assistantTitle}
         </h1>
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {onToggleCamera && (
+            <button
+              type="button"
+              onClick={onToggleCamera}
+              aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'}
+              data-testid="home-camera-button"
+              className={`flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm active:scale-95 ${
+                cameraOn ? 'bg-rose-500/80 text-white ring-1 ring-rose-300/60' : 'bg-[#0A1428]/70 text-cyan-100 ring-1 ring-cyan-300/40'
+              }`}
+            >
+              {cameraOn ? <CameraOff className="h-[18px] w-[18px]" /> : <Camera className="h-[18px] w-[18px]" />}
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenNotifications}
