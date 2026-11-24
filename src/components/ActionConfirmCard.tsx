@@ -35,6 +35,8 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
         return <Search className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
       case 'close_opened':
         return <X className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
+      case 'camera':
+        return <Smartphone className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
       case 'courier_dispatch':
       case 'parcels_email':
         return <Package className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
@@ -63,6 +65,8 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
         return 'Send parcels to courier';
       case 'parcels_email':
         return 'E-mail parcel list';
+      case 'camera':
+        return action.on ? 'Camera on' : 'Camera off';
     }
   };
 

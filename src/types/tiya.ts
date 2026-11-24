@@ -251,7 +251,8 @@ export type PhoneAction =
   | { action: 'web_search'; site: string; query: string }
   | { action: 'close_opened' }
   | { action: 'courier_dispatch'; plan: DispatchStep[] }
-  | { action: 'parcels_email' };
+  | { action: 'parcels_email' }
+  | { action: 'camera'; on: boolean };
 
 /** One part of a parcel dispatch: which orders go to which courier. */
 export interface DispatchStep {

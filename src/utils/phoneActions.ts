@@ -201,6 +201,8 @@ export function getConfirmationPromptText(action: PhoneAction): string {
       return `${describeDispatch(action.plan)}। পাঠিয়ে দেবো?`;
     case 'parcels_email':
       return 'পার্সেলের তালিকা ইমেইলে পাঠানো হচ্ছে…';
+    case 'camera':
+      return action.on ? 'ক্যামেরা চালু হচ্ছে…' : 'ক্যামেরা বন্ধ হচ্ছে…';
     case 'close_opened':
       return 'ROSE যেসব ট্যাব খুলেছিল সেগুলো বন্ধ করে ROSE-এ ফিরবো?';
     case 'web_search': {
@@ -218,6 +220,9 @@ export function validatePhoneAction(raw: unknown): PhoneAction | null {
 
   switch (actionType) {
     case 'open_app':
+      if (typeof obj.app === 'string' && /^(camera|ক্যামেরা|ক্যামেরা)$/i.test(obj.app.trim())) {
+        return { action: 'camera', on: true };
+      }
       if (typeof obj.app === 'string' && obj.app.trim()) {
         return { action: 'open_app', app: obj.app.trim() };
       }
@@ -276,6 +281,12 @@ export function validatePhoneAction(raw: unknown): PhoneAction | null {
     case 'parcels_email':
     case 'email_parcels':
       return { action: 'parcels_email' };
+    case 'camera':
+    case 'camera_on':
+    case 'camera_off': {
+      const t = `${actionType} ${typeof obj.text === 'string' ? obj.text : ''} ${typeof obj.query === 'string' ? obj.query : ''}`.toLowerCase();
+      return { action: 'camera', on: !/(off|close|stop|বন্ধ|অফ)/.test(t) };
+    }
     case 'web_search': {
       const query = typeof obj.query === 'string' ? obj.query.trim() : typeof obj.text === 'string' ? obj.text.trim() : '';
       if (!query) return null;
@@ -438,6 +449,15 @@ export async function executePhoneAction(
   nativeBridge?: { run: (json: string) => Promise<string | TiyaNativeResult> | string | TiyaNativeResult },
   onOpenFallbackUrl?: (url: string) => void,
 ): Promise<ActionExecutionResult> {
+  // ROSE's own camera window (in the app), never the phone's camera app
+  if (action.action === 'camera') {
+    try {
+      window.dispatchEvent(new CustomEvent('rose-camera', { detail: { on: action.on } }));
+    } catch {
+      /* ignore */
+    }
+    return { success: true, via: 'web_fallback', messageBn: action.on ? 'ROSE-এর ক্যামেরা চালু হয়েছে, এখন ROSE দেখতে পাচ্ছে।' : 'ROSE-এর ক্যামেরা বন্ধ হয়েছে।' };
+  }
   // Business parcels run on ROSE's server, never on the phone
   if (action.action === 'courier_dispatch' || action.action === 'parcels_email') {
     return runBusinessAction(action);

@@ -534,6 +534,13 @@ export default function App() {
     }
   }, [voiceState, stopVoice]);
 
+  // ROSE's camera action (voice or chat) → open / close the camera window
+  useEffect(() => {
+    const on = (e: Event) => setCameraOn(Boolean((e as CustomEvent).detail?.on));
+    window.addEventListener('rose-camera', on);
+    return () => window.removeEventListener('rose-camera', on);
+  }, []);
+
   // "camera on / off" by voice or chat turns the camera on or off
   const cameraCmdHandledRef = useRef<string>('');
   useEffect(() => {

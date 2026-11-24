@@ -37,14 +37,14 @@ function buildPhoneActionTool(nonBlocking: boolean): Record<string, unknown> {
   return {
     name: 'trigger_phone_action',
     description:
-      'Requests a structured phone action (open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call, web_search). Always call this when the user wants to open an app, call someone, send a WhatsApp/Messenger message, or search / play something on Google, YouTube, YouTube Music, Facebook videos, Google Maps, directions, flights or hotels (web_search with site + query), or close what ROSE opened and come back (close_opened). Business owners: send open parcels to couriers (courier_dispatch, put the plan in text) or e-mail the parcel list (parcels_email).',
+      'Requests a structured phone action (open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call, web_search). Always call this when the user wants to open an app, call someone, send a WhatsApp/Messenger message, or search / play something on Google, YouTube, YouTube Music, Facebook videos, Google Maps, directions, flights or hotels (web_search with site + query), or close what ROSE opened and come back (close_opened). Business owners: send open parcels to couriers (courier_dispatch, put the plan in text) or e-mail the parcel list (parcels_email). Turn the ROSE camera on or off so ROSE can see the user (camera_on / camera_off) whenever the user asks to open, start, close or stop the camera.',
     ...(nonBlocking ? { behavior: 'NON_BLOCKING' } : {}),
     parameters: {
       type: 'OBJECT',
       properties: {
         action: {
           type: 'STRING',
-          description: 'One of: open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call, web_search, close_opened, courier_dispatch, parcels_email',
+          description: 'One of: open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call, web_search, close_opened, courier_dispatch, parcels_email, camera_on, camera_off',
         },
         site: { type: 'STRING', description: 'For web_search: google, youtube, music, facebook, maps, directions, flights, hotels, images, news or wikipedia' },
         query: { type: 'STRING', description: 'For web_search: what to search or play' },
@@ -636,6 +636,43 @@ export class LocalLiveSocket {
   private language = 'Bengali';
   private systemInstruction = 'You are ROSE.';
   private turnHistory: Array<{ role: 'user' | 'assistant'; text: string }> = [];
+  // Noise gate for live voice: quiet background between words is sent as silence,
+  // so fans, traffic and TV do not turn into words. Speech passes untouched.
+  private gateFloor = 0.01;
+  private gateOpenUntil = 0;
+  private silentCache = new Map<number, string>();
+  private gateNoise(b64: string): string {
+    try {
+      const bin = atob(b64);
+      const n = bin.length >> 1;
+      if (!n) return b64;
+      let sum = 0;
+      for (let i = 0; i < n; i++) {
+        let v = (bin.charCodeAt(i * 2 + 1) << 8) | bin.charCodeAt(i * 2);
+        if (v >= 0x8000) v -= 0x10000;
+        const f = v / 32768;
+        sum += f * f;
+      }
+      const rms = Math.sqrt(sum / n);
+      const now = Date.now();
+      const threshold = Math.max(this.gateFloor * 2.2, 0.008);
+      if (rms > threshold) {
+        this.gateOpenUntil = now + 600; // keep word endings
+        return b64;
+      }
+      // learn the room's background level only from quiet frames
+      this.gateFloor = Math.min(0.06, this.gateFloor * 0.96 + rms * 0.04);
+      if (now < this.gateOpenUntil) return b64;
+      let silent = this.silentCache.get(bin.length);
+      if (!silent) {
+        silent = btoa('\0'.repeat(bin.length));
+        this.silentCache.set(bin.length, silent);
+      }
+      return silent;
+    } catch {
+      return b64;
+    }
+  }
   private lastFrame = '';
   private lastFrameAt = 0;
   private freshFrame(): string {
@@ -751,6 +788,15 @@ export class LocalLiveSocket {
             tools,
             inputAudioTranscription: {},
             outputAudioTranscription: {},
+            // background noise should not count as the user talking
+            realtimeInputConfig: {
+              automaticActivityDetection: {
+                startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
+                endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
+                prefixPaddingMs: 300,
+                silenceDurationMs: 700,
+              },
+            },
           },
           {
             onMessage: (msg) => {
@@ -918,11 +964,15 @@ export class LocalLiveSocket {
   }
 
   private async turnSpeak(text: string) {
+    // Owner: tell the voice HOW to say it (soft, loving, with feeling), not just what
+    const spoken = this.systemInstruction.includes('FINAL REMINDER (owner)')
+      ? `Say this in Bengali like a loving young woman talking to the person she loves: soft, warm and close, with real feeling (a smile, a tiny giggle, gentle hurt or longing where the words show it), natural pauses, never like a news reader or announcer:\n${text}`
+      : text;
     if (this.apiKey) {
       for (const model of await pickTtsModels(this.apiKey)) {
         try {
           const r = await generateContent(this.apiKey, model, {
-            contents: [{ role: 'user', parts: [{ text }] }],
+            contents: [{ role: 'user', parts: [{ text: spoken }] }],
             generationConfig: {
               responseModalities: ['AUDIO'],
               speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
@@ -1059,7 +1109,7 @@ export class LocalLiveSocket {
         }
       })();
     } else if (msg.type === 'audio' && msg.data && this.session) {
-      this.session.sendRealtimeInput({ audio: { data: msg.data, mimeType: 'audio/pcm;rate=16000' } });
+      this.session.sendRealtimeInput({ audio: { data: this.gateNoise(String(msg.data)), mimeType: 'audio/pcm;rate=16000' } });
     } else if (msg.type === 'text' && msg.text && this.session) {
       this.session.sendRealtimeInput({ text: msg.text });
     } else if (msg.type === 'video' && msg.data) {
