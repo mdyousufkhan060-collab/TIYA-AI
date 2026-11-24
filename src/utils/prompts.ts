@@ -1,4 +1,5 @@
 import { getTiyaMode, getTiyaModeContext, getTiyaParcelsContext, ROSE_SKILLS_BLOCK } from './modeContext';
+import { TEAM_PROMPT_BLOCK } from '../lib/agents';
 import { getRoseGuide } from './roseGuides';
 import {
   ADULT_ONLY_PERSONALITIES,
@@ -256,6 +257,9 @@ export function buildTiyaSystemPrompt(
   const modeContext = getTiyaModeContext();
   if (modeContext && !isOwner) {
     lines.push(`\n${modeContext}`);
+  }
+  if (isOwner || getTiyaMode() === 'business') {
+    lines.push(`\n${TEAM_PROMPT_BLOCK}`);
   }
   const parcelsContext = getTiyaParcelsContext();
   if (parcelsContext) {

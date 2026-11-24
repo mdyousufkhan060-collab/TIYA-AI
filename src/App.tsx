@@ -1047,6 +1047,52 @@ export default function App() {
     enabled: Boolean(session?.user?.id) && (isAdmin || profile?.account_mode === 'business'),
   };
 
+  // Voice: "জায়ানকে প্রশ্ন করো ..." → the team helper does it (never a WhatsApp / call)
+  const voiceTeamDoneRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!teamRef.current.enabled || !teamRef.current.userId) return;
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+    if (!lastUser || lastUser.source !== 'voice' || voiceTeamDoneRef.current.has(lastUser.id)) return;
+    if (lastUser.timestamp < appOpenedAtRef.current || fromOtherDeviceRef.current.has(lastUser.id)) return;
+    const t = window.setTimeout(() => {
+      // wait until he finished the sentence
+      const cmd = parseAgentCommand(lastUser.text);
+      if (!cmd || voiceTeamDoneRef.current.has(lastUser.id)) return;
+      voiceTeamDoneRef.current.add(lastUser.id);
+      const who = agentById(cmd.agent);
+      const nameRe = new RegExp(`(${who.name}|${who.nameBn})`, 'i');
+      // drop a phone action ROSE may have made for this name by mistake
+      updateMessages((prev) =>
+        prev.filter(
+          (m) =>
+            !(
+              m.pendingAction &&
+              m.timestamp >= lastUser.timestamp &&
+              (m.actionStatus === 'pending' || !m.actionStatus) &&
+              'contact' in m.pendingAction &&
+              nameRe.test(String((m.pendingAction as any).contact || ''))
+            ),
+        ),
+      );
+      sendActionFeedbackToLive(`[App note: the task was given to ${who.name} (${who.nameBn}) on the ROSE team, not to a phone contact. Tell him in one short line that ${who.nameBn} is working on it.]`);
+      const uid = teamRef.current.userId!;
+      void runAgentTask(uid, cmd.agent, cmd.task, 'voice').then((done) => {
+        if (!done) return;
+        updateMessages((prev) => [
+          ...prev,
+          {
+            id: makeId(),
+            role: 'assistant',
+            text: done.status === 'done' ? `【${who.name}】 ${done.result || ''}` : `【${who.name}】 কাজটা করতে পারিনি: ${done.result || 'unknown error'}`,
+            timestamp: Date.now(),
+            source: 'chat',
+          },
+        ]);
+      });
+    }, 1800);
+    return () => window.clearTimeout(t);
+  }, [messages, updateMessages, sendActionFeedbackToLive]);
+
   const handleSendChat = useCallback(
     async (text: string) => {
       setChatError('');

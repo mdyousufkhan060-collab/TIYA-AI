@@ -29,6 +29,14 @@ export const AGENTS: AgentInfo[] = [
 
 export const agentById = (id: string) => AGENTS.find((a) => a.id === id) || AGENTS[0];
 
+/** ROSE's team, for ROSE's own instructions (business users and the admin). */
+export const TEAM_PROMPT_BLOCK = [
+  'YOUR TEAM (AI helpers inside the ROSE app, shown on the PC "Team & Tasks" page; they are NOT people in the phone contacts):',
+  ...AGENTS.filter((a) => a.id !== 'rose').map((a) => `- ${a.name} (${a.nameBn}), ${a.role}: ${a.skills}`),
+  '- You, ROSE, are the Chief Manager: you plan the work, give tasks to the team and report back.',
+  'TEAM RULES: When the owner says "মিরাকে / আরিনকে / জায়ানকে / নাইরাকে বলো / প্রশ্ন করো / কাজ দাও ..." or "ask Zayan ...", the app gives that task to the helper by itself and shows the result in chat. NEVER call trigger_phone_action for these names (no WhatsApp, no call, no message): just say in one short line that you passed the task to that helper. If he asks who does what, explain the team above. If a task fits a helper better (delivery → জায়ান, orders → আরিন, customer replies → মিরা, accounts → নাইরা), suggest that helper.',
+].join('\n');
+
 export interface AgentTask {
   id: string;
   user_id: string;
@@ -55,14 +63,14 @@ const NAME_RE: Array<[AgentId, RegExp]> = [
  */
 export function parseAgentCommand(text: string): { agent: AgentId; task: string } | null {
   const t = text.trim();
-  const verb = /(কে|কেও|ke)\s*(বলো|বল|দাও|দিয়ে দাও|দিয়ে দাও|কাজ দাও|জানাও|bolo|dao)|\b(ask|tell|assign)\b/i;
+  const verb = /(কে|কেও|ke)\s*(দিয়ে\s*)?(বলো|বল|দাও|দিয়ে দাও|দিয়ে দাও|কাজ দাও|জানাও|প্রশ্ন কর|জিজ্ঞেস কর|জিজ্ঞাসা কর|করতে বল|বলে দাও|দিয়ে কর|bolo|dao|proshno|jiggesh)|\b(ask|tell|assign)\b/i;
   if (!verb.test(t)) return null;
   for (const [id, re] of NAME_RE) {
     if (re.test(t)) {
       const task = t
         .replace(re, '')
         .replace(/^(রোজ|rose)[,\s]*/i, '')
-        .replace(/(কে|কেও|ke)\s*(বলো|বল|দাও|দিয়ে দাও|দিয়ে দাও|কাজ দাও|জানাও|bolo|dao)/i, '')
+        .replace(/(কে|কেও|ke)\s*(দিয়ে\s*)?(বলো|বল|দাও|দিয়ে দাও|দিয়ে দাও|কাজ দাও|জানাও|প্রশ্ন করো|প্রশ্ন কর|জিজ্ঞেস করো|জিজ্ঞেস কর|জিজ্ঞাসা করো|জিজ্ঞাসা কর|করতে বলো|করতে বল|বলে দাও|দিয়ে করাও|দিয়ে কর|bolo|dao)/i, '')
         .replace(/\b(ask|tell|assign)\b\s*(to)?/i, '')
         .replace(/^\s*(to|যে|যেন)\s+/i, '')
         .trim();
