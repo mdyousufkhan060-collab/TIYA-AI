@@ -62,7 +62,6 @@ import { AgeCheckScreen } from './components/auth/AgeCheckScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { HomeScreen } from './components/HomeScreen';
 import { CameraPreview } from './components/CameraPreview';
-import { RoseVortex } from './components/RoseVortex';
 import { ChatScreen } from './components/ChatScreen';
 import { BottomNav } from './components/BottomNav';
 import { NotificationsSheet } from './components/NotificationsSheet';
@@ -778,6 +777,21 @@ export default function App() {
     }, 2000);
     return () => window.clearTimeout(t);
   }, [messages, session?.user?.id, chatSyncTick]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Android app: voice state + loudness for the floating ROSE rings shown outside the app
+  const nativeLevelAtRef = useRef(0);
+  useEffect(() => {
+    const nat = typeof window !== 'undefined' ? ((window as any).TiyaNative as any) : undefined;
+    if (typeof nat?.voiceLevel !== 'function') return;
+    const now = Date.now();
+    if (now - nativeLevelAtRef.current < 80 && voiceState === 'speaking') return;
+    nativeLevelAtRef.current = now;
+    try {
+      nat.voiceLevel(String(voiceState), Number(audioLevel) || 0);
+    } catch {
+      /* older Android app */
+    }
+  }, [voiceState, audioLevel]);
 
   // Sync voice errors into state error log
   useEffect(() => {
@@ -1748,11 +1762,6 @@ export default function App() {
           : 'flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] min-[481px]:p-3'
       } ${settings.reduceMotion ? 'reduce-motion' : ''}`}
     >
-      {desktopMode && (
-        <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 opacity-80">
-          <RoseVortex voiceState={voiceState} audioLevel={audioLevel} reduceMotion={settings.reduceMotion} />
-        </div>
-      )}
       {desktopMode && session?.user && (
         <>
           <DesktopTopBar

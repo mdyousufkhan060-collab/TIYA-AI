@@ -3,7 +3,6 @@ import { Bell, Camera, CameraOff, Crown } from 'lucide-react';
 import { ChatMessage, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
 import { ActionConfirmCard } from './ActionConfirmCard';
 import { TiyaNeonNav } from './TiyaNeonNav';
-import { RoseVortex } from './RoseVortex';
 
 interface HomeScreenProps {
   settings: TiyaSettings;
@@ -112,10 +111,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#020714] text-slate-100">
-      {/* Live background: ROSE light rings. Calm when idle, spinning and glowing with her voice */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0">
-        <RoseVortex voiceState={voiceState} audioLevel={audioLevel} reduceMotion={settings.reduceMotion} />
-      </div>
+      {/* Full-screen ROSE picture (stays while she talks; the light rings show outside the app) */}
+      <img
+        src="/tiya-home.jpg?v=3"
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={`pointer-events-none absolute inset-0 h-full w-full object-cover object-top select-none transition-transform duration-700 ${
+          isSpeaking && !settings.reduceMotion ? 'scale-[1.015]' : 'scale-100'
+        }`}
+      />
       {/* soft dark fade at top and bottom so text stays readable */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#020714]/85 to-transparent" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#020714] via-[#020714]/80 to-transparent" />
