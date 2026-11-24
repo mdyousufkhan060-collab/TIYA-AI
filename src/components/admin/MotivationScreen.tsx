@@ -185,7 +185,7 @@ export const MotivationScreen: React.FC<MotivationScreenProps> = ({
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[#060911] text-slate-100">
       {/* Header */}
-      <header className="flex h-13 shrink-0 items-center justify-between border-b border-cyan-400/15 bg-[#090D16] px-3">
+      <header className="flex shrink-0 pt-[env(safe-area-inset-top)] [min-height:calc(3.25rem+env(safe-area-inset-top))] items-center justify-between border-b border-cyan-400/15 bg-[#090D16] px-3">
         <button
           type="button"
           onClick={onBack}

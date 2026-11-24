@@ -274,6 +274,7 @@ interface PhoneControlPageProps {
 
 type PermissionItemId =
   | 'microphone'
+  | 'camera'
   | 'contacts'
   | 'phone_calls'
   | 'sms'
@@ -284,6 +285,7 @@ type PermissionItemId =
 
 const PHONE_PERMISSIONS: Array<{ id: PermissionItemId; label: string }> = [
   { id: 'microphone', label: 'Microphone' },
+  { id: 'camera', label: 'Camera' },
   { id: 'contacts', label: 'Contacts' },
   { id: 'phone_calls', label: 'Phone calls' },
   { id: 'sms', label: 'SMS' },
@@ -302,6 +304,7 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
     typeof window !== 'undefined' && typeof window.TiyaNative?.run === 'function';
 
   const [micPerm, setMicPerm] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
+  const [camPerm, setCamPerm] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
   const [nativeStatuses, setNativeStatuses] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState('');
 
@@ -311,8 +314,41 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
         .query({ name: 'microphone' as PermissionName })
         .then((res) => setMicPerm(res.state))
         .catch(() => setMicPerm('unknown'));
+      navigator.permissions
+        .query({ name: 'camera' as PermissionName })
+        .then((res) => setCamPerm(res.state))
+        .catch(() => setCamPerm('unknown'));
     }
   }, []);
+
+  // Real status from the Android app (refreshed when the user comes back from Android settings)
+  useEffect(() => {
+    if (!hasNativeBridge) return;
+    const load = async () => {
+      try {
+        const raw = await window.TiyaNative!.run(JSON.stringify({ action: 'permission_status' }));
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const map = (parsed?.permissions || parsed?.data || null) as Record<string, boolean> | null;
+        if (!parsed?.success || !map) return;
+        const next: Record<string, string> = {};
+        for (const [k, v] of Object.entries(map)) next[k] = v ? 'Allowed' : 'Off';
+        setNativeStatuses((prev) => ({ ...prev, ...next }));
+        try {
+          if (map.tiya_accessibility) window.localStorage.setItem('rose_access_was_on', '1');
+        } catch {
+          /* ignore */
+        }
+      } catch {
+        /* older app without permission_status */
+      }
+    };
+    void load();
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [hasNativeBridge]);
 
   const handleAllowPermission = async (id: PermissionItemId, label: string) => {
     setNotice('');
@@ -330,6 +366,19 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
       return;
     }
 
+    if (id === 'camera') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        for (const track of stream.getTracks()) track.stop();
+        setCamPerm('granted');
+        setNotice('Camera permission allowed.');
+      } catch {
+        setCamPerm('denied');
+        setNotice('Camera permission was denied. Allow it in the phone settings for ROSE.');
+      }
+      return;
+    }
+
     if (hasNativeBridge && window.TiyaNative) {
       try {
         const raw = await window.TiyaNative.run(
@@ -337,11 +386,16 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
         );
         const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
         const ok = Boolean(parsed?.success);
+        const unsupported = parsed?.via === 'unsupported' || /নেই|not (yet )?(supported|available)/i.test(String(parsed?.message || ''));
         setNativeStatuses((prev) => ({
           ...prev,
-          [id]: ok ? 'Allowed' : 'Pending',
+          [id]: ok ? 'Allowed' : unsupported ? 'Next app update' : 'Pending',
         }));
-        setNotice(parsed?.message || (ok ? `${label} allowed.` : `Open Android settings to allow ${label}.`));
+        setNotice(
+          unsupported
+            ? `${label} comes with the next ROSE Android update.`
+            : parsed?.message || (ok ? `${label} allowed.` : `Android settings opened. Turn on ${label} for ROSE, then come back.`),
+        );
       } catch {
         setNotice(`Could not request ${label} on Android.`);
       }
@@ -352,6 +406,11 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
   };
 
   const getPermissionStatus = (id: PermissionItemId): { text: string; allowed: boolean } => {
+    if (id === 'camera') {
+      if (camPerm === 'granted') return { text: 'Allowed', allowed: true };
+      if (camPerm === 'denied') return { text: 'Blocked', allowed: false };
+      return { text: 'Not set', allowed: false };
+    }
     if (id === 'microphone') {
       if (micPerm === 'granted') return { text: 'Allowed', allowed: true };
       if (micPerm === 'denied') return { text: 'Blocked', allowed: false };

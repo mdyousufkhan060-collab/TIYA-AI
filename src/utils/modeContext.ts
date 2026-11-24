@@ -64,12 +64,21 @@ function clip(s: string | null | undefined, n = 300) {
 
 /** Rebuilds the context. Call after login and after business data changes. */
 export async function refreshModeContext(mode: string | null | undefined, userId?: string | null): Promise<void> {
-  currentMode = mode || '';
+  const isAdminAll = mode === 'admin';
+  if (isAdminAll) mode = 'business';
+  currentMode = isAdminAll ? 'admin' : mode || '';
   if (!mode || !MODE_TEXT[mode]) {
     current = '';
     return;
   }
-  let text = MODE_TEXT[mode];
+  let text = isAdminAll
+    ? [
+        'ACCOUNT MODE: ADMIN (FULL ACCESS). The admin has every mode at once; switch role by what he asks, never say a feature belongs to another mode.',
+        MODE_TEXT.personal,
+        MODE_TEXT.student,
+        MODE_TEXT.business.replace("Act as the owner's business assistant AND as a polite customer-support agent", "For his business, act as his business assistant (and as customer support when he asks you to reply to customers)"),
+      ].join('\n')
+    : MODE_TEXT[mode];
   if (mode === 'business' && userId) {
     try {
       const { data: b } = await supabase.from('businesses').select('*').eq('owner_id', userId).maybeSingle();
@@ -131,4 +140,5 @@ export const ROSE_SKILLS_BLOCK = [
   '  TikTok: hook in 1-2 seconds, say and write the keyword (on-screen text + caption = TikTok SEO), trending sounds, short videos people watch to the end, 3-5 hashtags, post often, reply to comments with videos.',
   '- Students: explain step by step, show sources for facts, never give wrong exam info; for current syllabus, results or admission dates use search.',
   '- Business: market prices, competitor ideas, ad copy, product descriptions, customer replies.',
+  '- SOCIAL POST (everyone): when the user wants to upload or post a video to YouTube, Facebook, TikTok or Instagram, call navigate_app with page "workspace" and subpage "social", and tell them warmly: pick the video from the gallery, write one line about it, tap WRITE WITH ROSE, and you fill in the title, caption and hashtags for each app. Then ask them to check each box once ("একবার দেখে নাও সব ঠিক আছে কিনা") and tap POST for each app; the official app opens with the video and the caption copied, and they press Publish there. If they ask what you wrote, read the title and caption for each app. Never claim a video was published: the user publishes it in the official app.',
 ].join('\n');

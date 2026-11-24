@@ -500,7 +500,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   if (navOnly) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-white/[0.08] px-4">
+        <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] px-4 pt-[env(safe-area-inset-top)] [min-height:calc(3rem+env(safe-area-inset-top))]">
           <span className="text-sm font-semibold tracking-wider text-amber-200">ADMIN</span>
         </header>
         <div className="tiya-scroll flex-1 overflow-y-auto px-3.5 py-3">{hubBars}</div>
@@ -528,17 +528,17 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Admin Top Header */}
-      <header className="flex h-13 shrink-0 items-center justify-between border-b border-slate-200 px-2 dark:border-white/[0.08]">
+      <header className="flex shrink-0 pt-[env(safe-area-inset-top)] [min-height:calc(3.25rem+env(safe-area-inset-top))] items-center justify-between border-b border-slate-200 px-2 dark:border-white/[0.08]">
         <button
           type="button"
           onClick={handleHeaderBack}
-          className="flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-xs font-medium text-teal-600 hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-white/[0.06]"
+          className="flex min-h-[44px] min-w-[64px] shrink-0 items-center gap-1 rounded-xl px-2 text-xs font-medium text-teal-600 hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-white/[0.06]"
         >
           <ChevronLeft className="h-4 w-4" />
           <span>{view === 'hub' ? 'Home' : 'Back'}</span>
         </button>
 
-        <h1 className="font-display truncate px-2 text-sm font-semibold text-slate-900 dark:text-[#F4F5F7]">
+        <h1 className="font-display min-w-0 flex-1 truncate px-1 text-center text-sm font-semibold text-slate-900 dark:text-[#F4F5F7]">
           {headerTitle}
         </h1>
 
@@ -548,20 +548,20 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             onClick={handleManualRefresh}
             disabled={isRefreshing}
             aria-label="Refresh admin data"
-            className="flex min-h-[40px] items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-teal-600 hover:bg-slate-100 disabled:opacity-50 dark:text-teal-400 dark:hover:bg-white/[0.06]"
+            className="flex min-h-[44px] min-w-[44px] justify-center items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-teal-600 hover:bg-slate-100 disabled:opacity-50 dark:text-teal-400 dark:hover:bg-white/[0.06]"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>REFRESH</span>
+            <span className="hidden min-[400px]:inline">REFRESH</span>
           </button>
 
           <button
             type="button"
             onClick={onLogout}
             aria-label="Logout"
-            className="flex min-h-[40px] items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+            className="flex min-h-[44px] min-w-[44px] justify-center items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
           >
             <LogOut className="h-3.5 w-3.5" />
-            <span>LOGOUT</span>
+            <span className="hidden min-[400px]:inline">LOGOUT</span>
           </button>
         </div>
       </header>

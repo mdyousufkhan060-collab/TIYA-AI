@@ -8,6 +8,7 @@ import { refreshModeContext } from '../../utils/modeContext';
 import { WriterPanel } from '../desktop/WriterPanel';
 import { CustomerCheck } from './CustomerCheck';
 import { TutorialStrip } from '../TutorialVideos';
+import { SocialPostPanel } from './SocialPostPanel';
 
 type Mode = 'personal' | 'student' | 'business';
 
@@ -20,6 +21,8 @@ interface WorkspacePageProps {
   onModeChanged: () => void;
   /** open a section directly (ROSE voice/chat navigation), e.g. "products" */
   subpage?: string | null;
+  /** admin: every Personal, Student and Business section at once */
+  allModes?: boolean;
 }
 
 // ---------- Personal / Student tables ----------
@@ -379,6 +382,7 @@ const APPROVALS: CrudConfig = {
 
 type View =
   | 'hub'
+  | 'social'
   | 'mode'
   | 'tasks'
   | 'content'
@@ -405,6 +409,7 @@ const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
   mode: 'MODE',
   writer: 'WRITER',
+  social: 'SOCIAL POST',
   customer_check: 'CUSTOMER CHECK',
   biz_guide: 'START HERE · GUIDE',
   tasks: TASKS.title,
@@ -605,7 +610,7 @@ const BusinessDashboard: React.FC = () => {
   );
 };
 
-export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMinor, onBack, onModeChanged, subpage = null }) => {
+export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMinor, onBack, onModeChanged, subpage = null, allModes = false }) => {
   const [view, setView] = useState<View>('hub');
   useEffect(() => {
     if (subpage && subpage in TITLES) setView(subpage as View);
@@ -628,7 +633,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     void loadBusiness();
   }, [loadBusiness]);
 
-  const refreshAi = () => void refreshModeContext(mode, userId);
+  const refreshAi = () => void refreshModeContext(allModes ? 'admin' : mode, userId);
 
   const changeMode = async (m: Mode) => {
     if (m === mode) return;
@@ -653,8 +658,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
 
   let body: React.ReactNode = null;
   if (view === 'hub') {
-    const personal = [bar('01', 'tasks'), bar('02', 'content'), bar('03', 'writer')];
-    const student = [bar('01', 'notes'), bar('02', 'routine'), bar('03', 'tests'), bar('04', 'tasks'), bar('05', 'writer')];
+    const personal = [bar('01', 'tasks'), bar('02', 'content'), bar('03', 'writer'), bar('04', 'social', 'YT · FB · TT · IG')];
+    const student = [bar('01', 'notes'), bar('02', 'routine'), bar('03', 'tests'), bar('04', 'tasks'), bar('05', 'writer'), bar('06', 'social', 'YT · FB · TT · IG')];
     const label = (t: string) => (
       <p key={`l_${t}`} className="px-1 pt-2 text-[10px] font-bold tracking-wider text-slate-400">
         {t}
@@ -682,6 +687,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             bar('12', 'expenses'),
             label('TOOLS'),
             bar('13', 'writer'),
+            bar('15', 'social', 'YT · FB · TT · IG'),
             label('CHANNELS'),
             bar('14', 'channels', 'KEYS'),
           ]
@@ -690,7 +696,22 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     body = (
       <div className="space-y-3">
         <TutorialStrip audience={mode || 'personal'} />
-        <SettingsBar badge="M" title="MODE" value={modeLabel} tone="accent" onClick={() => setView('mode')} testId="ws-mode" />
+        {allModes ? (
+          <SettingsBar badge="A" title="MODE" value="ADMIN · ALL" tone="accent" hideChevron onClick={() => undefined} testId="ws-mode" />
+        ) : (
+          <SettingsBar badge="M" title="MODE" value={modeLabel} tone="accent" onClick={() => setView('mode')} testId="ws-mode" />
+        )}
+        {allModes && (
+          <div className="space-y-1.5">
+            {label('PERSONAL')}
+            {[bar('P1', 'tasks'), bar('P2', 'content')]}
+            {label('STUDENT')}
+            {[bar('S1', 'notes'), bar('S2', 'routine'), bar('S3', 'tests')]}
+            {label('WRITE & POST')}
+            {[bar('W1', 'writer'), bar('W2', 'social', 'YT · FB · TT · IG')]}
+            {label('BUSINESS')}
+          </div>
+        )}
         <div className="space-y-1.5">
           {mode === 'business' && !bizLoaded ? (
             <div className="flex items-center justify-center py-8 text-xs text-slate-500">
@@ -728,7 +749,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
         {modeMsg && <p className="pt-2 text-xs text-rose-300">{modeMsg}</p>}
       </div>
     );
-  } else if (view === 'writer') body = <div className="h-[calc(100dvh-140px)]"><WriterPanel /></div>;
+  } else if (view === 'social') body = <SocialPostPanel />;
+  else if (view === 'writer') body = <div className="h-[calc(100dvh-140px)]"><WriterPanel /></div>;
   else if (view === 'tasks') body = <CrudSection config={TASKS} scope={uScope} />;
   else if (view === 'content') body = <CrudSection config={CONTENT} scope={uScope} />;
   else if (view === 'notes') body = <CrudSection config={NOTES} scope={uScope} />;

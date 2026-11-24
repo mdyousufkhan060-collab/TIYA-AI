@@ -280,9 +280,9 @@ export function buildTiyaSystemPrompt(
     lines.push('ADMIN: the owner has full access. When he asks about AI tools, give the newest launches and updates, free vs paid, and what each is good for (the app searches the web for this).');
   }
 
-  // Personal / Student / Business mode (+ business data). Admin never has a mode.
+  // Personal / Student / Business mode (+ business data). Admin gets all three.
   const modeContext = getTiyaModeContext();
-  if (modeContext && !isOwner) {
+  if (modeContext) {
     lines.push(`\n${modeContext}`);
   }
   if (isOwner || getTiyaMode() === 'business') {

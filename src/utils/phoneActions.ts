@@ -458,6 +458,16 @@ export async function executePhoneAction(
     }
     return { success: true, via: 'web_fallback', messageBn: action.on ? 'ROSE-এর ক্যামেরা চালু হয়েছে, এখন ROSE দেখতে পাচ্ছে।' : 'ROSE-এর ক্যামেরা বন্ধ হয়েছে।' };
   }
+  // "ROSE Access চালু করো" → Android opens the accessibility setting for ROSE
+  if (action.action === 'open_app' && /(rose[\s_-]*access|accessibility|এক্সেস|অ্যাক্সেস|অ্যাকসেস)/i.test(action.app)) {
+    if (!nativeBridge) return { success: false, via: 'unsupported', messageBn: 'ROSE Access শুধু ROSE Android অ্যাপে চালু করা যায়।' };
+    try {
+      await nativeBridge.run(JSON.stringify({ action: 'request_permission', permission: 'tiya_accessibility' }));
+      return { success: true, via: 'android_native', messageBn: 'ROSE Access-এর সেটিং খুলেছে। ROSE চালু করে ফিরে আসো।' };
+    } catch {
+      return { success: false, via: 'android_native', messageBn: 'ROSE Access-এর সেটিং খোলা গেল না।' };
+    }
+  }
   // Business parcels run on ROSE's server, never on the phone
   if (action.action === 'courier_dispatch' || action.action === 'parcels_email') {
     return runBusinessAction(action);

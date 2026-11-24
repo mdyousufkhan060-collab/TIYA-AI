@@ -574,6 +574,54 @@ export default function App() {
     }
   }, [messages]);
 
+  // Android: some apps (banks) make the user turn ROSE Access off. When it was on
+  // before and is now off, ROSE says so and offers to open the setting again.
+  const [accessOff, setAccessOff] = useState(false);
+  const accessAskedRef = useRef(false);
+  const openRoseAccess = useCallback(() => {
+    const nat = (window as any).TiyaNative;
+    if (!nat?.run) return;
+    void Promise.resolve(nat.run(JSON.stringify({ action: 'request_permission', permission: 'tiya_accessibility' }))).catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    const nat = typeof window !== 'undefined' ? ((window as any).TiyaNative as any) : undefined;
+    if (!nat?.run || !session?.user?.id) return;
+    const check = async () => {
+      try {
+        const raw = await nat.run(JSON.stringify({ action: 'permission_status' }));
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const map = parsed?.permissions || parsed?.data;
+        if (!parsed?.success || !map || typeof map.tiya_accessibility !== 'boolean') return;
+        if (map.tiya_accessibility) {
+          window.localStorage.setItem('rose_access_was_on', '1');
+          accessAskedRef.current = false;
+          setAccessOff(false);
+          return;
+        }
+        if (window.localStorage.getItem('rose_access_was_on') !== '1') return;
+        setAccessOff(true);
+        if (!accessAskedRef.current && ['listening', 'thinking', 'speaking'].includes(liveVoiceStateRef.current)) {
+          accessAskedRef.current = true;
+          sendActionFeedbackToLive(
+            '[App note, not the user\'s words: ROSE Access (Android accessibility) was on before and is OFF now, maybe another app such as a bank app asked to turn it off. Tell the user softly in one or two sentences that ROSE Access is off so you cannot control other apps, and ask "চালু করে দেবো?". If they say yes, call trigger_phone_action with action open_app and app "rose_access"; the phone opens the setting and they switch ROSE on.]',
+          );
+        }
+      } catch {
+        /* older app without permission_status */
+      }
+    };
+    void check();
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void check();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    const timer = window.setInterval(check, 60000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.clearInterval(timer);
+    };
+  }, [session?.user?.id, sendActionFeedbackToLive]);
+
   // Owner, camera on, voice on, and he sat silent for 5 minutes → ROSE speaks first
   const silenceMessagesRef = useRef(messages);
   silenceMessagesRef.current = messages;
@@ -1627,11 +1675,12 @@ export default function App() {
 
   // Keep ROSE's prompt in step with the account mode (Personal / Student / Business)
   useEffect(() => {
-    if (!session?.user?.id || (isAdmin && profile?.account_mode !== 'business')) {
+    if (!session?.user?.id) {
       clearModeContext();
       return;
     }
-    void refreshModeContext(profile?.account_mode ?? null, session.user.id);
+    // Admin: Personal + Student + Business together (full access)
+    void refreshModeContext(isAdmin ? 'admin' : profile?.account_mode ?? null, session.user.id);
   }, [session?.user?.id, isAdmin, profile?.account_mode]);
 
   // Business: open parcels + couriers for ROSE (admin too, when his mode is Business),
@@ -1974,7 +2023,7 @@ export default function App() {
                 onOpenHome={() => navigateTo('home', 'hub', null)}
                 onOpenChatHistory={() => navigateTo('settings', 'chats_memory', null)}
                 onOpenChat={() => navigateTo('chat', 'hub', null)}
-                onOpenTools={() => navigateTo('settings', 'phone_control', 'quick_actions')}
+                onOpenTools={() => navigateTo('settings', 'workspace', null)}
                 onOpenMore={() => navigateTo('settings', 'hub', null)}
                 onConfirmAction={handleConfirmAction}
                 onCancelAction={handleCancelAction}
@@ -2000,7 +2049,7 @@ export default function App() {
                 onToggleVoice={toggleVoice}
                 onOpenHome={() => navigateTo('home', 'hub', null)}
                 onOpenChatHistory={() => navigateTo('settings', 'chats_memory', null)}
-                onOpenTools={() => navigateTo('settings', 'phone_control', 'quick_actions')}
+                onOpenTools={() => navigateTo('settings', 'workspace', null)}
                 onOpenMore={() => navigateTo('settings', 'hub', null)}
               />
             )}
@@ -2115,6 +2164,7 @@ export default function App() {
                 subpage={settingsSubpage}
                 userId={session.user.id}
                 mode={isAdmin ? 'business' : profile?.account_mode ?? 'personal'}
+                allModes={isAdmin}
                 isMinor={typeof userAge === 'number' && userAge < 18}
                 onModeChanged={() => {
                   if (session?.user?.id) loadAccountData(session.user.id);
@@ -2161,6 +2211,18 @@ export default function App() {
                   setSettingsSubpage(null);
                 }}
               />
+            )}
+
+            {accessOff && (
+              <div className="pointer-events-auto fixed inset-x-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-50 flex items-center gap-2 rounded-2xl border border-amber-400/40 bg-[#1a1408]/95 p-3 shadow-lg">
+                <p className="min-w-0 flex-1 text-[11.5px] leading-snug text-amber-100">ROSE Access is off. ROSE cannot open or control other apps.</p>
+                <button type="button" onClick={openRoseAccess} className="h-9 shrink-0 rounded-lg bg-amber-500 px-3 text-[11px] font-bold text-black">
+                  TURN ON
+                </button>
+                <button type="button" onClick={() => setAccessOff(false)} aria-label="Close" className="h-9 w-9 shrink-0 rounded-lg bg-white/10 text-white">
+                  ✕
+                </button>
+              </div>
             )}
 
             {!desktopMode && activeTab !== 'home' && activeTab !== 'chat' && !isInSettingsSubpage && (
