@@ -185,7 +185,10 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
       let lastErr: unknown = null;
       // Camera picture (voice + camera on): only Gemini can see it, so skip Groq and search
       const image = typeof body?.image === 'string' && body.image.length > 100 ? String(body.image) : '';
-      const groqKey = image && key ? '' : getGroqKey();
+      // Owner (emotional ROSE): Gemini speaks far more naturally than Groq, so Groq is only a backup
+      const ownerMode = system.includes('FINAL REMINDER (owner)');
+      const groqKey = (image || ownerMode) && key ? '' : getGroqKey();
+      const groqBackup = getGroqKey();
 
       // Fast path: plain talk goes to Groq (about 1 second). Anything that needs a phone action,
       // opening a page or today's motivation goes to Gemini, which can use the app's tools.
@@ -290,15 +293,15 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
       }
 
       // Gemini not working → Groq answers instead
-      if (groqKey && needsTools) {
+      if (groqBackup && (needsTools || ownerMode || image)) {
         try {
-          const text = await groqChat(groqKey, system, history, message);
+          const text = await groqChat(groqBackup, system, history, message);
           return ok({ ok: true, text, action: null, navigate: null, needsMotivation: false, model: 'groq' });
         } catch (err) {
           lastErr = lastErr || err;
         }
       }
-      if (!key && !groqKey) return fail(401, 'No API key', 'Add your Gemini or Groq API key in Settings > Connections.');
+      if (!key && !groqBackup) return fail(401, 'No API key', 'Add your Gemini or Groq API key in Settings > Connections.');
       return failFromError(lastErr);
     }
     case '/api/gemini/transcribe': {

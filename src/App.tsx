@@ -489,6 +489,51 @@ export default function App() {
     }
   }, [voiceActiveForService]);
 
+  // "কেটে দাও / রাখি / বাই" in voice: let ROSE say her goodbye first, then end the voice call
+  const hangupMsgIdRef = useRef<string>('');
+  const hangupHandledRef = useRef<string>('');
+  const hangupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevVoiceStateRef = useRef(voiceState);
+  const hangupMessagesRef = useRef(messages);
+  hangupMessagesRef.current = messages;
+  useEffect(() => {
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+    if (!lastUser || lastUser.source !== 'voice' || hangupHandledRef.current === lastUser.id) return;
+    const t = lastUser.text.trim().toLowerCase();
+    if (
+      /(কেটে দাও|কেটে দেও|কেটে দে|কাইটা দাও|ফোন রাখো|ফোন রাখ|এখন রাখি|রাখি এখন|রাখলাম|পরে কথা বলব|পরে কথা হবে|কল কাটো|কল কেটে|ভয়েস বন্ধ|বাই বাই|আল্লাহ হাফেজ|kete dao|kete dau|bye bye|allah hafez)/i.test(t)
+    ) {
+      hangupHandledRef.current = lastUser.id;
+      hangupMsgIdRef.current = lastUser.id;
+      if (hangupTimerRef.current) clearTimeout(hangupTimerRef.current);
+      // safety: if no goodbye comes within 15 s, end anyway
+      hangupTimerRef.current = setTimeout(() => {
+        if (hangupMsgIdRef.current) {
+          hangupMsgIdRef.current = '';
+          stopVoice();
+        }
+      }, 15000);
+    }
+  }, [messages, stopVoice]);
+  useEffect(() => {
+    const prev = prevVoiceStateRef.current;
+    prevVoiceStateRef.current = voiceState;
+    if (!hangupMsgIdRef.current) return;
+    if (voiceState === 'idle' || voiceState === 'error') {
+      hangupMsgIdRef.current = '';
+      if (hangupTimerRef.current) clearTimeout(hangupTimerRef.current);
+      return;
+    }
+    const list = hangupMessagesRef.current;
+    const at = list.findIndex((m) => m.id === hangupMsgIdRef.current);
+    const goodbyeSaid = at >= 0 && list.slice(at + 1).some((m) => m.role === 'assistant' && m.text.trim());
+    if (prev === 'speaking' && voiceState === 'listening' && goodbyeSaid) {
+      hangupMsgIdRef.current = '';
+      if (hangupTimerRef.current) clearTimeout(hangupTimerRef.current);
+      setTimeout(() => stopVoice(), 400);
+    }
+  }, [voiceState, stopVoice]);
+
   // Sync voice errors into state error log
   useEffect(() => {
     if (voiceState === 'error') {
