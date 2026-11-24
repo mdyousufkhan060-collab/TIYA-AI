@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { ChannelConnect, CourierConnect } from './BusinessConnect';
 import { supabase } from '../../lib/supabase';
 import { SettingsBar, SettingsSelectBar, SettingsShell } from '../settings/SettingsShell';
 import { CrudConfig, CrudSection, CrudField, SingleRowForm } from './CrudSection';
@@ -383,6 +384,7 @@ type View =
   | 'discounts'
   | 'approvals'
   | 'couriers'
+  | 'channels'
   | 'writer'
   | 'customer_check'
   | 'biz_guide';
@@ -409,6 +411,7 @@ const TITLES: Record<View, string> = {
   discounts: DISCOUNTS.title,
   approvals: APPROVALS.title,
   couriers: COURIERS.title,
+  channels: 'WHATSAPP & MESSENGER',
 };
 
 /** Quick numbers on top of the business hub. */
@@ -667,6 +670,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             bar('12', 'expenses'),
             label('TOOLS'),
             bar('13', 'writer'),
+            label('CHANNELS'),
+            bar('14', 'channels', 'KEYS'),
           ]
         : []),
     ];
@@ -748,7 +753,14 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
           onChanged={() => void supabase.functions.invoke('rose-approval', { body: { action: 'notify' } }).catch(() => undefined)}
         />
       );
-    else if (view === 'couriers') body = <CrudSection config={COURIERS} scope={bScope} />;
+    else if (view === 'couriers')
+      body = (
+        <div className="space-y-2">
+          <CourierConnect businessId={bScope.business_id} />
+          <CrudSection config={COURIERS} scope={bScope} />
+        </div>
+      );
+    else if (view === 'channels') body = <ChannelConnect />;
   }
   if (view === 'customer_check') body = <CustomerCheck shopName={bizInfo?.name} bkash={(bizInfo?.pay || '').match(/01\d{9}/)?.[0] || null} />;
   if (!body && !bScope && mode === 'business' && view !== 'hub')

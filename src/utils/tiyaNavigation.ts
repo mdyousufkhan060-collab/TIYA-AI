@@ -584,7 +584,7 @@ export const TIYA_SETTINGS_MAP_DESCRIPTION = [
   '  04 PHONE CONTROL (page="phone_control", subpages: quick_actions)',
   '  05 CHATS & MEMORY (page="chats_memory")',
   '  06 PREMIUM (page="premium")',
-  '  07 WORKSPACE (page="workspace", subpages = section ids from the mode guide: tasks, content, notes, routine, tests, writer, biz_guide, biz_profile, products, faqs, couriers, discounts, biz_ai, orders, customers, customer_check, approvals, biz_dashboard, expenses)',
+  '  07 WORKSPACE (page="workspace", subpages = section ids from the mode guide: tasks, content, notes, routine, tests, writer, biz_guide, biz_profile, products, faqs, couriers, discounts, biz_ai, orders, customers, customer_check, approvals, biz_dashboard, expenses, channels)',
   '  ABOUT > PRIVACY CONTROLS (page="privacy_controls", subpages: mic_permission, chat_history, tiya_memory, stored_info, api_key_security, policy_terms, account_delete)',
   '  SESSION > MY ACCOUNT (page="my_account")',
 ].join('\n');
