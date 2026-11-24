@@ -723,8 +723,13 @@ export default function App() {
       if (document.visibilityState === 'visible' && chatSyncReadyRef.current) void pullChats(uid).catch(() => undefined);
     };
     document.addEventListener('visibilitychange', onVis);
+    // while ROSE is open, bring in messages from the other device every 30 seconds
+    const every = window.setInterval(() => {
+      if (document.visibilityState === 'visible' && chatSyncReadyRef.current) void pullChats(uid).catch(() => undefined);
+    }, 30000);
     return () => {
       alive = false;
+      window.clearInterval(every);
       document.removeEventListener('visibilitychange', onVis);
     };
   }, [session?.user?.id, pullChats]);

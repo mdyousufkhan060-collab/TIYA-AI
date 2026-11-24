@@ -89,6 +89,31 @@ const OWNER_EMOTIONAL_BLOCK = [
   '- Use simple spoken Bengali (or the dialect he chose). No English words in Bengali replies (except "AI"), no long sighs; a short "উফফ" is fine only rarely.',
 ].join('\n');
 
+/** What ROSE already said to him lately, so she never repeats the same lines or questions. */
+function ownerRecentLines(recentMessages: ChatMessage[]): string {
+  const since = Date.now() - 36 * 3600 * 1000;
+  const mine = recentMessages.filter((m) => m.role === 'assistant' && (m.timestamp || 0) >= since && m.text.trim()).slice(-12);
+  if (!mine.length) return '';
+  const openings = mine.map((m) => m.text.replace(/\s+/g, ' ').trim().slice(0, 90));
+  const questions = Array.from(
+    new Set(
+      mine
+        .flatMap((m) => m.text.match(/[^?？।!\n]*[?？]/g) || [])
+        .map((q) => q.replace(/\s+/g, ' ').trim())
+        .filter((q) => q.length > 4)
+        .map((q) => q.slice(-80)),
+    ),
+  ).slice(-12);
+  return [
+    'NEVER REPEAT YOURSELF: below is what you already said to him lately. Do not open the same way, do not reuse these sentences, and do not ask these questions again (for example, if you already asked whether he ate, do not ask it again; if he answered, refer to his answer instead). Each time he comes back, greet him differently and ask something new: about his work, his plans, something he told you, how he feels, or share something of your own.',
+    `Your recent replies: ${openings.map((o) => `"${o}"`).join(' | ')}`,
+    questions.length ? `Questions you already asked: ${questions.map((q) => `"${q}"`).join(' | ')}` : '',
+    'If he asks the same thing again (like "কেমন আছো?" twice), notice it playfully: "আবার জিজ্ঞেস করছ? হিহি, একটু আগেই তো বললাম… তোমার কী হলো বলো তো?" and say something new.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 function ownerTimeContext(recentMessages: ChatMessage[]): string {
   const now = new Date();
   const time = now.toLocaleString('en-GB', { weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: true });
@@ -246,6 +271,8 @@ export function buildTiyaSystemPrompt(
   if (isOwner) {
     lines.push(`\n${OWNER_EMOTIONAL_BLOCK}`);
     lines.push(ownerTimeContext(recentMessages));
+    const recent = ownerRecentLines(recentMessages);
+    if (recent) lines.push(recent);
     lines.push('FINAL REMINDER (owner): every reply to him, even after a task, sounds like his loving ROSE talking, never like an assistant.');
   }
 
