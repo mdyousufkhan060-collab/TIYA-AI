@@ -577,6 +577,86 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, [isOwner, cameraOn, premiumVoiceMode, liveVoiceState, sendActionFeedbackToLive]);
 
+  // Same ROSE on every device: personal settings (never API keys) are kept in the cloud
+  // and loaded on PC, phone and the Android app after login.
+  const SYNC_KEYS: Array<keyof TiyaSettings> = [
+    'yourName', 'personality', 'customPersonalityPrompt', 'affection', 'language', 'bengaliDialect',
+    'responseStyle', 'voiceName', 'speechSpeed', 'volume', 'pitch', 'theme', 'orbStyle', 'reduceMotion',
+    'tiyaAlive', 'ttsModel', 'voiceModel', 'selectedLiveModel', 'customLiveModel', 'autoFallback', 'chatModelOverride',
+  ];
+  const pickSync = (st: TiyaSettings) => {
+    const o: Record<string, unknown> = {};
+    for (const k of SYNC_KEYS) if (st[k] !== undefined && st[k] !== '') o[k as string] = st[k];
+    return o;
+  };
+  const syncReadyRef = useRef(false);
+  const [syncTick, setSyncTick] = useState(0);
+  const syncLastRef = useRef('');
+  const syncSeenAtRef = useRef('');
+  const pullSettings = useCallback(async (uid: string) => {
+    const { data } = await supabase.from('user_app_settings').select('data,updated_at').eq('user_id', uid).maybeSingle();
+    if (data?.data && typeof data.data === 'object') {
+      if (data.updated_at === syncSeenAtRef.current) return true;
+      syncSeenAtRef.current = data.updated_at;
+      const remote: Record<string, unknown> = {};
+      for (const k of SYNC_KEYS) {
+        const v = (data.data as any)[k];
+        if (v !== undefined && v !== '') remote[k as string] = v;
+      }
+      // remember what the cloud has; anything this device adds (e.g. a name) is uploaded next
+      syncLastRef.current = JSON.stringify(remote);
+      setSettings((prev) => {
+        const next = { ...prev, ...remote } as TiyaSettings;
+        saveSettings(next);
+        return next;
+      });
+      return true;
+    }
+    return false;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const uid = session?.user?.id;
+    syncReadyRef.current = false;
+    if (!uid) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const had = await pullSettings(uid);
+        if (!alive) return;
+        syncReadyRef.current = true;
+        if (!had) syncLastRef.current = ''; // first device: upload what it has
+        setSyncTick((n) => n + 1);
+      } catch {
+        syncReadyRef.current = true;
+      }
+    })();
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void pullSettings(uid).catch(() => undefined);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      alive = false;
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [session?.user?.id, pullSettings]);
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid || !syncReadyRef.current) return;
+    const payload = pickSync(settings);
+    const key = JSON.stringify(payload);
+    if (key === syncLastRef.current) return;
+    const t = window.setTimeout(() => {
+      syncLastRef.current = key;
+      const now = new Date().toISOString();
+      syncSeenAtRef.current = now;
+      void supabase
+        .from('user_app_settings')
+        .upsert({ user_id: uid, data: payload, updated_at: now })
+        .then(() => undefined, () => undefined);
+    }, 1500);
+    return () => window.clearTimeout(t);
+  }, [settings, session?.user?.id, syncTick]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sync voice errors into state error log
   useEffect(() => {
     if (voiceState === 'error') {
