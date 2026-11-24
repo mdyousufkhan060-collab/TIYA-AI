@@ -164,7 +164,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 cameraOn ? 'bg-rose-500/80 text-white ring-1 ring-rose-300/60' : 'bg-[#0A1428]/70 text-cyan-100 ring-1 ring-cyan-300/40'
               }`}
             >
-              {cameraOn ? <CameraOff className="h-[18px] w-[18px]" /> : <Camera className="h-[18px] w-[18px]" />}
+              {cameraOn ? <Camera className="h-[18px] w-[18px]" /> : <CameraOff className="h-[18px] w-[18px]" />}
             </button>
           )}
           <button

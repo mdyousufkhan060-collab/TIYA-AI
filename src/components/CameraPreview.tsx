@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Eye, RefreshCw, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 /**
  * Small live camera window (front / back). Nothing is recorded or saved.
@@ -11,7 +11,7 @@ export const CameraPreview: React.FC<{
   onFrame?: (jpegBase64: string) => void;
 }> = ({ onClose, onFrame }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [facing, setFacing] = useState<'user' | 'environment'>('user');
+  const facing = 'user' as const;
   const [err, setErr] = useState('');
   const onFrameRef = useRef(onFrame);
   onFrameRef.current = onFrame;
@@ -58,7 +58,10 @@ export const CameraPreview: React.FC<{
           return;
         }
         stream = s;
-        if (videoRef.current) videoRef.current.srcObject = s;
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+          void videoRef.current.play().catch(() => {});
+        }
       })
       .catch(() => setErr('Camera blocked. Allow camera permission for ROSE and try again.'));
     return () => {
@@ -67,42 +70,31 @@ export const CameraPreview: React.FC<{
     };
   }, [facing]);
 
+  // The picture is hidden (the user does not see himself); the red/normal camera
+  // button shows that the camera is on. Only an error message is shown.
   return (
-    <div className="pointer-events-auto absolute right-3 top-[calc(4rem+env(safe-area-inset-top))] z-40 w-[42%] max-w-[190px] overflow-hidden rounded-2xl border border-cyan-300/40 bg-black shadow-[0_0_24px_-6px_rgba(34,211,238,0.6)]">
-      {err ? (
-        <p className="p-3 text-[11px] leading-snug text-rose-300">{err}</p>
-      ) : (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className={`aspect-[3/4] w-full object-cover ${facing === 'user' ? '-scale-x-100' : ''}`}
-        />
-      )}
-      {seeing && (
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/55 py-1 text-[10px] font-semibold tracking-wide text-cyan-200">
-          <Eye className="h-3 w-3" /> ROSE can see
+    <>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        aria-hidden="true"
+        className="pointer-events-none fixed left-0 top-0 h-[2px] w-[2px] opacity-[0.01]"
+      />
+      {err && (
+        <div className="pointer-events-auto absolute right-3 top-[calc(4rem+env(safe-area-inset-top))] z-40 flex max-w-[220px] items-start gap-2 rounded-2xl border border-rose-400/40 bg-black/80 p-3">
+          <p className="text-[11px] leading-snug text-rose-300">{err}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-white"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
-      <div className="absolute inset-x-0 top-0 flex justify-between p-1.5">
-        <button
-          type="button"
-          onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}
-          aria-label="Switch camera"
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white active:scale-95"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Turn camera off"
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white active:scale-95"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
+    </>
   );
 };

@@ -183,7 +183,9 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         .filter((h: any) => h.text.trim());
       const system = String(body?.systemInstruction || 'You are ROSE, a helpful Bengali-default AI assistant.');
       let lastErr: unknown = null;
-      const groqKey = getGroqKey();
+      // Camera picture (voice + camera on): only Gemini can see it, so skip Groq and search
+      const image = typeof body?.image === 'string' && body.image.length > 100 ? String(body.image) : '';
+      const groqKey = image && key ? '' : getGroqKey();
 
       // Fast path: plain talk goes to Groq (about 1 second). Anything that needs a phone action,
       // opening a page or today's motivation goes to Gemini, which can use the app's tools.
@@ -196,7 +198,7 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         /খবর|নিউজ|আজকের|আজ কি|সর্বশেষ|লেটেস্ট|সার্চ|খুঁজে দাও|খুঁজে বের|গুগল|দাম কত|দাম কি|রেট|আপডেট|লঞ্চ|রিলিজ|কে জিতেছে|ফলাফল|রেজাল্ট|আবহাওয়া|বাজার|ট্রেন্ডিং|ভাইরাল|সিলেবাস|ভর্তি|news|latest|search|google|price|rate|update|launch|release|today|current|weather|score|result|trending|viral|ai tool|new model|syllabus|admission/i.test(
           message,
         );
-      if (key && needsSearch) {
+      if (key && needsSearch && !image) {
         for (const model of await pickChatModels(key, body?.model)) {
           try {
             const res = await generateContent(
@@ -243,7 +245,15 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
       if (key) {
         const contents = [
           ...history.map((h) => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.text }] })),
-          { role: 'user', parts: [{ text: message }] },
+          {
+            role: 'user',
+            parts: image
+              ? [
+                  { text: `${message}\n\n[Live camera picture of the user right now is attached. You can see it: answer from it when it fits.]` },
+                  { inlineData: { mimeType: 'image/jpeg', data: image } },
+                ]
+              : [{ text: message }],
+          },
         ];
         for (const model of await pickChatModels(key, body?.model)) {
           try {
@@ -619,6 +629,11 @@ export class LocalLiveSocket {
   private language = 'Bengali';
   private systemInstruction = 'You are ROSE.';
   private turnHistory: Array<{ role: 'user' | 'assistant'; text: string }> = [];
+  private lastFrame = '';
+  private lastFrameAt = 0;
+  private freshFrame(): string {
+    return this.lastFrame && Date.now() - this.lastFrameAt < 6000 ? this.lastFrame : '';
+  }
   private turnChunks: Int16Array[] = [];
   private turnSpeech = false;
   private turnSilenceMs = 0;
@@ -819,6 +834,7 @@ export class LocalLiveSocket {
 
       const res = await handle('/api/gemini/chat', this.apiKey, {
         message: heard,
+        image: this.freshFrame(),
         history: this.turnHistory.slice(-12),
         systemInstruction:
           this.systemInstruction +
@@ -1021,6 +1037,7 @@ export class LocalLiveSocket {
         try {
           const res = await handle('/api/gemini/chat', this.apiKey, {
             message: String(msg.text),
+            image: this.freshFrame(),
             history: this.turnHistory.slice(-12),
             systemInstruction: this.systemInstruction,
           });
@@ -1038,12 +1055,16 @@ export class LocalLiveSocket {
       this.session.sendRealtimeInput({ audio: { data: msg.data, mimeType: 'audio/pcm;rate=16000' } });
     } else if (msg.type === 'text' && msg.text && this.session) {
       this.session.sendRealtimeInput({ text: msg.text });
-    } else if (msg.type === 'video' && msg.data && this.session && !this.turnMode) {
-      // Camera frame: ROSE can see the user (live model only)
-      try {
-        this.session.sendRealtimeInput({ video: { data: msg.data, mimeType: 'image/jpeg' } });
-      } catch {
-        // ignore a dropped frame
+    } else if (msg.type === 'video' && msg.data) {
+      // Camera frame: kept for standard voice, streamed to live voice
+      this.lastFrame = String(msg.data);
+      this.lastFrameAt = Date.now();
+      if (this.session && !this.turnMode) {
+        try {
+          this.session.sendRealtimeInput({ video: { data: msg.data, mimeType: 'image/jpeg' } });
+        } catch {
+          // ignore a dropped frame
+        }
       }
     } else if (msg.type === 'stop') {
       this.closedByClient = true;

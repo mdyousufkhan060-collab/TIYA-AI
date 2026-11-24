@@ -477,6 +477,18 @@ export default function App() {
     premiumVoiceStop();
   }, [liveStopVoice, premiumVoiceStop]);
 
+  // Android app: keep the mic alive when ROSE is minimized ("ROSE is listening" notification)
+  const voiceActiveForService = ['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState);
+  useEffect(() => {
+    const nat = typeof window !== 'undefined' ? ((window as any).TiyaNative as any) : undefined;
+    try {
+      if (voiceActiveForService && typeof nat?.voiceOn === 'function') nat.voiceOn();
+      else if (!voiceActiveForService && typeof nat?.voiceOff === 'function') nat.voiceOff();
+    } catch {
+      // older Android app without the service: nothing to do
+    }
+  }, [voiceActiveForService]);
+
   // Sync voice errors into state error log
   useEffect(() => {
     if (voiceState === 'error') {
