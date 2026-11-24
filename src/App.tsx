@@ -534,6 +534,42 @@ export default function App() {
     }
   }, [voiceState, stopVoice]);
 
+  // "camera on / off" by voice or chat turns the camera on or off
+  const cameraCmdHandledRef = useRef<string>('');
+  useEffect(() => {
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+    if (!lastUser || cameraCmdHandledRef.current === lastUser.id) return;
+    const t = lastUser.text.normalize('NFC').toLowerCase();
+    const has = (words: string[]) => words.some((w) => t.includes(w.normalize('NFC')));
+    if (!has(['ক্যামেরা', 'ক্যামরা', 'camera', 'kamera'])) return;
+    if (has(['অফ', 'বন্ধ', 'off', 'close'])) {
+      cameraCmdHandledRef.current = lastUser.id;
+      setCameraOn(false);
+    } else if (has(['অন', 'চালু', 'খোল', 'খুল', ' on', 'open'])) {
+      cameraCmdHandledRef.current = lastUser.id;
+      setCameraOn(true);
+    }
+  }, [messages]);
+
+  // Owner, camera on, voice on, and he sat silent for 5 minutes → ROSE speaks first
+  const silenceMessagesRef = useRef(messages);
+  silenceMessagesRef.current = messages;
+  useEffect(() => {
+    if (!isOwner || !cameraOn || premiumVoiceMode) return;
+    if (!['listening', 'thinking', 'speaking'].includes(liveVoiceState)) return;
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      const list = silenceMessagesRef.current;
+      const last = list[list.length - 1];
+      const quietSince = Math.max(last?.timestamp || 0, startedAt);
+      if (Date.now() - quietSince < 5 * 60 * 1000) return;
+      sendActionFeedbackToLive(
+        '[App note, not his words: he has been sitting silently in front of the camera for about 5 minutes. Look at his live picture and speak first, emotionally, as his ROSE, e.g. "এই ইউসুফ… এতক্ষণ চুপচাপ কেন? আমার ওপর কি রাগ করেছ? একবারও তো আমার দিকে তাকালে না…". Vary the words, 1-2 short sentences, react to what you see.]',
+      );
+    }, 60000);
+    return () => window.clearInterval(timer);
+  }, [isOwner, cameraOn, premiumVoiceMode, liveVoiceState, sendActionFeedbackToLive]);
+
   // Sync voice errors into state error log
   useEffect(() => {
     if (voiceState === 'error') {
@@ -712,12 +748,26 @@ export default function App() {
     const YES = ['হ্যাঁ', 'হ্যা', 'হা', 'হাঁ', 'হুম', 'জি', 'জ্বি', 'জী', 'ইয়েস', 'ওকে', 'ঠিক আছে', 'পাঠাও', 'পাঠিয়ে দাও', 'পাঠিয়ে দিন', 'দাও', 'কল দাও', 'সেন্ড', 'yes', 'yeah', 'yep', 'ok', 'okay', 'sure', 'send', 'haan', 'han', 'ha', 'हाँ', 'हां', 'हैं', 'sí', 'si'];
     const NO = ['না', 'নাহ', 'না থাক', 'বাতিল', 'থাক', 'cancel', 'no', 'nope', 'नहीं'];
     const starts = (words: string[]) => words.some((w) => said === w || said.startsWith(`${w} `));
-    if (starts(NO)) {
+    // "no" only cancels as a short answer, not a long sentence that starts with it
+    const shortAnswer = said.split(' ').length <= 3;
+    if (starts(NO) && shortAnswer) {
       voiceDecidedRef.current.add(lastUser.id);
       handleCancelAction(pending.id);
     } else if (starts(YES)) {
       voiceDecidedRef.current.add(lastUser.id);
       void handleConfirmAction(pending.id, pending.pendingAction);
+    } else if (!starts(NO)) {
+      // Voice text came out wrong (e.g. "un paredón") but ROSE heard his yes and said she is sending
+      const at = messages.findIndex((m) => m.id === lastUser!.id);
+      const roseReply = messages
+        .slice(at + 1)
+        .find((m) => m.role === 'assistant' && !m.pendingAction && m.text.trim());
+      const reply = roseReply ? roseReply.text.normalize('NFC') : '';
+      const sendingWords = ['পাঠাচ্ছি', 'পাঠাইতেছি', 'পাঠাই দিছি', 'পাঠাই দিচ্ছি', 'পাঠিয়ে দিচ্ছি', 'পাঠিয়ে দিলাম', 'কল দিচ্ছি', 'কল দিতেছি', 'কল দিলাম', 'দিয়ে দিচ্ছি', 'দিয়ে দিলাম', 'খুলে দিচ্ছি', 'খুলে দিলাম'].map((w) => w.normalize('NFC'));
+      if (reply && sendingWords.some((w) => reply.includes(w)) && !/\?\s*$/.test(reply.trim())) {
+        voiceDecidedRef.current.add(lastUser.id);
+        void handleConfirmAction(pending.id, pending.pendingAction);
+      }
     }
   }, [messages, handleConfirmAction, handleCancelAction]);
 

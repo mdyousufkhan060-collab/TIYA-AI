@@ -403,10 +403,17 @@ export async function executePhoneAction(
       }
 
       if (parsed && parsed.success) {
+        // WhatsApp has no way for another app to place a call or press send by itself
+        const waNote =
+          action.action === 'whatsapp_call'
+            ? `হোয়াটসঅ্যাপে ${action.contact}-এর চ্যাট খুলেছে। কল যেতে উপরের ফোন আইকনে চাপ দিতে হবে (কল এখনো যায়নি)।`
+            : action.action === 'whatsapp_message'
+              ? `হোয়াটসঅ্যাপে ${action.contact}-এর চ্যাটে মেসেজ লেখা আছে। পাঠাতে সেন্ড বাটনে চাপ দিতে হবে (এখনো যায়নি)।`
+              : '';
         return {
           success: true,
           via: 'android_native',
-          messageBn: parsed.message || 'কাজটি সফলভাবে সম্পন্ন হয়েছে।',
+          messageBn: waNote || parsed.message || 'কাজটি সফলভাবে সম্পন্ন হয়েছে।',
         };
       }
       if (action.action === 'web_search') {
