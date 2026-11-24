@@ -95,6 +95,8 @@ function makeId(): string {
 export default function App() {
   const [settings, setSettings] = useState<TiyaSettings>(() => loadSettings());
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadChats());
+  const appOpenedAtRef = useRef<number>(Date.now());
+  const fromOtherDeviceRef = useRef<Set<string>>(new Set());
   const [memories, setMemories] = useState<MemoryItem[]>(() => loadMemories());
   const [errorLog, setErrorLog] = useState<ErrorLogEntry[]>(() => loadErrorLog());
   const [activeTab, setActiveTab] = useState<MainTab>('home');
@@ -499,6 +501,7 @@ export default function App() {
   useEffect(() => {
     const lastUser = [...messages].reverse().find((m) => m.role === 'user');
     if (!lastUser || lastUser.source !== 'voice' || hangupHandledRef.current === lastUser.id) return;
+    if (lastUser.timestamp < appOpenedAtRef.current || fromOtherDeviceRef.current.has(lastUser.id)) return; // old or synced from another device
     const t = lastUser.text.trim().toLowerCase();
     if (
       /(কেটে দাও|কেটে দেও|কেটে দে|কাইটা দাও|ফোন রাখো|ফোন রাখ|এখন রাখি|রাখি এখন|রাখলাম|পরে কথা বলব|পরে কথা হবে|কল কাটো|কল কেটে|ভয়েস বন্ধ|বাই বাই|আল্লাহ হাফেজ|kete dao|kete dau|bye bye|allah hafez)/i.test(t)
@@ -546,6 +549,7 @@ export default function App() {
   useEffect(() => {
     const lastUser = [...messages].reverse().find((m) => m.role === 'user');
     if (!lastUser || cameraCmdHandledRef.current === lastUser.id) return;
+    if (lastUser.timestamp < appOpenedAtRef.current || fromOtherDeviceRef.current.has(lastUser.id)) return; // old or synced from another device
     const t = lastUser.text.normalize('NFC').toLowerCase();
     const has = (words: string[]) => words.some((w) => t.includes(w.normalize('NFC')));
     if (!has(['ক্যামেরা', 'ক্যামরা', 'camera', 'kamera'])) return;
@@ -656,6 +660,114 @@ export default function App() {
     }, 1500);
     return () => window.clearTimeout(t);
   }, [settings, session?.user?.id, syncTick]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Same conversation on every device: the last 200 chat messages are kept in the cloud,
+  // so ROSE has the same history (and the same "how long since he talked") on PC and phone.
+  const chatSyncReadyRef = useRef(false);
+  const chatSyncedRef = useRef<Set<string>>(new Set());
+  const chatTextRef = useRef<Map<string, string>>(new Map());
+  const [chatSyncTick, setChatSyncTick] = useState(0);
+  const chatSyncedKey = (uid: string) => `rose_chat_synced_${uid}`;
+  const persistChatSynced = (uid: string) => {
+    try {
+      localStorage.setItem(chatSyncedKey(uid), JSON.stringify(Array.from(chatSyncedRef.current).slice(-400)));
+    } catch {
+      /* ignore */
+    }
+  };
+  const pullChats = useCallback(async (uid: string) => {
+    const { data, error } = await supabase
+      .from('user_chat_messages')
+      .select('id,role,text,source,ts')
+      .eq('user_id', uid)
+      .order('ts', { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    const cloud = new Map<string, any>((data || []).map((r: any) => [r.id, r]));
+    let known: Set<string>;
+    try {
+      known = new Set(JSON.parse(localStorage.getItem(chatSyncedKey(uid)) || '[]'));
+    } catch {
+      known = new Set();
+    }
+    updateMessages((prev) => {
+      // a message this device had synced before but the cloud no longer has was deleted elsewhere
+      const kept = prev.filter((m) => cloud.has(m.id) || !known.has(m.id));
+      const have = new Set(kept.map((m) => m.id));
+      const added: ChatMessage[] = [];
+      for (const r of cloud.values()) {
+        if (have.has(r.id)) continue;
+        fromOtherDeviceRef.current.add(r.id);
+        added.push({ id: r.id, role: r.role, text: r.text, timestamp: Number(r.ts), source: r.source === 'voice' ? 'voice' : 'chat' });
+      }
+      if (!added.length && kept.length === prev.length) return prev;
+      return [...kept, ...added].sort((a, b) => a.timestamp - b.timestamp).slice(-200);
+    });
+    chatSyncedRef.current = new Set(cloud.keys());
+    chatTextRef.current = new Map(Array.from(cloud.values()).map((r: any) => [r.id, r.text]));
+    persistChatSynced(uid);
+  }, [updateMessages]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const uid = session?.user?.id;
+    chatSyncReadyRef.current = false;
+    if (!uid) return;
+    let alive = true;
+    void pullChats(uid)
+      .then(() => {
+        if (!alive) return;
+        chatSyncReadyRef.current = true;
+        setChatSyncTick((n) => n + 1);
+      })
+      .catch(() => undefined);
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && chatSyncReadyRef.current) void pullChats(uid).catch(() => undefined);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      alive = false;
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [session?.user?.id, pullChats]);
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid || !chatSyncReadyRef.current) return;
+    const t = window.setTimeout(() => {
+      const list = messages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.text.trim()).slice(-200);
+      const ids = new Set(list.map((m) => m.id));
+      const changed = list.filter((m) => chatTextRef.current.get(m.id) !== m.text);
+      const removed = Array.from(chatSyncedRef.current).filter((id) => !ids.has(id));
+      if (changed.length) {
+        const rows = changed.map((m) => ({ user_id: uid, id: m.id, role: m.role, text: m.text.slice(0, 8000), source: m.source, ts: m.timestamp }));
+        void supabase
+          .from('user_chat_messages')
+          .upsert(rows)
+          .then(({ error }) => {
+            if (error) return;
+            for (const m of changed) {
+              chatSyncedRef.current.add(m.id);
+              chatTextRef.current.set(m.id, m.text);
+            }
+            persistChatSynced(uid);
+          });
+      }
+      if (removed.length) {
+        void supabase
+          .from('user_chat_messages')
+          .delete()
+          .eq('user_id', uid)
+          .in('id', removed.slice(0, 200))
+          .then(({ error }) => {
+            if (error) return;
+            for (const id of removed) {
+              chatSyncedRef.current.delete(id);
+              chatTextRef.current.delete(id);
+            }
+            persistChatSynced(uid);
+          });
+      }
+    }, 2000);
+    return () => window.clearTimeout(t);
+  }, [messages, session?.user?.id, chatSyncTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync voice errors into state error log
   useEffect(() => {
