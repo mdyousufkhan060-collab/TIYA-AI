@@ -62,6 +62,7 @@ import { AgeCheckScreen } from './components/auth/AgeCheckScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { HomeScreen } from './components/HomeScreen';
 import { CameraPreview } from './components/CameraPreview';
+import { RoseVortex } from './components/RoseVortex';
 import { ChatScreen } from './components/ChatScreen';
 import { BottomNav } from './components/BottomNav';
 import { NotificationsSheet } from './components/NotificationsSheet';
@@ -470,6 +471,10 @@ export default function App() {
       ),
   });
   const voiceState = premiumVoiceMode ? premiumVoice.state : liveVoiceState;
+  const liveVoiceStateRef = useRef(liveVoiceState);
+  liveVoiceStateRef.current = liveVoiceState;
+  const premiumVoiceModeRef = useRef(premiumVoiceMode);
+  premiumVoiceModeRef.current = premiumVoiceMode;
   const errorLabel = premiumVoiceMode ? premiumVoice.errorText : liveErrorLabel;
   const errorDetail = premiumVoiceMode ? '' : liveErrorDetail;
   const toggleVoice = premiumVoiceMode ? premiumVoice.toggle : liveToggleVoice;
@@ -1047,6 +1052,43 @@ export default function App() {
     enabled: Boolean(session?.user?.id) && (isAdmin || profile?.account_mode === 'business'),
   };
 
+  // A team helper finished: ROSE tells him the main point; if he does not answer in 10 minutes, ROSE reminds once
+  const agentReportsRef = useRef<Map<string, { at: number; name: string; nameBn: string; result: string; reminded: boolean }>>(new Map());
+  const announceAgentResult = useCallback(
+    (msgId: string, who: { name: string; nameBn: string }, ok: boolean, result: string) => {
+      agentReportsRef.current.set(msgId, { at: Date.now(), name: who.name, nameBn: who.nameBn, result, reminded: false });
+      if (['listening', 'thinking', 'speaking'].includes(liveVoiceStateRef.current) && !premiumVoiceModeRef.current) {
+        sendActionFeedbackToLive(
+          ok
+            ? `[App note: ${who.name} (${who.nameBn}) finished the task. Result: ${result.slice(0, 700)}\nTell him the main point in 1-3 short sentences as ROSE, like "${who.nameBn} জানাল…". Do not read every line; the full report is in the chat.]`
+            : `[App note: ${who.name} could not finish the task (${result.slice(0, 200)}). Tell him briefly.]`,
+        );
+      }
+    },
+    [sendActionFeedbackToLive],
+  );
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const list = hangupMessagesRef.current;
+      for (const [id, r] of agentReportsRef.current) {
+        if (r.reminded || Date.now() - r.at < 10 * 60 * 1000) continue;
+        const at = list.findIndex((m) => m.id === id);
+        const answered = at >= 0 && list.slice(at + 1).some((m) => m.role === 'user');
+        r.reminded = true;
+        if (answered || at < 0) continue;
+        if (['listening', 'thinking', 'speaking'].includes(liveVoiceStateRef.current) && !premiumVoiceModeRef.current) {
+          sendActionFeedbackToLive(`[App note: he has not answered ${r.name}'s report for 10 minutes. ${r.nameBn} asked you to make sure he knows. Remind him softly in one or two sentences with the main point: ${r.result.slice(0, 300)}]`);
+        } else {
+          updateMessages((prev) => [
+            ...prev,
+            { id: makeId(), role: 'assistant', text: `${r.nameBn} আবার মনে করিয়ে দিতে বলল: ওর রিপোর্টটা কি দেখেছ? উপরে 【${r.name}】 লেখা মেসেজে আছে।`, timestamp: Date.now(), source: 'chat' },
+          ]);
+        }
+      }
+    }, 60000);
+    return () => window.clearInterval(t);
+  }, [sendActionFeedbackToLive, updateMessages]);
+
   // Voice: "জায়ানকে প্রশ্ন করো ..." → the team helper does it (never a WhatsApp / call)
   const voiceTeamDoneRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -1078,10 +1120,12 @@ export default function App() {
       const uid = teamRef.current.userId!;
       void runAgentTask(uid, cmd.agent, cmd.task, 'voice').then((done) => {
         if (!done) return;
+        const reportId = makeId();
+        announceAgentResult(reportId, who, done.status === 'done', String(done.result || ''));
         updateMessages((prev) => [
           ...prev,
           {
-            id: makeId(),
+            id: reportId,
             role: 'assistant',
             text: done.status === 'done' ? `【${who.name}】 ${done.result || ''}` : `【${who.name}】 কাজটা করতে পারিনি: ${done.result || 'unknown error'}`,
             timestamp: Date.now(),
@@ -1091,7 +1135,7 @@ export default function App() {
       });
     }, 1800);
     return () => window.clearTimeout(t);
-  }, [messages, updateMessages, sendActionFeedbackToLive]);
+  }, [messages, updateMessages, sendActionFeedbackToLive, announceAgentResult]);
 
   const handleSendChat = useCallback(
     async (text: string) => {
@@ -1113,10 +1157,12 @@ export default function App() {
         ]);
         void runAgentTask(teamRef.current.userId, agentCmd.agent, agentCmd.task, 'chat').then((done) => {
           if (!done) return;
+          const reportId = makeId();
+          announceAgentResult(reportId, who, done.status === 'done', String(done.result || ''));
           updateMessages((prev) => [
             ...prev,
             {
-              id: makeId(),
+              id: reportId,
               role: 'assistant',
               text:
                 done.status === 'done'
@@ -1381,6 +1427,7 @@ export default function App() {
       }
     },
     [
+      announceAgentResult,
       checkReplyUsage,
       deliverMotivationInChat,
       fetchLatestPublishedMotivation,
@@ -1558,7 +1605,7 @@ export default function App() {
 
   // Keep ROSE's prompt in step with the account mode (Personal / Student / Business)
   useEffect(() => {
-    if (!session?.user?.id || isAdmin) {
+    if (!session?.user?.id || (isAdmin && profile?.account_mode !== 'business')) {
       clearModeContext();
       return;
     }
@@ -1697,10 +1744,15 @@ export default function App() {
     <div
       className={`${
         desktopMode
-          ? 'grid h-[100dvh] w-full grid-cols-[minmax(0,1fr)_380px] grid-rows-[auto_minmax(0,1fr)] gap-3 bg-[#07060F] p-3'
+          ? 'relative isolate grid h-[100dvh] w-full grid-cols-[minmax(0,1fr)_380px] grid-rows-[auto_minmax(0,1fr)] gap-3 bg-[#07060F] p-3'
           : 'flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] min-[481px]:p-3'
       } ${settings.reduceMotion ? 'reduce-motion' : ''}`}
     >
+      {desktopMode && (
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 opacity-80">
+          <RoseVortex voiceState={voiceState} audioLevel={audioLevel} reduceMotion={settings.reduceMotion} />
+        </div>
+      )}
       {desktopMode && session?.user && (
         <>
           <DesktopTopBar

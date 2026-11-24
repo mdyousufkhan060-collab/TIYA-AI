@@ -3,7 +3,7 @@ import { Bell, Camera, CameraOff, Crown } from 'lucide-react';
 import { ChatMessage, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
 import { ActionConfirmCard } from './ActionConfirmCard';
 import { TiyaNeonNav } from './TiyaNeonNav';
-import { RoseOrb } from './RoseOrb';
+import { RoseVortex } from './RoseVortex';
 
 interface HomeScreenProps {
   settings: TiyaSettings;
@@ -112,24 +112,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#020714] text-slate-100">
-      {/* Full-screen ROSE picture */}
-      <img
-        src="/tiya-home.jpg?v=3"
-        alt=""
-        aria-hidden="true"
-        draggable={false}
-        className={`pointer-events-none absolute inset-0 h-full w-full object-cover object-top select-none transition-all duration-700 ${
-          isSpeaking && !settings.reduceMotion ? 'scale-[1.015]' : 'scale-100'
-        } ${isVoiceOn ? 'opacity-15 blur-[2px]' : 'opacity-100'}`}
-      />
-      {/* Voice mode: the living ROSE ball (spins, grows and bounces with her voice) */}
-      <div
-        aria-hidden="true"
-        className={`pointer-events-none absolute inset-x-0 top-[8%] bottom-[22%] z-10 transition-all duration-700 ${
-          isVoiceOn ? 'scale-100 opacity-100' : 'scale-75 opacity-0'
-        }`}
-      >
-        {isVoiceOn && <RoseOrb voiceState={voiceState} audioLevel={audioLevel} reduceMotion={settings.reduceMotion} />}
+      {/* Live background: ROSE light rings. Calm when idle, spinning and glowing with her voice */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0">
+        <RoseVortex voiceState={voiceState} audioLevel={audioLevel} reduceMotion={settings.reduceMotion} />
       </div>
       {/* soft dark fade at top and bottom so text stays readable */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#020714]/85 to-transparent" />

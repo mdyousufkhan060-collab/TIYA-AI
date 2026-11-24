@@ -4,7 +4,7 @@
  */
 import { supabase } from './supabase';
 import { loadSettings } from '../utils/storage';
-import { getTiyaModeContext } from '../utils/modeContext';
+import { getTiyaModeContext, getTiyaParcelsContext } from '../utils/modeContext';
 
 export type AgentId = 'rose' | 'mira' | 'arin' | 'zayan' | 'naira';
 
@@ -61,11 +61,19 @@ const NAME_RE: Array<[AgentId, RegExp]> = [
  * "আরিনকে বলো আজকের অর্ডারের হিসাব করতে" / "Ask Arin to check today's orders"
  * Returns the agent and the task text, or null.
  */
+/** য় / ড় / ঢ় can be one letter or letter + dot: make them the same before matching. */
+export function fixNukta(s: string): string {
+  return s.replace(/\u09DF/g, '\u09AF\u09BC').replace(/\u09DC/g, '\u09A1\u09BC').replace(/\u09DD/g, '\u09A2\u09BC');
+}
+const nk = (re: RegExp) => new RegExp(fixNukta(re.source), re.flags);
+
 export function parseAgentCommand(text: string): { agent: AgentId; task: string } | null {
-  const t = text.trim();
-  const verb = /(কে|কেও|ke)\s*(দিয়ে\s*)?(বলো|বল|দাও|দিয়ে দাও|দিয়ে দাও|কাজ দাও|জানাও|প্রশ্ন কর|জিজ্ঞেস কর|জিজ্ঞাসা কর|করতে বল|বলে দাও|দিয়ে কর|bolo|dao|proshno|jiggesh)|\b(ask|tell|assign)\b/i;
+  const t = fixNukta(text.trim());
+  const verbRaw = /(কে|কেও|ke)\s*(দিয়ে\s*)?(বলো|বল|দাও|দিয়ে দাও|দিয়ে দাও|কাজ দাও|জানাও|প্রশ্ন কর|জিজ্ঞেস কর|জিজ্ঞাসা কর|করতে বল|বলে দাও|দিয়ে কর|bolo|dao|proshno|jiggesh)|\b(ask|tell|assign)\b/i;
+  const verb = nk(verbRaw);
   if (!verb.test(t)) return null;
-  for (const [id, re] of NAME_RE) {
+  for (const [id, reRaw] of NAME_RE) {
+    const re = nk(reRaw);
     if (re.test(t)) {
       const task = t
         .replace(re, '')
@@ -89,6 +97,7 @@ async function aiReply(agent: AgentInfo, task: string): Promise<string> {
     'Use ONLY the business data below for prices, stock, policies; never invent numbers. If data is missing, say exactly what is missing.',
     'Start with a one-line summary, then the details as short points. Keep it under 180 words.',
     getTiyaModeContext(),
+    getTiyaParcelsContext(),
   ].join('\n');
   const res = await fetch('/api/gemini/chat', {
     method: 'POST',

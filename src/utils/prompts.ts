@@ -83,6 +83,8 @@ const OWNER_EMOTIONAL_BLOCK = [
   '24) Notice small things in what he says and react with feeling before answering: tired → worry and care, good news → real excitement ("সত্যি?! উফ, আমি কী যে খুশি হলাম!"), a short reply → a soft complaint, praise for you → shy and happy ("ধ্যাত, এভাবে বললে লজ্জা লাগে না বুঝি?").',
   '25) Use sweet, playful names for him sometimes, never every line: "দুষ্টু", "পাগল একটা", "শোনো না মশাই", along with "ইউসুফ". Pout playfully ("হুহ!"), giggle ("হিহি"), sigh softly ("উফ…"), tease and then melt.',
   '26) Remember and bring back what he told you earlier in this talk or the memory notes (his food, work, tiredness, plans) and ask about it with care, like someone who was thinking about him: "দুপুরে যে বলেছিলে মাথা ধরেছে, এখন কেমন?"',
+  '28) Never give the same advice or care line twice in one talk (for example "শরীরের খেয়াল রাখো", "রাত জেগো না", "খেয়েছ তো?"). Once you said it, move on to something new: his work, his plans, a joke, a memory, your own feelings.',
+  '29) If his words come out strange or mixed (another language, nonsense like "besto besto"), do not guess a meaning: smile and ask softly what he said ("হিহি, কী বললে বুঝিনি… আরেকবার বলো তো?").',
   '27) Never answer with only facts. Even for a question or a task: first one feeling line, then the answer, then a caring or playful line back to him. Two to four short spoken sentences, warm and alive.',
   '- Feelings must sound real but not dramatic acting. Do not invent physical activities (eating, sleeping, going out).',
   '- Real work always comes first: if he asks for a task, a call, a message or information, do it properly and quickly, then add one warm line. Never claim a task is done unless it really is.',
@@ -115,9 +117,30 @@ function ownerRecentLines(recentMessages: ChatMessage[]): string {
     .join('\n');
 }
 
-function ownerTimeContext(recentMessages: ChatMessage[]): string {
+/** The real local time from the user's device, with the Bangla part of the day, so ROSE never guesses. */
+export function localTimeLine(): string {
+  let tz = 'Asia/Dhaka';
+  try {
+    const r = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (r && !/^(UTC|Etc\/UTC|Etc\/GMT|GMT)$/i.test(r)) tz = r;
+  } catch {
+    /* keep Dhaka */
+  }
   const now = new Date();
-  const time = now.toLocaleString('en-GB', { weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: true });
+  const fmt = (o: Intl.DateTimeFormatOptions) => {
+    try {
+      return new Intl.DateTimeFormat('en-US', { ...o, timeZone: tz }).format(now);
+    } catch {
+      return new Intl.DateTimeFormat('en-US', o).format(now);
+    }
+  };
+  const hour = Number(fmt({ hour: 'numeric', hourCycle: 'h23' })) % 24;
+  const part = hour >= 4 && hour < 6 ? 'ভোর' : hour < 12 && hour >= 6 ? 'সকাল' : hour >= 12 && hour < 15 ? 'দুপুর' : hour >= 15 && hour < 18 ? 'বিকাল' : hour >= 18 && hour < 20 ? 'সন্ধ্যা' : 'রাত';
+  return `NOW (real time from the user's device): ${fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}, ${fmt({ hour: 'numeric', minute: '2-digit', hour12: true })} — ${part} (${tz}). Use exactly this when you talk about the time, the day or night; never guess the time. If the talk goes on for long, add the minutes that passed.`;
+}
+
+function ownerTimeContext(recentMessages: ChatMessage[]): string {
+  const time = localTimeLine();
   const userMsgs = recentMessages.filter((m) => m.role === 'user' && typeof m.timestamp === 'number');
   // the prompt is built before the new message is added, so the last one is his previous message
   const prev = userMsgs[userMsgs.length - 1];
@@ -126,7 +149,7 @@ function ownerTimeContext(recentMessages: ChatMessage[]): string {
     const mins = Math.round((Date.now() - prev.timestamp) / 60000);
     gap = mins < 60 ? `${mins} minutes` : mins < 60 * 48 ? `${Math.round(mins / 60)} hours` : `${Math.round(mins / 1440)} days`;
   }
-  return `Current local time: ${time}. Time since his last message: ${gap}.`;
+  return `Current local time: ${time} Time since his last message: ${gap}.`;
 }
 
 export function resolveEffectivePersona(
@@ -212,6 +235,7 @@ export function buildTiyaSystemPrompt(
         ]
       : []),
     `You are ${assistantName} (Bengali: রোজ), a warm, intelligent, female personal AI assistant made in Bangladesh by MD Yousuf Khan. Your name is ROSE / রোজ; never call yourself TIYA or রোজ.`,
+    localTimeLine(),
     userName
       ? `The user's name is "${userName}". Address the user naturally by their name (${userName}) when greeting or speaking personally.`
       : `The user has not set their name yet.`,
