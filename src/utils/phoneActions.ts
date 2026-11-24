@@ -1,4 +1,5 @@
-import { PhoneAction, TiyaNativeResult } from '../types/tiya';
+import { DispatchStep, PhoneAction, TiyaNativeResult } from '../types/tiya';
+import { supabase } from '../lib/supabase';
 
 export const SUPPORTED_PHONE_ACTIONS_META = [
   {
@@ -136,8 +137,50 @@ export function requiresConfirmation(action: PhoneAction): boolean {
     action.action === 'whatsapp_call' ||
     action.action === 'whatsapp_message' ||
     action.action === 'messenger_message' ||
-    action.action === 'messenger_call'
+    action.action === 'messenger_call' ||
+    action.action === 'courier_dispatch'
   );
+}
+
+const COURIER_LABEL: Record<string, string> = {
+  steadfast: 'Steadfast', pathao: 'Pathao', redx: 'RedX', paperfly: 'Paperfly', sundarban: 'Sundarban',
+  ecourier: 'eCourier', sa_paribahan: 'SA Paribahan', own: 'Own delivery',
+};
+export function courierLabel(c: string): string {
+  const k = String(c || '').toLowerCase();
+  return COURIER_LABEL[k] || c;
+}
+
+/** "steadfast: #1023,#1024; pathao: 3; redx: rest" → steps */
+export function parseDispatchPlan(text: string): DispatchStep[] {
+  const steps: DispatchStep[] = [];
+  for (const part of toLatinDigits(String(text || '')).split(/[;\n|]+/)) {
+    const m = part.match(/^\s*([^:=]+?)\s*[:=]\s*(.+)$/);
+    if (!m) {
+      const only = part.trim();
+      if (only) steps.push({ courier: only.toLowerCase(), rest: true });
+      continue;
+    }
+    const courier = m[1].trim().toLowerCase();
+    const spec = m[2].trim().toLowerCase();
+    const ids = Array.from(spec.matchAll(/#\s*(\d{1,9})/g)).map((x) => Number(x[1]));
+    if (ids.length) steps.push({ courier, orders: ids });
+    else if (/^(all|rest|baki|বাকি|সব)/.test(spec)) steps.push({ courier, rest: true });
+    else if (/^\d{1,4}$/.test(spec)) steps.push({ courier, count: Number(spec) });
+    else steps.push({ courier, rest: true });
+  }
+  return steps.filter((s) => s.courier).slice(0, 10);
+}
+
+export function describeDispatch(plan: DispatchStep[]): string {
+  return plan
+    .map((s) => {
+      const who = courierLabel(s.courier);
+      if (s.orders?.length) return `${s.orders.map((n) => `#${n}`).join(', ')} → ${who}`;
+      if (s.count) return `${s.count}টা পার্সেল → ${who}`;
+      return `${plan.length > 1 ? 'বাকি সব' : 'সব'} পার্সেল → ${who}`;
+    })
+    .join(' · ');
 }
 
 export function getConfirmationPromptText(action: PhoneAction): string {
@@ -154,6 +197,10 @@ export function getConfirmationPromptText(action: PhoneAction): string {
       return `${action.contact}-কে মেসেঞ্জারে "${action.text}" পাঠাবো?`;
     case 'open_app':
       return `${action.app} খোলা হচ্ছে…`;
+    case 'courier_dispatch':
+      return `${describeDispatch(action.plan)}। পাঠিয়ে দেবো?`;
+    case 'parcels_email':
+      return 'পার্সেলের তালিকা ইমেইলে পাঠানো হচ্ছে…';
     case 'close_opened':
       return 'ROSE যেসব ট্যাব খুলেছিল সেগুলো বন্ধ করে ROSE-এ ফিরবো?';
     case 'web_search': {
@@ -220,6 +267,15 @@ export function validatePhoneAction(raw: unknown): PhoneAction | null {
     case 'close_app':
     case 'go_home':
       return { action: 'close_opened' };
+    case 'courier_dispatch':
+    case 'send_parcels': {
+      const text = typeof obj.text === 'string' ? obj.text : typeof obj.query === 'string' ? obj.query : '';
+      const plan = parseDispatchPlan(text || (typeof obj.app === 'string' ? `${obj.app}: rest` : ''));
+      return plan.length ? { action: 'courier_dispatch', plan } : null;
+    }
+    case 'parcels_email':
+    case 'email_parcels':
+      return { action: 'parcels_email' };
     case 'web_search': {
       const query = typeof obj.query === 'string' ? obj.query.trim() : typeof obj.text === 'string' ? obj.text.trim() : '';
       if (!query) return null;
@@ -382,6 +438,10 @@ export async function executePhoneAction(
   nativeBridge?: { run: (json: string) => Promise<string | TiyaNativeResult> | string | TiyaNativeResult },
   onOpenFallbackUrl?: (url: string) => void,
 ): Promise<ActionExecutionResult> {
+  // Business parcels run on ROSE's server, never on the phone
+  if (action.action === 'courier_dispatch' || action.action === 'parcels_email') {
+    return runBusinessAction(action);
+  }
   // contacts spoken/typed in Bengali digits must reach the phone as 0-9
   if ('contact' in action && typeof action.contact === 'string') {
     action = { ...action, contact: toLatinDigits(action.contact) } as PhoneAction;
@@ -440,4 +500,34 @@ export async function executePhoneAction(
     onOpenFallbackUrl(fallback.fallbackUrl);
   }
   return fallback;
+}
+
+
+async function runBusinessAction(action: PhoneAction): Promise<ActionExecutionResult> {
+  try {
+    if (action.action === 'parcels_email') {
+      const { data, error } = await supabase.functions.invoke('rose-business', { body: { action: 'parcels_email' } });
+      if (error || !data?.ok) return { success: false, via: 'web_fallback', messageBn: `ইমেইল যায়নি: ${data?.error || error?.message || 'সমস্যা হয়েছে'}` };
+      return { success: true, via: 'web_fallback', messageBn: `পার্সেলের তালিকা ${data.to} ঠিকানায় ইমেইল করা হয়েছে (বাকি ${data.waiting}টা, আজ পাঠানো ${data.sent}টা)।` };
+    }
+    if (action.action === 'courier_dispatch') {
+      const { data, error } = await supabase.functions.invoke('rose-business', { body: { action: 'dispatch', plan: action.plan } });
+      if (error || !data?.ok) return { success: false, via: 'web_fallback', messageBn: `কুরিয়ারে পাঠানো যায়নি: ${data?.error || error?.message || 'সমস্যা হয়েছে'}` };
+      const results: any[] = data.results || [];
+      if (!results.length) return { success: true, via: 'web_fallback', messageBn: 'পাঠানোর মতো কোনো খোলা পার্সেল নেই।' };
+      const failed = results.filter((r) => !r.ok);
+      const lines = failed.slice(0, 5).map((r) => `#${r.order_no}: ${r.note}`);
+      return {
+        success: data.booked > 0 || failed.length === 0,
+        via: 'web_fallback',
+        messageBn:
+          `${data.booked}টা পার্সেল কুরিয়ারে বুক হয়েছে` +
+          (failed.length ? `, ${failed.length}টা বাকি/হাতে বুক করতে হবে (${lines.join('; ')})` : '') +
+          (data.emailed ? '। পুরো তালিকা ইমেইলে পাঠানো হয়েছে।' : '।'),
+      };
+    }
+  } catch (e) {
+    return { success: false, via: 'web_fallback', messageBn: `সমস্যা হয়েছে: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  return { success: false, via: 'unsupported', messageBn: 'এই কাজটি চেনা যায়নি।' };
 }

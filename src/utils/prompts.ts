@@ -1,4 +1,4 @@
-import { getTiyaMode, getTiyaModeContext, ROSE_SKILLS_BLOCK } from './modeContext';
+import { getTiyaMode, getTiyaModeContext, getTiyaParcelsContext, ROSE_SKILLS_BLOCK } from './modeContext';
 import { getRoseGuide } from './roseGuides';
 import {
   ADULT_ONLY_PERSONALITIES,
@@ -225,6 +225,10 @@ export function buildTiyaSystemPrompt(
   const modeContext = getTiyaModeContext();
   if (modeContext && !isOwner) {
     lines.push(`\n${modeContext}`);
+  }
+  const parcelsContext = getTiyaParcelsContext();
+  if (parcelsContext) {
+    lines.push(`\n${parcelsContext}`);
   }
 
   if (memoryBlock) {

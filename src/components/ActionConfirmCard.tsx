@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, ExternalLink, Phone, MessageSquare, Search, Smartphone, X } from 'lucide-react';
+import { Check, ExternalLink, Package, Phone, MessageSquare, Search, Smartphone, X } from 'lucide-react';
 import { ActionStatus, PhoneAction } from '../types/tiya';
 import { getConfirmationPromptText } from '../utils/phoneActions';
 
@@ -35,6 +35,9 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
         return <Search className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
       case 'close_opened':
         return <X className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
+      case 'courier_dispatch':
+      case 'parcels_email':
+        return <Package className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
     }
   };
 
@@ -56,6 +59,10 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
         return `Search ${action.site.toUpperCase()} · ${action.query}`;
       case 'close_opened':
         return 'Close & back to ROSE';
+      case 'courier_dispatch':
+        return 'Send parcels to courier';
+      case 'parcels_email':
+        return 'E-mail parcel list';
     }
   };
 

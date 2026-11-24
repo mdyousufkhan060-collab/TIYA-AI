@@ -158,6 +158,18 @@ const AI_FIELDS: CrudField[] = [
   { key: 'human_handover', label: 'HAND OVER TO ME WHEN NEEDED', type: 'bool', defaultValue: true },
   { key: 'restricted_topics', label: 'TOPICS AI MUST NOT DISCUSS', type: 'textarea' },
   { key: 'reply_style', label: 'CUSTOM REPLY STYLE', type: 'text' },
+  { key: 'parcel_ask_on', label: 'ROSE ASKS DAILY TO SEND PARCELS', type: 'bool', defaultValue: true },
+  {
+    key: 'parcel_ask_time',
+    label: 'PARCEL ASK TIME',
+    type: 'select',
+    defaultValue: '16:00',
+    options: Array.from({ length: 15 }, (_, i) => {
+      const h = i + 8;
+      return { value: `${String(h).padStart(2, '0')}:00`, label: `${h % 12 || 12}:00 ${h < 12 ? 'AM' : 'PM'}` };
+    }),
+  },
+  { key: 'parcel_email', label: 'E-MAIL ME THE PARCEL LIST AFTER SENDING', type: 'bool', defaultValue: true },
 ];
 
 export const PRODUCTS: CrudConfig = {

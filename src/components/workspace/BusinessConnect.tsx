@@ -170,7 +170,7 @@ export const CourierConnect: React.FC<{ businessId: string }> = ({ businessId })
   const loadOrders = useCallback(async () => {
     const { data } = await supabase
       .from('business_orders')
-      .select('id,note,total,courier,courier_status,courier_ref,tracking_code,status,created_at,customer_id')
+      .select('id,order_no,note,total,courier,courier_status,courier_ref,courier_note,tracking_code,status,created_at,customer_id')
       .eq('business_id', businessId)
       .neq('status', 'cancelled')
       .neq('status', 'delivered')
@@ -208,6 +208,23 @@ export const CourierConnect: React.FC<{ businessId: string }> = ({ businessId })
   };
 
   const steadfastReady = Boolean(status['courier:steadfast']?.verified_at);
+  const [bulk, setBulk] = useState<{ busy: string; text: string; ok: boolean } | null>(null);
+  const openCount = orders.filter((o) => !o.courier_ref && ['pending', 'processing'].includes(o.status)).length;
+  const sendAll = async () => {
+    setBulk({ busy: 'all', text: '', ok: true });
+    const r = await call({ action: 'dispatch', plan: [{ courier: 'steadfast', rest: true }] });
+    setBulk({
+      busy: '',
+      ok: Boolean(r?.ok),
+      text: r?.ok ? `${r.booked} booked${r.marked ? `, ${r.marked} need attention` : ''}${r.emailed ? ' · list e-mailed' : ''}` : r?.error || 'Failed.',
+    });
+    void loadOrders();
+  };
+  const emailList = async () => {
+    setBulk({ busy: 'mail', text: '', ok: true });
+    const r = await call({ action: 'parcels_email' });
+    setBulk({ busy: '', ok: Boolean(r?.ok), text: r?.ok ? `E-mailed to ${r.to}` : r?.error || 'Failed.' });
+  };
 
   return (
     <div className="space-y-3">
@@ -221,6 +238,28 @@ export const CourierConnect: React.FC<{ businessId: string }> = ({ businessId })
 
       <p className="px-1 pt-2 text-[10px] font-bold tracking-wider text-slate-400">SEND ORDERS WITH STEADFAST</p>
       {!steadfastReady && <p className="px-1 text-[11px] text-amber-300">Save and TEST your Steadfast keys first.</p>}
+      <p className="px-1 text-[10.5px] leading-snug text-slate-500">
+        Or just tell ROSE: "সব পার্সেল Steadfast-এ দাও", "৩টা Steadfast-এ, বাকি Pathao-তে", "#1023 আর #1025 RedX-এ".
+      </p>
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          disabled={!steadfastReady || openCount === 0 || Boolean(bulk?.busy)}
+          onClick={() => void sendAll()}
+          className="flex h-9 flex-1 items-center justify-center rounded-[4px] bg-teal-600 text-[11px] font-bold text-white disabled:opacity-40"
+        >
+          {bulk?.busy === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : `SEND ALL (${openCount})`}
+        </button>
+        <button
+          type="button"
+          disabled={Boolean(bulk?.busy)}
+          onClick={() => void emailList()}
+          className="flex h-9 flex-1 items-center justify-center rounded-[4px] border border-white/15 text-[11px] font-bold text-white disabled:opacity-40"
+        >
+          {bulk?.busy === 'mail' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'E-MAIL LIST'}
+        </button>
+      </div>
+      {bulk?.text && <p className={`px-1 text-[11px] ${bulk.ok ? 'text-emerald-300' : 'text-rose-300'}`}>{bulk.text}</p>}
       {orders.length === 0 && <p className="px-1 text-[11px] text-slate-500">No open orders.</p>}
       {orders.map((o) => {
         const c = o.cust;
@@ -230,12 +269,13 @@ export const CourierConnect: React.FC<{ businessId: string }> = ({ businessId })
             <div className="flex items-center justify-between gap-2">
               <p className="truncate text-[12px] font-semibold text-white">
                 <Package className="mr-1 inline h-3.5 w-3.5 text-teal-300" />
-                {c?.name || 'No customer'} · {o.total} Tk
+                #{o.order_no} · {c?.name || 'No customer'} · {o.total} Tk
               </p>
               <span className="shrink-0 text-[9.5px] font-bold tracking-wider text-slate-400">{String(o.courier_status || 'not_sent').replace('_', ' ').toUpperCase()}</span>
             </div>
             <p className="truncate text-[11px] text-slate-400">{o.note}</p>
             {o.tracking_code && <p className="text-[11px] text-emerald-300">TRACKING: {o.tracking_code}</p>}
+            {!o.tracking_code && o.courier_note && <p className="text-[11px] text-amber-300">{o.courier_note}</p>}
             <button
               type="button"
               disabled={busyId !== '' || (!booked && !steadfastReady)}
@@ -258,6 +298,7 @@ export const CourierConnect: React.FC<{ businessId: string }> = ({ businessId })
           </div>
         );
       })}
+      <WebsiteOrders />
       <p className="px-1 pt-2 text-[10px] font-bold tracking-wider text-slate-400">YOUR COURIER ACCOUNTS</p>
     </div>
   );
@@ -301,6 +342,51 @@ export const ChannelConnect: React.FC = () => {
       {META_KEYS.map((k) => (
         <KeyCard key={k.kind} k={k} st={status[k.kind]} onChanged={() => void reload()} />
       ))}
+    </div>
+  );
+};
+
+
+/** Link a shop's website to ROSE: new website orders land in ORDERS by themselves. */
+const WebsiteOrders: React.FC = () => {
+  const [link, setLink] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const load = async (reset = false) => {
+    setBusy(true);
+    const r = await call({ action: 'order_key', reset });
+    setBusy(false);
+    if (r?.ok) setLink(r.url);
+  };
+  return (
+    <div className="space-y-2 rounded-[4px] border border-white/[0.08] bg-[#11151E] p-3">
+      <p className="text-[12px] font-bold tracking-wider text-white">WEBSITE ORDERS</p>
+      <p className="text-[10.5px] leading-snug text-slate-500">
+        Put this link in your website (WooCommerce: Settings → Advanced → Webhooks → Order created → Delivery URL). New orders come into ORDERS with name, phone and address. Keep the link private.
+      </p>
+      {link ? (
+        <>
+          <p className="break-all rounded-[4px] bg-[#0B0F16] p-2 font-mono text-[10.5px] text-teal-200">{link}</p>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard?.writeText(link).then(() => setCopied(true), () => undefined);
+              }}
+              className="h-9 flex-1 rounded-[4px] bg-teal-600 text-[11px] font-bold text-white"
+            >
+              {copied ? 'COPIED' : 'COPY LINK'}
+            </button>
+            <button type="button" disabled={busy} onClick={() => void load(true)} className="h-9 rounded-[4px] border border-rose-400/30 px-3 text-[11px] font-bold text-rose-300">
+              NEW LINK
+            </button>
+          </div>
+        </>
+      ) : (
+        <button type="button" disabled={busy} onClick={() => void load()} className="flex h-9 w-full items-center justify-center rounded-[4px] border border-teal-400/40 text-[11px] font-bold text-teal-200">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'SHOW MY ORDER LINK'}
+        </button>
+      )}
     </div>
   );
 };

@@ -83,7 +83,7 @@ import { WorkspacePage } from './components/workspace/WorkspacePage';
 import { DesktopDashboard, DesktopRosePanel, DesktopTab, DesktopTeam, DesktopTopBar } from './components/desktop/DesktopHub';
 import { WriterPanel } from './components/desktop/WriterPanel';
 import { agentById, parseAgentCommand, runAgentTask } from './lib/agents';
-import { clearModeContext, refreshModeContext } from './utils/modeContext';
+import { clearModeContext, refreshModeContext, refreshParcelsContext } from './utils/modeContext';
 
 function makeId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -653,6 +653,7 @@ export default function App() {
           if (/^https?:\/\//.test(url)) openTracked(url);
         },
       );
+      if (action.action === 'courier_dispatch') void refreshParcelsContext(true);
 
       updateMessages((prev) =>
         prev.map((m) =>
@@ -1313,6 +1314,71 @@ export default function App() {
     }
     void refreshModeContext(profile?.account_mode ?? null, session.user.id);
   }, [session?.user?.id, isAdmin, profile?.account_mode]);
+
+  // Business: open parcels + couriers for ROSE (admin too, when his mode is Business),
+  // and once a day at the shop's time ROSE asks which courier to send them with.
+  const isBusinessMode = profile?.account_mode === 'business';
+  useEffect(() => {
+    void refreshParcelsContext(Boolean(session?.user?.id) && isBusinessMode);
+  }, [session?.user?.id, isBusinessMode]);
+  const parcelAskRef = useRef({ voiceOn: false, premium: false });
+  parcelAskRef.current = {
+    voiceOn: ['listening', 'thinking', 'speaking'].includes(liveVoiceState),
+    premium: premiumVoiceMode,
+  };
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid || !isBusinessMode) return;
+    let busy = false;
+    const tick = async () => {
+      if (busy) return;
+      const now = new Date();
+      const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+      const doneKey = `rose_parcel_ask_${uid}_${day}`;
+      try {
+        if (localStorage.getItem(doneKey)) return;
+      } catch {
+        return;
+      }
+      busy = true;
+      try {
+        const { data: b } = await supabase.from('businesses').select('id').eq('owner_id', uid).maybeSingle();
+        if (!b?.id) return;
+        const { data: ai } = await supabase.from('business_ai_settings').select('parcel_ask_on,parcel_ask_time').eq('business_id', b.id).maybeSingle();
+        if (ai && ai.parcel_ask_on === false) return;
+        const [hh, mm] = String(ai?.parcel_ask_time || '16:00').split(':').map((x: string) => Number(x) || 0);
+        if (now.getHours() * 60 + now.getMinutes() < hh * 60 + mm) return;
+        const count = await refreshParcelsContext(true);
+        try {
+          localStorage.setItem(doneKey, '1');
+        } catch {
+          /* ignore */
+        }
+        if (count <= 0) return;
+        if (parcelAskRef.current.voiceOn && !parcelAskRef.current.premium) {
+          sendActionFeedbackToLive(
+            `[App note, not his words: it is parcel time. ${count} open parcel(s) are waiting for a courier (see PARCELS). Tell him briefly and ask which courier to send them with, naming the shop couriers, or whether to split them.]`,
+          );
+        } else {
+          updateMessages((prev) => [
+            ...prev,
+            {
+              id: makeId(),
+              role: 'assistant',
+              text: `পার্সেল পাঠানোর সময় হয়েছে। আজ ${count}টা পার্সেল কুরিয়ারে দেওয়া বাকি। কোন কুরিয়ারে পাঠাব? চাইলে ভাগ করেও বলতে পারেন, যেমন "৩টা Steadfast-এ, বাকিগুলো Pathao-তে"।`,
+              timestamp: Date.now(),
+              source: 'chat',
+            },
+          ]);
+        }
+      } finally {
+        busy = false;
+      }
+    };
+    void tick();
+    const t = window.setInterval(() => void tick(), 60000);
+    return () => window.clearInterval(t);
+  }, [session?.user?.id, isBusinessMode, sendActionFeedbackToLive, updateMessages]);
 
   const chatSessionCount = useMemo(
     () => groupMessagesIntoChatSessions(messages).length,

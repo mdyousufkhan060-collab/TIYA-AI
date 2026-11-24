@@ -6,6 +6,40 @@ import { supabase } from '../lib/supabase';
 
 let current = '';
 let currentMode = '';
+let parcelsCtx = '';
+
+/** Open parcels + couriers for a business owner (also the admin when his mode is Business). */
+export function getTiyaParcelsContext(): string {
+  return parcelsCtx;
+}
+
+export async function refreshParcelsContext(enabled = true): Promise<number> {
+  if (!enabled) {
+    parcelsCtx = '';
+    return 0;
+  }
+  try {
+    const { data: pc } = await supabase.functions.invoke('rose-business', { body: { action: 'parcels' } });
+    if (!pc?.ok) {
+      parcelsCtx = '';
+      return 0;
+    }
+    const couriers = (pc.couriers || []) as Array<{ id: string; name: string; auto: boolean; is_default: boolean }>;
+    parcelsCtx = [
+      `PARCELS (owner only, never tell customers): ${pc.count} open parcel(s) not sent to a courier yet.`,
+      ...((pc.parcels || []) as any[])
+        .slice(0, 40)
+        .map((p) => `#${p.order_no} ${clip(p.name, 40) || 'no name'}, ${clip(p.address, 50) || 'no address'}, COD ${p.cod} Tk${p.ready ? '' : ' (info missing)'}`),
+      couriers.length
+        ? `Shop couriers: ${couriers.map((c) => `${c.name}${c.auto ? ' (books automatically)' : ' (marked only, owner books in its panel)'}${c.is_default ? ' [default]' : ''}`).join(', ')}.`
+        : 'No couriers added yet (Workspace > 04 COURIERS).',
+      'PARCEL RULES: When the owner wants to send parcels: if more than one courier exists and he did not name one, first ask which courier (say their names) or whether to split. He may split by IDs ("#1023, #1025 RedX-এ"), by count ("৩টা Steadfast-এ, বাকি Pathao-তে") or send all. Then call trigger_phone_action with action courier_dispatch and text like "redx: #1023,#1025; steadfast: rest" (IDs with #, counts as plain numbers, rest for the remaining). The app shows the plan and books after he says yes; report only the real result it returns. When he asks to e-mail the parcel list, call trigger_phone_action with action parcels_email.',
+    ].join('\n');
+    return Number(pc.count) || 0;
+  } catch {
+    return 0;
+  }
+}
 
 export function getTiyaMode(): string {
   return currentMode;
@@ -67,6 +101,7 @@ export async function refreshModeContext(mode: string | null | undefined, userId
             : 'No products added yet.',
           faqs && faqs.length ? `FAQ:\n${faqs.map((f: any) => `Q: ${clip(f.question, 120)} A: ${clip(f.answer, 200)}`).join('\n')}` : '',
         ].filter(Boolean);
+
         text += '\n' + lines.join('\n');
       } else {
         text += '\nThe owner has not set up the business profile yet. If asked, tell them to open Settings > Workspace > Business Profile.';
@@ -81,6 +116,7 @@ export async function refreshModeContext(mode: string | null | undefined, userId
 export function clearModeContext() {
   current = '';
   currentMode = '';
+  parcelsCtx = '';
 }
 
 /** Always-on skills for every user (and the admin): live search + social media growth know-how. */

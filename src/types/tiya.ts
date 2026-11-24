@@ -249,7 +249,20 @@ export type PhoneAction =
   | { action: 'messenger_message'; contact: string; text: string }
   | { action: 'messenger_call'; contact: string }
   | { action: 'web_search'; site: string; query: string }
-  | { action: 'close_opened' };
+  | { action: 'close_opened' }
+  | { action: 'courier_dispatch'; plan: DispatchStep[] }
+  | { action: 'parcels_email' };
+
+/** One part of a parcel dispatch: which orders go to which courier. */
+export interface DispatchStep {
+  courier: string;
+  /** order numbers like 1023 (shown as #1023) */
+  orders?: number[];
+  /** first N open parcels */
+  count?: number;
+  /** all remaining parcels */
+  rest?: boolean;
+}
 
 export type ActionStatus = 'pending' | 'confirmed' | 'cancelled' | 'executed' | 'failed';
 
