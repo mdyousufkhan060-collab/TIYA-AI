@@ -1038,6 +1038,13 @@ export class LocalLiveSocket {
       this.session.sendRealtimeInput({ audio: { data: msg.data, mimeType: 'audio/pcm;rate=16000' } });
     } else if (msg.type === 'text' && msg.text && this.session) {
       this.session.sendRealtimeInput({ text: msg.text });
+    } else if (msg.type === 'video' && msg.data && this.session && !this.turnMode) {
+      // Camera frame: ROSE can see the user (live model only)
+      try {
+        this.session.sendRealtimeInput({ video: { data: msg.data, mimeType: 'image/jpeg' } });
+      } catch {
+        // ignore a dropped frame
+      }
     } else if (msg.type === 'stop') {
       this.closedByClient = true;
       this.closeSession();

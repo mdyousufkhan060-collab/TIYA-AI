@@ -1,14 +1,46 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { RefreshCw, X } from 'lucide-react';
+import { Eye, RefreshCw, X } from 'lucide-react';
 
 /**
- * Small live camera window (front / back). Nothing is recorded or uploaded:
- * the picture stays on the phone and the camera turns off when it closes.
+ * Small live camera window (front / back). Nothing is recorded or saved.
+ * While voice is on (onFrame given), a small JPEG frame goes to ROSE every
+ * 1.5 s so she can see; frames stop as soon as voice or the camera turns off.
  */
-export const CameraPreview: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+export const CameraPreview: React.FC<{
+  onClose: () => void;
+  onFrame?: (jpegBase64: string) => void;
+}> = ({ onClose, onFrame }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
   const [err, setErr] = useState('');
+  const onFrameRef = useRef(onFrame);
+  onFrameRef.current = onFrame;
+  const seeing = Boolean(onFrame) && !err;
+
+  useEffect(() => {
+    if (!seeing) return;
+    const canvas = document.createElement('canvas');
+    const timer = window.setInterval(() => {
+      const v = videoRef.current;
+      const send = onFrameRef.current;
+      if (!v || !send || v.readyState < 2 || !v.videoWidth) return;
+      const w = 384;
+      const h = Math.round((v.videoHeight / v.videoWidth) * w) || 512;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      try {
+        ctx.drawImage(v, 0, 0, w, h);
+        const url = canvas.toDataURL('image/jpeg', 0.6);
+        const b64 = url.split(',')[1];
+        if (b64) send(b64);
+      } catch {
+        // ignore a frame that could not be read
+      }
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [seeing]);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -47,6 +79,11 @@ export const CameraPreview: React.FC<{ onClose: () => void }> = ({ onClose }) =>
           muted
           className={`aspect-[3/4] w-full object-cover ${facing === 'user' ? '-scale-x-100' : ''}`}
         />
+      )}
+      {seeing && (
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/55 py-1 text-[10px] font-semibold tracking-wide text-cyan-200">
+          <Eye className="h-3 w-3" /> ROSE can see
+        </div>
       )}
       <div className="absolute inset-x-0 top-0 flex justify-between p-1.5">
         <button

@@ -403,6 +403,7 @@ export default function App() {
     toggleVoice: liveToggleVoice,
     stopVoice: liveStopVoice,
     sendActionFeedbackToLive,
+    sendVideoFrame,
   } = useTiyaLiveVoice({
     settings,
     messages,
@@ -1681,7 +1682,16 @@ export default function App() {
               />
             )}
 
-            {cameraOn && <CameraPreview onClose={() => setCameraOn(false)} />}
+            {cameraOn && (
+              <CameraPreview
+                onClose={() => setCameraOn(false)}
+                onFrame={
+                  !premiumVoiceMode && ['listening', 'thinking', 'speaking'].includes(liveVoiceState)
+                    ? sendVideoFrame
+                    : undefined
+                }
+              />
+            )}
 
             <NotificationsSheet
               open={notifOpen}

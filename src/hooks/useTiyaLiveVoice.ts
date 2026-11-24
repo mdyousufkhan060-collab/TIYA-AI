@@ -514,6 +514,16 @@ export function useTiyaLiveVoice({
     }
   }, []);
 
+  /** Camera frame (JPEG base64, no prefix). Sent only while the live session is ready. */
+  const sendVideoFrame = useCallback((jpegBase64: string) => {
+    if (!jpegBase64) return;
+    const st = voiceStateRef.current;
+    if (st === 'idle' || st === 'error' || st === 'connecting') return;
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'video', data: jpegBase64 }));
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       cleanupResources();
@@ -530,5 +540,6 @@ export function useTiyaLiveVoice({
     startVoice,
     stopVoice,
     sendActionFeedbackToLive,
+    sendVideoFrame,
   };
 }

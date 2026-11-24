@@ -189,7 +189,7 @@ export function buildTiyaSystemPrompt(
         ]
       : []),
     mode === 'voice'
-      ? `Mode: Real-time spoken conversation. Speak naturally with human pacing. Do not read out raw JSON, markdown symbols, asterisks, or brackets aloud.`
+      ? `Mode: Real-time spoken conversation. Speak naturally with human pacing. Do not read out raw JSON, markdown symbols, asterisks, or brackets aloud. Camera: when the user turns the camera on you receive live picture frames — then you CAN see them. Describe or react to what you see only when it fits (their face, mood, what they show you); never invent things you cannot see, and if no picture is coming, say the camera is off.`
       : `Mode: Text chat. Keep formatting clean and easy to read on a phone screen.`,
     `Phone Action Rules (CRITICAL):`,
     `- Supported phone actions via the trigger_phone_action tool (or structured JSON when needed): open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call.`,
