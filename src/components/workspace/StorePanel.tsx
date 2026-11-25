@@ -5,7 +5,7 @@ import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { AdminBrandPage, RoseSupportCard } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
-import { INVOICE_SIZES, PRINT_CSS, invoiceDims, invoicePreviewHTML, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
+import { INVOICE_SIZES, PRINT_CSS, invoiceDims, kgText, invoicePreviewHTML, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
  * Workspace > MY STORE: the ROSE Store Builder for the store owner.
@@ -17,20 +17,22 @@ type Store = {
   id: string; owner_id?: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
   name_bn?: string; email2?: string; whatsapp?: string; phone2?: string; pixels?: Record<string, string>; chat_ai?: boolean;
-  delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[]; offer_banners?: OfferBanner[];
+  delivery_inside: number; delivery_outside: number; delivery_kg_inside?: number; delivery_kg_outside?: number; banners: Banner[]; trust: string[]; offer_banners?: OfferBanner[];
   pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean;
 };
+/** Courier charge: base up to 1 kg, then each started extra kg (same as the server). */
+const delByKg = (base: number, perKg: number, kg: number) => (base || 0) + (kg > 1 ? Math.ceil(kg - 1 - 1e-9) * (perKg || 0) : 0);
 type Banner = { title: string; badge: string; icon: string; bg?: string; img?: string };
 type OfferBanner = { img: string; title?: string; link?: string };
 type Cat = { id: string; name: string; icon: string; sort: number };
 type Prod = {
   id: string; name: string; category_id: string | null; price: number; old_price: number | null; stock: number; emoji: string;
   description: string; images: string[]; options_label: string; options: string[]; rx: boolean; active: boolean;
-  short_description: string; specs: Record<string, string>; cost_price?: number; on_offer?: boolean; sort?: number;
+  short_description: string; specs: Record<string, string>; cost_price?: number; on_offer?: boolean; sort?: number; weight_kg?: number | string;
 };
 type Order = {
   id: string; order_no: number; customer_name: string; phone: string; address: string; area: string;
-  items: Array<{ name: string; q: number; price: number; opt?: string }>; total: number; payment_method: string; trx_id: string; status: string; created_at: string; payment_status?: string; pay_proof?: string | null; paid_amount?: number | null;
+  items: Array<{ name: string; q: number; price: number; opt?: string; kg?: number }>; weight_kg?: number; total: number; payment_method: string; trx_id: string; status: string; created_at: string; payment_status?: string; pay_proof?: string | null; paid_amount?: number | null;
   email: string; division: string; district: string; upazila: string; courier: string; tracking: string; note: string; subtotal: number; delivery: number; courier_cost?: number;
 };
 export type Demo = {
@@ -931,7 +933,7 @@ const OrdersTab: React.FC<{ store: Store }> = ({ store }) => {
           </button>
           <p className="text-[11.5px] text-slate-300">{o.customer_name} · <a className="text-teal-300" href={`tel:${o.phone}`}>{o.phone}</a></p>
           <p className="text-[11px] text-slate-400">{[o.address, o.upazila, o.district, o.division].filter(Boolean).join(', ')} ({o.area})</p>
-          <p className="text-[11px] text-slate-300">{o.items.map((i) => `${i.name}${i.opt ? ` (${i.opt})` : ''} ×${i.q}`).join(', ')}</p>
+          <p className="text-[11px] text-slate-300">{o.items.map((i) => `${i.name}${i.opt ? ` (${i.opt})` : ''} ×${i.q}`).join(', ')}{Number(o.weight_kg) > 0 ? ` · ⚖️ ${kgText(Number(o.weight_kg))}` : ''}</p>
           <p className="text-[10.5px] text-slate-500">{o.payment_method.toUpperCase()}{o.trx_id ? ` · TrxID ${o.trx_id}` : ''}{o.email ? ` · ${o.email}` : ''} · {new Date(o.created_at).toLocaleString('en-GB')}</p>
           {o.trx_id && (
             <p className="text-[10.5px]">
@@ -976,6 +978,8 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
   const [secret, setSecret] = useState('');
   const [inside, setInside] = useState(String(store.delivery_inside));
   const [outside, setOutside] = useState(String(store.delivery_outside));
+  const [kgIn, setKgIn] = useState(String(store.delivery_kg_inside ?? 15));
+  const [kgOut, setKgOut] = useState(String(store.delivery_kg_outside ?? 25));
   const [ps, setPs] = useState<PrintSettings>({ stk: '100x70', inv: 'a4', photos: true, sender: store.name, phone: store.phone, logo: true, cod: true, items: true, bar: true, note: 'Handle with care', ...(store.print_settings || {}) });
   const [msg, setMsg] = useState('');
   const loadConn = useCallback(async () => {
@@ -992,7 +996,7 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
     setKey(''); setSecret(''); setOpen(''); setMsg(remove ? 'Disconnected.' : 'Connected. Keys are kept on the server only.'); void loadConn();
   };
   const saveStore = async () => {
-    const { error } = await supabase.from('stores').update({ delivery_inside: Number(inside) || 0, delivery_outside: Number(outside) || 0, print_settings: ps, updated_at: new Date().toISOString() }).eq('id', store.id);
+    const { error } = await supabase.from('stores').update({ delivery_inside: Number(inside) || 0, delivery_outside: Number(outside) || 0, delivery_kg_inside: Number(kgIn) || 0, delivery_kg_outside: Number(kgOut) || 0, print_settings: ps, updated_at: new Date().toISOString() }).eq('id', store.id);
     setMsg(error ? error.message : 'Saved.');
     if (!error) onSaved();
   };
@@ -1002,11 +1006,18 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
   return (
     <div className="space-y-2">
       <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">DELIVERY CHARGE</p>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">DELIVERY CHARGE BY WEIGHT</p>
         <div className="grid grid-cols-2 gap-2">
-          <label className="text-[11px] text-slate-400">Inside Dhaka<input className={input} inputMode="numeric" value={inside} onChange={(e) => setInside(e.target.value.replace(/\D/g, ''))} /></label>
-          <label className="text-[11px] text-slate-400">Outside Dhaka<input className={input} inputMode="numeric" value={outside} onChange={(e) => setOutside(e.target.value.replace(/\D/g, ''))} /></label>
+          <label className="text-[11px] text-slate-400">Inside Dhaka · up to 1 kg<input className={input} inputMode="numeric" value={inside} onChange={(e) => setInside(e.target.value.replace(/\D/g, ''))} /></label>
+          <label className="text-[11px] text-slate-400">Outside Dhaka · up to 1 kg<input className={input} inputMode="numeric" value={outside} onChange={(e) => setOutside(e.target.value.replace(/\D/g, ''))} /></label>
+          <label className="text-[11px] text-slate-400">Inside · each extra kg<input className={input} inputMode="numeric" value={kgIn} onChange={(e) => setKgIn(e.target.value.replace(/\D/g, ''))} /></label>
+          <label className="text-[11px] text-slate-400">Outside · each extra kg<input className={input} inputMode="numeric" value={kgOut} onChange={(e) => setKgOut(e.target.value.replace(/\D/g, ''))} /></label>
         </div>
+        <table className="w-full text-[11px] text-slate-300">
+          <thead><tr className="text-slate-500"><td>Parcel</td><td>Inside Dhaka</td><td>Outside Dhaka</td></tr></thead>
+          <tbody>{[0.5, 1, 1.5, 2, 3, 5].map((wt) => <tr key={wt}><td>{kgText(wt)}</td><td>{delByKg(Number(inside), Number(kgIn), wt)} Tk</td><td>{delByKg(Number(outside), Number(kgOut), wt)} Tk</td></tr>)}</tbody>
+        </table>
+        <p className="text-[10.5px] text-slate-400">The store adds up the weight of the whole cart and charges the customer from this table. 1.2 kg counts as 2 kg, like the couriers count. Put a weight on every product (PRODUCTS → edit → WEIGHT).</p>
       </div>
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">COURIERS</p>
@@ -1281,7 +1292,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
       old_price: edit.old_price ? Number(edit.old_price) : null, stock: Number(edit.stock) || 0, emoji: edit.emoji || '📦',
       description: edit.description || '', images: (edit.images || []).filter(Boolean),
       options_label: (edit.options || []).filter(Boolean).length ? edit.options_label || 'Size' : '', options: (edit.options || []).filter(Boolean), rx: Boolean(edit.rx), active: edit.active !== false,
-      short_description: (edit.short_description || '').slice(0, 160), specs: edit.specs || {}, cost_price: Number(edit.cost_price) || 0, on_offer: Boolean(edit.on_offer),
+      short_description: (edit.short_description || '').slice(0, 160), specs: edit.specs || {}, cost_price: Number(edit.cost_price) || 0, on_offer: Boolean(edit.on_offer), weight_kg: Math.min(1000, Number(edit.weight_kg) || 0),
       updated_at: new Date().toISOString(),
     };
     const { error } = edit.id ? await supabase.from('store_products').update(row).eq('id', edit.id) : await supabase.from('store_products').insert({ ...row, sort: prods.length });
@@ -1308,6 +1319,16 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
           <input className={input} value={edit.price ?? ''} onChange={(e) => set('price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="Price" inputMode="decimal" />
           <input className={input} value={edit.old_price ?? ''} onChange={(e) => set('old_price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="Old price" inputMode="decimal" />
           <input className={input} value={edit.stock ?? ''} onChange={(e) => set('stock', e.target.value.replace(/[^\d]/g, ''))} placeholder="Stock" inputMode="numeric" />
+        </div>
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-2">
+          <p className="text-[10.5px] font-bold tracking-wider text-amber-300">⚖️ WEIGHT FOR ONE PIECE (KG) · THE COURIER CHARGE COMES FROM THIS</p>
+          <input className={input + ' mt-1'} value={edit.weight_kg ?? ''} onChange={(e) => set('weight_kg', e.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 0.5 = 500 g" inputMode="decimal" />
+          <div className="mt-1 flex flex-wrap gap-1">
+            {([['250 g', 0.25], ['500 g', 0.5], ['1 kg', 1], ['2 kg', 2], ['5 kg', 5], ['10 kg', 10]] as Array<[string, number]>).map(([l, v]) => (
+              <button key={l} type="button" className="rounded-md bg-white/10 px-2 py-1 text-[11px] text-slate-200" onClick={() => set('weight_kg', String(v))}>{l}</button>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] text-slate-400">Weigh it with the box. If an option has a weight in it (5kg, 1 L), the store uses that option's weight.</p>
         </div>
         <label className="block text-[10.5px] text-slate-400">
           Purchase price (your cost, customers never see it) · for profit reports
@@ -1420,7 +1441,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
           {p.images?.[0] ? <img src={p.images[0].startsWith('http') ? p.images[0] : `https://images.unsplash.com/${p.images[0]}?w=120&q=60&auto=format&fit=crop`} alt="" className="h-10 w-10 rounded-lg object-cover" /> : <span className="text-2xl">{p.emoji}</span>}
           <div className="min-w-0 flex-1">
             <p className="truncate text-[12.5px] font-semibold text-white">{p.name}</p>
-            <p className="text-[11px] text-slate-400">{tk(Number(p.price))}{p.old_price ? ` (was ${tk(Number(p.old_price))})` : ''} · stock {p.stock}{p.active ? '' : ' · HIDDEN'}</p>
+            <p className="text-[11px] text-slate-400">{tk(Number(p.price))}{p.old_price ? ` (was ${tk(Number(p.old_price))})` : ''} · stock {p.stock}{Number(p.weight_kg) > 0 ? ` · ⚖️ ${kgText(Number(p.weight_kg))}` : ''}{p.active ? '' : ' · HIDDEN'}</p>
           </div>
         </button>
       ))}
@@ -1773,8 +1794,8 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">DELIVERY & PAYMENT</p>
         <div className="grid grid-cols-2 gap-2">
-          <input className={input} value={s.delivery_inside} onChange={(e) => set('delivery_inside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Inside Dhaka Tk" inputMode="numeric" />
-          <input className={input} value={s.delivery_outside} onChange={(e) => set('delivery_outside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Outside Dhaka Tk" inputMode="numeric" />
+          <input className={input} value={s.delivery_inside} onChange={(e) => set('delivery_inside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Inside Dhaka Tk (up to 1 kg)" inputMode="numeric" />
+          <input className={input} value={s.delivery_outside} onChange={(e) => set('delivery_outside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Outside Dhaka Tk (up to 1 kg)" inputMode="numeric" />
         </div>
         <PaySetup value={s.pay_numbers || {}} onChange={(v) => set('pay_numbers', v)} storeId={store.id} />
         <textarea className={input} rows={2} value={s.note} onChange={(e) => set('note', e.target.value)} placeholder="Delivery note shown on product pages" />

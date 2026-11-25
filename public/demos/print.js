@@ -28,6 +28,8 @@ var ROSE_PRINT = (() => {
     invoiceDims: () => invoiceDims,
     invoiceHTML: () => invoiceHTML,
     invoicePreviewHTML: () => invoicePreviewHTML,
+    kgText: () => kgText,
+    orderKg: () => orderKg,
     printOrders: () => printOrders,
     printPage: () => printPage,
     stickerHTML: () => stickerHTML,
@@ -183,6 +185,15 @@ var ROSE_PRINT = (() => {
   var logoBox = (st, size) => st.logo_url ? `<img src="${esc(st.logo_url)}" alt="" style="height:${size};max-width:${size === "14mm" ? "30mm" : "22mm"};object-fit:contain">` : `<span style="font-size:${size === "14mm" ? "10mm" : "6mm"};line-height:1">${esc(st.logo || "\u{1F6CD}\uFE0F")}</span>`;
   var orderCode = (st, o) => (st.slug || st.name || "ROSE").replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase() + String(o.order_no);
   var place = (o) => [o.address, o.upazila, o.district].filter((x) => x && x !== "\u2014").join(", ");
+  function kgText(kg) {
+    const n = Number(kg) || 0;
+    if (n <= 0) return "";
+    return n < 1 ? `${Math.round(n * 1e3)} g` : `${Math.round(n * 100) / 100} kg`;
+  }
+  function orderKg(o) {
+    const w = Number(o.weight_kg) || o.items.reduce((a, i) => a + (Number(i.kg) || 0) * (Number(i.q) || 1), 0);
+    return Math.round(w * 1e3) / 1e3;
+  }
   function stickerHTML(o, s, st) {
     const [w, h] = stickerSize(s);
     const tall = h >= 100;
@@ -203,7 +214,7 @@ var ROSE_PRINT = (() => {
     ${s.items !== false && !tiny ? `<div class="sit">${o.items.map((i) => `${esc(i.name)}${i.opt ? ` (${esc(i.opt)})` : ""} \xD7${i.q}`).join(" \xB7 ")}</div>` : ""}
     <div class="s3"><div><small>COURIER PARTNER</small><b>${esc(o.courier ? o.courier.replace(/^\w/, (c) => c.toUpperCase()) : "\u2014")}</b></div><div><small>TRACKING NO</small><b>${esc(o.tracking || "\u2014")}</b></div></div>
     ${tall && o.tracking && s.bar !== false ? `<div class="sbar2">${barcodeSVG(o.tracking, 12)}<b>${esc(o.tracking)}</b></div>` : ""}
-    <div class="s4"><div><small>WEIGHT</small><b>____ kg</b></div><div><small>PACKAGE</small><b>1/1 \xB7 ${qty} pcs</b></div><div><small>ORDER TYPE</small><b>${cod ? "COD" : "PREPAID"}</b></div></div>
+    <div class="s4"><div><small>WEIGHT</small><b>${kgText(orderKg(o)) || "____ kg"}</b></div><div><small>PACKAGE</small><b>1/1 \xB7 ${qty} pcs</b></div><div><small>ORDER TYPE</small><b>${cod ? "COD" : "PREPAID"}</b></div></div>
     ${s.note && !tiny ? `<div class="snote">${esc(s.note)}</div>` : ""}
   </div>`;
   }
@@ -226,6 +237,7 @@ var ROSE_PRINT = (() => {
     const dt = new Date(o.created_at || Date.now());
     const site = st.custom_domain || (st.slug ? `${st.slug}.myrosebd.com` : "");
     const photos = s.photos !== false && !pos;
+    const wt = kgText(orderKg(o));
     const cell = (ic, k, v, span = 1) => `<div class="ci" style="grid-column:span ${span}"><span>${ic}</span><b>${k}:</b> ${esc(v || "\u2014")}</div>`;
     return `<div class="ivc${pos ? " pos" : ""}" style="width:${w}mm;font-size:${fs}pt;padding:${pad}">
     <div class="ih">
@@ -244,11 +256,11 @@ var ROSE_PRINT = (() => {
       ${cell("\u{1F4B3}", "Payment", (PAY[(o.payment_method || "").toLowerCase()] || o.payment_method || "").toUpperCase() + (o.trx_id ? " \xB7 " + o.trx_id : ""), pos ? 2 : 1)}${cell("\u23F1\uFE0F", "Status", STATUS[o.status || "new"] || o.status || "Pending", 2)}
     </div>
     <table class="itbl"><thead><tr><th style="text-align:left">PRODUCT</th>${pos ? "" : "<th>VARIANT / SIZE</th>"}<th>QTY</th>${pos ? "" : "<th>UNIT PRICE</th>"}<th style="text-align:right">TOTAL</th></tr></thead><tbody>
-      ${o.items.map((i) => `<tr><td><div class="ip">${photos && i.img ? `<img src="${esc(i.img)}" alt="">` : ""}<b>${esc(i.name)}</b>${pos && i.opt ? ` (${esc(i.opt)})` : ""}</div></td>${pos ? "" : `<td align="center">${esc(i.opt || "\u2014")}</td>`}<td align="center">${i.q}</td>${pos ? "" : `<td align="center">${tk(i.price)}</td>`}<td align="right">${tk(i.price * i.q)}</td></tr>`).join("")}
+      ${o.items.map((i) => `<tr><td><div class="ip">${photos && i.img ? `<img src="${esc(i.img)}" alt="">` : ""}<span><b>${esc(i.name)}</b>${pos && i.opt ? ` (${esc(i.opt)})` : ""}${Number(i.kg) > 0 ? `<small class="ikg">\u2696\uFE0F ${kgText(Number(i.kg) * (Number(i.q) || 1))}</small>` : ""}</span></div></td>${pos ? "" : `<td align="center">${esc(i.opt || "\u2014")}</td>`}<td align="center">${i.q}</td>${pos ? "" : `<td align="center">${tk(i.price)}</td>`}<td align="right">${tk(i.price * i.q)}</td></tr>`).join("")}
     </tbody></table>
     <div class="ibot">
-      ${pos ? "" : `<div class="ibox"><div class="ibh">\u{1F69A} COURIER INFORMATION</div><p><span>Courier:</span><b>${esc(o.courier ? o.courier.replace(/^\w/, (c) => c.toUpperCase()) : "\u2014")}</b></p><p><span>Status:</span><b>${esc(STATUS[o.status || "new"] || "Pending")}</b></p><p><span>Tracking ID:</span><b>${esc(o.tracking || "\u2014")}</b></p><p><span>Delivery area:</span><b>${o.area === "outside" ? "Outside Dhaka" : o.area === "inside" ? "Inside Dhaka" : esc(o.district || "\u2014")}</b></p></div>`}
-      <div class="ibox"><div class="ibh">\u{1F9FE} BILLING SUMMARY</div><p><span>Subtotal:</span><b>${tk(sub)}</b></p><p><span>Delivery:</span><b>${tk(del)}</b></p><p class="gt"><span>GRAND TOTAL:</span><b>${tk(o.total)}</b></p>${isCod(o) ? `<p><span>Collect (COD):</span><b>${tk(o.total)}</b></p>` : ""}</div>
+      ${pos ? "" : `<div class="ibox"><div class="ibh">\u{1F69A} COURIER INFORMATION</div><p><span>Courier:</span><b>${esc(o.courier ? o.courier.replace(/^\w/, (c) => c.toUpperCase()) : "\u2014")}</b></p><p><span>Status:</span><b>${esc(STATUS[o.status || "new"] || "Pending")}</b></p><p><span>Tracking ID:</span><b>${esc(o.tracking || "\u2014")}</b></p><p><span>Delivery area:</span><b>${o.area === "outside" ? "Outside Dhaka" : o.area === "inside" ? "Inside Dhaka" : esc(o.district || "\u2014")}</b></p>${wt ? `<p><span>Total weight:</span><b>${wt}</b></p>` : ""}</div>`}
+      <div class="ibox"><div class="ibh">\u{1F9FE} BILLING SUMMARY</div><p><span>Subtotal:</span><b>${tk(sub)}</b></p><p><span>Delivery${pos && wt ? ` (${wt})` : ""}:</span><b>${tk(del)}</b></p><p class="gt"><span>GRAND TOTAL:</span><b>${tk(o.total)}</b></p>${isCod(o) ? `<p><span>Collect (COD):</span><b>${tk(o.total)}</b></p>` : ""}</div>
     </div>
     ${pos ? "" : `<div class="ibot"><div class="ibox"><div class="ibh">\u{1F4DD} NOTES</div><div class="small">${esc(o.note || "\u09AA\u09A3\u09CD\u09AF \u09AC\u09C1\u099D\u09C7 \u09A8\u09BF\u09AF\u09BC\u09C7 \u099A\u09C7\u0995 \u0995\u09B0\u09C7 \u09AA\u09C7\u09AE\u09C7\u09A8\u09CD\u099F \u0995\u09B0\u09AC\u09C7\u09A8\u0964")}</div></div><div class="ibox"><div class="ibh">\u{1F4C4} TERMS & CONDITIONS</div><div class="small">${esc(s.terms || "This is a computer generated invoice. No physical signature required.")}</div></div></div>`}
     ${barcodeSVG(orderCode(st, o), pos ? 7 : 8)}
@@ -277,7 +289,7 @@ var ROSE_PRINT = (() => {
 .isec{font-weight:800;letter-spacing:.06em;border-bottom:2px solid #111;padding:1mm 0;margin-top:2mm}
 .igrid{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #e5e7eb;border-top:0}.ci{padding:1.2mm 2mm;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;font-size:.92em;overflow:hidden}.ci span{margin-right:1mm}
 .itbl{width:100%;border-collapse:collapse;margin-top:3mm}.itbl th{background:#111;color:#fff;font-size:.8em;letter-spacing:.05em;padding:1.6mm 1.5mm}.itbl td{border-bottom:1px solid #e5e7eb;padding:1.4mm 1.5mm}
-.ip{display:flex;align-items:center;gap:2mm}.ip img{width:10mm;height:10mm;object-fit:cover;border-radius:1mm;border:1px solid #e5e7eb}
+.ip{display:flex;align-items:center;gap:2mm}.ikg{display:block;font-size:.82em;color:#64748b;font-weight:500}.ip img{width:10mm;height:10mm;object-fit:cover;border-radius:1mm;border:1px solid #e5e7eb}
 .ibot{display:grid;grid-template-columns:1fr 1fr;gap:2.5mm;margin-top:3mm}.ibox{border:1px solid #e5e7eb;border-radius:2mm;padding:2mm 2.5mm}.ibh{font-weight:800;font-size:.85em;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:1mm;margin-bottom:1mm}
 .ibox p{display:flex;justify-content:space-between;margin:.6mm 0}.ibox p span{color:#475569}.ibox .gt{border-top:1px solid #111;padding-top:1mm;font-size:1.15em}
 .ivc .bc{margin:3mm auto 0;height:8mm;width:55%!important}.ithanks{margin-top:2mm;background:#111;color:#fff;text-align:center;font-weight:800;letter-spacing:.12em;padding:2mm;border-radius:1.5mm}

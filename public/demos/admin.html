@@ -145,7 +145,7 @@
   // ---------------- demo state (lives only in this tab) ----------------
   var st = {
     products: S.products.map(function (p, i) {
-      return { id: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', imgs: p[6] ? [p[6]] : [], stock: [24, 8, 3, 40, 15, 0, 12, 31, 6, 19, 22, 5][i % 12], active: true,
+      return { id: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', imgs: p[6] ? [p[6]] : [], stock: [24, 8, 3, 40, 15, 0, 12, 31, 6, 19, 22, 5][i % 12], active: true, kg: window.ROSE_KG(p[0]) || window.ROSE_DEMO_KG[window.ROSE_KIND_OF[k] || 'fashion'] || 0.5,
         desc: p[0] + ' from ' + S.name + '. Best quality, checked before delivery. ' + (S.note || ''), opts: S.options ? S.options.values.slice() : [], optLabel: S.options ? S.options.label : '' };
     }),
     cats: S.categories.map(function (c) { return { name: c[0], icon: c[1] }; }),
@@ -265,7 +265,7 @@
       '<div class="tabs"><button class="' + (prodFilter === 'all' ? 'on' : '') + '" onclick="setProdFilter(\'all\')">ALL</button>' + st.cats.map(function (c) { return '<button class="' + (prodFilter === c.name ? 'on' : '') + '" onclick="setProdFilter(\'' + esc(c.name).replace(/'/g, '') + '\')">' + c.icon + ' ' + esc(c.name) + '</button>'; }).join('') + '</div>' +
       '<div class="card">' + list.map(function (p) {
         return row(thumb(p), esc(p.name) + (p.rx ? ' <span class="pill" style="background:#0e7490">Rx</span>' : '') + (p.active ? '' : ' <span class="pill" style="background:#475569">HIDDEN</span>'),
-          tk(p.price) + (p.old > p.price ? ' <s>' + tk(p.old) + '</s>' : '') + ' · ' + esc(p.cat) + ' · stock ' + p.stock, '<span class="chev">›</span>', "go('product/" + p.id + "')");
+          tk(p.price) + (p.old > p.price ? ' <s>' + tk(p.old) + '</s>' : '') + ' · ' + esc(p.cat) + ' · stock ' + p.stock + (p.kg > 0 ? ' · ⚖️ ' + window.ROSE_KG_TEXT(p.kg) : ''), '<span class="chev">›</span>', "go('product/" + p.id + "')");
       }).join('') + '</div>';
   };
   V.categories = function () {
@@ -440,8 +440,8 @@
   function draftOf(id) {
     if (draft && draft.key === id) return draft;
     var p = id === 'new' ? null : P(+id);
-    draft = p ? { key: id, id: p.id, name: p.name, price: p.price, old: p.old, stock: p.stock, cat: p.cat, imgs: p.imgs.slice(), e: p.e, optLabel: p.optLabel || OPT.labels[0], opts: p.opts.slice(), short: p.short || (p.name + ' from ' + S.name + '. Best quality, checked before delivery.'), long: p.long || p.desc, active: p.active, seo: p.name + ' | ' + S.name, specs: Object.assign({}, p.specs || demoSpecs()) }
-      : { key: id, id: -1, name: '', price: '', old: '', stock: 10, cat: st.cats[0] ? st.cats[0].name : '', imgs: [], e: '📦', optLabel: OPT.labels[0], opts: [], short: '', long: '', active: true, seo: '', specs: {} };
+    draft = p ? { key: id, id: p.id, name: p.name, price: p.price, old: p.old, stock: p.stock, kg: p.kg || '', cat: p.cat, imgs: p.imgs.slice(), e: p.e, optLabel: p.optLabel || OPT.labels[0], opts: p.opts.slice(), short: p.short || (p.name + ' from ' + S.name + '. Best quality, checked before delivery.'), long: p.long || p.desc, active: p.active, seo: p.name + ' | ' + S.name, specs: Object.assign({}, p.specs || demoSpecs()) }
+      : { key: id, id: -1, name: '', price: '', old: '', stock: 10, kg: '', cat: st.cats[0] ? st.cats[0].name : '', imgs: [], e: '📦', optLabel: OPT.labels[0], opts: [], short: '', long: '', active: true, seo: '', specs: {} };
     return draft;
   }
   function pvHTML(d) {
@@ -464,6 +464,7 @@
       '<div class="field"><span>Product name (clear words people search)</span><input data-k="name" value="' + esc(d.name) + '" placeholder="e.g. Men’s Black Cotton T-Shirt"></div>' +
       '<div class="two"><div class="field"><span>Price</span><input data-k="price" inputmode="numeric" value="' + d.price + '"></div><div class="field"><span>Old price (shows % OFF)</span><input data-k="old" inputmode="numeric" value="' + d.old + '"></div></div>' +
       '<div class="two"><div class="field"><span>Stock</span><input data-k="stock" inputmode="numeric" value="' + d.stock + '"></div><div class="field"><span>Category</span><select data-k="cat">' + st.cats.map(function (c) { return '<option' + (c.name === d.cat ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select></div></div>' +
+      '<div class="sizebox" style="border-color:#b45309;background:#1c1308"><div class="field"><span>⚖️ WEIGHT for one piece (kg) · the courier charge comes from this</span><input data-k="kg" inputmode="decimal" value="' + esc(d.kg) + '" placeholder="e.g. 0.5 = 500 g"></div><div class="chips">' + [['250 g', 0.25], ['500 g', 0.5], ['1 kg', 1], ['2 kg', 2], ['5 kg', 5], ['10 kg', 10]].map(function (x) { return '<button type="button" class="btn" style="padding:5px 10px;background:#334155;color:#e2e8f0" onclick="kgSet(' + x[1] + ')">' + x[0] + '</button>'; }).join(' ') + '</div><p class="note">Weigh it with the box. If an option has a weight in it (5kg, 1 L), the store uses that option’s weight.</p></div>' +
       '<div class="sizebox"><div class="two"><div class="field"><span>Option (optional)</span><select data-k="optLabel">' + OPT.labels.concat(OPT.labels.indexOf(d.optLabel) < 0 && d.optLabel ? [d.optLabel] : []).map(function (x) { return '<option' + (x === d.optLabel ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></div>' +
       '<div class="field"><span>Quick pick</span><select onchange="optSet(this.value);this.value=\'\'"><option value="">Choose a set…</option>' + SIZESETS.map(function (s, i) { return '<option value="' + i + '">' + s[0] + ' (' + s[1].join(', ') + ')</option>'; }).join('') + '</select></div></div>' +
       '<div class="field"><span>' + esc(d.optLabel) + 's · tap to add, or write your own and press Enter</span><div class="chips">' + chips + '<input id="optIn" placeholder="Write your own and press Enter" onkeydown="if(event.key===\'Enter\'){event.preventDefault();optAdd(this.value)}"></div>' +
@@ -480,7 +481,7 @@
   function afterProduct() {
     [].forEach.call(main.querySelectorAll('[data-k]'), function (el) {
       el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function () {
-        var key = el.dataset.k; if (/^sp_/.test(key)) { draft.specs[key.slice(3)] = el.value; return; } draft[key] = /price|old|stock/.test(key) ? (+el.value || '') : el.value;
+        var key = el.dataset.k; if (/^sp_/.test(key)) { draft.specs[key.slice(3)] = el.value; return; } draft[key] = /price|old|stock/.test(key) ? (+el.value || '') : key === 'kg' ? el.value.replace(/[^\d.]/g, '') : el.value;
         if (key === 'optLabel') return render();
         if (key === 'short') { var c = el.parentNode.querySelector('.cnt'); if (c) c.textContent = el.value.length + ' / 160'; }
         document.getElementById('pv').innerHTML = pvHTML(draft); document.getElementById('sv').innerHTML = seoHTML(draft);
@@ -488,6 +489,7 @@
     });
   }
   window.optAdd = function (v) { v = String(v || '').trim(); if (!v) return; v.split(',').forEach(function (x) { x = x.trim(); if (x && draft.opts.indexOf(x) < 0) draft.opts.push(x); }); render(); var i = document.getElementById('optIn'); if (i) i.focus(); };
+  window.kgSet = function (v) { draft.kg = v; render(); };
   window.optDel = function (i) { draft.opts.splice(i, 1); render(); };
   window.optSet = function (i) { if (i === '') return; draft.opts = SIZESETS[+i][1].slice(); render(); };
   window.imgMain = function (i) { var u = draft.imgs.splice(i, 1)[0]; draft.imgs.unshift(u); render(); };
@@ -499,7 +501,7 @@
     if (!d.name || !(+d.price > 0)) return toast('Name and price are needed');
     if (d.short.length < 20) return toast('Write a short description (at least 20 letters)');
     var p = d.id >= 0 ? P(d.id) : { id: st.products.length, e: '📦', rx: false };
-    p.name = d.name; p.price = +d.price; p.old = +d.old || p.price; p.stock = +d.stock || 0; p.cat = d.cat; p.short = d.short; p.long = d.long; p.desc = d.short; p.imgs = d.imgs.slice(); p.optLabel = d.optLabel; p.opts = d.opts.slice(); p.active = d.active; p.specs = Object.assign({}, d.specs);
+    p.name = d.name; p.price = +d.price; p.old = +d.old || p.price; p.stock = +d.stock || 0; p.kg = +d.kg || 0; p.cat = d.cat; p.short = d.short; p.long = d.long; p.desc = d.short; p.imgs = d.imgs.slice(); p.optLabel = d.optLabel; p.opts = d.opts.slice(); p.active = d.active; p.specs = Object.assign({}, d.specs);
     if (d.id < 0) st.products.unshift(p);
     st.products.forEach(function (x, i) { x.id = i; });
     draft = null; toast('Saved ✓'); go('products');
@@ -507,7 +509,9 @@
 
   // ---------- delivery & couriers ----------
   V.delivery = function () {
-    return '<div class="card"><b style="font-size:13px">DELIVERY CHARGE</b><div class="two" style="margin-top:10px"><div class="field"><span>Inside Dhaka (Tk)</span><input value="60"></div><div class="field"><span>Outside Dhaka (Tk)</span><input value="120"></div></div><div class="two"><div class="field"><span>Dhaka suburbs: Savar, Gazipur, Narayanganj (Tk)</span><input value="100"></div><div class="field"><span>Free delivery over (Tk)</span><input value="1500"></div></div>' + btn('SAVE', "toast('Delivery charges saved')") + '<p class="note">The checkout picks the charge from the district the customer chooses.</p></div>' +
+    return '<div class="card"><b style="font-size:13px">DELIVERY CHARGE BY WEIGHT</b><div class="two" style="margin-top:10px"><div class="field"><span>Inside Dhaka · up to 1 kg (Tk)</span><input value="70"></div><div class="field"><span>Outside Dhaka · up to 1 kg (Tk)</span><input value="130"></div></div><div class="two"><div class="field"><span>Inside Dhaka · each extra kg (Tk)</span><input value="15"></div><div class="field"><span>Outside Dhaka · each extra kg (Tk)</span><input value="25"></div></div>' +
+      '<table style="width:100%;font-size:12px;margin:4px 0 10px;border-collapse:collapse"><tr style="color:#94a3b8"><td>Parcel</td><td>Inside Dhaka</td><td>Outside Dhaka</td></tr>' + [0.5, 1, 1.5, 2, 3, 5].map(function (w) { return '<tr><td>' + window.ROSE_KG_TEXT(w) + '</td><td>' + window.ROSE_DEL(70, 15, w) + ' Tk</td><td>' + window.ROSE_DEL(130, 25, w) + ' Tk</td></tr>'; }).join('') + '</table>' +
+      '<div class="two"><div class="field"><span>Dhaka suburbs: Savar, Gazipur, Narayanganj (Tk)</span><input value="100"></div><div class="field"><span>Free delivery over (Tk)</span><input value="1500"></div></div>' + btn('SAVE', "toast('Delivery charges saved')") + '<p class="note">The checkout adds up the weight of everything in the cart, then picks the charge from the district. 1.2 kg counts as 2 kg, the same way couriers count.</p></div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">COURIERS · connect with your own courier account</b>' + st.couriers.map(function (c, i) {
         return '<div class="row"><span class="lg">' + window.ROSE_LOGO(c[0].toLowerCase().replace(' courier', '').replace(/ /g, '_'), 30) + '</span><div class="f"><b>' + c[0] + '</b><p>' + (c[1] ? '✅ Connected · auto booking · tracking sent to the customer by SMS' : c[3]) + '</p></div>' + btn(c[1] ? 'Disconnect' : 'Connect', 'courierToggle(' + i + ')', c[1] ? 'alt' : '') + '</div>' + (courierOpen === i ? '<div class="card" style="margin:0 0 8px;background:#0a0f1a"><div class="two"><div class="field"><span>API key</span><input placeholder="from your ' + c[0] + ' merchant panel"></div><div class="field"><span>Secret key</span><input type="password" placeholder="••••••"></div></div><div class="field"><span>Pickup address</span><input value="House 12, Road 5, Dhaka"></div>' + btn('SAVE & CONNECT', 'courierSave(' + i + ')') + '<p class="note">Keys are kept on the server only. Staff and customers never see them.</p></div>' : '');
       }).join('') + '</div>';
@@ -525,7 +529,7 @@
   function pStore() { return { name: st.print.sender || S.name, logo: S.logo, slug: k, whatsapp: st.print.phone, phone: st.print.phone, email: 'hello@' + k + '.myrosebd.com', address: 'House 12, Road 5, Dhaka (demo address)', pay_numbers: { bkash: '01XXXXXXXXX' } }; }
   function pOrder(o) {
     return { order_no: o.no, customer_name: o.name, phone: o.phone, address: o.area, upazila: o.upazila, district: o.district, division: o.division,
-      items: o.items.map(function (it) { var p = P(it.p); return { name: p.name, q: it.q, price: p.price, opt: o.opt, img: (p.imgs && p.imgs[0]) || p.img || '' }; }),
+      items: o.items.map(function (it) { var p = P(it.p); return { name: p.name, q: it.q, price: p.price, opt: o.opt, img: (p.imgs && p.imgs[0]) || p.img || '', kg: window.ROSE_KG(o.opt) != null ? window.ROSE_KG(o.opt) : (+p.kg || 0) }; }),
       delivery: o.del, total: o.total, payment_method: o.pay, trx_id: o.trx, tracking: o.track, courier: o.track ? 'steadfast' : '', status: o.st, area: /dhaka/i.test(o.district || '') ? 'inside' : 'outside', created_at: new Date().toISOString() };
   }
   function stickerHTML(o) { return RP.stickerHTML(pOrder(o), st.print, pStore()); }
@@ -575,7 +579,7 @@
     else {
       st.chats.push(['c', t]);
       var l = t.toLowerCase(), hit = st.products.filter(function (p) { return l.indexOf(p.name.toLowerCase().split(' ')[0]) >= 0 || l.indexOf(p.cat.toLowerCase()) >= 0; })[0];
-      st.chats.push(['r', '🤖 ROSE: ' + (hit ? hit.name + ' is ' + tk(hit.price) + (hit.stock ? ', ' + hit.stock + ' in stock.' : ', out of stock now.') : /deliver|charge|ডেলিভারি/.test(l) ? 'Delivery is 60 Tk inside Dhaka, 120 Tk outside.' : 'I will ask the shop owner and reply soon.')]);
+      st.chats.push(['r', '🤖 ROSE: ' + (hit ? hit.name + ' is ' + tk(hit.price) + (hit.stock ? ', ' + hit.stock + ' in stock.' : ', out of stock now.') : /deliver|charge|ডেলিভারি/.test(l) ? 'Delivery is 70 Tk inside Dhaka and 130 Tk outside for up to 1 kg, then 15 / 25 Tk for each extra kg.' : 'I will ask the shop owner and reply soon.')]);
     }
     render(); var b = document.getElementById('chatBox'); if (b) b.scrollTop = 99999;
   };

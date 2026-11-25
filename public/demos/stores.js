@@ -196,6 +196,17 @@ window.ROSE_KINDS = {
   };
   Object.keys(O).forEach(function (k) { if (window.ROSE_KINDS[k]) window.ROSE_KINDS[k].opt = O[k]; });
 })();
+// Weight for the courier charge. ROSE_KG('500g') = 0.5, ROSE_KG('2 L') = 2, ROSE_KG('500 mg') = null (strength, not weight).
+window.ROSE_KG = function (t) {
+  var m = String(t || '').toLowerCase().match(/(\d+(?:\.\d+)?)\s*(kg|gm|g|ltr|l|ml)(?![a-z])/);
+  if (!m) return null;
+  return /^(kg|ltr|l)$/.test(m[2]) ? +m[1] : +m[1] / 1000;
+};
+window.ROSE_KG_TEXT = function (kg) { kg = +kg || 0; return kg <= 0 ? '' : kg < 1 ? Math.round(kg * 1000) + ' g' : Math.round(kg * 100) / 100 + ' kg'; };
+// Courier charge: base price up to 1 kg, then a charge for each started extra kg (1.2 kg = 1 extra kg).
+window.ROSE_DEL = function (base, perKg, kg) { kg = +kg || 0; return (+base || 0) + (kg > 1 ? Math.ceil(kg - 1 - 1e-9) * (+perKg || 0) : 0); };
+// Demo weights when a demo product has none (kg)
+window.ROSE_DEMO_KG = { food: 0.6, fashion: 0.4, grocery: 1, pharmacy: 0.05, furniture: 15, market: 0.5 };
 window.ROSE_KIND_OF = { foodbazaar: 'food', fashionhub: 'fashion', sotadari: 'grocery', shopshotoi: 'market', homenest: 'furniture', medicare: 'pharmacy' };
 
 // Brand logos for payment methods and couriers. Put the official logo files in /public/brand/ with these names

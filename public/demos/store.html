@@ -438,12 +438,12 @@ if (liveSlug || ownDomain) {
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
         categories: cats.map(function (c) { return [c.name, c.icon || '🏷️']; }), sectionTitle: 'Popular Products',
         note: r.note || ('Delivery: ' + r.delivery_inside + ' Tk inside Dhaka, ' + r.delivery_outside + ' Tk outside.'),
-        delIn: r.delivery_inside, delOut: r.delivery_outside, payNumbers: r.pay_numbers || {}, pixels: r.pixels || {}, hideRose: !!r.hide_rose, offerBanners: (r.offer_banners || []).filter(function (b) { return b && b.img; }),
+        delIn: r.delivery_inside, delOut: r.delivery_outside, delKgIn: r.delivery_kg_inside, delKgOut: r.delivery_kg_outside, payNumbers: r.pay_numbers || {}, pixels: r.pixels || {}, hideRose: !!r.hide_rose, offerBanners: (r.offer_banners || []).filter(function (b) { return b && b.img; }),
       };
       var P = prods.map(function (p, i) {
         return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', e: p.emoji || '📦', img: fullImg((p.images || [])[0], 600), imgs: (p.images || []).map(function (u) { return fullImg(u, 900); }),
           price: +p.price, old: +(p.old_price || p.price), rx: p.rx, desc: p.description || '', short: p.short_description || '', long: p.description || '', specs: p.specs || {}, stock: p.stock, optLabel: p.options_label, opts: p.options || [],
-          rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 0, of: !!p.on_offer };
+          rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 0, of: !!p.on_offer, kg: +p.weight_kg || 0 };
       });
       if (P.some(function (p) { return p.cat === 'Others'; }) && !S.categories.some(function (c) { return c[0] === 'Others'; })) S.categories.push(['Others', '🏷️']);
       start(S, P, r.slug);
@@ -475,7 +475,16 @@ function start(S, P, liveId) {
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
 
   var KIND = window.ROSE_KINDS[window.ROSE_KIND_OF[S.template || id] || 'fashion'] || window.ROSE_KINDS.fashion;
-  var DIN = S.delIn != null ? +S.delIn : 60, DOUT = S.delOut != null ? +S.delOut : 120;
+  var DIN = S.delIn != null ? +S.delIn : 70, DOUT = S.delOut != null ? +S.delOut : 130;
+  var DKIN = S.delKgIn != null ? +S.delKgIn : 15, DKOUT = S.delKgOut != null ? +S.delKgOut : 25;
+  // Weight: demo products get a weight from the name ("Potatoes 1kg") or a normal weight for the shop kind
+  var KINDKEY = window.ROSE_KIND_OF[S.template || id] || 'fashion';
+  P.forEach(function (p) { if (p.kg == null) p.kg = window.ROSE_KG(p.name) || window.ROSE_DEMO_KG[KINDKEY] || 0.5; });
+  var kgT = window.ROSE_KG_TEXT;
+  // weight of one piece: the option's weight ("5kg", "1 L") or the product's weight
+  function itemKg(pid, opt) { var k = window.ROSE_KG(opt); return k != null ? k : (P[pid] ? +P[pid].kg || 0 : 0); }
+  function cartKg() { return Math.round(st.cart.reduce(function (a, c) { return a + itemKg(c.id, c.opt) * c.q; }, 0) * 1000) / 1000; }
+  function delFor(zone, kg) { return zone === 'inside' ? window.ROSE_DEL(DIN, DKIN, kg) : window.ROSE_DEL(DOUT, DKOUT, kg); }
   var PAYS = [['cod', '💵 Cash on Delivery'], ['bkash', 'bKash'], ['nagad', 'Nagad'], ['rocket', 'Rocket']].concat(S.live ? [] : [['card', '💳 Card (VISA/Master)'], ['bank', '🏦 Bank transfer']]);
   // cart + wishlist (memory, with storage when allowed)
   var KEY = 'rose_demo_' + id;
@@ -635,7 +644,7 @@ function start(S, P, liveId) {
     fullName: ['Full name', 'পুরো নাম'], mobile: ['Mobile number', 'মোবাইল নম্বর'], email: ['Email (optional)', 'ইমেইল (ঐচ্ছিক)'], division: ['Division', 'বিভাগ'], district: ['District', 'জেলা'], upazila: ['Upazila / Thana', 'উপজেলা / থানা'], fullAddr: ['Full address', 'পুরো ঠিকানা'],
     addrPh: ['House no, road / village, area, nearby landmark', 'বাসা নং, রোড / গ্রাম, এলাকা, কাছের পরিচিত জায়গা'], namePh: ['e.g. Rahim Uddin', 'যেমন: রহিম উদ্দিন'],
     choose: ['Choose', 'বাছাই করুন'], other: ['Other (write it)', 'অন্যটি (লিখুন)'], saveInfo: ['Save my details for next time', 'পরের বার জন্য আমার তথ্য রাখুন'],
-    subtotal: ['Subtotal', 'মোট পণ্য'], delCharge: ['Delivery charge', 'ডেলিভারি চার্জ'], total: ['Total', 'সর্বমোট'], confirm: ['Confirm Order', 'অর্ডার কনফার্ম করুন'], coupon: ['Coupon code', 'কুপন কোড'], apply: ['Apply', 'প্রয়োগ'],
+    subtotal: ['Subtotal', 'মোট পণ্য'], weight: ['Weight', 'ওজন'], totWeight: ['Total weight', 'মোট ওজন'], perKg: ['per extra kg', 'প্রতি বাড়তি কেজি'], upTo1: ['up to 1 kg', '১ কেজি পর্যন্ত'], delCharge: ['Delivery charge', 'ডেলিভারি চার্জ'], total: ['Total', 'সর্বমোট'], confirm: ['Confirm Order', 'অর্ডার কনফার্ম করুন'], coupon: ['Coupon code', 'কুপন কোড'], apply: ['Apply', 'প্রয়োগ'],
     guest: ['No account needed. You can order as a guest.', 'অ্যাকাউন্ট ছাড়াও অর্ডার করা যায়।'], google: ['Continue with Google', 'Google দিয়ে চালিয়ে যান'], emailLogin: ['Log in with email', 'ইমেইল দিয়ে লগইন'], signedIn: ['Signed in as', 'লগইন করা আছে:'], useSaved: ['Use my saved address', 'সেভ করা ঠিকানা বসান'], logout: ['Log out', 'লগআউট'],
     inside: ['Inside Dhaka', 'ঢাকার ভিতরে'], outside: ['Outside Dhaka', 'ঢাকার বাইরে'], days1: ['1-2 days', '১-২ দিন'], days3: ['2-4 days', '২-৪ দিন'], pickDist: ['Choose your district to see the delivery charge.', 'ডেলিভারি চার্জ দেখতে জেলা বাছাই করুন।'],
     cod: ['Cash on Delivery', 'ক্যাশ অন ডেলিভারি'], codSub: ['Pay when you get the product', 'পণ্য হাতে পেয়ে টাকা দিন'], sendTo: ['Send Money to', 'সেন্ড মানি করুন:'], cashOutTo: ['Cash Out to', 'ক্যাশ আউট করুন:'], payTo: ['Make Payment to', 'পেমেন্ট করুন:'], proof: ['Payment screenshot', 'পেমেন্টের স্ক্রিনশট'], eProof: ['Add the screenshot of your payment.', 'পেমেন্টের স্ক্রিনশট দিন।'], bankT: ['Bank transfer', 'ব্যাংক ট্রান্সফার'], bankRef: ['Transfer reference', 'ট্রান্সফারের রেফারেন্স'], payCheck: ['ROSE is checking your payment…', 'ROSE আপনার পেমেন্ট মিলিয়ে দেখছে…'], payOk: ['Payment received. Your order is confirmed.', 'পেমেন্ট পাওয়া গেছে। অর্ডার কনফার্ম।'], payWait: ['Payment not found yet. If you paid, it shows here in a few minutes; otherwise the shop will call you.', 'পেমেন্ট এখনো পাওয়া যায়নি। টাকা পাঠিয়ে থাকলে কয়েক মিনিটে এখানে দেখাবে; না হলে দোকান থেকে কল করা হবে।'], payPart: ['Part payment received', 'আংশিক পেমেন্ট পাওয়া গেছে'], trx: ['Transaction ID (TrxID)', 'ট্রানজেকশন আইডি (TrxID)'], card: ['Card (VISA / Mastercard)', 'কার্ড (VISA / Mastercard)'],
@@ -714,10 +723,10 @@ function start(S, P, liveId) {
       '<div class="price"><b style="font-size:28px">' + tk(p.price) + '</b>' + (off(p) ? '<s style="font-size:15px">' + tk(p.old) + '</s> <span class="save">Save ' + tk(p.old - p.price) + '</span>' : '') + '</div>' +
       '<p class="shortd">' + esc(short(p)) + '</p>' +
       (p.rx ? '<div class="note warn">📄 <b>Prescription required.</b> Upload a doctor’s prescription at checkout. A licensed pharmacist checks it before the order is confirmed.</div>' : '') +
-      opt + '<div style="display:flex;gap:12px;align-items:center"><b style="font-size:14px">' + t('qty') + '</b><div class="qty"><button id="qm">−</button><span id="qv">1</span><button id="qp">+</button></div><span style="color:' + (stock ? '#16a34a' : '#dc2626') + ';font-size:13px;font-weight:600">● ' + (stock ? t('inStock') : t('outStock')) + '</span></div>' +
+      opt + '<div style="display:flex;gap:12px;align-items:center"><b style="font-size:14px">' + t('qty') + '</b><div class="qty"><button id="qm">−</button><span id="qv">1</span><button id="qp">+</button></div><span style="color:' + (stock ? '#16a34a' : '#dc2626') + ';font-size:13px;font-weight:600">● ' + (stock ? t('inStock') : t('outStock')) + '</span>' + (itemKg(p.id, (p.opts && p.opts[0]) || (S.options ? S.options.values[0] : '')) > 0 ? '<span id="pKg" style="font-size:13px;font-weight:600;color:#475569">⚖️ ' + t('weight') + ': ' + kgT(itemKg(p.id, (p.opts && p.opts[0]) || (S.options ? S.options.values[0] : ''))) + '</span>' : '') + '</div>' +
       '<div class="pbtns"><button class="btn alt" id="addBtn2">' + IC.cart + t('addCart') + '</button><button class="btn" id="buyBtn2">' + t('orderNow') + '</button></div>' +
       '<button class="linkb" onclick="__rose.wish(' + p.id + ');route()">' + (st.wish.indexOf(p.id) >= 0 ? '❤️ Saved' : '🤍 Save to wishlist') + '</button>' +
-      '<div class="chips"><span>🚚 ' + t('inside') + ' ৳' + DIN + '</span><span>📦 ' + t('outside') + ' ৳' + DOUT + '</span><span>💵 COD</span><span>🔁 7-day return</span></div></div></div>' +
+      '<div class="chips"><span>🚚 ' + t('inside') + ' ৳' + DIN + '</span><span>📦 ' + t('outside') + ' ৳' + DOUT + '</span><span>⚖️ ' + t('upTo1') + ' · +৳' + DKIN + '/' + DKOUT + ' ' + t('perKg') + '</span><span>💵 COD</span><span>🔁 7-day return</span></div></div></div>' +
       tabs + reviewsBox(p) +
       (rel.length ? '<div class="head"><h3>' + t('youMay') + '</h3><a href="#/all">See All →</a></div><div class="grid">' + rel.map(card).join('') + '</div>' : '');
   }
@@ -727,7 +736,7 @@ function start(S, P, liveId) {
     document.getElementById('qm').onclick = function () { q = Math.max(1, q - 1); qv.textContent = q; };
     document.getElementById('qp').onclick = function () { q++; qv.textContent = q; };
     var o = document.getElementById('opts');
-    if (o) o.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(o.children, function (x) { x.classList.remove('on'); }); b.classList.add('on'); opt = b.dataset.v; };
+    if (o) o.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(o.children, function (x) { x.classList.remove('on'); }); b.classList.add('on'); opt = b.dataset.v; var pk = document.getElementById('pKg'); if (pk) pk.textContent = '⚖️ ' + t('weight') + ': ' + kgT(itemKg(pid, opt)); };
     var add = function () { addCart(pid, opt, q); }, buy = function () { addCart(pid, opt, q); location.hash = '#/checkout'; };
     document.getElementById('addBtn2').onclick = add; document.getElementById('buyBtn2').onclick = buy;
     showBar('<div class="bbp">' + (pp.img ? '<img src="' + esc(pp.img) + '" alt="">' : '<span>' + pp.e + '</span>') + '<div><b>' + esc(pp.name) + '</b><span>' + tk(pp.price) + '</span></div></div><button class="btn alt" id="bbAdd">' + IC.cart + t('addCart') + '</button><button class="btn" id="bbBuy">' + t('orderNow') + '</button>');
@@ -755,10 +764,11 @@ function start(S, P, liveId) {
     var sub = 0;
     var rows = st.cart.map(function (c, i) {
       var p = P[c.id]; sub += p.price * c.q;
-      return '<div class="row"><span class="e" style="height:56px;overflow:hidden;border-radius:12px">' + (p.img ? '<img src="' + p.img + '" alt="" style="width:56px;height:56px;object-fit:cover">' : p.e) + '</span><div style="flex:1"><b style="font-size:14px">' + esc(p.name) + '</b><div style="font-size:12px;color:#64748b">' + esc(c.opt) + (p.rx ? ' · Rx' : '') + '</div><b style="color:#dc2626">' + tk(p.price) + '</b></div>' +
+      return '<div class="row"><span class="e" style="height:56px;overflow:hidden;border-radius:12px">' + (p.img ? '<img src="' + p.img + '" alt="" style="width:56px;height:56px;object-fit:cover">' : p.e) + '</span><div style="flex:1"><b style="font-size:14px">' + esc(p.name) + '</b><div style="font-size:12px;color:#64748b">' + esc(c.opt) + (p.rx ? ' · Rx' : '') + (itemKg(c.id, c.opt) > 0 ? ' · ⚖️ ' + kgT(itemKg(c.id, c.opt) * c.q) : '') + '</div><b style="color:#dc2626">' + tk(p.price) + '</b></div>' +
         '<div class="qty"><button onclick="cq(' + i + ',-1)">−</button><span>' + c.q + '</span><button onclick="cq(' + i + ',1)">+</button></div></div>';
     }).join('');
     return '<div class="head"><h3>' + t('cart') + '</h3></div><div class="panel">' + rows +
+      (cartKg() > 0 ? '<div style="display:flex;justify-content:space-between;margin-top:12px;font-size:14px;color:#475569"><span>⚖️ ' + t('totWeight') + '</span><b>' + kgT(cartKg()) + '</b></div>' : '') +
       '<div style="display:flex;justify-content:space-between;margin-top:12px;font-size:16px"><span>' + t('subtotal') + '</span><b>' + tk(sub) + '</b></div>' +
       '<a class="btn" style="margin-top:12px;padding:13px" href="#/checkout">' + t('checkout') + ' →</a></div>';
   }
@@ -799,9 +809,9 @@ function start(S, P, liveId) {
       sec(2, t('delivery'), '<div id="zoneBox" class="zone"><span class="small">' + t('pickDist') + '</span></div>') +
       sec(3, t('payment'), '<div class="pays" id="pays">' + pays + '</div><div id="payNote"></div>' + fld('trx', t('trx'), '<input id="fTrx" placeholder="8N7A6XXXXX" autocomplete="off">', 1).replace('class="field"', 'class="field" hidden') + fld('proof', t('proof'), '<input id="fProof" type="file" accept="image/*">', 1).replace('class="field"', 'class="field" hidden')) +
       '</div><div><div class="panel cosum"><h3 style="margin-top:0">' + t('summary') + '</h3>' +
-      st.cart.map(function (c) { var p = P[c.id]; return '<div class="row"><span class="e" style="width:48px;height:48px;overflow:hidden;border-radius:10px;font-size:26px">' + (p.img ? '<img src="' + p.img + '" alt="" style="width:48px;height:48px;object-fit:cover">' : p.e) + '</span><div style="flex:1;font-size:13px"><b>' + esc(p.name) + '</b><div style="color:#64748b">' + esc(c.opt) + ' × ' + c.q + '</div></div><b style="font-size:14px">' + tk(p.price * c.q) + '</b></div>'; }).join('') +
+      st.cart.map(function (c) { var p = P[c.id]; return '<div class="row"><span class="e" style="width:48px;height:48px;overflow:hidden;border-radius:10px;font-size:26px">' + (p.img ? '<img src="' + p.img + '" alt="" style="width:48px;height:48px;object-fit:cover">' : p.e) + '</span><div style="flex:1;font-size:13px"><b>' + esc(p.name) + '</b><div style="color:#64748b">' + esc(c.opt) + ' × ' + c.q + (itemKg(c.id, c.opt) > 0 ? ' · ⚖️ ' + kgT(itemKg(c.id, c.opt) * c.q) : '') + '</div></div><b style="font-size:14px">' + tk(p.price * c.q) + '</b></div>'; }).join('') +
       '<div style="display:flex;gap:6px;margin:12px 0"><input id="fCoupon" placeholder="' + t('coupon') + '" style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:10px"><button class="btn alt" style="width:auto" onclick="toast(\'' + (S.live ? 'Coupon not valid' : 'Demo: coupon applied') + '\')">' + t('apply') + '</button></div>' +
-      '<div class="tot"><div><span>' + t('subtotal') + '</span><b>' + tk(sub) + '</b></div><div><span>' + t('delCharge') + '</span><b id="dl">–</b></div><div class="big"><span>' + t('total') + '</span><b id="tot">' + tk(sub) + '</b></div></div>' +
+      '<div class="tot">' + (cartKg() > 0 ? '<div><span>⚖️ ' + t('totWeight') + '</span><b>' + kgT(cartKg()) + '</b></div>' : '') + '<div><span>' + t('subtotal') + '</span><b>' + tk(sub) + '</b></div><div><span>' + t('delCharge') + '</span><b id="dl">–</b></div><div class="big"><span>' + t('total') + '</span><b id="tot">' + tk(sub) + '</b></div></div>' +
       '<button class="btn hideM" id="placeBtn" style="margin-top:12px;padding:14px;font-size:16px" onclick="placeOrder()">' + t('confirm') + '</button><p id="placeMsg" class="small">🔒 ' + (S.live ? 'Your details go only to this shop.' : 'Demo store: no real order is made.') + '</p></div></div></div>';
   }
   function bindCheckout() {
@@ -813,8 +823,8 @@ function start(S, P, liveId) {
     var dv = $('fDiv'), ds = $('fDist'), up = $('fUpz'), upt = $('fUpzT');
     function setZone() {
       var di = dv.value === '' ? null : BD[+dv.value], d = di && ds.value !== '' ? di[2][+ds.value] : null;
-      var inside = d && d[0] === 'Dhaka', del = d ? (inside ? DIN : DOUT) : 0; coState.zone = d ? (inside ? 'inside' : 'outside') : '';
-      $('zoneBox').innerHTML = d ? '<div class="zcard on"><b>🚚 ' + (inside ? t('inside') : t('outside')) + '</b><span>' + (inside ? t('days1') : t('days3')) + ' · Steadfast / Pathao</span><b class="zp">৳ ' + del + '</b></div>' : '<span class="small">' + t('pickDist') + '</span>';
+      var inside = d && d[0] === 'Dhaka', W = cartKg(), del = d ? delFor(inside ? 'inside' : 'outside', W) : 0; coState.zone = d ? (inside ? 'inside' : 'outside') : '';
+      $('zoneBox').innerHTML = d ? '<div class="zcard on"><b>🚚 ' + (inside ? t('inside') : t('outside')) + '</b><span>' + (inside ? t('days1') : t('days3')) + ' · Steadfast / Pathao' + (W > 0 ? ' · ⚖️ ' + kgT(W) : '') + '</span><b class="zp">৳ ' + del + '</b></div>' + (W > 1 ? '<p class="small" style="margin:6px 2px 0">৳' + (inside ? DIN : DOUT) + ' ' + t('upTo1') + ' + ৳' + (inside ? DKIN : DKOUT) + ' × ' + Math.ceil(W - 1 - 1e-9) + ' kg</p>' : '') : '<span class="small">' + t('pickDist') + '</span>';
       $('dl').textContent = d ? tk(del) : '–'; $('tot').textContent = tk(sub + del); $('bbTot').textContent = tk(sub + del);
     }
     dv.onchange = function () {
@@ -896,9 +906,9 @@ function start(S, P, liveId) {
     if (bad.length) { var w = document.getElementById('w_' + bad[0]); if (w) { w.scrollIntoView({ behavior: 'smooth', block: 'center' }); var i = w.querySelector('input,select,textarea'); if (i) setTimeout(function () { i.focus(); }, 300); } toast(LANG === 'bn' ? 'লাল দাগ দেওয়া ঘরগুলো ঠিক করুন' : 'Please fix the fields in red'); return; }
     var v = function (x) { return document.getElementById(x).value.trim(); };
     var di = BD[+v('fDiv')], d = di[2][+v('fDist')], u = v('fUpz') === '__other' ? v('fUpzT') : v('fUpz');
-    var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0), del = coState.zone === 'inside' ? DIN : DOUT;
+    var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0), W = cartKg(), del = delFor(coState.zone, W);
     var O = { no: 0, date: new Date().toISOString(), name: v('fName').replace(/\s+/g, ' '), phone: v('fPhone'), email: v('fEmail'), division: di[0], district: d[0], upazila: u, address: v('fAddr'), zone: coState.zone, pay: coState.pay, trx: /bkash|nagad|rocket|bank/.test(coState.pay) ? v('fTrx') : '',
-      items: st.cart.map(function (c) { var p = P[c.id]; return { name: p.name, opt: c.opt, q: c.q, price: p.price, img: p.img }; }), sub: sub, del: del, total: sub + del, status: 'new' };
+      items: st.cart.map(function (c) { var p = P[c.id]; return { name: p.name, opt: c.opt, q: c.q, price: p.price, img: p.img, kg: itemKg(c.id, c.opt) }; }), sub: sub, del: del, total: sub + del, kg: W, status: 'new' };
     if (document.getElementById('fSave').checked) { cust.name = O.name; cust.phone = O.phone; cust.division = O.division; cust.district = O.district; cust.upazila = O.upazila; cust.address = O.address; if (O.email && !cust.email) cust.emailTyped = O.email; saveCust(); }
     var finish = function () { var all = myOrders(); all.unshift(O); try { localStorage.setItem(OKEY, JSON.stringify(all.slice(0, 30))); } catch (e) {} st.cart = []; save(); location.hash = '#/invoice/' + O.no; };
     if (!S.live) { O.no = 1025 + myOrders().length; return finish(); }
@@ -907,7 +917,7 @@ function start(S, P, liveId) {
     uploadProof(file).then(function (path) { return sb('rpc/place_store_order_v3', {
       p_slug: S.slug, p_name: O.name, p_phone: O.phone, p_email: O.email, p_division: O.division, p_district: O.district, p_upazila: O.upazila, p_address: O.address,
       p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: O.pay, p_trx: O.trx, p_note: O.pay === 'bank' ? 'Bank ref: ' + O.trx : '', p_proof: path || '',
-    }); }).then(function (r) { O.no = r.order_no; O.payState = r.payment_status || ''; if (r.total) { O.total = +r.total; O.del = O.total - O.sub; } track('Purchase', { value: O.total, order: String(O.no), items: st.cart.map(function (c) { return { id: c.id, name: P[c.id].name, price: P[c.id].price, q: c.q }; }) }); finish(); })
+    }); }).then(function (r) { O.no = r.order_no; O.payState = r.payment_status || ''; if (r.total) { O.total = +r.total; O.del = O.total - O.sub; } if (r.weight_kg != null) O.kg = +r.weight_kg; track('Purchase', { value: O.total, order: String(O.no), items: st.cart.map(function (c) { return { id: c.id, name: P[c.id].name, price: P[c.id].price, q: c.q }; }) }); finish(); })
       .catch(function (e) { if (b) { b.disabled = false; b.textContent = t('confirm'); } toast(e.message); });
   };
 
@@ -934,7 +944,7 @@ function start(S, P, liveId) {
   function printOrder(O) {
     return { order_no: O.no, customer_name: O.name, phone: O.phone, email: O.email, address: O.address, upazila: O.upazila, district: O.district, division: O.division,
       items: O.items, subtotal: O.sub, delivery: O.del, total: O.total, area: O.zone, status: O.status || 'new', courier: O.courier, tracking: O.tracking,
-      payment_method: O.pay, trx_id: O.trx, created_at: O.date };
+      payment_method: O.pay, trx_id: O.trx, created_at: O.date, weight_kg: O.kg || 0 };
   }
   function invoice(no) {
     var O = myOrders().filter(function (o) { return String(o.no) === String(no); })[0];
