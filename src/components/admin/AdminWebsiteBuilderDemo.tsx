@@ -81,7 +81,16 @@ const TREE: Node[] = [
       n('ABANDONED CARTS', ['People who left items in the cart', 'Send a reminder']),
       n('RETURNS', ['Return / exchange requests', 'Approve or reject with a note']),
       n('NOTIFICATIONS', ['New order by SMS, e-mail or WhatsApp', 'ROSE tells the owner by voice']),
-      n('STAFF', ['Give staff access by Gmail', 'Activity log: who changed what']),
+      {
+        title: 'STAFF',
+        value: 'GMAIL',
+        children: [
+          n('ADD STAFF', ['Type the staff Gmail, choose a ROLE, tap SEND INVITE', 'Staff gets an e-mail and a notice in ROSE', 'Staff signs in with that same Gmail (Google login)', 'Sees ONLY the bars their role allows', 'Limit by plan: Starter 1, Pro 3, Business 10 staff']),
+          n('ROLES', ['MANAGER: everything except payments setup, domain and staff', 'ORDER STAFF: Orders, courier booking, invoices, returns', 'PRODUCT STAFF: Products, categories, images, stock', 'CHAT SUPPORT: Live chat and reviews replies', 'MARKETING: Offers, coupons, homepage banners, pixels, blog', 'ACCOUNTS: Dashboard, sales reports, payments list (view only)', 'CUSTOM: owner ticks each bar ON / OFF (view or edit)']),
+          n('SAFETY', ['Only the OWNER can delete the store, change payment numbers, domain or staff', 'Every action is checked on the server, a hidden button is not enough', 'Staff cannot see customer card or bank details', 'REMOVE: access stops at once, also logs out', 'Pause staff for a few days without deleting']),
+          n('ACTIVITY LOG', ['Who did what and when: price change, order status, refunds', 'Filter by staff name', 'ROSE can read it out: \u201cRahim changed 3 prices today\u201d']),
+        ],
+      },
       n('DOMAIN & HOSTING', ['Subdomain, own domain or Hostinger download', 'Backup: export products and orders to Excel']),
     ],
   },
