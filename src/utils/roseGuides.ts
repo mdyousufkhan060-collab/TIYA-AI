@@ -116,14 +116,23 @@ const ALL_MODES = `WHAT ROSE OFFERS (tell anyone who asks, in full, whatever the
 - ROSE PREMIUM (Settings > 06 PREMIUM): text and voice credits.
 WHAT THIS USER CAN USE: only the tools of their own mode (below). A Personal or Student user CAN build and run a website / store with the Store Builder, and manage it themselves there. But ROSE's Business help (replying to customers, managing orders in ROSE, parcel booking, approvals, courier check, sales reports) works only in BUSINESS mode. If they ask for that, say kindly that you can't do it in their mode, then tell them how: Settings > 07 WORKSPACE > M MODE > BUSINESS (18+, same Gmail, no new account needed). Their own data stays. Then list what they will get in Business. Policies: myrosebd.com/policies.html.`;
 
+const STORE_BUILDER = `MAKING A STORE FOR SOMEONE (when anyone says "ওয়েবসাইট / দোকান / অনলাইন শপ বানাতে চাই"):
+1 Ask, one question at a time, short and friendly: what do they sell? Then pick the design: food or restaurant → foodbazaar; clothes, shoes, fashion → fashionhub; grocery, vegetables, fish, daily needs → sotadari; mixed gadgets, electronics, beauty, many kinds → shopshotoi; furniture, home decor → homenest; medicine, pharmacy, health products → medicare. Tell them the design name and that they can see it at myrosebd.com/demos/store.html?s=<key>.
+2 Then ask: company name in English, name in Bangla (optional), WhatsApp number (11 digits), another phone (optional), second email (optional), full address where customers find them, city / district. Repeat it back once and ask "ঠিক আছে?".
+3 Then give the ready link with everything filled, spaces as %20: https://www.myrosebd.com/start?d=<key>&name=<English name>&bn=<Bangla name>&wa=<WhatsApp>&ph2=<other phone>&addr=<address>&city=<city>&e2=<second email> . They open it, tap Continue with Google with their company Gmail, check the form, add logo and banner photos if they want, and tap START 5-DAY FREE STORE. The store is live at once at name.myrosebd.com with the full demo copied (categories, products, banners), free for 5 days.
+4 After that: products, prices and photos in myrosebd.com/app → Settings → 07 WORKSPACE → STORE · WEBSITE (02 PRODUCTS, 03 CATEGORIES, 04 HOMEPAGE & DESIGN, 09 COMPANY INFO); buy 3, 6, 9, 12 or 24 months in 08 PLAN & RENEW.
+PHOTOS: any size works; ROSE makes every photo small (WebP) and still sharp, so the store stays fast. Best sizes: product 1000×1000 px square, logo 400×400 px PNG, banner 1600×600 px wide. Up to 8 photos per product.
+Never create the store yourself or ask for passwords; the owner taps START. Each person gets their own separate copy of a design: many shops can use the same design, their data never mixes.`;
+
 export function getRoseGuide(mode: string | null | undefined, isAdmin: boolean): string {
-  if (isAdmin) return [WHATS_NEW_ADMIN, COMMON, ACTIONS, ADMIN, BUSINESS, STUDENT, PERSONAL, ALL_MODES].join('\n\n');
+  if (isAdmin) return [WHATS_NEW_ADMIN, COMMON, ACTIONS, ADMIN, BUSINESS, STUDENT, PERSONAL, ALL_MODES, STORE_BUILDER].join('\n\n');
   const own = mode === 'business' ? BUSINESS : mode === 'student' ? STUDENT : PERSONAL;
   return [
     COMMON,
     ACTIONS,
     own,
     ALL_MODES,
+    STORE_BUILDER,
     WHATS_NEW_USER,
     'You may explain every mode and plan to anyone, but only DO the tools of this user\'s own mode. Never describe the Admin panel to normal users.',
   ].join('\n\n');

@@ -57,8 +57,19 @@ export function loadDemos(): Promise<Record<string, Demo>> {
     document.head.appendChild(s);
   });
 }
-/** Phone photo -> small WebP in the store's own folder; returns the public link. */
+/** Image size hints shown next to every upload. Any size works: ROSE shrinks it. */
+export const IMG_HINT = {
+  product: 'Best 1000 × 1000 px (square). Any size works: ROSE makes it small and fast, it still looks sharp.',
+  logo: 'Best 400 × 400 px, PNG with a clear background.',
+  banner: 'Best 1600 × 600 px (wide). Big photos are made small by themselves.',
+};
+/**
+ * Phone photo -> sharp, small WebP in the store's own folder; returns the public link.
+ * Big photos (5-20 MB) become about 80-250 KB: scaled down in steps (keeps details), quality 0.85.
+ */
 export async function uploadImage(storeId: string, file: File, max = 1200): Promise<string> {
+  if (!/^image\//.test(file.type)) throw new Error('Choose a photo (JPG, PNG or WebP).');
+  if (file.size > 40 * 1024 * 1024) throw new Error('This photo is too big (over 40 MB).');
   const url = URL.createObjectURL(file);
   const img = await new Promise<HTMLImageElement>((res, rej) => {
     const i = new Image();
@@ -67,14 +78,33 @@ export async function uploadImage(storeId: string, file: File, max = 1200): Prom
     i.src = url;
   });
   const k = Math.min(1, max / Math.max(img.width, img.height));
+  const W = Math.max(1, Math.round(img.width * k));
+  const H = Math.max(1, Math.round(img.height * k));
+  // step down by halves for a sharp result, then the final size
+  let src: CanvasImageSource = img;
+  let w = img.width;
+  let h = img.height;
+  while (w / 2 > W && h / 2 > H) {
+    const c2 = document.createElement('canvas');
+    c2.width = Math.round(w / 2);
+    c2.height = Math.round(h / 2);
+    const x2 = c2.getContext('2d')!;
+    x2.imageSmoothingQuality = 'high';
+    x2.drawImage(src, 0, 0, c2.width, c2.height);
+    src = c2;
+    w = c2.width;
+    h = c2.height;
+  }
   const c = document.createElement('canvas');
-  c.width = Math.round(img.width * k);
-  c.height = Math.round(img.height * k);
-  c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(src, 0, 0, W, H);
   URL.revokeObjectURL(url);
-  const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not convert the photo'))), 'image/webp', 0.82));
+  const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not convert the photo'))), 'image/webp', 0.85));
   const path = `${storeId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
-  const { error } = await supabase.storage.from('store-media').upload(path, blob, { contentType: 'image/webp', upsert: false });
+  const { error } = await supabase.storage.from('store-media').upload(path, blob, { contentType: 'image/webp', upsert: false, cacheControl: '31536000' });
   if (error) throw new Error(error.message);
   return supabase.storage.from('store-media').getPublicUrl(path).data.publicUrl;
 }
@@ -1047,7 +1077,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
                 setMsg('');
                 try {
                   const urls: string[] = [];
-                  for (const f of files) urls.push(await uploadImage(store.id, f));
+                  for (const f of files) urls.push(await uploadImage(store.id, f, 1200));
                   setEdit((x) => ({ ...(x || {}), images: [...((x?.images || []).filter(Boolean)), ...urls].slice(0, 8) }));
                 } catch (err: any) {
                   setMsg(String(err?.message || err));
@@ -1058,6 +1088,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
             </label>
           )}
         </div>
+        <p className="px-1 text-[10.5px] text-slate-400">{IMG_HINT.product}</p>
         <div className="space-y-2 rounded-lg border border-teal-900 bg-teal-950/30 p-2">
           <div className="grid grid-cols-2 gap-2">
             <select className={input} value={edit.options_label || 'Size'} onChange={(e) => set('options_label', e.target.value)}>
@@ -1163,7 +1194,7 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
     <div className="space-y-2">
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">STORE</p>
-        <p className="text-[11px] text-slate-400">LOGO (picture) and NAME are separate.</p>
+        <p className="text-[11px] text-slate-400">LOGO (picture) and NAME are separate. {IMG_HINT.logo}</p>
         <div className="flex items-center gap-2">
           {s.logo_url ? <img src={s.logo_url} alt="Logo" className="h-12 w-12 rounded-lg bg-white object-contain" /> : <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-black/30 text-2xl">{s.logo}</span>}
           <label className={btn + ' flex-1 cursor-pointer bg-white/10'}>
@@ -1196,6 +1227,7 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
       </div>
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">BANNERS</p>
+        <p className="text-[10.5px] text-slate-400">{IMG_HINT.banner}</p>
         {s.banners.map((b, i) => (
           <div key={i} className="space-y-1 rounded-lg bg-black/30 p-2">
             <div className="flex gap-2">

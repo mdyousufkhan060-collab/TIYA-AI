@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
+import { IMG_HINT, RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
 
 /**
  * myrosebd.com/start?d=foodbazaar — take a demo store as your own:
@@ -20,7 +20,20 @@ export default function StartStorePage() {
   const [email, setEmail] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [existing, setExisting] = useState<{ slug: string; name: string } | null>(null);
-  const [f, setF] = useState({ name: '', nameBn: '', slug: '', email: '', email2: '', whatsapp: '', phone2: '', address: '', city: 'Dhaka', sample: true });
+  const pre = (k: string) => (qs.get(k) || '').slice(0, 200);
+  const [f, setF] = useState(() => {
+    let saved: Record<string, string> = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY + '_form') || '{}'); } catch { /* ignore */ }
+    const v = (k: string, q: string, d = '') => pre(q) || saved[k] || d;
+    return {
+      name: v('name', 'name'), nameBn: v('nameBn', 'bn'), slug: v('slug', 'slug'), email: '', email2: v('email2', 'e2'),
+      whatsapp: v('whatsapp', 'wa').replace(/\D/g, '').slice(0, 11), phone2: v('phone2', 'ph2').replace(/\D/g, '').slice(0, 11),
+      address: v('address', 'addr'), city: v('city', 'city', 'Dhaka'), sample: true,
+    };
+  });
+  useEffect(() => {
+    try { localStorage.setItem(KEY + '_form', JSON.stringify(f)); } catch { /* ignore */ }
+  }, [f]);
   const [logo, setLogo] = useState<File | null>(null);
   const [banners, setBanners] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -110,6 +123,7 @@ export default function StartStorePage() {
       if ((sd as { ok?: boolean } | null)?.ok) url = `https://${slug}.myrosebd.com`;
       const { data: acc2 } = await supabase.rpc('my_website_access');
       localStorage.removeItem(KEY);
+      localStorage.removeItem(KEY + '_form');
       setDone({ url, ends: (acc2 as { ends_at?: string } | null)?.ends_at || '' });
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e));
@@ -119,10 +133,10 @@ export default function StartStorePage() {
   };
 
   const shell = (body: React.ReactNode) => (
-    <div className="min-h-[100dvh] bg-[#07090D] px-4 py-6 text-white">
-      <div className="mx-auto max-w-xl space-y-4">
+    <div className="min-h-[100dvh] bg-[#07090D] px-4 py-5 text-white md:px-8">
+      <div className="mx-auto max-w-5xl space-y-4">
         <a href="/demos" className="text-[12px] font-bold text-teal-300">‹ All designs</a>
-        <h1 className="text-2xl font-extrabold">Get your own store <span className="block text-base font-semibold text-slate-400">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span></h1>
+        <h1 className="text-2xl font-extrabold md:text-3xl">Get your own store <span className="block text-base font-semibold text-slate-400">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span></h1>
         {body}
         <p className="pt-4 text-center text-[11px] text-slate-500">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a className="underline" href="/policies.html">Policies</a></p>
       </div>
@@ -132,12 +146,14 @@ export default function StartStorePage() {
   if (!ready) return shell(<Loader2 className="h-6 w-6 animate-spin text-teal-300" />);
 
   const designs = (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-3 gap-1.5 md:grid-cols-2">
       {Object.entries(demos).map(([k, x]) => (
-        <button key={k} type="button" onClick={() => { setKey(k); localStorage.setItem(KEY, k); }} className={`rounded-xl border p-2 text-left ${key === k ? 'border-teal-400 bg-teal-500/10' : 'border-white/10 bg-white/[0.03]'}`}>
-          <span className="text-2xl">{x.logo}</span>
-          <span className="block truncate text-[12px] font-bold">{x.name}</span>
-          <span className="block truncate text-[10.5px] text-slate-400">{x.type}</span>
+        <button key={k} type="button" onClick={() => { setKey(k); localStorage.setItem(KEY, k); }} className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left ${key === k ? 'border-teal-400 bg-teal-500/10' : 'border-white/10 bg-white/[0.03]'}`}>
+          <span className="text-xl">{x.logo}</span>
+          <span className="min-w-0">
+            <span className="block truncate text-[12px] font-bold">{x.name}</span>
+            <span className="block truncate text-[10px] text-slate-400">{x.type}</span>
+          </span>
         </button>
       ))}
     </div>
@@ -180,9 +196,17 @@ export default function StartStorePage() {
     );
 
   return shell(
-    <div className="space-y-4">
-      <p className="text-[13px] text-slate-300">Design <span className={bn}>ডিজাইন</span></p>
-      {designs}
+    <div className="grid gap-4 md:grid-cols-[300px_1fr] md:items-start">
+      <div className="space-y-2 md:sticky md:top-4">
+        <p className="text-[13px] text-slate-300">Design <span className={bn}>ডিজাইন</span></p>
+        {designs}
+        {d && (
+          <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="block rounded-lg border border-white/10 px-2 py-1.5 text-center text-[12px] text-teal-300">
+            See {d.name} demo ↗
+          </a>
+        )}
+        <p className="hidden text-[11.5px] text-slate-400 md:block">You get a full copy of this website: pages, categories, banners and demo products. Then change anything.</p>
+      </div>
       <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         <p className="text-[12px] text-slate-400">Signed in as <b className="text-white">{email}</b></p>
         <label className={lbl}>Company name (English) *<span className={bn}>কোম্পানির নাম</span>
@@ -201,16 +225,23 @@ export default function StartStorePage() {
           <label className={lbl}>Other phone<span className={bn}>অন্য ফোন</span>
             <input className={input + ' mt-1'} value={f.phone2} onChange={(e) => set('phone2', e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" placeholder="optional" /></label>
         </div>
-        <label className={lbl}>Full address *<span className={bn}>পুরো ঠিকানা (কাস্টমার যেখানে আপনাকে পাবে)</span>
-          <textarea className={input + ' mt-1'} rows={2} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area, thana, district" /></label>
-        <label className={lbl}>City / District<span className={bn}>শহর / জেলা</span>
-          <input className={input + ' mt-1'} value={f.city} onChange={(e) => set('city', e.target.value)} /></label>
-        <label className={lbl}>Logo<span className={bn}>লোগো (ঐচ্ছিক)</span>
-          <input className="mt-1 block w-full text-[12px] text-slate-300" type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] || null)} /></label>
-        <label className={lbl}>Banner photos (up to 4)<span className={bn}>ব্যানারের ছবি</span>
-          <input className="mt-1 block w-full text-[12px] text-slate-300" type="file" accept="image/*" multiple onChange={(e) => setBanners(Array.from(e.target.files || []).slice(0, 4))} /></label>
-        <label className="flex items-center gap-2 text-[13px] text-slate-200">
-          <input type="checkbox" checked={f.sample} onChange={(e) => set('sample', e.target.checked)} /> Start with the demo products (change later) <span className={bn}>ডেমো প্রোডাক্ট দিয়ে শুরু</span>
+        <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+          <label className={lbl}>Full address *<span className={bn}>পুরো ঠিকানা</span>
+            <textarea className={input + ' mt-1'} rows={2} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area, thana, district" /></label>
+          <label className={lbl}>City / District<span className={bn}>শহর / জেলা</span>
+            <input className={input + ' mt-1'} value={f.city} onChange={(e) => set('city', e.target.value)} /></label>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className={lbl}>Logo<span className={bn}>লোগো (ঐচ্ছিক)</span>
+            <input className="mt-1 block w-full text-[12px] text-slate-300" type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] || null)} />
+            <span className="mt-0.5 block text-[10.5px] font-normal text-slate-500">{IMG_HINT.logo}</span></label>
+          <label className={lbl}>Banner photos (up to 4)<span className={bn}>ব্যানারের ছবি</span>
+            <input className="mt-1 block w-full text-[12px] text-slate-300" type="file" accept="image/*" multiple onChange={(e) => setBanners(Array.from(e.target.files || []).slice(0, 4))} />
+            <span className="mt-0.5 block text-[10.5px] font-normal text-slate-500">{IMG_HINT.banner}</span></label>
+        </div>
+        <label className="flex items-start gap-2 text-[13px] text-slate-200">
+          <input type="checkbox" className="mt-1" checked={f.sample} onChange={(e) => set('sample', e.target.checked)} />
+          <span>Copy the full demo website: categories, products and banners (change later) <span className={bn}>পুরো ডেমো ওয়েবসাইট কপি হবে</span></span>
         </label>
         <button type="button" disabled={busy || !d} onClick={() => void create()} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 text-[14px] font-extrabold text-black disabled:opacity-60">
           {busy && <Loader2 className="h-4 w-4 animate-spin" />} START 5-DAY FREE STORE

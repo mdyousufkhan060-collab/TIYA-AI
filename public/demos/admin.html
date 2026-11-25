@@ -173,6 +173,7 @@
   // ---------------- bars ----------------
   var BARS = [
     ['dashboard', 'DASHBOARD', '📊', '#1d4ed8', function () { return 'TODAY'; }],
+    ['plan', 'PLAN & PAYMENT', '⭐', '#f59e0b', function () { return 'TRIAL · 3 DAYS LEFT'; }],
     ['orders', 'ORDERS', '🧾', '#7c3aed', function () { return st.orders.filter(function (o) { return o.st === 'new'; }).length + ' NEW'; }],
     ['products', 'PRODUCTS', '📦', '#0d9488', function () { return st.products.length + ' ITEMS'; }],
     ['categories', 'CATEGORIES', '🗂️', '#ca8a04', function () { return st.cats.length; }],
@@ -194,6 +195,42 @@
 
   // ---------------- views ----------------
   var V = {};
+  // ---------------- plan & payment (real stores: STORE · WEBSITE > 08 PLAN & RENEW) ----------------
+  var PL = { plans: [['starter', 'STARTER', 999, '1 store · 300 products · 1 staff · name.myrosebd.com'], ['pro', 'PRO', 1999, '1 store · unlimited products · 3 staff · own domain'], ['business', 'BUSINESS', 3999, '3 stores · unlimited products · 10 staff · own domain']],
+    months: [[3, 0], [6, 5], [9, 10], [12, 15], [24, 25]], pay: { bKash: '01671060679', Nagad: '01671060679', Rocket: '016710606798' }, plan: 'starter', m: 3, method: 'bKash', loaded: false };
+  window.PL = PL;
+  (function loadPlanInfo() {
+    var U = 'https://ukgwipazzjstjkdfaozg.supabase.co/rest/v1/', K = 'sb_publishable_CRMgURG899vqIqUIsADWgw_p90ZliES', H = { apikey: K, Authorization: 'Bearer ' + K };
+    try {
+      fetch(U + 'store_plan_prices?select=*&order=sort', { headers: H }).then(function (r) { return r.json(); }).then(function (rows) {
+        if (Array.isArray(rows) && rows.length) PL.plans = rows.map(function (r) { return [r.plan, r.plan.toUpperCase(), Number(r.monthly), r.stores + ' store' + (r.stores > 1 ? 's' : '') + ' · ' + (r.products > 10000 ? 'unlimited' : r.products) + ' products · ' + r.staff + ' staff · ' + (r.own_domain ? 'own domain' : 'name.myrosebd.com')]; });
+        if (location.hash === '#plan') render();
+      }).catch(function () {});
+      fetch(U + 'rpc/get_payment_info', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: '{}' }).then(function (r) { return r.json(); }).then(function (x) {
+        if (x && x.bkash) PL.pay = { bKash: x.bkash, Nagad: x.nagad || x.bkash, Rocket: x.rocket || x.bkash };
+        if (location.hash === '#plan') render();
+      }).catch(function () {});
+    } catch (e) {}
+  })();
+  var tkf = function (n) { return Math.round(n).toLocaleString('en-IN') + ' Tk'; };
+  V.plan = function () {
+    var cur = PL.plans.filter(function (p) { return p[0] === PL.plan; })[0] || PL.plans[0];
+    var off = (PL.months.filter(function (m) { return m[0] === PL.m; })[0] || [3, 0])[1];
+    var total = Math.round(cur[2] * PL.m * (100 - off) / 100);
+    var chip = function (on, html, fn) { return '<button class="btn ' + (on ? '' : 'alt') + '" style="flex:1;padding:8px 4px" onclick="' + fn + '">' + html + '</button>'; };
+    return '<div class="card" style="border:1px solid #f59e0b66;background:#f59e0b14"><b>NOW: 5-DAY FREE TRIAL</b><p class="note" style="margin-top:4px">3 days left (demo). When the trial ends the store pauses; choose a plan here and it opens again at once. Nothing is deleted.</p></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">1 · CHOOSE A PLAN</b>' + PL.plans.map(function (p) {
+        return '<div class="row" style="cursor:pointer;border:1px solid ' + (p[0] === PL.plan ? '#2dd4bf' : '#1f2937') + ';border-radius:10px;padding:8px;margin-top:6px" onclick="PL.plan=\'' + p[0] + '\';render()"><div style="flex:1"><b>' + p[1] + '</b><div style="font-size:11.5px;color:#94a3b8">' + p[3] + '</div></div><b style="color:#5eead4;white-space:nowrap">' + tkf(p[2]) + ' / month</b></div>';
+      }).join('') + '</div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">2 · HOW LONG</b><div style="display:flex;gap:5px;margin-top:6px">' + PL.months.map(function (m) { return chip(m[0] === PL.m, m[0] + 'm' + (m[1] ? '<br><small style="color:#fbbf24">-' + m[1] + '%</small>' : ''), 'PL.m=' + m[0] + ';render()'); }).join('') + '</div>' +
+      '<div class="row" style="margin-top:8px;border:1px solid #f59e0b66;border-radius:10px;padding:8px"><span style="flex:1">' + cur[1] + ' · ' + PL.m + ' months</span><b style="font-size:18px;color:#fbbf24">' + tkf(total) + '</b></div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">3 · PAY AND SEND THE TrxID</b><div style="display:flex;gap:5px;margin-top:6px">' + ['bKash', 'Nagad', 'Rocket'].map(function (m) { return chip(m === PL.method, '<span style="display:inline-flex;align-items:center;gap:5px">' + (window.ROSE_LOGO ? window.ROSE_LOGO(m.toLowerCase(), 16, true) : '') + m + '</span>', 'PL.method=\'' + m + '\';render()'); }).join('') + '</div>' +
+      '<p class="note" style="margin-top:8px">Send Money <b style="color:#fbbf24">' + tkf(total) + '</b> to ' + PL.method + ' <b style="color:#fff;user-select:all">' + PL.pay[PL.method] + '</b>, then write the number you paid from and the TrxID.</p>' +
+      '<div class="field"><span>Your number</span><input placeholder="01XXXXXXXXX" inputmode="numeric"></div><div class="field"><span>Transaction ID (TrxID)</span><input placeholder="e.g. CKP3ABC123"></div>' +
+      '<div class="btns">' + btn('SEND FOR CHECKING', "toast('Demo: in your real store the plan turns on as soon as the payment matches')") + '</div>' +
+      '<p class="note">In your real store this is STORE · WEBSITE → 08 PLAN &amp; RENEW. The plan turns on by itself when the payment is matched.</p></div>' +
+      '<a href="/start?d=' + k + '" class="card" style="display:block;margin-top:10px;text-align:center;background:#facc15;color:#111;font-weight:800;text-decoration:none">⭐ USE THIS DESIGN AS MY STORE · 5 DAYS FREE</a>';
+  };
   V.dashboard = function () {
     var today = st.orders.filter(function (o) { return o.st !== 'cancelled'; });
     var days = ['Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed'];
@@ -523,7 +560,7 @@
     var parts = route.split('/'), id = parts[0], arg = parts[1];
     var barId = id === 'order' ? 'orders' : id === 'product' ? 'products' : id;
     if (id !== 'product') draft = null;
-    var GROUPS = [['MAIN', ['dashboard', 'orders', 'products', 'categories', 'customers']], ['SELL', ['offers', 'reviews', 'chat', 'reports']], ['STORE', ['design', 'payments', 'delivery', 'print', 'pixels', 'seo', 'domain', 'staff']]];
+    var GROUPS = [['MAIN', ['dashboard', 'orders', 'products', 'categories', 'customers']], ['SELL', ['offers', 'reviews', 'chat', 'reports']], ['STORE', ['plan', 'design', 'payments', 'delivery', 'print', 'pixels', 'seo', 'domain', 'staff']]];
     var pc = '<nav class="pcnav">' + GROUPS.map(function (g) { return '<div class="gh">' + g[0] + '</div>' + g[1].map(function (bid) { var b = barOf(bid); var title = bid === 'seo' ? 'SEO' : b[1].charAt(0) + b[1].slice(1).toLowerCase().replace(/&/g, '&amp;'); return '<button class="ni' + (bid === barId ? ' on' : '') + '" onclick="go(\'' + bid + '\')"><span class="ni-ic" style="background:' + b[3] + '22">' + b[2] + '</span><span class="ni-t">' + title + '</span><span class="ni-v">' + b[4]() + '</span></button>'; }).join(''); }).join('') + '</nav>';
     side.innerHTML = head + pc + '<div class="bigbars">' + BARS.map(function (b, j) {
       return '<button class="bar' + (b[0] === barId ? ' on' : '') + '" onclick="go(\'' + b[0] + '\')"><span class="n">' + String(j + 1).padStart(2, '0') + '</span><span class="ic" style="background:' + b[3] + '22;border:1px solid ' + b[3] + '55">' + b[2] + '</span><span class="t">' + b[1] + '</span><span class="v">' + b[4]() + '</span><span class="chev">›</span></button>';
