@@ -510,7 +510,7 @@ export default function App() {
     if (lastUser.timestamp < appOpenedAtRef.current || fromOtherDeviceRef.current.has(lastUser.id)) return; // old or synced from another device
     const t = lastUser.text.trim().toLowerCase();
     if (
-      /(কেটে দাও|কেটে দেও|কেটে দে|কাইটা দাও|ফোন রাখো|ফোন রাখ|এখন রাখি|রাখি এখন|রাখলাম|পরে কথা বলব|পরে কথা হবে|কল কাটো|কল কেটে|ভয়েস বন্ধ|বাই বাই|আল্লাহ হাফেজ|kete dao|kete dau|bye bye|allah hafez)/i.test(t)
+      /(কেটে দাও|কেটে দেও|কেটে দে|কাইটা দাও|ফোন রাখো|ফোন রাখ|এখন রাখি|রাখি এখন|রাখলাম|পরে কথা বলব|পরে কথা হবে|কল কাটো|কল কেটে|ভয়েস বন্ধ|বাই বাই|আল্লাহ হাফেজ|তুমি ঘুমাও|ঘুমিয়ে পড়ো|এখন ঘুমাও|kete dao|kete dau|bye bye|allah hafez|काट दो|काट दे|बंद करो|फोन रखो)/i.test(t)
     ) {
       hangupHandledRef.current = lastUser.id;
       hangupMsgIdRef.current = lastUser.id;

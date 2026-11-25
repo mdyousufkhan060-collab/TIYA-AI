@@ -140,6 +140,7 @@ export function normalizeSearchSite(site: unknown): string {
 }
 
 const APP_WEB_URLS: Array<[RegExp, string]> = [
+  [/myrosebd|rose ?(web|site)|রোজের? ?(ওয়েব|সাইট)|তোমার ওয়েবসাইট/i, 'https://www.myrosebd.com/'],
   [/you ?tube|ইউটিউব/i, 'https://www.youtube.com/'],
   [/music|গান/i, 'https://music.youtube.com/'],
   [/face ?book|ফেসবুক/i, 'https://www.facebook.com/'],
@@ -487,6 +488,14 @@ export async function executePhoneAction(
       /* ignore */
     }
     return { success: true, via: 'web_fallback', messageBn: action.on ? 'ROSE-এর ক্যামেরা চালু হয়েছে, এখন ROSE দেখতে পাচ্ছে।' : 'ROSE-এর ক্যামেরা বন্ধ হয়েছে।' };
+  }
+  // ROSE's own website (myrosebd.com or a store link): open it as a page, also inside the Android app
+  if (action.action === 'open_app') {
+    const site = /^https?:\/\/[^\s]+$/i.test(action.app.trim()) && /myrosebd\.com/i.test(action.app) ? action.app.trim() : /myrosebd|rose ?(web|site)|রোজের? ?(ওয়েব|সাইট)|তোমার ওয়েবসাইট/i.test(action.app) ? 'https://www.myrosebd.com/' : '';
+    if (site) {
+      if (onOpenFallbackUrl) onOpenFallbackUrl(site);
+      return { success: true, via: 'web_fallback', fallbackUrl: site, messageBn: 'myrosebd.com খুলে দিয়েছি।' };
+    }
   }
   // "ROSE Access চালু করো" → Android opens the accessibility setting for ROSE
   if (action.action === 'open_app' && /(rose[\s_-]*access|accessibility|এক্সেস|অ্যাক্সেস|অ্যাকসেস)/i.test(action.app)) {
