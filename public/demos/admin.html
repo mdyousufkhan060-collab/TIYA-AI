@@ -516,7 +516,7 @@
   // ---------------- routing ----------------
   var side = document.getElementById('side'), main = document.getElementById('main');
   var head = '<div class="card store">' + (S.banners[0].img ? '<img src="' + IMG(S.banners[0].img, 120) + '" alt="">' : '<span style="font-size:32px">' + S.logo + '</span>') + '<div style="flex:1"><b>' + esc(S.name) + '</b><div style="font-size:11px;color:#94a3b8">' + k + '.myrosebd.com</div></div><span class="pill live">LIVE</span></div>';
-  head += '<a href="#rose" class="card rosecard" style="display:flex;align-items:center;gap:12px;border:1px solid rgba(45,212,191,.5);background:linear-gradient(90deg,rgba(20,184,166,.15),rgba(217,70,239,.1));text-decoration:none;color:inherit"><img src="/tiya-home.jpg?v=3" alt="ROSE" style="width:48px;height:48px;border-radius:99px;border:2px solid #2dd4bf;object-fit:cover;object-position:center 30%"><div style="flex:1"><div style="font-size:10.5px;font-weight:700;letter-spacing:.16em;color:#5eead4">ROSE SUPPORT</div><b style="font-size:16px">MYROSEBD.COM</b><div style="font-size:11px;color:#cbd5e1">Need help? Call or WhatsApp ROSE</div></div><span style="font-size:10px;font-weight:700;color:#99f6e4">OPEN ›</span></a>';
+  head += '<a href="#rose" class="card rosecard" style="display:flex;align-items:center;gap:12px;border:1px solid rgba(45,212,191,.5);background:linear-gradient(90deg,rgba(20,184,166,.15),rgba(217,70,239,.1));text-decoration:none;color:inherit"><img src="/tiya-home.jpg?v=3" alt="ROSE" style="width:48px;height:48px;border-radius:99px;border:2px solid #2dd4bf;object-fit:cover;object-position:center 30%"><div style="flex:1"><div style="font-size:10.5px;font-weight:700;letter-spacing:.16em;color:#5eead4">ROSE SUPPORT</div><b style="font-size:16px">MYROSEBD.COM</b><div style="font-size:11px;color:#cbd5e1">Plans · get a real store · help</div></div><span style="font-size:10px;font-weight:700;color:#99f6e4">OPEN ›</span></a>';
   var route = '';
   window.go = function (r) { location.hash = r; };
   function render() {
@@ -535,7 +535,13 @@
         '<div class="card"><b>' + C.admin + '</b><div style="font-size:12px;color:#94a3b8">Admin · ROSE Store Builder</div></div>' +
         C.phones.map(function (n) { return '<div class="card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="flex:1">' + n + '</b><a class="btn alt" href="tel:+' + intl(n) + '">CALL</a><a class="btn" style="background:#22c55e" target="_blank" rel="noopener" href="https://wa.me/' + intl(n) + '">WHATSAPP</a></div>'; }).join('') +
         C.emails.map(function (e) { return '<div class="card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="flex:1;word-break:break-all">' + e + '</b><a class="btn alt" href="mailto:' + e + '">EMAIL</a></div>'; }).join('') +
-        '<div class="card"><a class="btn" href="https://' + C.site + '" target="_blank" rel="noopener">OPEN ' + C.site.toUpperCase() + '</a></div>';
+        '<div class="card"><a class="btn" href="https://' + C.site + '" target="_blank" rel="noopener">OPEN ' + C.site.toUpperCase() + '</a></div>' +
+        '<h2 style="margin-top:18px">GET A REAL STORE LIKE THIS</h2>' +
+        [['5-DAY FREE TRIAL', 'Free', '1 store · 50 products · try everything'], ['STARTER', '999 Tk / month', '1 store · 300 products · 1 staff · name.myrosebd.com'], ['PRO', '1,999 Tk / month', '1 store · unlimited products · 3 staff · own domain'], ['BUSINESS', '3,999 Tk / month', '3 stores · unlimited products · 10 staff · own domain']].map(function (p) {
+          return '<div class="card" style="display:flex;align-items:center;gap:10px"><div style="flex:1"><b>' + p[0] + '</b><div style="font-size:11.5px;color:#94a3b8">' + p[2] + '</div></div><b style="color:#5eead4;white-space:nowrap">' + p[1] + '</b></div>';
+        }).join('') +
+        '<div class="card" style="font-size:12px;color:#94a3b8">3, 6, 9, 12 or 24 months · longer = up to 25% off · pay by bKash, Nagad or Rocket</div>' +
+        '<div class="card"><a class="btn" style="background:#facc15;color:#111" href="https://www.myrosebd.com/app" target="_blank" rel="noopener">START FREE TRIAL</a> <a class="btn alt" href="https://www.myrosebd.com/policies.html" target="_blank" rel="noopener">POLICIES</a></div>';
       return;
     }
     var bar = barOf(barId);

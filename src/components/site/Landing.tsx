@@ -471,6 +471,15 @@ export const Landing: React.FC = () => {
             <a href="/terms.html" className="flex items-center gap-1 hover:text-white">
               <Lock className="h-3 w-3" /> Terms
             </a>
+            <a href="/refund.html" className="hover:text-white">
+              Refund
+            </a>
+            <a href="/acceptable-use.html" className="hover:text-white">
+              Acceptable use
+            </a>
+            <a href="/policies.html" className="hover:text-white">
+              All policies
+            </a>
             <a href="/delete-account.html" className="hover:text-white">
               Delete account
             </a>

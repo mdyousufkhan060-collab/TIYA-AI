@@ -272,7 +272,7 @@
 </style>
 </head>
 <body>
-<div class="demo" id="demoBar"><div class="wrap"><span><b>DEMO STORE</b> · sample products · <b>ROSE Store Builder</b></span><span style="display:flex;gap:6px"><a id="adminLink" href="/demos/admin.html" style="background:#fff">See admin</a><a href="https://www.myrosebd.com/app">Get a real store like this</a></span></div></div>
+<div class="demo" id="demoBar"><div class="wrap"><span><b>DEMO STORE</b> · sample products · <b>ROSE Store Builder</b></span><span style="display:flex;gap:6px"><a id="adminLink" href="/demos/admin.html" style="background:#fff">See admin</a></span></div></div>
 <header class="top"><div class="wrap">
   <div class="bar">
     <a class="logo" href="#/"><span class="ic" id="logoIc"></span><span><b id="logoName"></b><small id="logoTag"></small></span></a>
@@ -480,7 +480,7 @@ function start(S, P, liveId) {
     '<p>Facebook · YouTube · TikTok · Instagram</p></div>' +
     '<div><h4>Shop</h4><p><a href="#/categories">All categories</a></p><p><a href="#/wishlist">Wishlist</a></p><p><a href="#/cart">Cart</a></p><p><a href="#/account">My orders</a></p></div>' +
     '<div><h4>Help</h4><p><a href="#/page/about">About us</a></p><p><a href="#/page/contact">Contact</a></p><p><a href="#/page/return">Return policy</a></p><p><a href="#/page/privacy">Privacy</a></p><p><a href="#/page/terms">Terms</a></p></div>' +
-    '<div><a href="#" class="made-rose" onclick="roseInfo();return false" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8"><img src="/tiya-home.jpg?v=3" alt="" style="width:20px;height:20px;border-radius:99px;object-fit:cover;object-position:center 30%">Made with ROSE · myrosebd.com</a><h4>We accept</h4><div class="paylogos">' + ['bkash', 'nagad', 'rocket', 'visa', 'mastercard', 'cod'].map(function (k) { return '<span>' + window.ROSE_LOGO(k, 24) + '</span>'; }).join('') + '</div><h4 style="margin-top:12px">Get the app</h4><span class="store-btn">▶ Google Play</span></div>';
+    '<div><a href="#" class="made-rose" onclick="roseInfo();return false" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8"><img src="/tiya-home.jpg?v=3" alt="" style="width:20px;height:20px;border-radius:99px;object-fit:cover;object-position:center 30%">Made with ROSE · myrosebd.com</a><h4>We accept</h4><div class="paylogos">' + ['bkash', 'nagad', 'rocket', 'visa', 'mastercard', 'cod'].map(function (k) { return '<span>' + window.ROSE_LOGO(k, 24) + '</span>'; }).join('') + '</div><a href="https://www.myrosebd.com/policies.html" target="_blank" rel="noopener" style="display:block;margin-top:10px;font-size:11px;color:#94a3b8">Privacy · Terms · Refund</a><h4 style="margin-top:12px">Get the app</h4><span class="store-btn">▶ Google Play</span></div>';
 
   function renderNav() {
     var h = location.hash || '#/';

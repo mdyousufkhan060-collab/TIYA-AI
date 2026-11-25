@@ -4,5 +4,8 @@
   <url><loc>https://www.myrosebd.com/developers</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://www.myrosebd.com/terms.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://www.myrosebd.com/privacy.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://www.myrosebd.com/policies.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://www.myrosebd.com/refund.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://www.myrosebd.com/acceptable-use.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://www.myrosebd.com/delete-account.html</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
 </urlset>

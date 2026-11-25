@@ -86,13 +86,22 @@ const ADMIN = `ADMIN GUIDE (only for the owner / admin). On a PC tap the small A
 06 GIFT CODES. 07 INCOME. 08 LOGIN ACTIVITY. 09 NOTIFY ALL. 10 MOTIVATION. 11 DEVELOPER TOOLS. 12 API PROVIDERS. 13 SYSTEM LOGS. 14 DELETE REQUESTS. 15 DEVELOPERS (public developer profiles and photos). 16 BUSINESSES (owners, call / email, business access ON / OFF). 17 TEAM ACTIVITY. 18 REPORTS & FEEDBACK (user reports with REPLY / SEEN / FIXED / CLOSE, and 👍 / 👎 totals). 19 IMTIAZ LIST (PC install and app work list). 20 STORE READINESS (Play Store and Microsoft Store checklist). 21 TUTORIAL VIDEOS (YouTube links for Personal, Student and Business how-to videos). 00 ADMIN GUIDE explains every bar.
 The admin has no credit limit and can use every mode's tools.`;
 
+const ALL_MODES = `WHAT ROSE OFFERS (tell anyone who asks, in full, whatever their mode):
+- PERSONAL: daily planning, tasks and reminders, Writer (letters, CVs, posts, emails), Content Studio, social posts, songs / YouTube / Google / maps, calls and messages (Android app), voice and chat.
+- STUDENT: everything in Personal plus notes, study routine, practice tests (MCQ), step-by-step explanations, maths working, English grammar, exam prep.
+- BUSINESS (18+): everything in Personal plus business profile, products, FAQ, ROSE replies to customers, orders, customers, customer courier check (GOOD / RISKY), couriers and parcel booking, discount rules, approvals by email, sales dashboard, expenses and profit, Team & Tasks agents.
+- WEBSITE / STORE BUILDER (Workspace > STORE · WEBSITE, every mode, 18+ for selling): 5-day free trial once per Gmail, then STARTER 999 Tk, PRO 1,999 Tk or BUSINESS 3,999 Tk per month (3-24 months, up to 25% off). Store at name.myrosebd.com or own domain (PRO and up), staff by Gmail with roles, couriers, invoices and stickers. Demos: myrosebd.com/demos.
+- ROSE PREMIUM (Settings > 06 PREMIUM): text and voice credits.
+WHAT THIS USER CAN USE: only the tools of their own mode (below). A Personal or Student user CAN build and run a website / store with the Store Builder, and manage it themselves there. But ROSE's Business help (replying to customers, managing orders in ROSE, parcel booking, approvals, courier check, sales reports) works only in BUSINESS mode. If they ask for that, say kindly that you can't do it in their mode, then tell them how: Settings > 07 WORKSPACE > M MODE > BUSINESS (18+, same Gmail, no new account needed). Their own data stays. Then list what they will get in Business. Policies: myrosebd.com/policies.html.`;
+
 export function getRoseGuide(mode: string | null | undefined, isAdmin: boolean): string {
-  if (isAdmin) return [COMMON, ACTIONS, ADMIN, BUSINESS, STUDENT, PERSONAL].join('\n\n');
+  if (isAdmin) return [COMMON, ACTIONS, ADMIN, BUSINESS, STUDENT, PERSONAL, ALL_MODES].join('\n\n');
   const own = mode === 'business' ? BUSINESS : mode === 'student' ? STUDENT : PERSONAL;
   return [
     COMMON,
     ACTIONS,
     own,
-    'Explain only this user\'s own mode. If they ask about another mode, say they can switch in Settings > 07 WORKSPACE > M MODE. Never describe the Admin panel to normal users.',
+    ALL_MODES,
+    'You may explain every mode and plan to anyone, but only DO the tools of this user\'s own mode. Never describe the Admin panel to normal users.',
   ].join('\n\n');
 }
