@@ -75,6 +75,7 @@ const GUIDE: Array<[string, string, string, string]> = [
   ['19', 'team_list', 'IMTIAZ LIST', 'PC install list and app work for Imtiaz. He ticks items done.'],
   ['20', 'store', 'STORE READINESS', 'Everything Google Play and Microsoft Store need: policies, data safety, rating, payments, screenshots.'],
   ['21', 'videos', 'TUTORIAL VIDEOS', 'YouTube links for Personal, Student and Business how-to videos.'],
+  ['22', 'website_builder', 'WEBSITE BUILDER', 'DEMO plan of the ROSE store builder: hosting, plans, 6 demo stores, store admin bars, SEO, live chat.'],
 ];
 
 /** Admin > 00 ADMIN GUIDE: what every admin bar is for. */

@@ -33,6 +33,7 @@ import { UserAvatar } from './UserAvatar';
 import { AdminReportsPage } from './AdminReportsPage';
 import { TeamChecklist } from '../settings/TeamChecklist';
 import { AdminVideosPage, AdminGuidePage } from './AdminGuideVideos';
+import { AdminWebsiteBuilderDemo } from './AdminWebsiteBuilderDemo';
 import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
@@ -58,7 +59,8 @@ type AdminView =
   | 'plans'
   | 'gifts'
   | 'income'
-  | 'developer_tools';
+  | 'developer_tools'
+  | 'website_builder';
 
 interface AdminScreenProps {
   settings: TiyaSettings;
@@ -443,6 +445,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               team_list: '19 Imtiaz List',
               store: '20 Store Readiness',
               videos: '21 Tutorial Videos',
+              website_builder: '22 Website Builder',
               guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
@@ -494,6 +497,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="19" title="IMTIAZ LIST" value="PC & APP" tone={activeView === 'team_list' ? 'accent' : 'default'} onClick={() => go('team_list')} testId="admin-bar-team-list" />
             <SettingsBar badge="20" title="STORE READINESS" value="PLAY · MS" tone={activeView === 'store' ? 'accent' : 'default'} onClick={() => go('store')} testId="admin-bar-store" />
             <SettingsBar badge="21" title="TUTORIAL VIDEOS" value="YOUTUBE" tone={activeView === 'videos' ? 'accent' : 'default'} onClick={() => go('videos')} testId="admin-bar-videos" />
+            <SettingsBar badge="22" title="WEBSITE BUILDER" value="DEMO" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
           </div>
   );
 
@@ -599,6 +603,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'team_list' && <TeamChecklist canEdit listName="IMTIAZ LIST" />}
         {view === 'store' && <TeamChecklist canEdit listName="STORE READINESS" />}
         {view === 'videos' && <AdminVideosPage />}
+        {view === 'website_builder' && <AdminWebsiteBuilderDemo />}
         {view === 'guide' && <AdminGuidePage onOpen={(v) => setView(v as AdminView)} />}
 
         {view === 'dashboard' && (
