@@ -85,6 +85,39 @@
     body:not(.inview) .main { display: none; }
     .grid4 { grid-template-columns: repeat(2, 1fr); }
   }
+  .pcnav { display: none; }
+  .side .store > div { min-width: 0; } .side .store > div div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (min-width: 821px) {
+    .layout { grid-template-columns: 250px 1fr; }
+    .bigbars { display: none; }
+    .pcnav { display: block; background: #0b1120; border: 1px solid #1e293b; border-radius: 14px; padding: 8px; }
+    .pcnav .gh { font-size: 10.5px; font-weight: 800; letter-spacing: .14em; color: #64748b; padding: 10px 10px 4px; }
+    .ni { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: 0; color: #cbd5e1; border-radius: 9px; padding: 7px 9px; text-align: left; font-size: 13.5px; position: relative; }
+    .ni:hover { background: #151b27; color: #fff; }
+    .ni.on { background: #0f2a2c; color: #5eead4; font-weight: 700; }
+    .ni.on::before { content: ''; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: #14b8a6; }
+    .ni-ic { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 14px; flex-shrink: 0; }
+    .ni-t { flex: 1; }
+    .ni-v { font-size: 10px; color: #94a3b8; background: #1e293b; border-radius: 99px; padding: 2px 7px; white-space: nowrap; }
+    .side .store { margin-bottom: 8px; }
+  }
+  .kv { display: grid; grid-template-columns: 90px 1fr; gap: 6px 10px; font-size: 13px; margin-top: 10px; }
+  .kv span { color: #94a3b8; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: #0a0f1a; border: 1px solid #334155; border-radius: 10px; padding: 6px; }
+  .chips .chip { display: inline-flex; align-items: center; gap: 4px; background: #14b8a6; color: #021014; font-weight: 800; border-radius: 8px; padding: 4px 4px 4px 9px; font-size: 12.5px; }
+  .chips .chip button { background: rgba(0,0,0,.15); border: 0; border-radius: 6px; width: 20px; height: 20px; font-size: 11px; color: #021014; }
+  .chips input { flex: 1; min-width: 120px; background: transparent; border: 0; color: #fff; padding: 6px; font-size: 13px; outline: none; }
+  .quick { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .quick button { background: transparent; border: 1px dashed #475569; color: #cbd5e1; border-radius: 8px; padding: 4px 8px; font-size: 11.5px; }
+  .sizebox { border: 1px solid #134e4a; background: #0b1a1d; border-radius: 12px; padding: 10px 10px 0; margin-bottom: 10px; }
+  .cnt { color: #64748b; text-align: right; }
+  .ph8 { position: relative; width: 64px; height: 64px; }
+  .ph8 img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 2px solid #334155; }
+  .ph8.main img { border-color: #14b8a6; }
+  .ph8 .pm, .ph8 .px { position: absolute; top: -6px; width: 20px; height: 20px; border-radius: 99px; border: 0; font-size: 11px; display: grid; place-items: center; }
+  .ph8 .pm { left: -6px; background: #facc15; color: #111; } .ph8 .px { right: -6px; background: #dc2626; color: #fff; }
+  .ph8 em { position: absolute; bottom: 2px; left: 2px; right: 2px; font-style: normal; font-size: 8.5px; font-weight: 800; text-align: center; background: #14b8a6; color: #021014; border-radius: 0 0 8px 8px; }
+  .radio { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #1e293b; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -113,18 +146,20 @@
     cats: S.categories.map(function (c) { return { name: c[0], icon: c[1] }; }),
     coupons: [{ code: 'ROSE10', text: '10% off, min 1,000 Tk', on: true }, { code: 'FREESHIP', text: 'Free delivery over 1,500 Tk', on: true }, { code: 'EID500', text: '500 Tk off, min 5,000 Tk', on: false }],
     pay: [['Cash on Delivery', true], ['bKash (Send Money + TrxID)', true], ['Nagad', true], ['Rocket', false], ['Bank transfer', false]],
-    couriers: [['Steadfast', true], ['Pathao', false], ['RedX', false]],
+    couriers: [['Steadfast', true, '#0f766e', 'Most used · 60/110 Tk'], ['Pathao', false, '#e11d48', 'Fast in Dhaka'], ['RedX', false, '#dc2626', 'All 64 districts'], ['Paperfly', false, '#2563eb', 'Good for outside Dhaka'], ['eCourier', false, '#7c3aed', 'Same day in Dhaka'], ['Sundarban Courier', false, '#16a34a', 'Office pickup, all districts'], ['SA Paribahan', false, '#ea580c', 'Heavy parcels, furniture']],
     staff: [['rahim.staff@gmail.com', 'ORDER STAFF'], ['mitu.design@gmail.com', 'PRODUCT STAFF']],
     banners: S.banners.map(function (b) { return { title: b.title, badge: b.badge, img: b.img }; }),
     chats: [], takeover: false,
   };
-  var names = ['Rahim U.', 'Nusrat J.', 'Tanvir A.', 'Sadia R.', 'Kamal H.', 'Mitu K.', 'Arif B.', 'Lima S.'];
-  var areas = ['Mirpur, Dhaka', 'Uttara, Dhaka', 'Chattogram', 'Dhanmondi, Dhaka', 'Sylhet', 'Gazipur', 'Khulna', 'Banani, Dhaka'];
+  var names = ['Rahim Uddin', 'Nusrat Jahan', 'Tanvir Ahmed', 'Sadia Rahman', 'Kamal Hossain', 'Mitu Khatun', 'Arif Billah', 'Lima Sultana'];
+  var areas = ['House 14, Road 3, Block C, Mirpur 10', 'House 7, Sector 11, Uttara', 'Flat 4B, Lalkhan Bazar Road, near Wasa', 'House 22, Road 9A, Dhanmondi', 'Zindabazar, Lamabazar Road, near Jame Mosque', 'Chowrasta, Board Bazar, near the school', 'House 5, KDA Avenue, Sonadanga', 'House 31, Road 11, Banani'];
+  var LOC = [['Dhaka', 'Dhaka', 'Mirpur'], ['Dhaka', 'Dhaka', 'Uttara'], ['Chattogram', 'Chattogram', 'Kotwali'], ['Dhaka', 'Dhaka', 'Dhanmondi'], ['Sylhet', 'Sylhet', 'Sylhet Sadar'], ['Dhaka', 'Gazipur', 'Gazipur Sadar'], ['Khulna', 'Khulna', 'Sonadanga'], ['Dhaka', 'Dhaka', 'Banani']];
+  var mails = ['rahim.uddin@gmail.com', '', 'tanvir.a@gmail.com', 'sadia.r@gmail.com', '', 'mitu.k@gmail.com', '', 'lima.s@gmail.com'];
   var stat0 = ['new', 'new', 'confirmed', 'packed', 'shipped', 'delivered', 'delivered', 'cancelled'];
   st.orders = names.map(function (n, i) {
-    var p = st.products[i % st.products.length], q = 1 + (i % 2), del = /Dhaka/.test(areas[i]) ? 60 : 120;
+    var p = st.products[i % st.products.length], q = 1 + (i % 2), del = LOC[i][1] === 'Dhaka' ? 60 : 120;
     return { no: 1024 - i, name: n, phone: '01' + (7 + (i % 3)) + '1234567' + i, area: areas[i], items: [{ p: p.id, q: q }], del: del, total: p.price * q + del,
-      pay: i % 3 ? 'COD' : 'bKash', trx: i % 3 ? '' : 'BK7' + (3920 + i) + 'XQ', st: stat0[i], time: (i * 37 + 9) + ' min ago', history: i === 7 ? '3 orders, 2 returned' : (i + 1) + ' orders, 0 returned', track: '' };
+      pay: i % 3 ? 'COD' : 'bKash', trx: i % 3 ? '' : 'BK7' + (3920 + i) + 'XQ', st: stat0[i], time: (i * 37 + 9) + ' min ago', history: i === 7 ? '3 orders, 2 returned' : (i + 1) + ' orders, 0 returned', track: '', email: mails[i], division: LOC[i][0], district: LOC[i][1], upazila: LOC[i][2], opt: p.opts[i % (p.opts.length || 1)] || '', note: '' };
   });
   st.reviews = st.products.slice(0, 4).map(function (p, i) { return { p: p.id, who: names[i], stars: i % 2 ? 4 : 5, text: ['Good quality, fast delivery.', 'Exactly as shown. Will order again.', 'Packing was nice, thanks!', 'Price is fair.'][i], reply: '', hidden: false }; });
   var P = function (id) { return st.products[id]; };
@@ -145,7 +180,8 @@
     ['reviews', 'REVIEWS', '⭐', '#eab308', function () { return '4.6 ★'; }],
     ['chat', 'LIVE CHAT', '💬', '#059669', function () { return st.takeover ? 'YOU' : 'ROSE'; }],
     ['payments', 'PAYMENTS', '💳', '#4f46e5', function () { return st.pay.filter(function (p) { return p[1]; }).length + ' ON'; }],
-    ['delivery', 'DELIVERY', '🚚', '#b45309', function () { return '60 / 120 TK'; }],
+    ['delivery', 'DELIVERY & COURIER', '🚚', '#b45309', function () { return st.couriers.filter(function (c) { return c[1]; }).length + ' ON'; }],
+    ['print', 'INVOICE & STICKER', '🏷️', '#e11d48', function () { return 'PRINT'; }],
     ['pixels', 'TRACKING & PIXELS', '📈', '#0284c7', function () { return 'ADS'; }],
     ['seo', 'SEO', '🔍', '#16a34a', function () { return '82 / 100'; }],
     ['staff', 'STAFF', '👤', '#9333ea', function () { return st.staff.length + ' / 3'; }],
@@ -162,7 +198,7 @@
     var bars = [40, 65, 52, 80, 70, 95, 88].map(function (h, i) { return '<div style="height:' + h + '%" title="' + tk(h * 410) + '"><span>' + days[i] + '</span></div>'; }).join('');
     return '<div class="grid4">' + [[today.length, 'ORDERS TODAY', 'orders'], [tk(today.reduce(function (a, o) { return a + o.total; }, 0)), 'SALES TODAY', 'reports'], ['1,240', 'VISITORS', 'pixels'], ['3.2%', 'CONVERSION', 'reports']].map(function (x) {
       return '<div class="card stat" style="cursor:pointer" onclick="go(\'' + x[2] + '\')"><b>' + x[0] + '</b><small>' + x[1] + '</small></div>'; }).join('') + '</div>' +
-      '<div class="card" style="margin-top:10px;padding-bottom:26px"><b style="font-size:13px">SALES · LAST 7 DAYS</b><div class="chart">' + bars + '</div></div>' +
+      '<div class="card" style="margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">SALES · LAST 7 DAYS</b><span style="font-size:12px;color:#34d399;font-weight:700">▲ 18% vs last week</span></div><div style="margin-top:8px">' + salesChart() + '</div></div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">NEW ORDERS</b>' + st.orders.filter(function (o) { return o.st === 'new'; }).map(orderRow).join('') + '</div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">LOW STOCK</b>' + st.products.filter(function (p) { return p.stock < 7; }).map(function (p) {
         return row(thumb(p), esc(p.name), p.stock ? 'Only ' + p.stock + ' left' : 'Out of stock', btn('+10', 'restock(' + p.id + ')', 'alt'));
@@ -170,7 +206,7 @@
   };
   function orderRow(o) {
     var p = P(o.items[0].p);
-    return row(thumb(p), '#' + o.no + ' · ' + tk(o.total), esc(o.name) + ' · ' + o.area + '<br>' + esc(p.name) + ' ×' + o.items[0].q + ' · ' + o.pay + ' · ' + o.time, '<span class="st s-' + o.st + '">' + o.st.toUpperCase() + '</span>', "go('order/" + o.no + "')");
+    return row(thumb(p), '#' + o.no + ' · ' + tk(o.total), esc(o.name) + ' · ' + esc(o.upazila + ', ' + o.district) + '<br>' + esc(p.name) + ' ×' + o.items[0].q + ' · ' + o.pay + ' · ' + o.time, '<span class="st s-' + o.st + '">' + o.st.toUpperCase() + '</span>', "go('order/" + o.no + "')");
   }
   var orderFilter = 'all';
   V.orders = function () {
@@ -179,20 +215,6 @@
     return '<div class="tabs">' + ['all', 'new', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled'].map(function (s) {
       return '<button class="' + (orderFilter === s ? 'on' : '') + '" onclick="setOrderFilter(\'' + s + '\')">' + s.toUpperCase() + '<i>' + count(s) + '</i></button>'; }).join('') + '</div>' +
       '<div class="card">' + (list.length ? list.map(orderRow).join('') : '<p class="note">No orders here.</p>') + '</div><p class="note">Tap an order to open it: confirm, book courier, print invoice, call the customer.</p>';
-  };
-  V.order = function (no) {
-    var o = st.orders.filter(function (x) { return x.no === +no; })[0]; if (!o) return '<p class="note">Not found.</p>';
-    var p = P(o.items[0].p), sub = p.price * o.items[0].q;
-    var risky = /returned/.test(o.history) && !/0 returned/.test(o.history);
-    return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">#' + o.no + '</b><span class="st s-' + o.st + '">' + o.st.toUpperCase() + '</span></div>' +
-      '<p class="note" style="margin-top:4px">' + o.time + ' · paid by ' + o.pay + (o.trx ? ' · TrxID ' + o.trx : '') + '</p>' +
-      row(thumb(p), esc(p.name) + ' ×' + o.items[0].q, tk(p.price) + ' each', '<b>' + tk(sub) + '</b>') +
-      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:8px"><span>Delivery</span><b>' + tk(o.del) + '</b></div><div style="display:flex;justify-content:space-between;font-size:15px;margin-top:4px"><span>Total</span><b style="color:#2dd4bf">' + tk(o.total) + '</b></div></div>' +
-      '<div class="card" style="margin-top:10px"><b style="font-size:13px">CUSTOMER</b><p style="margin:6px 0 0">' + esc(o.name) + ' · <a href="tel:' + o.phone + '" style="color:#2dd4bf">' + o.phone + '</a></p><p class="note" style="margin-top:2px">' + o.area + '</p>' +
-      '<p class="note" style="margin-top:6px">Courier history: <b style="color:' + (risky ? '#f87171' : '#34d399') + '">' + o.history + '</b>' + (risky ? ' · ask for advance payment' : ' · safe for COD') + '</p></div>' +
-      '<div class="card" style="margin-top:10px"><b style="font-size:13px">CHANGE STATUS</b><div class="tabs" style="margin-top:8px">' + STATUSES.map(function (s) { return '<button class="' + (o.st === s ? 'on' : '') + '" onclick="setStatus(' + o.no + ',\'' + s + '\')">' + s.toUpperCase() + '</button>'; }).join('') + '</div>' +
-      (o.track ? '<p class="note">Courier: ' + o.track + '</p>' : '') +
-      '<div class="btns">' + btn('🚚 Book Steadfast', 'book(' + o.no + ',\'Steadfast\')') + btn('Book Pathao', 'book(' + o.no + ',\'Pathao\')', 'alt') + btn('🖨️ Invoice', 'invoice(' + o.no + ')', 'alt') + btn('📞 Call', 'toast(\'Calling ' + o.phone + '…\')', 'alt') + btn('WhatsApp', 'toast(\'WhatsApp opened with the order message\')', 'alt') + '</div></div>';
   };
   var prodFilter = 'all';
   V.products = function () {
@@ -203,28 +225,6 @@
         return row(thumb(p), esc(p.name) + (p.rx ? ' <span class="pill" style="background:#0e7490">Rx</span>' : '') + (p.active ? '' : ' <span class="pill" style="background:#475569">HIDDEN</span>'),
           tk(p.price) + (p.old > p.price ? ' <s>' + tk(p.old) + '</s>' : '') + ' · ' + esc(p.cat) + ' · stock ' + p.stock, '<span class="chev">›</span>', "go('product/" + p.id + "')");
       }).join('') + '</div>';
-  };
-  V.product = function (id) {
-    var isNew = id === 'new';
-    var p = isNew ? { id: -1, name: '', cat: st.cats[0] ? st.cats[0].name : '', e: '📦', price: '', old: '', stock: 10, imgs: [], active: true, desc: '', opts: [], optLabel: '' } : P(+id);
-    if (!p) return '<p class="note">Not found.</p>';
-    var off = p.old > p.price ? Math.round((1 - p.price / p.old) * 100) : 0;
-    return '<div class="layoutp" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px">' +
-      '<div class="card"><b style="font-size:13px">' + (isNew ? 'ADD PRODUCT' : 'EDIT PRODUCT') + '</b>' +
-      '<div class="field" style="margin-top:10px"><span>Photos (first one is the main photo)</span><div class="thumbs" id="thumbs">' + p.imgs.map(function (u) { return '<img src="' + IMG(u, 160) + '" alt="">'; }).join('') + '<label style="cursor:pointer"><span>＋</span><input type="file" accept="image/*" multiple hidden onchange="addPhotos(this)"></label></div></div>' +
-      '<div class="field"><span>Product name (clear words people search)</span><input id="pName" value="' + esc(p.name) + '" placeholder="e.g. Men’s Black Cotton T-Shirt"></div>' +
-      '<div class="two"><div class="field"><span>Price</span><input id="pPrice" inputmode="numeric" value="' + p.price + '"></div><div class="field"><span>Old price (shows % OFF)</span><input id="pOld" inputmode="numeric" value="' + p.old + '"></div></div>' +
-      '<div class="two"><div class="field"><span>Stock</span><input id="pStock" inputmode="numeric" value="' + p.stock + '"></div><div class="field"><span>Category</span><select id="pCat">' + st.cats.map(function (c) { return '<option' + (c.name === p.cat ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select></div></div>' +
-      '<div class="two"><div class="field"><span>Option name</span><input id="pOptL" value="' + esc(p.optLabel) + '" placeholder="Size / Colour"></div><div class="field"><span>Options</span><input id="pOpts" value="' + esc(p.opts.join(', ')) + '" placeholder="S, M, L, XL"></div></div>' +
-      '<div class="field"><span>Description (what it is, material, size, delivery)</span><textarea id="pDesc" rows="4">' + esc(p.desc) + '</textarea></div>' +
-      '<div class="field"><span>SEO title (Google)</span><input id="pSeo" value="' + esc(p.name ? p.name + ' | ' + S.name : '') + '"></div>' +
-      '<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px"><button class="toggle' + (p.active ? ' on' : '') + '" id="pAct" onclick="this.classList.toggle(\'on\')"></button> Show in store</div>' +
-      '<div class="btns">' + btn('SAVE', 'saveProduct(' + (isNew ? -1 : p.id) + ')') + btn('🤖 ROSE write description', 'aiDesc()', 'alt') + (isNew ? '' : btn('Delete', 'delProduct(' + p.id + ')', 'red')) + '</div></div>' +
-      '<div><div class="card"><b style="font-size:13px">HOW CUSTOMERS SEE IT</b><div class="preview" style="margin-top:10px">' + (p.imgs[0] ? '<img src="' + IMG(p.imgs[0], 700) + '" alt="">' : '<div style="height:220px;display:grid;place-items:center;font-size:90px;background:#f1f5f9">' + p.e + '</div>') +
-      '<div class="b"><b style="font-size:16px">' + esc(p.name || 'Product name') + '</b><div style="margin-top:6px"><b style="color:#dc2626;font-size:20px">' + tk(p.price || 0) + '</b>' + (off ? ' <s style="color:#64748b">' + tk(p.old) + '</s> <span class="pill" style="background:#ef4444">-' + off + '%</span>' : '') + '</div>' +
-      (p.opts.length ? '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + p.opts.map(function (o, i) { return '<span style="border:1.5px solid ' + (i ? '#e5e7eb' : S.color) + ';border-radius:8px;padding:4px 10px;font-size:12px">' + esc(o) + '</span>'; }).join('') + '</div>' : '') +
-      '<p style="font-size:13px;color:#334155;line-height:1.5">' + esc(p.desc).slice(0, 220) + '</p><div style="background:' + S.color + ';color:#fff;border-radius:10px;padding:10px;text-align:center;font-weight:800">🛒 Add to Cart</div></div></div></div>' +
-      '<div class="card" style="margin-top:10px"><b style="font-size:13px">ON GOOGLE</b><div class="seo" style="margin-top:8px"><small>myrosebd.com/shop/' + k + '/product/' + (p.name || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '</small>' + esc((p.name || 'Product') + ' | ' + S.name) + '<p>' + tk(p.price || 0) + ' · In stock · ' + esc(p.desc).slice(0, 110) + '…</p></div></div></div></div>';
   };
   V.categories = function () {
     return '<div class="card">' + st.cats.map(function (c, i) {
@@ -242,7 +242,7 @@
   };
   V.customers = function () {
     return '<div class="card">' + st.orders.map(function (o, i) {
-      return row('<span class="ph">👤</span>', esc(o.name), o.phone + ' · ' + o.area + ' · ' + o.history + ' · ' + (120 + i * 40) + ' points', /2 returned/.test(o.history) ? '<span class="st s-cancelled">RISK</span>' : '<span class="chev">›</span>', "toast('" + esc(o.name) + ": " + (3 + i) + " orders, " + tk(2400 + i * 1350) + " spent')");
+      return row('<span class="ph">👤</span>', esc(o.name), o.phone + ' · ' + esc(o.district) + ' · ' + o.history + ' · ' + (120 + i * 40) + ' points', /2 returned/.test(o.history) ? '<span class="st s-cancelled">RISK</span>' : '<span class="chev">›</span>', "toast('" + esc(o.name) + ": " + (3 + i) + " orders, " + tk(2400 + i * 1350) + " spent')");
     }).join('') + '</div>';
   };
   V.offers = function () {
@@ -269,10 +269,6 @@
       '<div class="row"><span class="ph">💳</span><div class="f"><b>Card: SSLCommerz / aamarPay</b><p>Needs a trade licence and merchant account</p></div><span class="pill" style="background:#475569">SET UP</span></div></div>' +
       '<div class="card" style="margin-top:10px"><div class="two"><div class="field"><span>bKash number</span><input value="017XXXXXXXX"></div><div class="field"><span>Nagad number</span><input value="018XXXXXXXX"></div></div>' + btn('SAVE', "toast('Payment numbers saved')") + '</div>';
   };
-  V.delivery = function () {
-    return '<div class="card"><div class="two"><div class="field"><span>Inside Dhaka (Tk)</span><input value="60"></div><div class="field"><span>Outside Dhaka (Tk)</span><input value="120"></div></div><div class="field"><span>Free delivery over (Tk)</span><input value="1500"></div>' + btn('SAVE', "toast('Delivery charges saved')") + '</div>' +
-      '<div class="card" style="margin-top:10px"><b style="font-size:13px">COURIERS</b>' + st.couriers.map(function (c, i) { return '<div class="row"><span class="ph">🚚</span><div class="f"><b>' + c[0] + '</b><p>' + (c[1] ? 'Connected · auto booking' : 'Not connected') + '</p></div>' + btn(c[1] ? 'Test' : 'Connect', 'st.couriers[' + i + '][1]=true;toast(\'' + c[0] + ' connected (demo)\');render()', 'alt') + '</div>'; }).join('') + '</div>';
-  };
   V.pixels = function () {
     return '<div class="card">' + [['Facebook Pixel ID', '1234567890'], ['Facebook Conversions API token', '••••••••'], ['TikTok Pixel ID', 'C0ABCDEF'], ['Google Analytics 4 (G-…)', 'G-XXXXXXX'], ['Google Tag Manager (GTM-…)', ''], ['Search Console verification', '']].map(function (f) { return '<div class="field"><span>' + f[0] + '</span><input value="' + f[1] + '" placeholder="paste here"></div>'; }).join('') +
       '<div class="btns">' + btn('SAVE', "toast('Saved. Events start in a few minutes')") + btn('Send test event', "toast('Test PageView sent ✓')", 'alt') + '</div><p class="note">Sent automatically: PageView, ViewContent, AddToCart, InitiateCheckout, Purchase. How-to videos show where to copy each ID.</p></div>' +
@@ -297,6 +293,183 @@
   };
 
   // ---------------- actions ----------------
+  // ---------- dashboard chart (line chart like a PC dashboard) ----------
+  function salesChart() {
+    var days = ['Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed'], v = [16400, 26650, 21300, 32800, 28700, 38950, 36080];
+    var W = 640, H = 190, max = 40000, x = function (i) { return 40 + i * (W - 60) / 6; }, y = function (n) { return 14 + (H - 40) * (1 - n / max); };
+    var pts = v.map(function (n, i) { return x(i) + ',' + y(n); }).join(' ');
+    var grid = [0, 10000, 20000, 30000, 40000].map(function (g) { return '<line x1="40" x2="' + (W - 20) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="#1e293b"/><text x="34" y="' + (y(g) + 4) + '" text-anchor="end" fill="#64748b" font-size="10">' + (g / 1000) + 'k</text>'; }).join('');
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2dd4bf" stop-opacity=".35"/><stop offset="1" stop-color="#2dd4bf" stop-opacity="0"/></linearGradient></defs>' + grid +
+      '<polygon points="' + x(0) + ',' + y(0) + ' ' + pts + ' ' + x(6) + ',' + y(0) + '" fill="url(#ga)"/><polyline points="' + pts + '" fill="none" stroke="#2dd4bf" stroke-width="2.5" stroke-linejoin="round"/>' +
+      v.map(function (n, i) { return '<circle cx="' + x(i) + '" cy="' + y(n) + '" r="4" fill="#0b1120" stroke="#2dd4bf" stroke-width="2"><title>' + days[i] + ': ' + tk(n) + '</title></circle><text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle" fill="#64748b" font-size="11">' + days[i] + '</text>'; }).join('') + '</svg>';
+  }
+
+  // ---------- order detail (view + edit + print) ----------
+  var editing = 0;
+  V.order = function (no) {
+    var o = st.orders.filter(function (x) { return x.no === +no; })[0]; if (!o) return '<p class="note">Not found.</p>';
+    var p = P(o.items[0].p), sub = p.price * o.items[0].q;
+    var risky = /returned/.test(o.history) && !/0 returned/.test(o.history);
+    var cust = editing === o.no
+      ? '<div class="card" style="margin-top:10px"><b style="font-size:13px">EDIT CUSTOMER & ORDER</b><div style="margin-top:10px"></div>' +
+        '<div class="two"><div class="field"><span>Full name</span><input id="oN" value="' + esc(o.name) + '"></div><div class="field"><span>Mobile (11 digits)</span><input id="oP" maxlength="11" inputmode="numeric" value="' + o.phone + '"></div></div>' +
+        '<div class="field"><span>Email</span><input id="oE" value="' + esc(o.email) + '"></div>' +
+        '<div class="two"><div class="field"><span>Division</span><input id="oDv" value="' + esc(o.division) + '"></div><div class="field"><span>District</span><input id="oDs" value="' + esc(o.district) + '"></div></div>' +
+        '<div class="two"><div class="field"><span>Upazila / Thana</span><input id="oU" value="' + esc(o.upazila) + '"></div><div class="field"><span>Quantity</span><input id="oQ" inputmode="numeric" value="' + o.items[0].q + '"></div></div>' +
+        '<div class="field"><span>Full address</span><textarea id="oA" rows="2">' + esc(o.area) + '</textarea></div>' +
+        '<div class="two"><div class="field"><span>Delivery charge</span><input id="oD" inputmode="numeric" value="' + o.del + '"></div><div class="field"><span>Note for courier</span><input id="oNote" value="' + esc(o.note || '') + '"></div></div>' +
+        '<div class="btns">' + btn('SAVE CHANGES', 'saveOrder(' + o.no + ')') + btn('Cancel', 'setEdit(0)', 'alt') + '</div></div>'
+      : '<div class="card" style="margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">CUSTOMER</b>' + btn('✏️ Edit', 'setEdit(' + o.no + ')', 'alt') + '</div>' +
+        '<div class="kv"><span>Name</span><b>' + esc(o.name) + '</b><span>Mobile</span><a href="tel:' + o.phone + '" style="color:#2dd4bf">' + o.phone + '</a><span>Email</span><b>' + esc(o.email || '—') + '</b><span>Division</span><b>' + esc(o.division) + '</b><span>District</span><b>' + esc(o.district) + '</b><span>Upazila</span><b>' + esc(o.upazila) + '</b><span>Address</span><b>' + esc(o.area) + '</b>' + (o.note ? '<span>Note</span><b>' + esc(o.note) + '</b>' : '') + '</div>' +
+        '<p class="note" style="margin-top:6px">Courier history: <b style="color:' + (risky ? '#f87171' : '#34d399') + '">' + o.history + '</b>' + (risky ? ' · ask for advance payment' : ' · safe for COD') + '</p></div>';
+    return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">#' + o.no + '</b><span class="st s-' + o.st + '">' + o.st.toUpperCase() + '</span></div>' +
+      '<p class="note" style="margin-top:4px">' + o.time + ' · paid by ' + o.pay + (o.trx ? ' · TrxID ' + o.trx : '') + '</p>' +
+      row(thumb(p), esc(p.name) + ' ×' + o.items[0].q, tk(p.price) + ' each' + (o.opt ? ' · ' + esc(o.opt) : ''), '<b>' + tk(sub) + '</b>') +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:8px"><span>Delivery (' + (o.district === 'Dhaka' ? 'inside Dhaka' : 'outside Dhaka') + ')</span><b>' + tk(o.del) + '</b></div><div style="display:flex;justify-content:space-between;font-size:15px;margin-top:4px"><span>Total</span><b style="color:#2dd4bf">' + tk(o.total) + '</b></div></div>' +
+      cust +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">CHANGE STATUS</b><div class="tabs" style="margin-top:8px">' + STATUSES.map(function (s) { return '<button class="' + (o.st === s ? 'on' : '') + '" onclick="setStatus(' + o.no + ',\'' + s + '\')">' + s.toUpperCase() + '</button>'; }).join('') + '</div>' +
+      (o.track ? '<p class="note">Courier: ' + o.track + '</p>' : '') +
+      '<div class="btns">' + st.couriers.filter(function (c) { return c[1]; }).map(function (c, i) { return btn('🚚 Book ' + c[0], 'book(' + o.no + ',\'' + c[0] + '\')', i ? 'alt' : ''); }).join('') + btn('🧾 Print invoice', 'printDoc(\'invoice\',[' + o.no + '])', 'alt') + btn('🏷️ Print sticker', 'printDoc(\'sticker\',[' + o.no + '])', 'alt') + btn('📞 Call', 'toast(\'Calling ' + o.phone + '…\')', 'alt') + btn('🤖 ROSE confirm by call', 'toast(\'ROSE will call ' + o.name + ' to confirm the order\')', 'alt') + '</div>' +
+      '<p class="note">ROSE, the owner and staff with ORDER access can edit this order. Every change is saved in the activity log.</p></div>';
+  };
+  window.saveOrder = function (no) {
+    var g = function (x) { return document.getElementById(x).value.trim(); };
+    if (!/^01[3-9]\d{8}$/.test(g('oP'))) return toast('Mobile must be 11 digits (01XXXXXXXXX)');
+    if (g('oN').split(/\s+/).length < 2) return toast('Write the full name');
+    if (g('oA').length < 15) return toast('Write the full address');
+    st.orders.forEach(function (o) { if (o.no !== no) return; var p = P(o.items[0].p); o.name = g('oN'); o.phone = g('oP'); o.email = g('oE'); o.division = g('oDv'); o.district = g('oDs'); o.upazila = g('oU'); o.area = g('oA'); o.note = g('oNote'); o.items[0].q = Math.max(1, +g('oQ') || 1); o.del = +g('oD') || 0; o.total = p.price * o.items[0].q + o.del; });
+    editing = 0; toast('Order #' + no + ' saved'); render();
+  };
+
+  // ---------- product (photos, size, short + long description, live preview) ----------
+  var SIZESETS = [['Shirt / T-shirt', ['S', 'M', 'L', 'XL', 'XXL']], ['Pant / Waist', ['28', '30', '32', '34', '36', '38']], ['Shoe', ['39', '40', '41', '42', '43', '44']], ['Kids', ['1-2Y', '3-4Y', '5-6Y', '7-8Y']], ['Free size', ['Free size']]];
+  var draft = null;
+  function draftOf(id) {
+    if (draft && draft.key === id) return draft;
+    var p = id === 'new' ? null : P(+id);
+    draft = p ? { key: id, id: p.id, name: p.name, price: p.price, old: p.old, stock: p.stock, cat: p.cat, imgs: p.imgs.slice(), e: p.e, optLabel: p.optLabel || 'Size', opts: p.opts.slice(), short: p.short || (p.name + ' from ' + S.name + '. Best quality, checked before delivery.'), long: p.long || p.desc, active: p.active, seo: p.name + ' | ' + S.name }
+      : { key: id, id: -1, name: '', price: '', old: '', stock: 10, cat: st.cats[0] ? st.cats[0].name : '', imgs: [], e: '📦', optLabel: 'Size', opts: [], short: '', long: '', active: true, seo: '' };
+    return draft;
+  }
+  function pvHTML(d) {
+    var off = d.old > d.price ? Math.round((1 - d.price / d.old) * 100) : 0;
+    return '<div class="preview" style="margin-top:10px">' + (d.imgs[0] ? '<img src="' + IMG(d.imgs[0], 700) + '" alt="">' : '<div style="height:220px;display:grid;place-items:center;font-size:90px;background:#f1f5f9">' + d.e + '</div>') +
+      (d.imgs.length > 1 ? '<div style="display:flex;gap:6px;padding:8px 12px 0">' + d.imgs.slice(0, 6).map(function (u, i) { return '<img src="' + IMG(u, 120) + '" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;border:2px solid ' + (i ? '#e5e7eb' : S.color) + '">'; }).join('') + '</div>' : '') +
+      '<div class="b"><b style="font-size:16px">' + esc(d.name || 'Product name') + '</b><div style="margin-top:6px"><b style="color:#dc2626;font-size:20px">' + tk(+d.price || 0) + '</b>' + (off ? ' <s style="color:#64748b">' + tk(d.old) + '</s> <span class="pill" style="background:#ef4444">-' + off + '%</span>' : '') + '</div>' +
+      '<p style="font-size:13px;color:#334155;line-height:1.5;margin:8px 0">' + esc(d.short || 'Short description shows here, next to the price.') + '</p>' +
+      (d.opts.length ? '<b style="font-size:12px">' + esc(d.optLabel) + '</b><div style="margin:4px 0 8px;display:flex;gap:6px;flex-wrap:wrap">' + d.opts.map(function (o, i) { return '<span style="border:1.5px solid ' + (i ? '#e5e7eb' : S.color) + ';border-radius:8px;padding:4px 10px;font-size:12px">' + esc(o) + '</span>'; }).join('') + '</div>' : '') +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><div style="border:1.5px solid ' + S.color + ';color:' + S.color + ';border-radius:10px;padding:9px;text-align:center;font-weight:800;font-size:13px">Add to Cart</div><div style="background:' + S.color + ';color:#fff;border-radius:10px;padding:9px;text-align:center;font-weight:800;font-size:13px">Order Now</div></div>' +
+      '<div style="border-top:1px solid #e5e7eb;margin-top:10px;padding-top:8px;font-size:12px;color:#475569;white-space:pre-line">' + esc((d.long || 'Long description shows in the Description tab under the photos.').slice(0, 260)) + '</div></div></div>';
+  }
+  function seoHTML(d) { return '<div class="seo" style="margin-top:8px"><small>myrosebd.com/shop/' + k + '/product/' + (d.name || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '</small>' + esc(d.seo || ((d.name || 'Product') + ' | ' + S.name)) + '<p>' + tk(+d.price || 0) + ' · In stock · ' + esc(d.short).slice(0, 110) + '</p></div>'; }
+  V.product = function (id) {
+    var d = draftOf(id), isNew = id === 'new';
+    var chips = d.opts.map(function (o, i) { return '<span class="chip">' + esc(o) + '<button onclick="optDel(' + i + ')">✕</button></span>'; }).join('');
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px">' +
+      '<div class="card"><b style="font-size:13px">' + (isNew ? 'ADD PRODUCT' : 'EDIT PRODUCT') + '</b>' +
+      '<div class="field" style="margin-top:10px"><span>Photos · up to 8 · tap ★ to make it the main photo</span><div class="thumbs">' + d.imgs.map(function (u, i) { return '<div class="ph8' + (i ? '' : ' main') + '"><img src="' + IMG(u, 160) + '" alt=""><button class="pm" title="Main photo" onclick="imgMain(' + i + ')">★</button><button class="px" title="Remove" onclick="imgDel(' + i + ')">✕</button>' + (i ? '' : '<em>MAIN</em>') + '</div>'; }).join('') + (d.imgs.length < 8 ? '<label style="cursor:pointer"><span>＋</span><input type="file" accept="image/*" multiple hidden onchange="addPhotos(this)"></label>' : '') + '</div></div>' +
+      '<div class="field"><span>Product name (clear words people search)</span><input data-k="name" value="' + esc(d.name) + '" placeholder="e.g. Men’s Black Cotton T-Shirt"></div>' +
+      '<div class="two"><div class="field"><span>Price</span><input data-k="price" inputmode="numeric" value="' + d.price + '"></div><div class="field"><span>Old price (shows % OFF)</span><input data-k="old" inputmode="numeric" value="' + d.old + '"></div></div>' +
+      '<div class="two"><div class="field"><span>Stock</span><input data-k="stock" inputmode="numeric" value="' + d.stock + '"></div><div class="field"><span>Category</span><select data-k="cat">' + st.cats.map(function (c) { return '<option' + (c.name === d.cat ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select></div></div>' +
+      '<div class="sizebox"><div class="two"><div class="field"><span>Option name</span><select data-k="optLabel">' + ['Size', 'Colour', 'Weight', 'Pack', 'Model'].map(function (x) { return '<option' + (x === d.optLabel ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field"><span>Quick pick</span><select onchange="optSet(this.value);this.value=\'\'"><option value="">Choose a set…</option>' + SIZESETS.map(function (s, i) { return '<option value="' + i + '">' + s[0] + ' (' + s[1].join(', ') + ')</option>'; }).join('') + '</select></div></div>' +
+      '<div class="field"><span>' + esc(d.optLabel) + 's · tap to add, or write your own and press Enter</span><div class="chips">' + chips + '<input id="optIn" placeholder="Write, e.g. XXL or 42" onkeydown="if(event.key===\'Enter\'){event.preventDefault();optAdd(this.value)}"></div>' +
+      '<div class="quick">' + (d.optLabel === 'Size' ? ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '28', '30', '32', '34', '36', 'Free size'] : d.optLabel === 'Colour' ? ['Black', 'White', 'Red', 'Blue', 'Green', 'Navy', 'Grey', 'Maroon'] : d.optLabel === 'Weight' ? ['250g', '500g', '1kg', '2kg', '5kg'] : ['1 pc', '2 pcs', '3 pcs']).filter(function (x) { return d.opts.indexOf(x) < 0; }).map(function (x) { return '<button onclick="optAdd(\'' + x + '\')">+ ' + x + '</button>'; }).join('') + '</div></div></div>' +
+      '<div class="field"><span>Short description · shows next to the price (max 160)</span><textarea data-k="short" rows="2" maxlength="160">' + esc(d.short) + '</textarea><small class="cnt">' + d.short.length + ' / 160</small></div>' +
+      '<div class="field"><span>Long description · full details: material, size chart, care, delivery, return</span><textarea data-k="long" rows="6">' + esc(d.long) + '</textarea></div>' +
+      '<div class="field"><span>SEO title (Google)</span><input data-k="seo" value="' + esc(d.seo) + '"></div>' +
+      '<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px"><button class="toggle' + (d.active ? ' on' : '') + '" onclick="draftAct(this)"></button> Show in store</div>' +
+      '<div class="btns">' + btn('SAVE', 'saveProduct()') + btn('🤖 ROSE write descriptions', 'aiDesc()', 'alt') + (isNew ? '' : btn('Delete', 'delProduct(' + d.id + ')', 'red')) + '</div></div>' +
+      '<div><div class="card"><b style="font-size:13px">HOW CUSTOMERS SEE IT · live</b><div id="pv">' + pvHTML(d) + '</div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">ON GOOGLE</b><div id="sv">' + seoHTML(d) + '</div></div></div></div>';
+  };
+  function afterProduct() {
+    [].forEach.call(main.querySelectorAll('[data-k]'), function (el) {
+      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function () {
+        var key = el.dataset.k; draft[key] = /price|old|stock/.test(key) ? (+el.value || '') : el.value;
+        if (key === 'optLabel') return render();
+        if (key === 'short') { var c = el.parentNode.querySelector('.cnt'); if (c) c.textContent = el.value.length + ' / 160'; }
+        document.getElementById('pv').innerHTML = pvHTML(draft); document.getElementById('sv').innerHTML = seoHTML(draft);
+      });
+    });
+  }
+  window.optAdd = function (v) { v = String(v || '').trim(); if (!v) return; v.split(',').forEach(function (x) { x = x.trim(); if (x && draft.opts.indexOf(x) < 0) draft.opts.push(x); }); render(); var i = document.getElementById('optIn'); if (i) i.focus(); };
+  window.optDel = function (i) { draft.opts.splice(i, 1); render(); };
+  window.optSet = function (i) { if (i === '') return; draft.optLabel = 'Size'; draft.opts = SIZESETS[+i][1].slice(); render(); };
+  window.imgMain = function (i) { var u = draft.imgs.splice(i, 1)[0]; draft.imgs.unshift(u); render(); };
+  window.imgDel = function (i) { draft.imgs.splice(i, 1); render(); };
+  window.addPhotos = function (inp) { var fs = [].slice.call(inp.files || [], 0, 8 - draft.imgs.length); fs.forEach(function (f) { draft.imgs.push(URL.createObjectURL(f)); }); toast(fs.length + ' photo(s) added'); render(); };
+  window.aiDesc = function () { var n = draft.name || 'This product'; draft.short = n + ': premium quality, same as the photo. Cash on delivery all over Bangladesh.'; draft.long = n + ' by ' + S.name + '.\n\n• Material: premium quality, checked by hand\n• ' + (draft.opts.length ? draft.optLabel + ': ' + draft.opts.join(', ') : 'One size') + '\n• Delivery: 1-2 days in Dhaka, 2-4 days outside\n• 7-day easy return or exchange with the invoice'; toast('ROSE wrote both descriptions'); render(); };
+  window.saveProduct = function () {
+    var d = draft;
+    if (!d.name || !(+d.price > 0)) return toast('Name and price are needed');
+    if (d.short.length < 20) return toast('Write a short description (at least 20 letters)');
+    var p = d.id >= 0 ? P(d.id) : { id: st.products.length, e: '📦', rx: false };
+    p.name = d.name; p.price = +d.price; p.old = +d.old || p.price; p.stock = +d.stock || 0; p.cat = d.cat; p.short = d.short; p.long = d.long; p.desc = d.short; p.imgs = d.imgs.slice(); p.optLabel = d.optLabel; p.opts = d.opts.slice(); p.active = d.active;
+    if (d.id < 0) st.products.unshift(p);
+    st.products.forEach(function (x, i) { x.id = i; });
+    draft = null; toast('Saved ✓'); go('products');
+  };
+
+  // ---------- delivery & couriers ----------
+  V.delivery = function () {
+    return '<div class="card"><b style="font-size:13px">DELIVERY CHARGE</b><div class="two" style="margin-top:10px"><div class="field"><span>Inside Dhaka (Tk)</span><input value="60"></div><div class="field"><span>Outside Dhaka (Tk)</span><input value="120"></div></div><div class="two"><div class="field"><span>Dhaka suburbs: Savar, Gazipur, Narayanganj (Tk)</span><input value="100"></div><div class="field"><span>Free delivery over (Tk)</span><input value="1500"></div></div>' + btn('SAVE', "toast('Delivery charges saved')") + '<p class="note">The checkout picks the charge from the district the customer chooses.</p></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">COURIERS · connect with your own courier account</b>' + st.couriers.map(function (c, i) {
+        return '<div class="row"><span class="ph" style="font-size:20px;background:' + c[2] + ';color:#fff;font-weight:900">' + c[0].charAt(0) + '</span><div class="f"><b>' + c[0] + '</b><p>' + (c[1] ? '✅ Connected · auto booking · tracking sent to the customer by SMS' : c[3]) + '</p></div>' + btn(c[1] ? 'Disconnect' : 'Connect', 'courierToggle(' + i + ')', c[1] ? 'alt' : '') + '</div>' + (courierOpen === i ? '<div class="card" style="margin:0 0 8px;background:#0a0f1a"><div class="two"><div class="field"><span>API key</span><input placeholder="from your ' + c[0] + ' merchant panel"></div><div class="field"><span>Secret key</span><input type="password" placeholder="••••••"></div></div><div class="field"><span>Pickup address</span><input value="House 12, Road 5, Dhaka"></div>' + btn('SAVE & CONNECT', 'courierSave(' + i + ')') + '<p class="note">Keys are kept on the server only. Staff and customers never see them.</p></div>' : '');
+      }).join('') + '</div>';
+  };
+  var courierOpen = -1;
+  window.courierToggle = function (i) { if (st.couriers[i][1]) { st.couriers[i][1] = false; toast(st.couriers[i][0] + ' disconnected'); courierOpen = -1; } else courierOpen = courierOpen === i ? -1 : i; render(); };
+  window.courierSave = function (i) { st.couriers[i][1] = true; courierOpen = -1; toast(st.couriers[i][0] + ' connected (demo)'); render(); };
+
+  // ---------- invoice & sticker printing ----------
+  var STK = [['4x6', '4 × 6 in · 100 × 150 mm (Steadfast, Pathao, RedX)', 100, 150], ['4x4', '4 × 4 in · 100 × 100 mm', 100, 100], ['3x4', '3 × 4 in · 75 × 100 mm', 75, 100], ['3x2', '3 × 2 in · 75 × 50 mm (small)', 75, 50], ['a6', 'A6 · 105 × 148 mm', 105, 148], ['custom', 'Custom size', 0, 0]];
+  var INV = [['a4', 'A4 · 210 × 297 mm'], ['a5', 'A5 · 148 × 210 mm'], ['pos80', 'POS roll 80 mm'], ['pos58', 'POS roll 58 mm']];
+  st.print = { inv: 'a4', stk: '4x6', cw: 100, ch: 150, sender: S.name, phone: '01XXXXXXXXX', logo: true, cod: true, items: true, bar: true, note: 'Handle with care · Do not fold' };
+  function stkSize() { var s = STK.filter(function (x) { return x[0] === st.print.stk; })[0]; return s[0] === 'custom' ? [st.print.cw || 100, st.print.ch || 150] : [s[2], s[3]]; }
+  function barcode(no) { var s = String(no) + '7', x = 0, out = ''; for (var i = 0; i < 46; i++) { var w = 1 + ((s.charCodeAt(i % s.length) + i * 7) % 3); if (i % 2 === 0) out += '<rect x="' + x + '" y="0" width="' + w + '" height="30"/>'; x += w; } return '<svg viewBox="0 0 ' + x + ' 30" preserveAspectRatio="none" style="width:100%;height:9mm">' + out + '</svg>'; }
+  function stickerHTML(o) {
+    var p = P(o.items[0].p), sz = stkSize(), small = sz[1] < 80, c = st.print;
+    return '<div class="stk" style="width:' + sz[0] + 'mm;height:' + sz[1] + 'mm;font-size:' + (small ? 7.5 : sz[0] >= 100 && sz[1] >= 140 ? 12.5 : 10) + 'pt">' +
+      '<div class="sh">' + (c.logo ? '<span class="lg">' + S.logo + '</span>' : '') + '<div><b>' + esc(c.sender) + '</b><div>' + esc(c.phone) + '</div></div><b class="sno">#' + o.no + '</b></div>' +
+      '<div class="sto"><small>TO</small><b style="font-size:1.25em">' + esc(o.name) + '</b><div>📞 ' + o.phone + '</div><div>' + esc(o.area) + (small ? '' : ', ' + esc(o.upazila) + ', ' + esc(o.district)) + '</div></div>' +
+      (c.items && !small ? '<div class="sit">' + esc(p.name) + ' × ' + o.items[0].q + '</div>' : '') +
+      '<div class="sf">' + (c.cod ? '<div class="cod"><small>' + (o.pay === 'COD' ? 'COD · COLLECT' : 'PAID · COLLECT') + '</small><b>' + tk(o.pay === 'COD' ? o.total : 0) + '</b></div>' : '') + (c.bar ? '<div style="flex:1;text-align:center">' + barcode(o.no) + '<small>' + (o.track || 'ORDER ' + o.no) + '</small></div>' : '') + '</div>' +
+      (c.note && !small ? '<div class="snote">' + esc(c.note) + '</div>' : '') + '</div>';
+  }
+  function invoiceHTML(o, size) {
+    var p = P(o.items[0].p), pos = /pos/.test(size), w = size === 'pos58' ? 58 : size === 'pos80' ? 80 : size === 'a5' ? 148 : 210;
+    return '<div class="ivc" style="width:' + w + 'mm;font-size:' + (pos ? 8 : size === 'a5' ? 9 : 10.5) + 'pt;padding:' + (pos ? '3mm' : '12mm') + '">' +
+      '<div style="display:flex;justify-content:space-between;' + (pos ? 'flex-direction:column;text-align:center' : '') + ';border-bottom:2px solid #111;padding-bottom:3mm"><div><b style="font-size:1.6em">' + S.logo + ' ' + esc(st.print.sender) + '</b><div>' + esc(st.print.phone) + ' · myrosebd.com/shop/' + k + '</div></div><div style="' + (pos ? '' : 'text-align:right') + '"><b style="font-size:1.4em">INVOICE</b><div>#' + o.no + ' · ' + new Date().toLocaleDateString('en-GB') + '</div></div></div>' +
+      '<div style="margin:3mm 0"><b>Bill to:</b> ' + esc(o.name) + ' · ' + o.phone + '<br>' + esc(o.area) + ', ' + esc(o.upazila) + ', ' + esc(o.district) + ', ' + esc(o.division) + '</div>' +
+      '<table style="width:100%;border-collapse:collapse"><tr style="border-bottom:1px solid #999"><th align="left">Item</th><th>Qty</th><th align="right">Amount</th></tr><tr><td>' + esc(p.name) + (o.opt ? ' (' + esc(o.opt) + ')' : '') + '</td><td align="center">' + o.items[0].q + '</td><td align="right">' + tk(p.price * o.items[0].q) + '</td></tr>' +
+      '<tr><td colspan="2" align="right">Delivery</td><td align="right">' + tk(o.del) + '</td></tr><tr style="border-top:1px solid #111;font-weight:800"><td colspan="2" align="right">Total</td><td align="right">' + tk(o.total) + '</td></tr></table>' +
+      '<p>Payment: <b>' + o.pay + (o.trx ? ' · ' + o.trx : '') + '</b>' + (o.pay === 'COD' ? ' · collect ' + tk(o.total) : '') + '</p><p style="text-align:center;color:#555">Thank you for shopping with ' + esc(st.print.sender) + '!</p></div>';
+  }
+  window.printDoc = function (kind, nos) {
+    var list = st.orders.filter(function (o) { return nos.indexOf(o.no) >= 0; });
+    if (!list.length) return toast('No orders to print');
+    var sz = stkSize(), inv = st.print.inv, page = kind === 'sticker' ? sz[0] + 'mm ' + sz[1] + 'mm' : inv === 'a4' ? 'A4' : inv === 'a5' ? 'A5' : (inv === 'pos58' ? '58mm' : '80mm') + ' auto';
+    var body = list.map(function (o) { return '<div class="pg">' + (kind === 'sticker' ? stickerHTML(o) : invoiceHTML(o, inv)) + '</div>'; }).join('');
+    var w = window.open('', '_blank'); if (!w) return toast('Allow pop-ups to print');
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + (kind === 'sticker' ? 'Stickers' : 'Invoices') + '</title><style>@page{size:' + page + ';margin:0}body{margin:0;font-family:system-ui,Arial,sans-serif;color:#111}.pg{page-break-after:always}' + PRINTCSS + '</style></head><body>' + body + '<script>setTimeout(function(){print()},300)<\/script></body></html>');
+    w.document.close();
+  };
+  var PRINTCSS = '.stk{box-sizing:border-box;border:1px dashed #999;padding:3mm;display:flex;flex-direction:column;gap:1.5mm;overflow:hidden;background:#fff;color:#111}.sh{display:flex;align-items:center;gap:2mm;border-bottom:1.5px solid #111;padding-bottom:1.5mm}.sh>div{flex:1;line-height:1.2}.lg{font-size:1.8em}.sno{font-size:1.15em}.sto{line-height:1.35;flex:1}.sto small,.cod small{display:block;font-size:.75em;letter-spacing:.1em;color:#555}.sit{border-top:1px dashed #999;padding-top:1mm;font-size:.9em}.sf{display:flex;gap:2mm;align-items:center;border-top:1.5px solid #111;padding-top:1.5mm}.cod{border:2px solid #111;border-radius:2mm;padding:1mm 2mm;text-align:center}.cod b{font-size:1.3em}.sf small{font-size:.7em}.snote{text-align:center;font-size:.8em;font-weight:700;background:#111;color:#fff;border-radius:1mm;padding:.8mm}.ivc{box-sizing:border-box;background:#fff;color:#111;line-height:1.45}.ivc td,.ivc th{padding:1.2mm 0}';
+  V.print = function () {
+    var c = st.print, sz = stkSize(), o = st.orders[0], scale = Math.min(1, 300 / (sz[0] * 3.78));
+    var newNos = st.orders.filter(function (x) { return x.st === 'new' || x.st === 'confirmed' || x.st === 'packed'; }).map(function (x) { return x.no; });
+    return '<style>' + PRINTCSS + '</style><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px"><div>' +
+      '<div class="card"><b style="font-size:13px">COURIER STICKER (LABEL) SIZE</b><div style="margin-top:8px">' + STK.map(function (s) { return '<label class="radio"><input type="radio" name="stk" ' + (c.stk === s[0] ? 'checked' : '') + ' onchange="st.print.stk=\'' + s[0] + '\';render()"> ' + s[1] + '</label>'; }).join('') + '</div>' +
+      (c.stk === 'custom' ? '<div class="two"><div class="field"><span>Width (mm)</span><input inputmode="numeric" value="' + c.cw + '" onchange="st.print.cw=+this.value;render()"></div><div class="field"><span>Height (mm)</span><input inputmode="numeric" value="' + c.ch + '" onchange="st.print.ch=+this.value;render()"></div></div>' : '') + '</div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">YOUR COMPANY ON THE STICKER</b><div class="field" style="margin-top:8px"><span>Company / sender name</span><input value="' + esc(c.sender) + '" onchange="st.print.sender=this.value;render()"></div><div class="field"><span>Sender phone</span><input value="' + esc(c.phone) + '" onchange="st.print.phone=this.value;render()"></div><div class="field"><span>Bottom note</span><input value="' + esc(c.note) + '" onchange="st.print.note=this.value;render()"></div>' +
+      [['logo', 'Show logo'], ['cod', 'Show COD amount'], ['items', 'Show product name'], ['bar', 'Show barcode']].map(function (x) { return '<div class="row"><div class="f"><b>' + x[1] + '</b></div><button class="toggle' + (c[x[0]] ? ' on' : '') + '" onclick="st.print.' + x[0] + '=!st.print.' + x[0] + ';render()"></button></div>'; }).join('') + '</div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">INVOICE SIZE</b><div style="margin-top:8px">' + INV.map(function (s) { return '<label class="radio"><input type="radio" name="inv" ' + (c.inv === s[0] ? 'checked' : '') + ' onchange="st.print.inv=\'' + s[0] + '\';render()"> ' + s[1] + '</label>'; }).join('') + '</div></div></div>' +
+      '<div><div class="card"><b style="font-size:13px">STICKER PREVIEW · ' + sz[0] + ' × ' + sz[1] + ' mm</b><div style="margin-top:10px;background:#e5e7eb;border-radius:10px;padding:10px;overflow:hidden;height:' + Math.round(sz[1] * 3.78 * scale + 20) + 'px"><div style="transform:scale(' + scale + ');transform-origin:0 0">' + stickerHTML(o) + '</div></div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">PRINT</b><div class="btns">' + btn('🏷️ Stickers for ' + newNos.length + ' open orders', 'printDoc(\'sticker\',[' + newNos.join(',') + '])') + btn('🧾 Invoices for ' + newNos.length + ' open orders', 'printDoc(\'invoice\',[' + newNos.join(',') + '])', 'alt') + btn('Test print 1 sticker', 'printDoc(\'sticker\',[' + o.no + '])', 'alt') + '</div><p class="note">Works with any label printer (Xprinter, TSC, Zebra) or a normal printer. In the print window choose your printer and "Actual size".</p></div></div></div>';
+  };
+  window.setEdit = function (n) { editing = n; render(); };
+  window.draftAct = function (el) { draft.active = !draft.active; el.classList.toggle('on'); };
   window.st = st;
   window.toast = toast;
   window.setOrderFilter = function (s) { orderFilter = s; render(); };
@@ -305,19 +478,6 @@
   window.book = function (no, c) { st.orders.forEach(function (o) { if (o.no === no) { o.track = c + ' · tracking SF' + (no * 7) + 'BD'; if (o.st === 'new' || o.st === 'confirmed') o.st = 'packed'; } }); toast(c + ' booked ✓'); render(); };
   window.invoice = function (no) { toast('Invoice #' + no + ' ready to print'); };
   window.restock = function (id) { P(id).stock += 10; toast('Stock +10'); render(); };
-  window.addPhotos = function (inp) { var fs = [].slice.call(inp.files || [], 0, 6); window.__newImgs = (window.__newImgs || []).concat(fs.map(function (f) { return URL.createObjectURL(f); })); var t = document.getElementById('thumbs'); fs.forEach(function (f) { var im = document.createElement('img'); im.src = URL.createObjectURL(f); t.insertBefore(im, t.lastChild); }); toast(fs.length + ' photo(s) added'); };
-  window.aiDesc = function () { var n = document.getElementById('pName').value || 'This product'; document.getElementById('pDesc').value = n + ' by ' + S.name + ': premium quality, carefully checked before delivery. Cash on delivery all over Bangladesh. 7-day easy return. Order now and get it in 1-3 days.'; toast('ROSE wrote the description'); };
-  window.saveProduct = function (id) {
-    var g = function (x) { return document.getElementById(x).value.trim(); };
-    if (!g('pName') || !(+g('pPrice') > 0)) return toast('Name and price are needed');
-    var p = id >= 0 ? P(id) : { id: st.products.length, e: '📦', imgs: [], rx: false };
-    p.name = g('pName'); p.price = +g('pPrice'); p.old = +g('pOld') || p.price; p.stock = +g('pStock') || 0; p.cat = g('pCat'); p.desc = g('pDesc');
-    p.optLabel = g('pOptL'); p.opts = g('pOpts') ? g('pOpts').split(',').map(function (x) { return x.trim(); }).filter(Boolean) : []; p.active = document.getElementById('pAct').classList.contains('on');
-    if (window.__newImgs) { p.imgs = p.imgs.concat(window.__newImgs); window.__newImgs = null; }
-    if (id < 0) st.products.unshift(p);
-    st.products.forEach(function (x, i) { x.id = i; });
-    toast('Saved ✓'); go('products');
-  };
   window.delProduct = function (id) { if (!confirm('Delete this product?')) return; st.products.splice(id, 1); st.products.forEach(function (x, i) { x.id = i; }); toast('Deleted'); go('products'); };
   window.addCat = function () { var n = document.getElementById('cName').value.trim(); if (!n) return toast('Write a name'); st.cats.push({ name: n, icon: document.getElementById('cIcon').value || '🏷️' }); toast('Category added'); render(); };
   window.delCat = function (i) { st.cats.splice(i, 1); render(); };
@@ -346,15 +506,19 @@
   function render() {
     var parts = route.split('/'), id = parts[0], arg = parts[1];
     var barId = id === 'order' ? 'orders' : id === 'product' ? 'products' : id;
-    side.innerHTML = head + BARS.map(function (b, j) {
+    if (id !== 'product') draft = null;
+    var GROUPS = [['MAIN', ['dashboard', 'orders', 'products', 'categories', 'customers']], ['SELL', ['offers', 'reviews', 'chat', 'reports']], ['STORE', ['design', 'payments', 'delivery', 'print', 'pixels', 'seo', 'domain', 'staff']]];
+    var pc = '<nav class="pcnav">' + GROUPS.map(function (g) { return '<div class="gh">' + g[0] + '</div>' + g[1].map(function (bid) { var b = barOf(bid); var title = bid === 'seo' ? 'SEO' : b[1].charAt(0) + b[1].slice(1).toLowerCase().replace(/&/g, '&amp;'); return '<button class="ni' + (bid === barId ? ' on' : '') + '" onclick="go(\'' + bid + '\')"><span class="ni-ic" style="background:' + b[3] + '22">' + b[2] + '</span><span class="ni-t">' + title + '</span><span class="ni-v">' + b[4]() + '</span></button>'; }).join(''); }).join('') + '</nav>';
+    side.innerHTML = head + pc + '<div class="bigbars">' + BARS.map(function (b, j) {
       return '<button class="bar' + (b[0] === barId ? ' on' : '') + '" onclick="go(\'' + b[0] + '\')"><span class="n">' + String(j + 1).padStart(2, '0') + '</span><span class="ic" style="background:' + b[3] + '22;border:1px solid ' + b[3] + '55">' + b[2] + '</span><span class="t">' + b[1] + '</span><span class="v">' + b[4]() + '</span><span class="chev">›</span></button>';
-    }).join('');
+    }).join('') + '</div>';
     var bar = barOf(barId);
     if (!bar) { main.innerHTML = ''; return; }
     var t = id === 'order' ? 'ORDER #' + arg : id === 'product' ? (arg === 'new' ? 'ADD PRODUCT' : 'PRODUCT') : bar[1];
     document.getElementById('title').textContent = t;
     var backTo = id === 'order' ? 'orders' : id === 'product' ? 'products' : '';
     main.innerHTML = '<h2>' + (backTo ? '<button class="btn alt" style="padding:5px 9px" onclick="go(\'' + backTo + '\')">‹</button>' : '') + '<span class="ic" style="font-size:20px">' + bar[2] + '</span>' + t + '</h2>' + (V[id] ? V[id](arg) : '');
+    if (id === 'product') afterProduct();
   }
   window.render = render;
   function onHash() {
