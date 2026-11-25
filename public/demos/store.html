@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Demo Store · ROSE Store Builder</title>
+<meta name="robots" content="noindex" />
+<meta name="description" content="Demo online store made with ROSE Store Builder." />
+<style>
+  :root { --c: #16a34a; --a: #facc15; --bg: #f6f7fb; --card: #fff; --ink: #0f172a; --mute: #64748b; --line: #e5e7eb; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 14px; }
+  .demo { background: #0f172a; color: #e2e8f0; font-size: 12px; }
+  .demo .wrap { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 7px 14px; }
+  .demo a { background: var(--a); color: #111; border-radius: 999px; padding: 5px 10px; font-weight: 700; white-space: nowrap; }
+  header.top { background: #fff; position: sticky; top: 0; z-index: 20; box-shadow: 0 1px 0 var(--line); }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+  .logo { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .logo .ic { font-size: 30px; }
+  .logo b { font-size: 21px; color: var(--c); display: block; line-height: 1.05; }
+  .logo small { color: var(--mute); font-size: 11.5px; }
+  .grow { flex: 1; }
+  .icon { position: relative; font-size: 22px; padding: 6px; border-radius: 10px; background: none; border: 0; }
+  .icon i[hidden] { display: none; }
+  .icon i { position: absolute; top: 0; right: 0; background: #ef4444; color: #fff; font-style: normal; font-size: 10px; border-radius: 99px; min-width: 16px; height: 16px; display: grid; place-items: center; padding: 0 4px; }
+  .city { font-size: 13px; color: var(--mute); white-space: nowrap; }
+  .search { display: flex; border: 1.5px solid var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 10px; background: #fff; }
+  .search input { flex: 1; border: 0; padding: 11px 16px; font-size: 14px; outline: none; min-width: 0; }
+  .search button { background: var(--c); color: #fff; border: 0; padding: 0 20px; font-weight: 700; }
+  main { padding: 12px 0 90px; }
+  .slider { position: relative; border-radius: 18px; overflow: hidden; height: 190px; }
+  .slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; opacity: 0; transition: opacity .6s; }
+  .slide.on { opacity: 1; }
+  .slide h2 { margin: 0 0 10px; font-size: clamp(19px, 4.6vw, 30px); line-height: 1.12; max-width: 62%; color: #0f172a; }
+  .slide .badge { display: inline-block; background: #ef4444; color: #fff; font-weight: 800; padding: 6px 12px; border-radius: 10px; transform: rotate(-2deg); }
+  .slide .big { font-size: clamp(70px, 16vw, 120px); filter: drop-shadow(0 8px 14px rgba(0,0,0,.18)); }
+  .dots { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+  .dots b { width: 7px; height: 7px; border-radius: 9px; background: rgba(255,255,255,.6); }
+  .dots b.on { width: 18px; background: #fff; }
+  .trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0; background: #fff; border-radius: 14px; padding: 10px; font-size: 12px; text-align: center; }
+  .cats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 12px 0; }
+  .cat { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 4px; text-align: center; font-size: 12.5px; }
+  .cat .e { font-size: 32px; display: block; margin-bottom: 4px; }
+  .head { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 10px; }
+  .head h3 { margin: 0; font-size: 20px; }
+  .head a { color: var(--c); font-weight: 700; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .card .img { height: 130px; display: grid; place-items: center; font-size: 64px; background: linear-gradient(160deg, #fff, #f1f5f9); }
+  .off { position: absolute; top: 8px; left: 8px; background: #ef4444; color: #fff; font-size: 11.5px; font-weight: 800; border-radius: 7px; padding: 3px 7px; }
+  .rx { position: absolute; top: 8px; right: 8px; background: #0e7490; color: #fff; font-size: 11px; font-weight: 800; border-radius: 7px; padding: 3px 7px; }
+  .heart { position: absolute; top: 6px; right: 6px; background: #fff; border: 0; border-radius: 99px; width: 30px; height: 30px; font-size: 16px; }
+  .card .body { padding: 9px 10px 10px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .card .t { font-size: 13.5px; font-weight: 600; min-height: 36px; }
+  .price b { color: #dc2626; font-size: 17px; }
+  .price s { color: var(--mute); font-size: 12.5px; margin-left: 6px; }
+  .stars { color: #f59e0b; font-size: 12px; }
+  .btn { background: var(--c); color: #fff; border: 0; border-radius: 10px; padding: 9px 10px; font-weight: 700; font-size: 13px; width: 100%; }
+  .btn.alt { background: #fff; color: var(--c); border: 1.5px solid var(--c); }
+  .promos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .promo { border-radius: 16px; padding: 16px; min-height: 110px; color: #fff; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 18px; }
+  .promo span { font-size: 54px; }
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+  .pd { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .pd .big { height: 300px; border-radius: 16px; display: grid; place-items: center; font-size: 140px; background: linear-gradient(160deg,#fff,#eef2f7); border: 1px solid var(--line); }
+  .thumbs { display: flex; gap: 8px; margin-top: 8px; }
+  .thumbs div { width: 58px; height: 58px; border-radius: 10px; border: 1px solid var(--line); display: grid; place-items: center; font-size: 28px; background: #fff; }
+  .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .opts button { border: 1.5px solid var(--line); background: #fff; border-radius: 9px; padding: 7px 12px; font-size: 13px; }
+  .opts button.on { border-color: var(--c); color: var(--c); font-weight: 700; }
+  .qty { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .qty button { border: 0; background: #f1f5f9; width: 34px; height: 34px; font-size: 18px; }
+  .qty span { width: 40px; display: grid; place-items: center; }
+  .note { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 12px; padding: 10px 12px; font-size: 13px; color: #134e4a; }
+  .warn { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .row .e { font-size: 34px; width: 52px; text-align: center; }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 13px; }
+  .field input, .field select, .field textarea { border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+  .pay { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pay label { border: 1.5px solid var(--line); border-radius: 10px; padding: 10px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .crumb { font-size: 12.5px; color: var(--mute); margin-bottom: 10px; }
+  .crumb a { color: var(--c); }
+  .review { border-top: 1px solid var(--line); padding: 10px 0; font-size: 13.5px; }
+  .review b { font-size: 13px; }
+  .vb { background: #dcfce7; color: #166534; font-size: 10.5px; border-radius: 6px; padding: 2px 6px; margin-left: 6px; }
+  footer { background: #0f172a; color: #cbd5e1; padding: 26px 0 110px; font-size: 13px; }
+  footer .cols { display: grid; grid-template-columns: 2fr 1fr 1fr 1.3fr; gap: 18px; }
+  footer h4 { color: #fff; margin: 0 0 8px; font-size: 14px; }
+  footer p { margin: 4px 0; }
+  .paylogos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .paylogos span { background: #fff; color: #0f172a; border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 800; }
+  .store-btn { display: inline-flex; align-items: center; gap: 6px; background: #000; color: #fff; border: 1px solid #475569; border-radius: 10px; padding: 7px 12px; margin-top: 6px; font-size: 12px; }
+  nav.bottom { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: env(safe-area-inset-bottom); z-index: 30; }
+  nav.bottom a { text-align: center; font-size: 11.5px; padding: 7px 0 8px; color: var(--mute); position: relative; }
+  nav.bottom a .e { font-size: 21px; display: block; }
+  nav.bottom a.on { color: var(--c); font-weight: 700; }
+  nav.bottom a i { position: absolute; top: 2px; left: 55%; background: #ef4444; color: #fff; font-style: normal; font-size: 10px; border-radius: 99px; padding: 0 5px; }
+  .chatbtn { position: fixed; right: 14px; bottom: 78px; z-index: 31; width: 56px; height: 56px; border-radius: 99px; border: 0; background: var(--c); color: #fff; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+  .chat { position: fixed; right: 14px; bottom: 142px; z-index: 32; width: min(340px, calc(100vw - 28px)); background: #fff; border-radius: 16px; box-shadow: 0 12px 34px rgba(0,0,0,.25); overflow: hidden; display: none; }
+  .chat.on { display: block; }
+  .chat .h { background: var(--c); color: #fff; padding: 10px 12px; font-weight: 700; display: flex; justify-content: space-between; }
+  .chat .m { height: 240px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; background: #f8fafc; }
+  .chat .m div { max-width: 82%; padding: 7px 10px; border-radius: 12px; }
+  .chat .m .b { background: #fff; border: 1px solid var(--line); align-self: flex-start; }
+  .chat .m .u { background: var(--c); color: #fff; align-self: flex-end; }
+  .chat form { display: flex; border-top: 1px solid var(--line); }
+  .chat input { flex: 1; border: 0; padding: 10px; outline: none; }
+  .chat form button { border: 0; background: none; color: var(--c); font-weight: 800; padding: 0 12px; }
+  .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 9px 16px; border-radius: 99px; font-size: 13px; z-index: 40; display: none; }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .cats { grid-template-columns: repeat(3, 1fr); }
+    .trust { grid-template-columns: repeat(2, 1fr); }
+    .pd { grid-template-columns: 1fr; }
+    .pd .big { height: 230px; font-size: 110px; }
+    .promos { grid-template-columns: 1fr; }
+    footer .cols { grid-template-columns: 1fr 1fr; }
+    .city { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="demo"><div class="wrap"><span>DEMO STORE · made with <b>ROSE Store Builder</b></span><a href="/app">Make a store like this</a></div></div>
+<header class="top"><div class="wrap">
+  <div class="bar">
+    <a class="logo" href="#/"><span class="ic" id="logoIc"></span><span><b id="logoName"></b><small id="logoTag"></small></span></a>
+    <span class="grow"></span>
+    <span class="city" id="city"></span>
+    <a class="icon" href="#/wishlist" title="Wishlist">🤍<i id="wCount" hidden></i></a>
+    <a class="icon" href="#/cart" title="Cart">🛒<i id="cCount" hidden></i></a>
+  </div>
+  <form class="search" id="searchForm"><input id="q" placeholder="Search products…" aria-label="Search" /><button>Search</button></form>
+</div></header>
+
+<main><div class="wrap" id="view"></div></main>
+
+<footer><div class="wrap cols" id="foot"></div></footer>
+
+<nav class="bottom" id="nav"></nav>
+<button class="chatbtn" id="chatBtn" aria-label="Live chat">💬</button>
+<div class="chat" id="chat">
+  <div class="h"><span id="chatTitle">Live chat</span><button id="chatX" style="background:none;border:0;color:#fff;font-size:18px">✕</button></div>
+  <div class="m" id="chatM"></div>
+  <form id="chatF"><input id="chatI" placeholder="Type a message…" /><button>SEND</button></form>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="stores.js"></script>
+<script>
+(function () {
+  var id = new URLSearchParams(location.search).get('s') || 'foodbazaar';
+  var S = window.ROSE_STORES[id] || window.ROSE_STORES.foodbazaar;
+  var root = document.documentElement;
+  root.style.setProperty('--c', S.color);
+  root.style.setProperty('--a', S.accent);
+  document.title = S.name + ' · ' + S.tagline + ' (Demo)';
+
+  var P = S.products.map(function (p, i) {
+    return { id: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 40 + ((i * 37) % 300) };
+  });
+  var tk = function (n) { return '৳ ' + n.toLocaleString('en-IN'); };
+  var off = function (p) { return Math.round((1 - p.price / p.old) * 100); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  // cart + wishlist (memory, with storage when allowed)
+  var KEY = 'rose_demo_' + id;
+  var st = { cart: [], wish: [] };
+  try { st = JSON.parse(localStorage.getItem(KEY)) || st; } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} counts(); }
+  function counts() {
+    var c = st.cart.reduce(function (a, x) { return a + x.q; }, 0);
+    var cc = document.getElementById('cCount'); cc.hidden = !c; cc.textContent = c;
+    var w = document.getElementById('wCount'); w.hidden = !st.wish.length; w.textContent = st.wish.length;
+    renderNav();
+  }
+  function toast(t) { var el = document.getElementById('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(function () { el.style.display = 'none'; }, 1800); }
+  function addCart(pid, opt, q) {
+    var ex = st.cart.find(function (x) { return x.id === pid && x.opt === (opt || ''); });
+    if (ex) ex.q += q || 1; else st.cart.push({ id: pid, opt: opt || '', q: q || 1 });
+    save(); toast('Added to cart');
+  }
+  function toggleWish(pid) {
+    var i = st.wish.indexOf(pid);
+    if (i >= 0) st.wish.splice(i, 1); else st.wish.push(pid);
+    save(); toast(i >= 0 ? 'Removed from wishlist' : 'Saved to wishlist');
+  }
+  window.__rose = { add: addCart, wish: toggleWish };
+
+  // header + footer
+  document.getElementById('logoIc').textContent = S.logo;
+  document.getElementById('logoName').textContent = S.name;
+  document.getElementById('logoTag').textContent = S.tagline;
+  document.getElementById('city').textContent = '📍 ' + S.city;
+  document.getElementById('foot').innerHTML =
+    '<div><h4>' + S.logo + ' ' + esc(S.name) + '</h4><p>' + esc(S.tagline) + '</p><p>📍 House 12, Road 5, ' + S.city + ' (demo address)</p><p>📞 +880 1XXX-XXXXXX</p><p>✉️ hello@' + id + '.myrosebd.com</p>' +
+    (S.pharmacy ? '<p><b>Drug Licence:</b> ' + S.licence + '</p>' : '') +
+    '<p>Facebook · YouTube · TikTok · Instagram</p></div>' +
+    '<div><h4>Shop</h4><p><a href="#/categories">All categories</a></p><p><a href="#/wishlist">Wishlist</a></p><p><a href="#/cart">Cart</a></p><p><a href="#/account">My orders</a></p></div>' +
+    '<div><h4>Help</h4><p><a href="#/page/about">About us</a></p><p><a href="#/page/contact">Contact</a></p><p><a href="#/page/return">Return policy</a></p><p><a href="#/page/privacy">Privacy</a></p><p><a href="#/page/terms">Terms</a></p></div>' +
+    '<div><h4>We accept</h4><div class="paylogos"><span>bKash</span><span>Nagad</span><span>Rocket</span><span>VISA</span><span>Mastercard</span><span>COD</span></div><h4 style="margin-top:12px">Get the app</h4><span class="store-btn">▶ Google Play</span></div>';
+
+  function renderNav() {
+    var h = location.hash || '#/';
+    var c = st.cart.reduce(function (a, x) { return a + x.q; }, 0);
+    var items = [['#/', '🏠', 'Home'], ['#/categories', '🗂️', 'Categories'], ['#/cart', '🛒', 'Cart'], ['#/wishlist', '🤍', 'Wishlist'], ['#/account', '👤', 'Account']];
+    document.getElementById('nav').innerHTML = items.map(function (it) {
+      var on = it[0] === '#/' ? (h === '#/' || h === '#') : h.indexOf(it[0]) === 0;
+      return '<a href="' + it[0] + '" class="' + (on ? 'on' : '') + '"><span class="e">' + it[1] + '</span>' + it[2] + (it[0] === '#/cart' && c ? '<i>' + c + '</i>' : '') + '</a>';
+    }).join('');
+  }
+
+  function card(p) {
+    var w = st.wish.indexOf(p.id) >= 0;
+    return '<div class="card"><a href="#/p/' + p.id + '"><div class="img">' + p.e + '</div></a>' +
+      '<span class="off">-' + off(p) + '%</span>' + (p.rx ? '<span class="rx" style="top:40px">Rx</span>' : '') +
+      '<button class="heart" onclick="__rose.wish(' + p.id + ');route()">' + (w ? '❤️' : '🤍') + '</button>' +
+      '<div class="body"><a class="t" href="#/p/' + p.id + '">' + esc(p.name) + '</a>' +
+      '<div class="stars">★ ' + p.rating + ' <span style="color:#94a3b8">(' + p.sold + ')</span></div>' +
+      '<div class="price"><b>' + tk(p.price) + '</b><s>' + tk(p.old) + '</s></div>' +
+      '<button class="btn" onclick="__rose.add(' + p.id + ')">🛒 Add to Cart</button></div></div>';
+  }
+
+  var slideTimer;
+  function home() {
+    var b = S.banners;
+    var html = '<div class="slider" id="slider">' + b.map(function (x, i) {
+      return '<div class="slide ' + (i ? '' : 'on') + '" style="background:' + x.bg + '"><div><h2>' + esc(x.title) + '</h2><span class="badge">' + esc(x.badge) + '</span><div style="margin-top:12px"><a class="btn" style="display:inline-block;width:auto;padding:9px 16px" href="#/categories">Shop Now →</a></div></div><div class="big">' + x.icon + '</div></div>';
+    }).join('') + '<div class="dots">' + b.map(function (x, i) { return '<b class="' + (i ? '' : 'on') + '"></b>'; }).join('') + '</div></div>';
+    html += '<div class="trust">' + S.trust.map(function (t) { return '<div>' + t + '</div>'; }).join('') + '</div>';
+    html += '<div class="cats">' + S.categories.map(function (c) { return '<a class="cat" href="#/c/' + encodeURIComponent(c[0]) + '"><span class="e">' + c[1] + '</span>' + esc(c[0]) + '</a>'; }).join('') + '</div>';
+    html += '<div class="head"><h3>🔥 ' + esc(S.sectionTitle) + '</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(0, 8).map(card).join('') + '</div>';
+    html += '<div class="promos"><div class="promo" style="background:linear-gradient(120deg,' + S.color + ',#0f172a)"><div>' + esc(S.banners[1].title) + '<br><small style="font-weight:600">' + esc(S.banners[1].badge) + '</small></div><span>' + S.banners[1].icon + '</span></div>' +
+      '<div class="promo" style="background:linear-gradient(120deg,#f59e0b,#ef4444)"><div>Best Quality<br>Best Price</div><span>' + S.logo + '</span></div></div>';
+    html += '<div class="head"><h3>✨ New Arrivals</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(-4).map(card).join('') + '</div>';
+    return html;
+  }
+  function startSlider() {
+    clearInterval(slideTimer);
+    var k = 0;
+    slideTimer = setInterval(function () {
+      var s = document.querySelectorAll('#slider .slide'), d = document.querySelectorAll('#slider .dots b');
+      if (!s.length) return clearInterval(slideTimer);
+      s[k].classList.remove('on'); d[k].classList.remove('on');
+      k = (k + 1) % s.length;
+      s[k].classList.add('on'); d[k].classList.add('on');
+    }, 3500);
+  }
+  function list(title, items) {
+    return '<div class="crumb"><a href="#/">Home</a> › ' + esc(title) + '</div><div class="head"><h3>' + esc(title) + '</h3><span style="color:#64748b;font-size:13px">' + items.length + ' items</span></div>' +
+      (items.length ? '<div class="grid">' + items.map(card).join('') + '</div>' : '<div class="panel">Nothing found.</div>');
+  }
+  function product(p) {
+    var opt = S.options ? '<div><b style="font-size:13px">' + esc(S.options.label) + '</b><div class="opts" id="opts">' + S.options.values.map(function (v, i) { return '<button class="' + (i ? '' : 'on') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div></div>' : '';
+    var rel = P.filter(function (x) { return x.cat === p.cat && x.id !== p.id; }).slice(0, 4);
+    return '<div class="crumb"><a href="#/">Home</a> › <a href="#/c/' + encodeURIComponent(p.cat) + '">' + esc(p.cat) + '</a> › ' + esc(p.name) + '</div>' +
+      '<div class="pd"><div><div class="big">' + p.e + '</div><div class="thumbs"><div>' + p.e + '</div><div>' + p.e + '</div><div>' + p.e + '</div></div></div>' +
+      '<div class="panel" style="display:flex;flex-direction:column;gap:12px"><h2 style="margin:0">' + esc(p.name) + '</h2>' +
+      '<div class="stars">★★★★★ ' + p.rating + ' · ' + p.sold + ' sold</div>' +
+      '<div class="price"><b style="font-size:26px">' + tk(p.price) + '</b><s>' + tk(p.old) + '</s> <span class="off" style="position:static">-' + off(p) + '%</span></div>' +
+      (p.rx ? '<div class="note warn">📄 <b>Prescription required.</b> Upload a doctor’s prescription at checkout. A licensed pharmacist checks it before the order is confirmed.</div>' : '') +
+      opt + '<div style="display:flex;gap:10px;align-items:center"><div class="qty"><button id="qm">−</button><span id="qv">1</span><button id="qp">+</button></div><span style="color:#16a34a;font-size:13px">✓ In stock</span></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn" id="addBtn">🛒 Add to Cart</button><button class="btn alt" id="buyBtn">Buy Now</button></div>' +
+      '<button class="btn alt" onclick="__rose.wish(' + p.id + ');route()">' + (st.wish.indexOf(p.id) >= 0 ? '❤️ Saved' : '🤍 Save to wishlist') + '</button>' +
+      '<div class="note">🚚 ' + esc(S.note) + '</div></div></div>' +
+      '<div class="panel" style="margin-top:14px"><h3 style="margin:0 0 6px">Customer reviews</h3><div class="stars" style="font-size:14px">★ ' + p.rating + ' out of 5</div>' +
+      '<div class="review"><b>Rahim U.</b><span class="vb">Verified Buyer</span><div class="stars">★★★★★</div>Good quality, fast delivery. (demo review)</div>' +
+      '<div class="review"><b>Nusrat J.</b><span class="vb">Verified Buyer</span><div class="stars">★★★★☆</div>Exactly as shown. Will order again. (demo review)</div>' +
+      '<button class="btn alt" style="margin-top:8px" onclick="toast(\'Only real buyers can write a review\')">Write a review</button></div>' +
+      (rel.length ? '<div class="head"><h3>You may also like</h3></div><div class="grid">' + rel.map(card).join('') + '</div>' : '');
+  }
+  function cartPage() {
+    if (!st.cart.length) return '<div class="panel" style="text-align:center;padding:40px">🛒<h3>Your cart is empty</h3><a class="btn" style="display:inline-block;width:auto;padding:10px 20px" href="#/">Start shopping</a></div>';
+    var sub = 0;
+    var rows = st.cart.map(function (c, i) {
+      var p = P[c.id]; sub += p.price * c.q;
+      return '<div class="row"><span class="e">' + p.e + '</span><div style="flex:1"><b style="font-size:14px">' + esc(p.name) + '</b><div style="font-size:12px;color:#64748b">' + esc(c.opt) + (p.rx ? ' · Rx' : '') + '</div><b style="color:#dc2626">' + tk(p.price) + '</b></div>' +
+        '<div class="qty"><button onclick="cq(' + i + ',-1)">−</button><span>' + c.q + '</span><button onclick="cq(' + i + ',1)">+</button></div></div>';
+    }).join('');
+    return '<div class="head"><h3>🛒 Cart</h3></div><div class="panel">' + rows +
+      '<div style="display:flex;justify-content:space-between;margin-top:12px"><span>Subtotal</span><b>' + tk(sub) + '</b></div>' +
+      '<div class="field" style="margin-top:10px"><span>Coupon code</span><div style="display:flex;gap:6px"><input placeholder="e.g. ROSE10" style="flex:1"><button class="btn alt" style="width:auto" onclick="toast(\'Demo: coupon applied\')">Apply</button></div></div>' +
+      '<a class="btn" style="display:block;text-align:center" href="#/checkout">Checkout →</a></div>';
+  }
+  window.cq = function (i, d) { st.cart[i].q += d; if (st.cart[i].q <= 0) st.cart.splice(i, 1); save(); route(); };
+  function checkout() {
+    if (!st.cart.length) return cartPage();
+    var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0);
+    var needRx = st.cart.some(function (c) { return P[c.id].rx; });
+    return '<div class="crumb"><a href="#/cart">Cart</a> › Checkout</div><div class="pd"><div class="panel"><h3 style="margin-top:0">Delivery details</h3>' +
+      '<div class="field"><span>Full name</span><input placeholder="Your name"></div><div class="field"><span>Phone</span><input placeholder="01XXXXXXXXX"></div>' +
+      '<div class="field"><span>Full address</span><textarea rows="2" placeholder="House, road, area"></textarea></div>' +
+      '<div class="field"><span>Delivery area</span><select id="area"><option value="60">Inside Dhaka (৳ 60)</option><option value="120">Outside Dhaka (৳ 120)</option></select></div>' +
+      (needRx ? '<div class="note warn" style="margin-bottom:10px">📄 <b>Prescription required</b> for Rx medicine.<br><input type="file" accept="image/*,.pdf" style="margin-top:8px"></div>' : '') +
+      '</div><div class="panel"><h3 style="margin-top:0">Payment</h3><div class="pay">' +
+      ['💵 Cash on Delivery', 'bKash', 'Nagad', 'Rocket', '💳 Card (VISA/Master)', '🏦 Bank transfer'].map(function (m, i) { return '<label><input type="radio" name="pay" ' + (i ? '' : 'checked') + '> ' + m + '</label>'; }).join('') +
+      '</div><div style="margin-top:14px;font-size:14px;display:grid;gap:6px"><div style="display:flex;justify-content:space-between"><span>Subtotal</span><b>' + tk(sub) + '</b></div><div style="display:flex;justify-content:space-between"><span>Delivery</span><b id="dl">' + tk(60) + '</b></div><div style="display:flex;justify-content:space-between;font-size:17px"><span>Total</span><b id="tot" style="color:#dc2626">' + tk(sub + 60) + '</b></div></div>' +
+      '<button class="btn" style="margin-top:12px" onclick="placeOrder()">Place Order</button><p style="font-size:12px;color:#64748b">Demo store: no real order is made.</p></div></div>';
+  }
+  window.placeOrder = function () { st.cart = []; save(); location.hash = '#/done'; };
+  function done() {
+    var no = 1000 + Math.floor(Math.random() * 9000);
+    return '<div class="panel" style="text-align:center;padding:36px">✅<h2>Order placed!</h2><p>Order <b>#' + no + '</b> (demo). In a real store the owner gets it in ROSE at once, and can book the courier in one tap.</p>' +
+      '<div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;font-size:12.5px;margin:14px 0"><span class="note">1 Confirmed</span><span class="note">2 Packed</span><span class="note">3 Shipped</span><span class="note">4 Delivered</span></div>' +
+      '<a class="btn" style="display:inline-block;width:auto;padding:10px 20px" href="#/">Continue shopping</a></div>';
+  }
+  function account() {
+    return '<div class="panel"><h3 style="margin-top:0">👤 My account</h3><button class="btn alt" onclick="toast(\'Demo: Google login\')">Continue with Google</button><div class="field" style="margin-top:10px"><span>or phone number (OTP)</span><input placeholder="01XXXXXXXXX"></div>' +
+      '<h4>My orders</h4><div class="row"><span class="e">📦</span><div style="flex:1"><b>#1024</b><div style="font-size:12px;color:#64748b">On the way · Steadfast</div></div><button class="btn alt" style="width:auto" onclick="toast(\'Demo: re-order\')">Re-order</button></div>' +
+      '<div class="row"><span class="e">⭐</span><div style="flex:1"><b>Loyalty points</b><div style="font-size:12px;color:#64748b">120 points = ৳ 12 off</div></div></div></div>';
+  }
+  var PAGES = {
+    about: ['About us', S.name + ' is a demo store made with ROSE Store Builder. A real store writes its own story here.'],
+    contact: ['Contact', 'Phone, e-mail, address and map. Live chat is at the bottom right.'],
+    return: ['Return policy', 'Example: return or exchange within 7 days with the invoice. Each store writes its own rules.'],
+    privacy: ['Privacy policy', 'How the store uses customer data. ROSE gives every store a ready template.'],
+    terms: ['Terms', 'Store terms and conditions.'],
+  };
+
+  window.route = function () {
+    var h = decodeURIComponent((location.hash || '#/').slice(1));
+    var v = document.getElementById('view'), html;
+    if (h === '/' || h === '') html = home();
+    else if (h === '/categories') html = '<div class="head"><h3>All categories</h3></div><div class="cats">' + S.categories.map(function (c) { return '<a class="cat" href="#/c/' + encodeURIComponent(c[0]) + '"><span class="e">' + c[1] + '</span>' + esc(c[0]) + '</a>'; }).join('') + '</div>';
+    else if (h.indexOf('/c/') === 0) { var cat = h.slice(3); html = list(cat, P.filter(function (p) { return p.cat === cat; })); }
+    else if (h === '/all') html = list('All products', P);
+    else if (h.indexOf('/p/') === 0) { var p = P[+h.slice(3)]; html = p ? product(p) : list('Not found', []); }
+    else if (h.indexOf('/s/') === 0) { var q = h.slice(3).toLowerCase(); html = list('Search: ' + q, P.filter(function (p) { return (p.name + ' ' + p.cat).toLowerCase().indexOf(q) >= 0; })); }
+    else if (h === '/cart') html = cartPage();
+    else if (h === '/checkout') html = checkout();
+    else if (h === '/done') html = done();
+    else if (h === '/wishlist') { var w = P.filter(function (p) { return st.wish.indexOf(p.id) >= 0; }); html = w.length ? list('Wishlist', w) : '<div class="panel" style="text-align:center;padding:40px">🤍<h3>No saved items yet</h3></div>'; }
+    else if (h === '/account') html = account();
+    else if (h.indexOf('/page/') === 0) { var pg = PAGES[h.slice(6)] || PAGES.about; html = '<div class="panel"><h2 style="margin-top:0">' + pg[0] + '</h2><p>' + esc(pg[1]) + '</p></div>'; }
+    else html = home();
+    v.innerHTML = html;
+    window.scrollTo(0, 0);
+    renderNav();
+    if (h === '/' || h === '') startSlider();
+    if (h.indexOf('/p/') === 0) bindProduct(+h.slice(3));
+    var area = document.getElementById('area');
+    if (area) area.onchange = function () {
+      var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0), d = +area.value;
+      document.getElementById('dl').textContent = tk(d); document.getElementById('tot').textContent = tk(sub + d);
+    };
+  };
+  window.toast = toast;
+  function bindProduct(pid) {
+    var q = 1, opt = S.options ? S.options.values[0] : '';
+    var qv = document.getElementById('qv');
+    document.getElementById('qm').onclick = function () { q = Math.max(1, q - 1); qv.textContent = q; };
+    document.getElementById('qp').onclick = function () { q++; qv.textContent = q; };
+    var o = document.getElementById('opts');
+    if (o) o.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(o.children, function (x) { x.classList.remove('on'); }); b.classList.add('on'); opt = b.dataset.v; };
+    document.getElementById('addBtn').onclick = function () { addCart(pid, opt, q); };
+    document.getElementById('buyBtn').onclick = function () { addCart(pid, opt, q); location.hash = '#/checkout'; };
+  }
+  document.getElementById('searchForm').onsubmit = function (e) { e.preventDefault(); var q = document.getElementById('q').value.trim(); if (q) location.hash = '#/s/' + encodeURIComponent(q); };
+  window.addEventListener('hashchange', route);
+
+  // live chat (demo answers)
+  var chat = document.getElementById('chat'), cm = document.getElementById('chatM');
+  document.getElementById('chatTitle').textContent = S.name + ' · Live chat';
+  function say(t, who) { var d = document.createElement('div'); d.className = who; d.textContent = t; cm.appendChild(d); cm.scrollTop = 99999; }
+  say('Hi! I am ROSE, the assistant of ' + S.name + '. Ask about price, stock or delivery.', 'b');
+  document.getElementById('chatBtn').onclick = function () { chat.classList.toggle('on'); };
+  document.getElementById('chatX').onclick = function () { chat.classList.remove('on'); };
+  document.getElementById('chatF').onsubmit = function (e) {
+    e.preventDefault();
+    var i = document.getElementById('chatI'), t = i.value.trim(); if (!t) return; i.value = ''; say(t, 'u');
+    var l = t.toLowerCase(), hit = P.find(function (p) { return l.indexOf(p.name.toLowerCase().split(' ')[0]) >= 0; });
+    var a = hit ? hit.name + ' is ' + tk(hit.price) + ' (was ' + tk(hit.old) + ') and in stock.'
+      : /deliver|ডেলিভারি|charge/.test(l) ? 'Delivery: ৳ 60 inside Dhaka, ৳ 120 outside. ' + S.note
+      : /dose|ডোজ|খাব/.test(l) && S.pharmacy ? 'For dose, please ask your doctor or our pharmacist. I can help you order.'
+      : 'Thanks! In a real store the owner gets this message in the ROSE app at once and can reply.';
+    setTimeout(function () { say(a, 'b'); }, 600);
+  };
+
+  counts(); route();
+})();
+</script>
+</body>
+</html>

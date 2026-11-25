@@ -42,9 +42,12 @@ const TREE: Node[] = [
     value: 'PREMIUM ONLY',
     children: [
       n('FREE USERS', ['Can open and scroll every demo store', 'BUILD button shows: Upgrade to Premium']),
-      n('WEBSITE STARTER', ['1 store, yourshop.myrosebd.com', 'Up to 200 products', 'Cash on Delivery, bKash / Nagad / Rocket (manual)', 'Price: set in 05 PLANS & PRICES'], 'PLAN'),
-      n('WEBSITE PRO', ['1 store, own domain allowed', 'Unlimited products and orders', 'Live chat with ROSE, Pixel and Analytics, coupons', 'Courier booking (Steadfast, Pathao, RedX)', 'Price: set in 05 PLANS & PRICES'], 'PLAN'),
-      n('WEBSITE BUSINESS', ['Up to 3 stores', 'Hostinger download, staff accounts, card payment gateway', 'Priority support', 'Price: set in 05 PLANS & PRICES'], 'PLAN'),
+      n('5-DAY FREE TRIAL', ['One free trial per Gmail, no payment needed', 'Full WEBSITE PRO features for 5 days on yourshop.myrosebd.com', 'Day 4: ROSE reminds to choose a plan', 'After 5 days the store is paused (not deleted) until a plan is bought']),
+      n('DURATIONS', ['3 months: normal price', '6 months: 5% off', '9 months: 10% off', '12 months: 15% off', '24 months (2 years): 25% off', 'All numbers editable in 05 PLANS & PRICES']),
+      n('WEBSITE STARTER', ['1 store, yourshop.myrosebd.com', 'Up to 200 products, 1 staff', 'Cash on Delivery, bKash / Nagad / Rocket (manual)', 'Suggested: 499 Tk / month (set in 05 PLANS & PRICES)'], 'PLAN'),
+      n('WEBSITE PRO', ['1 store, own domain allowed', 'Unlimited products and orders, 3 staff', 'Live chat with ROSE, Pixel and Analytics, coupons', 'Courier booking (Steadfast, Pathao, RedX)', 'Suggested: 999 Tk / month (set in 05 PLANS & PRICES)'], 'PLAN'),
+      n('WEBSITE BUSINESS', ['Up to 3 stores, 10 staff', 'Hostinger download, card payment gateway', 'Priority support', 'Suggested: 1,999 Tk / month (set in 05 PLANS & PRICES)'], 'PLAN'),
+      n('HOW-TO VIDEOS', ['Short videos on the website with finger marks on each tap', 'How to start the 5-day free trial', 'What each plan gives', 'How to connect your own domain', 'How to add Facebook Pixel, TikTok Pixel and Google Analytics', 'Admin writes the script, voice is recorded, then the video is made']),
     ],
   },
   {

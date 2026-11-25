@@ -1,3 +1,7 @@
 {
-  "rewrites": [{ "source": "/((?!.*\\.).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/demos", "destination": "/demos/index.html" },
+    { "source": "/demos/", "destination": "/demos/index.html" },
+    { "source": "/((?!.*\\.).*)", "destination": "/index.html" }
+  ]
 }
