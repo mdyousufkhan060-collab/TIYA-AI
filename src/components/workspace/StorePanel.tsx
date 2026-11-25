@@ -11,7 +11,7 @@ import { STORE_DURATIONS, STORE_PLANS, storePrice, tk, type StorePlanId } from '
  */
 type Access = { plan: StorePlanId; ends_at: string; stores_limit: number; products_limit: number } | null;
 type Store = {
-  id: string; slug: string; name: string; tagline: string; logo: string; color: string; accent: string; template: string;
+  id: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
   delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[];
   pay_numbers: Record<string, string>; published: boolean; suspended: boolean;
@@ -28,7 +28,7 @@ type Order = {
 };
 type Demo = {
   name: string; tagline: string; logo: string; type: string; color: string; accent: string; banners: Banner[]; trust: string[];
-  categories: [string, string][]; products: Array<[string, string, string, number, number, string?]>;
+  categories: [string, string][]; products: Array<[string, string, string, number, number, string?, string?]>;
   options?: { label: string; values: string[] }; note: string; pharmacy?: boolean;
 };
 
@@ -48,6 +48,28 @@ function loadDemos(): Promise<Record<string, Demo>> {
     document.head.appendChild(s);
   });
 }
+/** Phone photo -> small WebP in the store's own folder; returns the public link. */
+async function uploadImage(storeId: string, file: File, max = 1200): Promise<string> {
+  const url = URL.createObjectURL(file);
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = () => rej(new Error('Could not read the photo'));
+    i.src = url;
+  });
+  const k = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * k);
+  c.height = Math.round(img.height * k);
+  c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+  URL.revokeObjectURL(url);
+  const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not convert the photo'))), 'image/webp', 0.82));
+  const path = `${storeId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  const { error } = await supabase.storage.from('store-media').upload(path, blob, { contentType: 'image/webp', upsert: false });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from('store-media').getPublicUrl(path).data.publicUrl;
+}
+
 const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 
 export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
@@ -253,6 +275,7 @@ const CreateStore: React.FC<{ demos: Record<string, Demo>; canCreate: boolean; o
       const prods = d.products.map((p, i) => ({
         store_id: st.id, name: p[0], category_id: byName.get(p[1]) || null, emoji: p[2], price: p[3], old_price: p[4], stock: 50,
         rx: p[5] === 'rx', options_label: d.options?.label || '', options: d.options?.values || [], sort: i,
+        images: p[6] ? [String(p[6])] : [],
       }));
       await supabase.from('store_products').insert(prods);
     }
@@ -395,6 +418,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
   const [cats, setCats] = useState<Cat[]>([]);
   const [edit, setEdit] = useState<Partial<Prod> | null>(null);
   const [msg, setMsg] = useState('');
+  const [uploading, setUploading] = useState(false);
   const load = useCallback(async () => {
     const [p, c] = await Promise.all([
       supabase.from('store_products').select('*').eq('store_id', store.id).order('sort'),
@@ -444,7 +468,35 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
           <input className={input} value={edit.stock ?? ''} onChange={(e) => set('stock', e.target.value.replace(/[^\d]/g, ''))} placeholder="Stock" inputMode="numeric" />
         </div>
         <textarea className={input} rows={3} value={edit.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Description (helps Google)" />
-        <input className={input} value={(edit.images || []).join(', ')} onChange={(e) => set('images', e.target.value.split(',').map((x) => x.trim()))} placeholder="Photo links (https://…), comma separated" />
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap gap-1.5">
+            {(edit.images || []).filter(Boolean).map((u, i) => (
+              <div key={u + i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-white/10">
+                <img src={u} alt="" className="h-full w-full object-cover" />
+                <button type="button" aria-label="Remove photo" onClick={() => set('images', (edit.images || []).filter((x) => x !== u))} className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] text-white">✕</button>
+              </div>
+            ))}
+          </div>
+          <label className={btn + ' w-full cursor-pointer bg-white/10'}>
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} ADD PHOTOS (GALLERY / CAMERA)
+            <input type="file" accept="image/*" multiple hidden onChange={async (e) => {
+              const files = Array.from(e.target.files || []).slice(0, 6);
+              e.target.value = '';
+              if (!files.length) return;
+              setUploading(true);
+              setMsg('');
+              try {
+                const urls: string[] = [];
+                for (const f of files) urls.push(await uploadImage(store.id, f));
+                setEdit((x) => ({ ...(x || {}), images: [...((x?.images || []).filter(Boolean)), ...urls] }));
+              } catch (err: any) {
+                setMsg(String(err?.message || err));
+              } finally {
+                setUploading(false);
+              }
+            }} />
+          </label>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <input className={input} value={edit.options_label || ''} onChange={(e) => set('options_label', e.target.value)} placeholder="Size / Colour" />
           <input className={input + ' col-span-2'} value={(edit.options || []).join(', ')} onChange={(e) => set('options', e.target.value.split(',').map((x) => x.trim()))} placeholder="S, M, L, XL" />
@@ -474,7 +526,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
       {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
       {prods.map((p) => (
         <button key={p.id} type="button" onClick={() => { setMsg(''); setEdit(p); }} className={box + ' flex w-full items-center gap-2 text-left'}>
-          <span className="text-2xl">{p.emoji}</span>
+          {p.images?.[0] ? <img src={p.images[0].startsWith('http') ? p.images[0] : `https://images.unsplash.com/${p.images[0]}?w=120&q=60&auto=format&fit=crop`} alt="" className="h-10 w-10 rounded-lg object-cover" /> : <span className="text-2xl">{p.emoji}</span>}
           <div className="min-w-0 flex-1">
             <p className="truncate text-[12.5px] font-semibold text-white">{p.name}</p>
             <p className="text-[11px] text-slate-400">{tk(Number(p.price))}{p.old_price ? ` (was ${tk(Number(p.old_price))})` : ''} · stock {p.stock}{p.active ? '' : ' · HIDDEN'}</p>
@@ -489,6 +541,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
 const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
   const [s, setS] = useState<Store>(store);
   const [msg, setMsg] = useState('');
+  const [logoBusy, setLogoBusy] = useState(false);
   const set = (k: keyof Store, v: unknown) => setS((x) => ({ ...x, [k]: v }));
   const setBanner = (i: number, k: keyof Banner, v: string) =>
     setS((x) => ({ ...x, banners: x.banners.map((b, j) => (j === i ? { ...b, [k]: v } : b)) }));
@@ -496,7 +549,7 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
     const { error } = await supabase
       .from('stores')
       .update({
-        name: s.name, tagline: s.tagline, logo: s.logo, color: s.color, accent: s.accent, city: s.city, phone: s.phone, email: s.email,
+        name: s.name, tagline: s.tagline, logo: s.logo, logo_url: s.logo_url || '', color: s.color, accent: s.accent, city: s.city, phone: s.phone, email: s.email,
         address: s.address, licence: s.licence, note: s.note, delivery_inside: Number(s.delivery_inside) || 0,
         delivery_outside: Number(s.delivery_outside) || 0, banners: s.banners, trust: s.trust, pay_numbers: s.pay_numbers,
         updated_at: new Date().toISOString(),
@@ -512,8 +565,29 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
     <div className="space-y-2">
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">STORE</p>
+        <p className="text-[11px] text-slate-400">LOGO (picture) and NAME are separate.</p>
+        <div className="flex items-center gap-2">
+          {s.logo_url ? <img src={s.logo_url} alt="Logo" className="h-12 w-12 rounded-lg bg-white object-contain" /> : <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-black/30 text-2xl">{s.logo}</span>}
+          <label className={btn + ' flex-1 cursor-pointer bg-white/10'}>
+            {logoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} UPLOAD LOGO
+            <input type="file" accept="image/*" hidden onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              setLogoBusy(true);
+              try {
+                set('logo_url', await uploadImage(store.id, f, 400));
+              } catch (err: any) {
+                setMsg(String(err?.message || err));
+              } finally {
+                setLogoBusy(false);
+              }
+            }} />
+          </label>
+          {s.logo_url && <button type="button" onClick={() => set('logo_url', '')} className="text-[11px] font-bold text-rose-300">REMOVE</button>}
+        </div>
         <div className="flex gap-2">
-          <input className={input + ' w-14 text-center'} value={s.logo} onChange={(e) => set('logo', e.target.value)} aria-label="Logo" />
+          <input className={input + ' w-14 text-center'} value={s.logo} onChange={(e) => set('logo', e.target.value)} aria-label="Icon if no logo" />
           {field('name', 'Store name')}
         </div>
         {field('tagline', 'Tagline')}

@@ -36,7 +36,7 @@
       <button data-v="m">MOBILE</button>
       <button data-v="d">DESKTOP</button>
     </div>
-    <div class="tabs"><a class="btn" href="/demos">‹ ALL DEMOS</a><a class="btn" id="open" href="#">OPEN FULL</a></div>
+    <div class="tabs"><a class="btn" href="/demos">‹ ALL DEMOS</a><a class="btn" id="adm" href="#">⚙️ ADMIN</a><a class="btn" id="open" href="#">OPEN FULL</a></div>
   </div>
   <div class="stage">
     <div class="dev phonewrap"><small>MOBILE</small><div class="phone"><iframe id="fm" title="Mobile preview"></iframe></div></div>
@@ -51,6 +51,7 @@
   document.getElementById('fm').src = url;
   document.getElementById('fd').src = url;
   document.getElementById('open').href = url;
+  document.getElementById('adm').href = '/demos/admin.html?s=' + encodeURIComponent(k);
   [].forEach.call(document.querySelectorAll('.tabs button'), function (b) {
     b.onclick = function () {
       [].forEach.call(document.querySelectorAll('.tabs button'), function (x) { x.classList.remove('on'); });

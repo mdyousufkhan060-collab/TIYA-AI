@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Demo Store Admin · ROSE Store Builder</title>
+<meta name="robots" content="noindex" />
+<style>
+  * { box-sizing: border-box; }
+  html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; }
+  body { margin: 0; background: #070b14; color: #e2e8f0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor: pointer; }
+  .demo { background: #facc15; color: #111; font-size: 12px; font-weight: 700; text-align: center; padding: 6px 10px; }
+  header { position: sticky; top: 0; z-index: 10; background: #0b1120; border-bottom: 1px solid #1e293b; }
+  .hb { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+  .hb .back { color: #2dd4bf; font-weight: 800; font-size: 13px; min-width: 70px; }
+  .hb b { flex: 1; text-align: center; letter-spacing: .08em; font-size: 14px; }
+  .hb a.store { font-size: 12px; border: 1px solid #334155; border-radius: 9px; padding: 6px 10px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 14px; }
+  .layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
+  .side { position: sticky; top: 64px; align-self: start; }
+  .card { background: #11151e; border: 1px solid #1e293b; border-radius: 14px; padding: 12px; }
+  .bar { width: 100%; display: flex; align-items: center; gap: 10px; height: 48px; border-radius: 12px; border: 1px solid #1e293b; background: #11151e; color: #e2e8f0; padding: 0 12px; margin-bottom: 6px; text-align: left; }
+  .bar.on { border-color: #14b8a6; background: #0f1f24; }
+  .bar .n { font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; color: #2dd4bf; background: #1e293b; border-radius: 6px; padding: 3px 6px; }
+  .bar .t { flex: 1; font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+  .bar .v { font-size: 10.5px; color: #94a3b8; }
+  .store { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .store img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
+  .pill { display: inline-block; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; }
+  .live { background: #059669; color: #fff; }
+  h2 { margin: 0 0 12px; font-size: 16px; letter-spacing: .06em; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stat b { display: block; font-size: 22px; color: #fff; }
+  .stat small { color: #94a3b8; font-size: 11px; letter-spacing: .06em; }
+  .chart { display: flex; align-items: flex-end; gap: 6px; height: 120px; margin-top: 8px; }
+  .chart div { flex: 1; background: linear-gradient(#2dd4bf, #0e7490); border-radius: 6px 6px 0 0; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
+  .row:last-child { border-bottom: 0; }
+  .row img { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; }
+  .row .f { flex: 1; min-width: 0; }
+  .row .f p { margin: 2px 0 0; color: #94a3b8; font-size: 11.5px; }
+  .st { font-size: 10px; font-weight: 800; border-radius: 6px; padding: 3px 7px; }
+  .s-new { background: #2563eb; } .s-confirmed { background: #7c3aed; } .s-shipped { background: #d97706; } .s-delivered { background: #059669; } .s-cancelled { background: #dc2626; }
+  .btn { background: #14b8a6; color: #021014; border: 0; border-radius: 10px; padding: 9px 12px; font-weight: 800; font-size: 12px; }
+  .btn.alt { background: transparent; color: #e2e8f0; border: 1px solid #334155; }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; color: #94a3b8; }
+  .field input, .field select, .field textarea { background: #0a0f1a; border: 1px solid #334155; border-radius: 10px; color: #fff; padding: 10px; font-size: 13px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabs span { border: 1px solid #334155; border-radius: 99px; padding: 5px 10px; font-size: 11px; }
+  .tabs span.on { background: #14b8a6; color: #021014; border-color: #14b8a6; font-weight: 800; }
+  .chat { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+  .chat div { max-width: 80%; padding: 8px 10px; border-radius: 12px; }
+  .chat .c { background: #1e293b; align-self: flex-start; }
+  .chat .r { background: #0f766e; align-self: flex-end; }
+  .note { font-size: 12px; color: #94a3b8; margin-top: 10px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #14b8a6; color: #021014; font-weight: 800; padding: 9px 16px; border-radius: 99px; font-size: 13px; display: none; z-index: 50; }
+  @media (max-width: 820px) {
+    .layout { grid-template-columns: 1fr; }
+    .side { position: static; }
+    body.inview .side { display: none; }
+    body:not(.inview) .main { display: none; }
+    .grid4 { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="demo">DEMO ADMIN · sample data · nothing is saved</div>
+<header><div class="hb"><a class="back" id="back" href="/demos">‹ Demos</a><b id="title">STORE ADMIN</b><a class="store" id="storeLink" href="#">View store</a></div></header>
+<div class="wrap"><div class="layout"><aside class="side" id="side"></aside><main class="main" id="main"></main></div></div>
+<div class="toast" id="toast"></div>
+<script src="/demos/stores.js"></script>
+<script>
+  var k = new URLSearchParams(location.search).get('s') || 'fashionhub';
+  var S = window.ROSE_STORES[k] || window.ROSE_STORES.fashionhub;
+  var IMG = function (id, w) { return id ? window.ROSE_IMG(id, w || 200) : ''; };
+  var P = S.products.map(function (p, i) { return { i: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', img: IMG(p[6]), stock: [24, 8, 3, 40, 15, 0, 12, 31, 6, 19, 22, 5][i % 12] }; });
+  var tk = function (n) { return '৳ ' + Math.round(n).toLocaleString('en-IN'); };
+  var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  function toast(t) { var e = document.getElementById('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(function () { e.style.display = 'none'; }, 1600); }
+  window.toast = toast;
+  document.getElementById('storeLink').href = '/demos/store.html?s=' + k;
+  document.title = S.name + ' Admin (demo)';
+
+  var names = ['Rahim U.', 'Nusrat J.', 'Tanvir A.', 'Sadia R.', 'Kamal H.', 'Mitu K.'];
+  var areas = ['Mirpur, Dhaka', 'Uttara, Dhaka', 'Chattogram', 'Dhanmondi, Dhaka', 'Sylhet', 'Gazipur'];
+  var stat = ['new', 'confirmed', 'shipped', 'delivered', 'new', 'cancelled'];
+  var O = names.map(function (n, i) { var p = P[i % P.length]; return { no: 1024 - i, name: n, area: areas[i], item: p, q: 1 + (i % 2), st: stat[i] }; });
+  var thumb = function (p) { return p.img ? '<img src="' + p.img + '" alt="">' : '<span style="font-size:30px">' + p.e + '</span>'; };
+  var row = function (img, title, sub, right) { return '<div class="row">' + img + '<div class="f"><b>' + title + '</b><p>' + sub + '</p></div>' + (right || '') + '</div>'; };
+  var demoBtn = function (t, alt) { return '<button class="btn' + (alt ? ' alt' : '') + '" onclick="toast(\'Demo: ' + t + '\')">' + t + '</button>'; };
+
+  var VIEWS = [
+    ['DASHBOARD', 'TODAY', function () {
+      var bars = [40, 65, 52, 80, 70, 95, 88].map(function (h) { return '<div style="height:' + h + '%"></div>'; }).join('');
+      return '<div class="grid4">' + [['18', 'ORDERS TODAY'], [tk(24650), 'SALES TODAY'], ['1,240', 'VISITORS'], ['3.2%', 'CONVERSION']].map(function (x) { return '<div class="card stat"><b>' + x[0] + '</b><small>' + x[1] + '</small></div>'; }).join('') + '</div>' +
+        '<div class="card" style="margin-top:10px"><b style="font-size:13px">SALES · LAST 7 DAYS</b><div class="chart">' + bars + '</div></div>' +
+        '<div class="card" style="margin-top:10px"><b style="font-size:13px">LOW STOCK</b>' + P.filter(function (p) { return p.stock < 7; }).map(function (p) { return row(thumb(p), esc(p.name), p.stock ? 'Only ' + p.stock + ' left' : 'Out of stock', demoBtn('Restock', true)); }).join('') + '</div>';
+    }],
+    ['ORDERS', '6 NEW', function () {
+      return '<div class="tabs"><span class="on">ALL</span><span>NEW</span><span>CONFIRMED</span><span>SHIPPED</span><span>DELIVERED</span></div><div class="card">' + O.map(function (o) {
+        return row(thumb(o.item), '#' + o.no + ' · ' + tk(o.item.price * o.q + 60), esc(o.name) + ' · 017XXXXXXXX · ' + o.area + '<br>' + esc(o.item.name) + ' ×' + o.q + ' · COD', '<span class="st s-' + o.st + '">' + o.st.toUpperCase() + '</span>');
+      }).join('') + '</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">' + demoBtn('Book Steadfast') + demoBtn('Book Pathao', 1) + demoBtn('Print invoice', 1) + demoBtn('Call customer', 1) + '</div><p class="note">Fraud check: ROSE checks the phone number’s past courier returns before you confirm.</p>';
+    }],
+    ['PRODUCTS', P.length + ' ITEMS', function () {
+      return '<div style="display:flex;gap:8px;margin-bottom:10px">' + demoBtn('+ ADD PRODUCT') + demoBtn('Bulk upload (Excel)', 1) + '</div><div class="card">' + P.map(function (p) {
+        return row(thumb(p), esc(p.name) + (p.rx ? ' <span class="pill" style="background:#0e7490">Rx</span>' : ''), tk(p.price) + ' <s>' + tk(p.old) + '</s> · ' + esc(p.cat) + ' · stock ' + p.stock, demoBtn('Edit', true));
+      }).join('') + '</div><div class="card" style="margin-top:10px"><b style="font-size:13px">ADD PRODUCT (form)</b><div style="margin-top:10px">' +
+        ['Product name', 'Price', 'Old price', 'Stock', 'Size / Colour (S, M, L)', 'SEO title'].map(function (f) { return '<div class="field"><span>' + f + '</span><input placeholder="' + f + '"></div>'; }).join('') +
+        '<div class="field"><span>Photos (from phone gallery or camera)</span><input type="file" accept="image/*" multiple></div><div class="field"><span>Description</span><textarea rows="3"></textarea></div>' + demoBtn('SAVE') + '</div></div>';
+    }],
+    ['CATEGORIES', S.categories.length, function () {
+      return '<div class="card">' + S.categories.map(function (c) { return row('<span style="font-size:28px;width:46px;text-align:center">' + c[1] + '</span>', esc(c[0]), P.filter(function (p) { return p.cat === c[0]; }).length + ' products', demoBtn('Edit', true)); }).join('') + '</div><div style="margin-top:10px">' + demoBtn('+ ADD CATEGORY') + '</div>';
+    }],
+    ['HOMEPAGE & DESIGN', 'BANNERS', function () {
+      return '<div class="card"><b style="font-size:13px">LOGO & NAME</b><div class="field" style="margin-top:8px"><span>Logo (upload separately)</span><input type="file" accept="image/*"></div><div class="field"><span>Store name</span><input value="' + esc(S.name) + '"></div><div class="field"><span>Tagline</span><input value="' + esc(S.tagline) + '"></div>' +
+        '<div class="field"><span>Main colour</span><input type="color" value="' + S.color + '" style="height:42px"></div></div>' +
+        '<div class="card" style="margin-top:10px"><b style="font-size:13px">BANNER SLIDER</b>' + S.banners.map(function (b) { return row(b.img ? '<img src="' + IMG(b.img, 300) + '" alt="" style="width:80px">' : '', esc(b.title), esc(b.badge), demoBtn('Edit', true)); }).join('') + '<div style="margin-top:8px">' + demoBtn('+ ADD BANNER') + '</div></div>' +
+        '<div class="card" style="margin-top:10px"><b style="font-size:13px">SECTIONS ORDER</b><p class="note">Banner slider · Trust row · Categories · ' + esc(S.sectionTitle) + ' · Offer banners · New arrivals (drag to reorder)</p><p class="note">Flash Sale timer: ends in 05:42:10</p></div>';
+    }],
+    ['CUSTOMERS', '312', function () {
+      return '<div class="card">' + names.map(function (n, i) { return row('<span style="font-size:26px;width:46px;text-align:center">👤</span>', esc(n), (3 + i) + ' orders · ' + tk(2400 + i * 1350) + ' spent · ' + (120 + i * 40) + ' points', i === 5 ? '<span class="st s-cancelled">2 RETURNS</span>' : ''); }).join('') + '</div>';
+    }],
+    ['OFFERS & COUPONS', '3 ACTIVE', function () {
+      return '<div class="card">' + [['ROSE10', '10% off, min 1,000 Tk'], ['FREESHIP', 'Free delivery over 1,500 Tk'], ['EID500', '500 Tk off, min 5,000 Tk']].map(function (c) { return row('<span style="font-size:26px;width:46px;text-align:center">🏷️</span>', c[0], c[1], '<span class="pill live">ON</span>'); }).join('') + '</div><div style="margin-top:10px">' + demoBtn('+ NEW COUPON') + '</div>';
+    }],
+    ['REVIEWS', '4.6 ★', function () {
+      return '<div class="card">' + P.slice(0, 4).map(function (p, i) { return row(thumb(p), '★★★★' + (i % 2 ? '☆' : '★') + ' · ' + esc(names[i]) + ' <span class="pill" style="background:#14532d">Verified Buyer</span>', '"Good quality, fast delivery." · ' + esc(p.name), demoBtn('Reply', true)); }).join('') + '</div><p class="note">Only real buyers can review. You can reply or hide bad words.</p>';
+    }],
+    ['LIVE CHAT', '2 NEW', function () {
+      return '<div class="card"><b style="font-size:13px">Nusrat J. · now typing…</b><div class="chat" style="margin-top:10px"><div class="c">Is the ' + esc(P[0].name) + ' available?</div><div class="r">🤖 ROSE: Yes! ' + esc(P[0].name) + ' is ' + tk(P[0].price) + ' and in stock. Delivery 60 Tk inside Dhaka.</div><div class="c">Can I get it tomorrow?</div><div class="r">🤖 ROSE: Order before 6 PM and it reaches you tomorrow in Dhaka.</div></div><div style="display:flex;gap:8px;margin-top:12px">' + demoBtn('TAKE OVER') + demoBtn('Send order link', 1) + '</div></div><p class="note">Every chat also reaches the owner’s ROSE app, and ROSE tells you by voice.</p>';
+    }],
+    ['PAYMENTS', 'COD · bKash', function () {
+      return '<div class="card">' + [['Cash on Delivery', 'ON'], ['bKash (Send Money + TrxID)', 'ON'], ['Nagad', 'ON'], ['Rocket', 'OFF'], ['Card: SSLCommerz / aamarPay', 'NEEDS TRADE LICENCE'], ['Bank transfer', 'OFF']].map(function (m) { return row('<span style="font-size:24px;width:46px;text-align:center">💳</span>', m[0], '', '<span class="pill" style="background:' + (m[1] === 'ON' ? '#059669' : '#334155') + '">' + m[1] + '</span>'); }).join('') + '</div><div class="field" style="margin-top:10px"><span>bKash number</span><input value="017XXXXXXXX"></div>';
+    }],
+    ['DELIVERY', '60 / 120 TK', function () {
+      return '<div class="card"><div class="field"><span>Inside Dhaka</span><input value="60"></div><div class="field"><span>Outside Dhaka</span><input value="120"></div><div class="field"><span>Free delivery over</span><input value="1500"></div></div><div class="card" style="margin-top:10px">' + ['Steadfast', 'Pathao', 'RedX'].map(function (c, i) { return row('<span style="font-size:24px;width:46px;text-align:center">🚚</span>', c, i ? 'Not connected' : 'Connected · auto booking', demoBtn(i ? 'Connect' : 'Test', true)); }).join('') + '</div>';
+    }],
+    ['TRACKING & PIXELS', 'ADS', function () {
+      return '<div class="card">' + [['Facebook Pixel ID', '1234567890'], ['Facebook Conversions API token', '••••••••'], ['TikTok Pixel ID', 'C0ABCDEF'], ['Google Analytics 4 (G-…)', 'G-XXXXXXX'], ['Google Tag Manager (GTM-…)', ''], ['Search Console verification', '']].map(function (f) { return '<div class="field"><span>' + f[0] + '</span><input value="' + f[1] + '" placeholder="paste here"></div>'; }).join('') + demoBtn('SAVE') + '<p class="note">Sent automatically: PageView, ViewContent, AddToCart, InitiateCheckout, Purchase. How-to videos show where to copy each ID.</p></div>';
+    }],
+    ['SEO', '82 / 100', function () {
+      return '<div class="card">' + P.slice(0, 5).map(function (p, i) { var sc = [92, 78, 64, 88, 71][i]; return row(thumb(p), esc(p.name), sc > 80 ? 'Good' : 'Add a longer description and 2 more photos', '<span class="pill" style="background:' + (sc > 80 ? '#059669' : '#d97706') + '">' + sc + '</span>'); }).join('') + '</div><p class="note">Automatic: fast WebP photos, Product schema, sitemap, clean links. ROSE can write titles and descriptions.</p>';
+    }],
+    ['STAFF', '2 / 3', function () {
+      return '<div class="card">' + [['rahim.staff@gmail.com', 'ORDER STAFF'], ['mitu.design@gmail.com', 'PRODUCT STAFF']].map(function (s) { return row('<span style="font-size:24px;width:46px;text-align:center">👤</span>', s[0], s[1], demoBtn('Remove', true)); }).join('') + '</div><div class="card" style="margin-top:10px"><div class="field"><span>Staff Gmail</span><input placeholder="staff@gmail.com"></div><div class="field"><span>Role</span><select><option>MANAGER</option><option>ORDER STAFF</option><option>PRODUCT STAFF</option><option>CHAT SUPPORT</option><option>MARKETING</option><option>ACCOUNTS</option><option>CUSTOM</option></select></div>' + demoBtn('SEND INVITE') + '</div><p class="note">Staff sign in with that Gmail and see only their bars. Activity log shows who changed what.</p>';
+    }],
+    ['DOMAIN', 'myrosebd.com', function () {
+      return '<div class="card"><b style="font-size:13px">Store link</b><p class="note">myrosebd.com/shop/' + k + '</p></div><div class="card" style="margin-top:10px"><b style="font-size:13px">Own domain</b><div class="field" style="margin-top:8px"><span>Your domain</span><input placeholder="yourshop.com"></div><p class="note">Add these 2 records where you bought the domain:<br>A · @ · 216.198.79.1<br>CNAME · www · cname.vercel-dns.com</p>' + demoBtn('CHECK DOMAIN') + '</div><div class="card" style="margin-top:10px"><b style="font-size:13px">Hostinger</b><p class="note">Business plan: DOWNLOAD FOR HOSTINGER (ZIP) with a step-by-step guide.</p>' + demoBtn('DOWNLOAD ZIP', 1) + '</div>';
+    }],
+    ['REPORTS', 'THIS MONTH', function () {
+      return '<div class="grid4">' + [['412', 'ORDERS'], [tk(568400), 'SALES'], [tk(96300), 'PROFIT (EST.)'], ['4.1%', 'RETURNS']].map(function (x) { return '<div class="card stat"><b>' + x[0] + '</b><small>' + x[1] + '</small></div>'; }).join('') + '</div><div class="card" style="margin-top:10px"><b style="font-size:13px">TOP PRODUCTS</b>' + P.slice(0, 4).map(function (p, i) { return row(thumb(p), esc(p.name), (90 - i * 17) + ' sold', ''); }).join('') + '</div><div style="margin-top:10px">' + demoBtn('Export Excel', 1) + '</div>';
+    }],
+  ];
+
+  var side = document.getElementById('side'), main = document.getElementById('main');
+  var head = '<div class="card store">' + (S.banners[0].img ? '<img src="' + IMG(S.banners[0].img, 120) + '" alt="">' : '<span style="font-size:32px">' + S.logo + '</span>') + '<div style="flex:1"><b>' + esc(S.name) + '</b><div style="font-size:11px;color:#94a3b8">myrosebd.com/shop/' + k + '</div></div><span class="pill live">LIVE</span></div>';
+  function render(i) {
+    side.innerHTML = head + VIEWS.map(function (v, j) { return '<button class="bar' + (j === i ? ' on' : '') + '" onclick="openView(' + j + ')"><span class="n">' + String(j + 1).padStart(2, '0') + '</span><span class="t">' + v[0] + '</span><span class="v">' + v[1] + '</span></button>'; }).join('');
+    if (i >= 0) main.innerHTML = '<h2>' + VIEWS[i][0] + '</h2>' + VIEWS[i][2]();
+  }
+  window.openView = function (i) {
+    document.body.classList.add('inview');
+    document.getElementById('title').textContent = VIEWS[i][0];
+    document.getElementById('back').textContent = '‹ Back';
+    document.getElementById('back').onclick = function (e) {
+      if (window.innerWidth <= 820) { e.preventDefault(); document.body.classList.remove('inview'); document.getElementById('title').textContent = 'STORE ADMIN'; this.textContent = '‹ Demos'; this.onclick = null; }
+    };
+    render(i); window.scrollTo(0, 0);
+  };
+  render(window.innerWidth > 820 ? 0 : -1);
+  if (window.innerWidth > 820) document.getElementById('title').textContent = 'STORE ADMIN';
+</script>
+</body>
+</html>

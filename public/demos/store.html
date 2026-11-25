@@ -10,6 +10,8 @@
   :root { --c: #16a34a; --a: #facc15; --bg: #f6f7fb; --card: #fff; --ink: #0f172a; --mute: #64748b; --line: #e5e7eb; }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", sans-serif; }
+  html { scrollbar-width: none; -ms-overflow-style: none; }
+  html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; display: none; }
   a { color: inherit; text-decoration: none; }
   button, input, select, textarea { font: inherit; }
   button { cursor: pointer; }
@@ -31,6 +33,7 @@
   .search { display: flex; border: 1.5px solid var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 10px; background: #fff; }
   .search input { flex: 1; border: 0; padding: 11px 16px; font-size: 14px; outline: none; min-width: 0; }
   .search button { background: var(--c); color: #fff; border: 0; padding: 0 20px; font-weight: 700; }
+  .search button.cam { background: transparent; color: var(--ink); padding: 0 12px; font-size: 20px; border-left: 1px solid var(--line); }
   main { padding: 12px 0 90px; }
   .slider { position: relative; border-radius: 18px; overflow: hidden; height: 210px; }
   @media (min-width: 761px) { .slider { height: 320px; } }
@@ -97,11 +100,20 @@
   .paylogos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   .paylogos span { background: #fff; color: #0f172a; border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 800; }
   .store-btn { display: inline-flex; align-items: center; gap: 6px; background: #000; color: #fff; border: 1px solid #475569; border-radius: 10px; padding: 7px 12px; margin-top: 6px; font-size: 12px; }
-  nav.bottom { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: env(safe-area-inset-bottom); z-index: 30; }
-  nav.bottom a { text-align: center; font-size: 11.5px; padding: 7px 0 8px; color: var(--mute); position: relative; }
-  nav.bottom a .e { font-size: 21px; display: block; }
-  nav.bottom a.on { color: var(--c); font-weight: 700; }
-  nav.bottom a i { position: absolute; top: 2px; left: 55%; background: #ef4444; color: #fff; font-style: normal; font-size: 10px; border-radius: 99px; padding: 0 5px; }
+  nav.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: rgba(255,255,255,.96); backdrop-filter: blur(10px); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(15,23,42,.06); display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; }
+  nav.bottom a { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 600; color: var(--mute); position: relative; padding: 4px 0; transition: color .2s; }
+  nav.bottom a .e { width: 44px; height: 30px; border-radius: 999px; display: grid; place-items: center; font-size: 19px; transition: background .25s, transform .25s; }
+  nav.bottom a.on { color: var(--c); }
+  nav.bottom a.on .e { background: color-mix(in srgb, var(--c) 16%, #fff); transform: translateY(-1px); }
+  nav.bottom a i { position: absolute; top: 0; left: calc(50% + 6px); background: #ef4444; color: #fff; font-style: normal; font-size: 10px; font-weight: 800; border-radius: 99px; padding: 1px 5px; border: 2px solid #fff; }
+  @media (min-width: 761px) {
+    nav.bottom { left: 50%; right: auto; bottom: 16px; width: 560px; transform: translateX(-50%); border-radius: 999px; border: 1px solid var(--line); padding: 6px 10px; box-shadow: 0 12px 30px rgba(15,23,42,.18); }
+    nav.bottom a { flex-direction: row; justify-content: center; gap: 6px; font-size: 13px; }
+    nav.bottom a .e { width: 34px; }
+    nav.bottom a i { left: auto; right: 6px; }
+    .chatbtn { bottom: 22px !important; }
+    footer { padding-bottom: 100px !important; }
+  }
   .chatbtn { position: fixed; right: 14px; bottom: 78px; z-index: 31; width: 56px; height: 56px; border-radius: 99px; border: 0; background: var(--c); color: #fff; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
   .chat { position: fixed; right: 14px; bottom: 142px; z-index: 32; width: min(340px, calc(100vw - 28px)); background: #fff; border-radius: 16px; box-shadow: 0 12px 34px rgba(0,0,0,.25); overflow: hidden; display: none; }
   .chat.on { display: block; }
@@ -127,7 +139,7 @@
 </style>
 </head>
 <body>
-<div class="demo" id="demoBar"><div class="wrap"><span>DEMO STORE · made with <b>ROSE Store Builder</b></span><a href="/app">Make a store like this</a></div></div>
+<div class="demo" id="demoBar"><div class="wrap"><span>DEMO STORE · <b>ROSE Store Builder</b></span><span style="display:flex;gap:6px"><a id="adminLink" href="/demos/admin.html" style="background:#fff">See admin</a><a href="/app">Make a store like this</a></span></div></div>
 <header class="top"><div class="wrap">
   <div class="bar">
     <a class="logo" href="#/"><span class="ic" id="logoIc"></span><span><b id="logoName"></b><small id="logoTag"></small></span></a>
@@ -136,7 +148,8 @@
     <a class="icon" href="#/wishlist" title="Wishlist">🤍<i id="wCount" hidden></i></a>
     <a class="icon" href="#/cart" title="Cart">🛒<i id="cCount" hidden></i></a>
   </div>
-  <form class="search" id="searchForm"><input id="q" placeholder="Search products…" aria-label="Search" /><button>Search</button></form>
+  <form class="search" id="searchForm"><input id="q" placeholder="Search products…" aria-label="Search" /><button type="button" class="cam" id="camBtn" aria-label="Search by photo" title="Search by photo">📷</button><button>Search</button></form>
+  <input type="file" id="camFile" accept="image/*" hidden />
 </div></header>
 
 <main><div class="wrap" id="view"></div></main>
@@ -162,6 +175,7 @@ function sb(path, body) {
     body: body ? JSON.stringify(body) : undefined,
   }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.message || 'Error'); return j; }); });
 }
+var fullImg = function (u, w) { return !u ? '' : /^https?:/.test(u) ? u : window.ROSE_IMG(u, w); };
 var qs = new URLSearchParams(location.search);
 var liveSlug = qs.get('store') || ((location.pathname.match(/^\/shop\/([a-z0-9-]+)/) || [])[1]) || '';
 if (liveSlug) {
@@ -177,7 +191,7 @@ if (liveSlug) {
       });
       if (banners.length < 2) banners.push({ title: 'Best Quality, Best Price', badge: 'Order now', icon: r.logo, bg: 'linear-gradient(120deg,#fef3c7,' + r.accent + ')' });
       var S = {
-        live: true, slug: r.slug, name: r.name, tagline: r.tagline || '', logo: r.logo || '🛍️', type: 'Store', color: r.color, accent: r.accent,
+        live: true, slug: r.slug, logoUrl: r.logo_url || '', name: r.name, tagline: r.tagline || '', logo: r.logo || '🛍️', type: 'Store', color: r.color, accent: r.accent,
         city: r.city || 'Dhaka', phone: r.phone, email: r.email, address: r.address, licence: r.licence,
         pharmacy: prods.some(function (p) { return p.rx; }), banners: banners,
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
@@ -186,7 +200,7 @@ if (liveSlug) {
         delIn: r.delivery_inside, delOut: r.delivery_outside, payNumbers: r.pay_numbers || {},
       };
       var P = prods.map(function (p, i) {
-        return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', e: p.emoji || '📦', img: (p.images || [])[0] || '', imgs: p.images || [],
+        return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', e: p.emoji || '📦', img: fullImg((p.images || [])[0], 600), imgs: (p.images || []).map(function (u) { return fullImg(u, 900); }),
           price: +p.price, old: +(p.old_price || p.price), rx: p.rx, desc: p.description || '', optLabel: p.options_label, opts: p.options || [],
           rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 0 };
       });
@@ -207,6 +221,7 @@ if (liveSlug) {
 function start(S, P, liveId) {
   var id = liveId || (qs.get('s') || 'foodbazaar');
   if (liveId) { var db = document.getElementById('demoBar'); if (db) db.style.display = 'none'; }
+  else { var al = document.getElementById('adminLink'); if (al) al.href = '/demos/admin.html?s=' + encodeURIComponent(id); }
   var root = document.documentElement;
   root.style.setProperty('--c', S.color);
   root.style.setProperty('--a', S.accent);
@@ -245,7 +260,8 @@ function start(S, P, liveId) {
   window.__rose = { add: addCart, wish: toggleWish };
 
   // header + footer
-  document.getElementById('logoIc').textContent = S.logo;
+  if (S.logoUrl) document.getElementById('logoIc').innerHTML = '<img src="' + esc(S.logoUrl) + '" alt="' + esc(S.name) + ' logo" style="height:38px;width:38px;object-fit:contain;border-radius:8px">';
+  else document.getElementById('logoIc').textContent = S.logo;
   document.getElementById('logoName').textContent = S.name;
   document.getElementById('logoTag').textContent = S.tagline;
   document.getElementById('city').textContent = '📍 ' + S.city;
@@ -400,7 +416,13 @@ function start(S, P, liveId) {
     else if (h.indexOf('/c/') === 0) { var cat = h.slice(3); html = list(cat, P.filter(function (p) { return p.cat === cat; })); }
     else if (h === '/all') html = list('All products', P);
     else if (h.indexOf('/p/') === 0) { var p = P[+h.slice(3)]; html = p ? product(p) : list('Not found', []); }
-    else if (h.indexOf('/s/') === 0) { var q = h.slice(3).toLowerCase(); html = list('Search: ' + q, P.filter(function (p) { return (p.name + ' ' + p.cat).toLowerCase().indexOf(q) >= 0; })); }
+    else if (h.indexOf('/s/') === 0) {
+      var q = h.slice(3).toLowerCase(), ph = window.__photoHits; window.__photoHits = null;
+      var words = q.split(/\s+/).filter(function (w) { return w.length > 1; });
+      var found = ph && ph.length ? ph : P.filter(function (p) { var t = (p.name + ' ' + p.cat).toLowerCase(); return t.indexOf(q) >= 0 || (words.length > 1 && words.every(function (w) { return t.indexOf(w) >= 0; })); });
+      if (!found.length) found = P.filter(function (p) { var t = (p.name + ' ' + p.cat).toLowerCase(); return words.some(function (w) { return w.length > 2 && t.indexOf(w) >= 0; }); });
+      html = list('Search: ' + q, found);
+    }
     else if (h === '/cart') html = cartPage();
     else if (h === '/checkout') html = checkout();
     else if (h === '/done') html = done();
@@ -432,6 +454,35 @@ function start(S, P, liveId) {
   }
   document.getElementById('searchForm').onsubmit = function (e) { e.preventDefault(); var q = document.getElementById('q').value.trim(); if (q) location.hash = '#/s/' + encodeURIComponent(q); };
   window.addEventListener('hashchange', route);
+
+  // search by photo (camera or gallery)
+  var camFile = document.getElementById('camFile');
+  document.getElementById('camBtn').onclick = function () { camFile.value = ''; camFile.click(); };
+  camFile.onchange = function () {
+    var f = camFile.files && camFile.files[0]; if (!f) return;
+    toast('Looking at your photo…');
+    var img = new Image(), url = URL.createObjectURL(f);
+    img.onload = function () {
+      var k = Math.min(1, 512 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      var b64 = c.toDataURL('image/jpeg', 0.7).split(',')[1];
+      fetch(SB_URL + '/functions/v1/store-image-search', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY }, body: JSON.stringify({ image: b64, names: P.map(function (p) { return p.name; }) }) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.query) throw new Error(j.error || 'Could not find it');
+          var exact = P.find(function (p) { return p.name.toLowerCase() === j.query.toLowerCase(); });
+          if (exact) { location.hash = '#/p/' + exact.id; return; }
+          document.getElementById('q').value = j.query;
+          var words = j.query.toLowerCase().split(/\s+/).filter(function (w) { return w.length > 2; });
+          var hit = P.filter(function (p) { var t = (p.name + ' ' + p.cat).toLowerCase(); return words.some(function (w) { return t.indexOf(w) >= 0; }); });
+          window.__photoHits = hit; location.hash = '#/s/' + encodeURIComponent(j.query);
+        })
+        .catch(function (e) { toast(e.message || 'Photo search failed'); });
+    };
+    img.onerror = function () { toast('Could not read that photo'); };
+    img.src = url;
+  };
 
   // live chat (demo answers)
   var chat = document.getElementById('chat'), cm = document.getElementById('chatM');
