@@ -1,7 +1,20 @@
 {
   "rewrites": [
-    { "source": "/demos", "destination": "/demos/index.html" },
-    { "source": "/demos/", "destination": "/demos/index.html" },
-    { "source": "/((?!.*\\.).*)", "destination": "/index.html" }
+    {
+      "source": "/demos",
+      "destination": "/demos/index.html"
+    },
+    {
+      "source": "/demos/",
+      "destination": "/demos/index.html"
+    },
+    {
+      "source": "/shop/:slug",
+      "destination": "/demos/store.html"
+    },
+    {
+      "source": "/((?!.*\\.).*)",
+      "destination": "/index.html"
+    }
   ]
 }

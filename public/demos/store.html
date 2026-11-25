@@ -125,7 +125,7 @@
 </style>
 </head>
 <body>
-<div class="demo"><div class="wrap"><span>DEMO STORE · made with <b>ROSE Store Builder</b></span><a href="/app">Make a store like this</a></div></div>
+<div class="demo" id="demoBar"><div class="wrap"><span>DEMO STORE · made with <b>ROSE Store Builder</b></span><a href="/app">Make a store like this</a></div></div>
 <header class="top"><div class="wrap">
   <div class="bar">
     <a class="logo" href="#/"><span class="ic" id="logoIc"></span><span><b id="logoName"></b><small id="logoTag"></small></span></a>
@@ -150,23 +150,73 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="stores.js"></script>
+<script src="/demos/stores.js"></script>
 <script>
-(function () {
-  var id = new URLSearchParams(location.search).get('s') || 'foodbazaar';
-  var S = window.ROSE_STORES[id] || window.ROSE_STORES.foodbazaar;
+var SB_URL = 'https://ukgwipazzjstjkdfaozg.supabase.co', SB_KEY = 'sb_publishable_CRMgURG899vqIqUIsADWgw_p90ZliES';
+function sb(path, body) {
+  return fetch(SB_URL + '/rest/v1/' + path, {
+    method: body ? 'POST' : 'GET',
+    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.message || 'Error'); return j; }); });
+}
+var qs = new URLSearchParams(location.search);
+var liveSlug = qs.get('store') || ((location.pathname.match(/^\/shop\/([a-z0-9-]+)/) || [])[1]) || '';
+if (liveSlug) {
+  document.getElementById('view').innerHTML = '<div class="panel" style="text-align:center;padding:40px">Loading…</div>';
+  sb('stores?select=*&slug=eq.' + encodeURIComponent(liveSlug)).then(function (st) {
+    var r = st[0];
+    if (!r) throw new Error('This store is not open yet.');
+    return Promise.all([sb('store_categories?select=*&store_id=eq.' + r.id + '&order=sort'), sb('store_products?select=*&store_id=eq.' + r.id + '&active=eq.true&order=sort')]).then(function (x) {
+      var cats = x[0], prods = x[1], byId = {};
+      cats.forEach(function (c) { byId[c.id] = c.name; });
+      var banners = (r.banners && r.banners.length ? r.banners : [{ title: r.name, badge: r.tagline || 'Shop now', icon: r.logo }]).map(function (b) {
+        return { title: b.title, badge: b.badge, icon: b.icon || r.logo, bg: b.bg || 'linear-gradient(120deg,#ffffff,' + r.color + ')' };
+      });
+      if (banners.length < 2) banners.push({ title: 'Best Quality, Best Price', badge: 'Order now', icon: r.logo, bg: 'linear-gradient(120deg,#fef3c7,' + r.accent + ')' });
+      var S = {
+        live: true, slug: r.slug, name: r.name, tagline: r.tagline || '', logo: r.logo || '🛍️', type: 'Store', color: r.color, accent: r.accent,
+        city: r.city || 'Dhaka', phone: r.phone, email: r.email, address: r.address, licence: r.licence,
+        pharmacy: prods.some(function (p) { return p.rx; }), banners: banners,
+        trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
+        categories: cats.map(function (c) { return [c.name, c.icon || '🏷️']; }), sectionTitle: 'Popular Products',
+        note: r.note || ('Delivery: ' + r.delivery_inside + ' Tk inside Dhaka, ' + r.delivery_outside + ' Tk outside.'),
+        delIn: r.delivery_inside, delOut: r.delivery_outside, payNumbers: r.pay_numbers || {},
+      };
+      var P = prods.map(function (p, i) {
+        return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', e: p.emoji || '📦', img: (p.images || [])[0] || '', imgs: p.images || [],
+          price: +p.price, old: +(p.old_price || p.price), rx: p.rx, desc: p.description || '', optLabel: p.options_label, opts: p.options || [],
+          rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 0 };
+      });
+      if (P.some(function (p) { return p.cat === 'Others'; }) && !S.categories.some(function (c) { return c[0] === 'Others'; })) S.categories.push(['Others', '🏷️']);
+      start(S, P, r.slug);
+    });
+  }).catch(function (e) {
+    document.getElementById('view').innerHTML = '<div class="panel" style="text-align:center;padding:40px">🛍️<h3>' + (e.message || 'Store not found') + '</h3><a class="btn" style="display:inline-block;width:auto;padding:10px 18px" href="/demos">See demo stores</a></div>';
+  });
+} else {
+  var demoId = qs.get('s') || 'foodbazaar';
+  var DS = window.ROSE_STORES[demoId] || window.ROSE_STORES.foodbazaar;
+  start(DS, DS.products.map(function (p, i) {
+    return { id: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 40 + ((i * 37) % 300) };
+  }), '');
+}
+
+function start(S, P, liveId) {
+  var id = liveId || (qs.get('s') || 'foodbazaar');
+  if (liveId) { var db = document.getElementById('demoBar'); if (db) db.style.display = 'none'; }
   var root = document.documentElement;
   root.style.setProperty('--c', S.color);
   root.style.setProperty('--a', S.accent);
   document.title = S.name + ' · ' + S.tagline + ' (Demo)';
 
-  var P = S.products.map(function (p, i) {
-    return { id: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 40 + ((i * 37) % 300) };
-  });
   var tk = function (n) { return '৳ ' + n.toLocaleString('en-IN'); };
-  var off = function (p) { return Math.round((1 - p.price / p.old) * 100); };
+  var off = function (p) { return p.old > p.price ? Math.round((1 - p.price / p.old) * 100) : 0; };
+  var pic = function (p, big) { return p.img ? '<img src="' + esc(p.img) + '" alt="' + esc(p.name) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover">' : p.e; };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
 
+  var DIN = S.delIn != null ? +S.delIn : 60, DOUT = S.delOut != null ? +S.delOut : 120;
+  var PAYS = [['cod', '💵 Cash on Delivery'], ['bkash', 'bKash'], ['nagad', 'Nagad'], ['rocket', 'Rocket']].concat(S.live ? [] : [['card', '💳 Card (VISA/Master)'], ['bank', '🏦 Bank transfer']]);
   // cart + wishlist (memory, with storage when allowed)
   var KEY = 'rose_demo_' + id;
   var st = { cart: [], wish: [] };
@@ -197,12 +247,14 @@
   document.getElementById('logoTag').textContent = S.tagline;
   document.getElementById('city').textContent = '📍 ' + S.city;
   document.getElementById('foot').innerHTML =
-    '<div><h4>' + S.logo + ' ' + esc(S.name) + '</h4><p>' + esc(S.tagline) + '</p><p>📍 House 12, Road 5, ' + S.city + ' (demo address)</p><p>📞 +880 1XXX-XXXXXX</p><p>✉️ hello@' + id + '.myrosebd.com</p>' +
-    (S.pharmacy ? '<p><b>Drug Licence:</b> ' + S.licence + '</p>' : '') +
+    '<div><h4>' + S.logo + ' ' + esc(S.name) + '</h4><p>' + esc(S.tagline) + '</p>' +
+    (S.live ? (S.address ? '<p>📍 ' + esc(S.address) + '</p>' : '') + (S.phone ? '<p>📞 ' + esc(S.phone) + '</p>' : '') + (S.email ? '<p>✉️ ' + esc(S.email) + '</p>' : '')
+      : '<p>📍 House 12, Road 5, ' + S.city + ' (demo address)</p><p>📞 +880 1XXX-XXXXXX</p><p>✉️ hello@' + id + '.myrosebd.com</p>') +
+    (S.licence ? '<p><b>Licence:</b> ' + esc(S.licence) + '</p>' : '') +
     '<p>Facebook · YouTube · TikTok · Instagram</p></div>' +
     '<div><h4>Shop</h4><p><a href="#/categories">All categories</a></p><p><a href="#/wishlist">Wishlist</a></p><p><a href="#/cart">Cart</a></p><p><a href="#/account">My orders</a></p></div>' +
     '<div><h4>Help</h4><p><a href="#/page/about">About us</a></p><p><a href="#/page/contact">Contact</a></p><p><a href="#/page/return">Return policy</a></p><p><a href="#/page/privacy">Privacy</a></p><p><a href="#/page/terms">Terms</a></p></div>' +
-    '<div><h4>We accept</h4><div class="paylogos"><span>bKash</span><span>Nagad</span><span>Rocket</span><span>VISA</span><span>Mastercard</span><span>COD</span></div><h4 style="margin-top:12px">Get the app</h4><span class="store-btn">▶ Google Play</span></div>';
+    '<div><p style="font-size:11px;color:#94a3b8">Made with ROSE Store Builder</p><h4>We accept</h4><div class="paylogos"><span>bKash</span><span>Nagad</span><span>Rocket</span><span>VISA</span><span>Mastercard</span><span>COD</span></div><h4 style="margin-top:12px">Get the app</h4><span class="store-btn">▶ Google Play</span></div>';
 
   function renderNav() {
     var h = location.hash || '#/';
@@ -216,12 +268,12 @@
 
   function card(p) {
     var w = st.wish.indexOf(p.id) >= 0;
-    return '<div class="card"><a href="#/p/' + p.id + '"><div class="img">' + p.e + '</div></a>' +
-      '<span class="off">-' + off(p) + '%</span>' + (p.rx ? '<span class="rx" style="top:40px">Rx</span>' : '') +
+    return '<div class="card"><a href="#/p/' + p.id + '"><div class="img">' + pic(p) + '</div></a>' +
+      (off(p) ? '<span class="off">-' + off(p) + '%</span>' : '') + (p.rx ? '<span class="rx" style="top:40px">Rx</span>' : '') +
       '<button class="heart" onclick="__rose.wish(' + p.id + ');route()">' + (w ? '❤️' : '🤍') + '</button>' +
       '<div class="body"><a class="t" href="#/p/' + p.id + '">' + esc(p.name) + '</a>' +
-      '<div class="stars">★ ' + p.rating + ' <span style="color:#94a3b8">(' + p.sold + ')</span></div>' +
-      '<div class="price"><b>' + tk(p.price) + '</b><s>' + tk(p.old) + '</s></div>' +
+      (p.sold ? '<div class="stars">★ ' + p.rating + ' <span style="color:#94a3b8">(' + p.sold + ')</span></div>' : '') +
+      '<div class="price"><b>' + tk(p.price) + '</b>' + (off(p) ? '<s>' + tk(p.old) + '</s>' : '') + '</div>' +
       '<button class="btn" onclick="__rose.add(' + p.id + ')">🛒 Add to Cart</button></div></div>';
   }
 
@@ -255,22 +307,24 @@
       (items.length ? '<div class="grid">' + items.map(card).join('') + '</div>' : '<div class="panel">Nothing found.</div>');
   }
   function product(p) {
-    var opt = S.options ? '<div><b style="font-size:13px">' + esc(S.options.label) + '</b><div class="opts" id="opts">' + S.options.values.map(function (v, i) { return '<button class="' + (i ? '' : 'on') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div></div>' : '';
+    var O = p.opts && p.opts.length ? { label: p.optLabel || 'Option', values: p.opts } : S.options;
+    var opt = O ? '<div><b style="font-size:13px">' + esc(O.label) + '</b><div class="opts" id="opts">' + O.values.map(function (v, i) { return '<button class="' + (i ? '' : 'on') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div></div>' : '';
     var rel = P.filter(function (x) { return x.cat === p.cat && x.id !== p.id; }).slice(0, 4);
     return '<div class="crumb"><a href="#/">Home</a> › <a href="#/c/' + encodeURIComponent(p.cat) + '">' + esc(p.cat) + '</a> › ' + esc(p.name) + '</div>' +
-      '<div class="pd"><div><div class="big">' + p.e + '</div><div class="thumbs"><div>' + p.e + '</div><div>' + p.e + '</div><div>' + p.e + '</div></div></div>' +
+      '<div class="pd"><div><div class="big" style="overflow:hidden">' + pic(p) + '</div>' + (p.imgs && p.imgs.length > 1 ? '<div class="thumbs">' + p.imgs.slice(0, 5).map(function (u) { return '<div style="overflow:hidden"><img src="' + esc(u) + '" style="width:100%;height:100%;object-fit:cover" alt=""></div>'; }).join('') + '</div>' : (S.live ? '' : '<div class="thumbs"><div>' + p.e + '</div><div>' + p.e + '</div><div>' + p.e + '</div></div>')) + '</div>' +
       '<div class="panel" style="display:flex;flex-direction:column;gap:12px"><h2 style="margin:0">' + esc(p.name) + '</h2>' +
-      '<div class="stars">★★★★★ ' + p.rating + ' · ' + p.sold + ' sold</div>' +
-      '<div class="price"><b style="font-size:26px">' + tk(p.price) + '</b><s>' + tk(p.old) + '</s> <span class="off" style="position:static">-' + off(p) + '%</span></div>' +
+      (p.sold ? '<div class="stars">★★★★★ ' + p.rating + ' · ' + p.sold + ' sold</div>' : '') +
+      '<div class="price"><b style="font-size:26px">' + tk(p.price) + '</b>' + (off(p) ? '<s>' + tk(p.old) + '</s> <span class="off" style="position:static">-' + off(p) + '%</span>' : '') + '</div>' +
+      (p.desc ? '<p style="margin:0;font-size:14px;line-height:1.5;color:#334155">' + esc(p.desc) + '</p>' : '') +
       (p.rx ? '<div class="note warn">📄 <b>Prescription required.</b> Upload a doctor’s prescription at checkout. A licensed pharmacist checks it before the order is confirmed.</div>' : '') +
       opt + '<div style="display:flex;gap:10px;align-items:center"><div class="qty"><button id="qm">−</button><span id="qv">1</span><button id="qp">+</button></div><span style="color:#16a34a;font-size:13px">✓ In stock</span></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn" id="addBtn">🛒 Add to Cart</button><button class="btn alt" id="buyBtn">Buy Now</button></div>' +
       '<button class="btn alt" onclick="__rose.wish(' + p.id + ');route()">' + (st.wish.indexOf(p.id) >= 0 ? '❤️ Saved' : '🤍 Save to wishlist') + '</button>' +
       '<div class="note">🚚 ' + esc(S.note) + '</div></div></div>' +
-      '<div class="panel" style="margin-top:14px"><h3 style="margin:0 0 6px">Customer reviews</h3><div class="stars" style="font-size:14px">★ ' + p.rating + ' out of 5</div>' +
+      (S.live ? '' : '<div class="panel" style="margin-top:14px"><h3 style="margin:0 0 6px">Customer reviews</h3><div class="stars" style="font-size:14px">★ ' + p.rating + ' out of 5</div>' +
       '<div class="review"><b>Rahim U.</b><span class="vb">Verified Buyer</span><div class="stars">★★★★★</div>Good quality, fast delivery. (demo review)</div>' +
       '<div class="review"><b>Nusrat J.</b><span class="vb">Verified Buyer</span><div class="stars">★★★★☆</div>Exactly as shown. Will order again. (demo review)</div>' +
-      '<button class="btn alt" style="margin-top:8px" onclick="toast(\'Only real buyers can write a review\')">Write a review</button></div>' +
+      '<button class="btn alt" style="margin-top:8px" onclick="toast(\'Only real buyers can write a review\')">Write a review</button></div>') +
       (rel.length ? '<div class="head"><h3>You may also like</h3></div><div class="grid">' + rel.map(card).join('') + '</div>' : '');
   }
   function cartPage() {
@@ -292,19 +346,33 @@
     var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0);
     var needRx = st.cart.some(function (c) { return P[c.id].rx; });
     return '<div class="crumb"><a href="#/cart">Cart</a> › Checkout</div><div class="pd"><div class="panel"><h3 style="margin-top:0">Delivery details</h3>' +
-      '<div class="field"><span>Full name</span><input placeholder="Your name"></div><div class="field"><span>Phone</span><input placeholder="01XXXXXXXXX"></div>' +
-      '<div class="field"><span>Full address</span><textarea rows="2" placeholder="House, road, area"></textarea></div>' +
-      '<div class="field"><span>Delivery area</span><select id="area"><option value="60">Inside Dhaka (৳ 60)</option><option value="120">Outside Dhaka (৳ 120)</option></select></div>' +
+      '<div class="field"><span>Full name</span><input id="fName" placeholder="Your name"></div><div class="field"><span>Phone</span><input id="fPhone" inputmode="tel" placeholder="01XXXXXXXXX"></div>' +
+      '<div class="field"><span>Full address</span><textarea id="fAddr" rows="2" placeholder="House, road, area"></textarea></div>' +
+      '<div class="field"><span>Delivery area</span><select id="area"><option value="' + DIN + '" data-a="inside">Inside Dhaka (৳ ' + DIN + ')</option><option value="' + DOUT + '" data-a="outside">Outside Dhaka (৳ ' + DOUT + ')</option></select></div>' +
       (needRx ? '<div class="note warn" style="margin-bottom:10px">📄 <b>Prescription required</b> for Rx medicine.<br><input type="file" accept="image/*,.pdf" style="margin-top:8px"></div>' : '') +
       '</div><div class="panel"><h3 style="margin-top:0">Payment</h3><div class="pay">' +
-      ['💵 Cash on Delivery', 'bKash', 'Nagad', 'Rocket', '💳 Card (VISA/Master)', '🏦 Bank transfer'].map(function (m, i) { return '<label><input type="radio" name="pay" ' + (i ? '' : 'checked') + '> ' + m + '</label>'; }).join('') +
-      '</div><div style="margin-top:14px;font-size:14px;display:grid;gap:6px"><div style="display:flex;justify-content:space-between"><span>Subtotal</span><b>' + tk(sub) + '</b></div><div style="display:flex;justify-content:space-between"><span>Delivery</span><b id="dl">' + tk(60) + '</b></div><div style="display:flex;justify-content:space-between;font-size:17px"><span>Total</span><b id="tot" style="color:#dc2626">' + tk(sub + 60) + '</b></div></div>' +
-      '<button class="btn" style="margin-top:12px" onclick="placeOrder()">Place Order</button><p style="font-size:12px;color:#64748b">Demo store: no real order is made.</p></div></div>';
+      PAYS.map(function (m, i) { return '<label><input type="radio" name="pay" value="' + m[0] + '" ' + (i ? '' : 'checked') + '> ' + m[1] + '</label>'; }).join('') +
+      '</div>' + (S.live ? '<div class="field" style="margin-top:8px"><span>bKash / Nagad / Rocket: send money to ' + esc(Object.keys(S.payNumbers || {}).filter(function (k) { return S.payNumbers[k]; }).map(function (k) { return k + ' ' + S.payNumbers[k]; }).join(', ') || 'the store number') + ', then write the TrxID</span><input id="fTrx" placeholder="TrxID (if paid)"></div>' : '') + '<div>' +
+      '</div><div style="margin-top:14px;font-size:14px;display:grid;gap:6px"><div style="display:flex;justify-content:space-between"><span>Subtotal</span><b>' + tk(sub) + '</b></div><div style="display:flex;justify-content:space-between"><span>Delivery</span><b id="dl">' + tk(DIN) + '</b></div><div style="display:flex;justify-content:space-between;font-size:17px"><span>Total</span><b id="tot" style="color:#dc2626">' + tk(sub + DIN) + '</b></div></div>' +
+      '<button class="btn" id="placeBtn" style="margin-top:12px" onclick="placeOrder()">Place Order</button><p id="placeMsg" style="font-size:12px;color:#64748b">' + (S.live ? 'Cash on delivery available.' : 'Demo store: no real order is made.') + '</p></div></div>';
   }
-  window.placeOrder = function () { st.cart = []; save(); location.hash = '#/done'; };
+  window.placeOrder = function () {
+    if (!S.live) { st.cart = []; save(); location.hash = '#/done'; return; }
+    var v = function (i) { var el = document.getElementById(i); return el ? el.value.trim() : ''; };
+    var area = document.getElementById('area'), pay = document.querySelector('input[name=pay]:checked');
+    var m = document.getElementById('placeMsg'), b = document.getElementById('placeBtn');
+    if (!v('fName') || v('fPhone').replace(/\D/g, '').length < 11 || !v('fAddr')) { m.textContent = 'Please write your name, 11-digit phone and full address.'; m.style.color = '#dc2626'; return; }
+    b.disabled = true; b.textContent = 'Placing…';
+    sb('rpc/place_store_order', {
+      p_slug: S.slug, p_name: v('fName'), p_phone: v('fPhone'), p_address: v('fAddr'), p_area: area.options[area.selectedIndex].dataset.a,
+      p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: pay ? pay.value : 'cod', p_trx: v('fTrx'), p_note: '',
+    }).then(function (r) { lastOrder = r; st.cart = []; save(); location.hash = '#/done'; })
+      .catch(function (e) { b.disabled = false; b.textContent = 'Place Order'; m.textContent = e.message; m.style.color = '#dc2626'; });
+  };
+  var lastOrder = null;
   function done() {
-    var no = 1000 + Math.floor(Math.random() * 9000);
-    return '<div class="panel" style="text-align:center;padding:36px">✅<h2>Order placed!</h2><p>Order <b>#' + no + '</b> (demo). In a real store the owner gets it in ROSE at once, and can book the courier in one tap.</p>' +
+    var no = lastOrder ? lastOrder.order_no : 1000 + Math.floor(Math.random() * 9000);
+    return '<div class="panel" style="text-align:center;padding:36px">✅<h2>Order placed!</h2><p>Order <b>#' + no + '</b>' + (S.live ? (lastOrder ? ', total <b>' + tk(lastOrder.total) + '</b>. The shop will call you to confirm.' : '.') : ' (demo). In a real store the owner gets it in ROSE at once, and can book the courier in one tap.') + '</p>' +
       '<div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;font-size:12.5px;margin:14px 0"><span class="note">1 Confirmed</span><span class="note">2 Packed</span><span class="note">3 Shipped</span><span class="note">4 Delivered</span></div>' +
       '<a class="btn" style="display:inline-block;width:auto;padding:10px 20px" href="#/">Continue shopping</a></div>';
   }
@@ -314,7 +382,7 @@
       '<div class="row"><span class="e">⭐</span><div style="flex:1"><b>Loyalty points</b><div style="font-size:12px;color:#64748b">120 points = ৳ 12 off</div></div></div></div>';
   }
   var PAGES = {
-    about: ['About us', S.name + ' is a demo store made with ROSE Store Builder. A real store writes its own story here.'],
+    about: ['About us', S.live ? S.name + ': ' + S.tagline : S.name + ' is a demo store made with ROSE Store Builder. A real store writes its own story here.'],
     contact: ['Contact', 'Phone, e-mail, address and map. Live chat is at the bottom right.'],
     return: ['Return policy', 'Example: return or exchange within 7 days with the invoice. Each store writes its own rules.'],
     privacy: ['Privacy policy', 'How the store uses customer data. ROSE gives every store a ready template.'],
@@ -350,7 +418,7 @@
   };
   window.toast = toast;
   function bindProduct(pid) {
-    var q = 1, opt = S.options ? S.options.values[0] : '';
+    var pp = P[pid], q = 1, opt = pp.opts && pp.opts.length ? pp.opts[0] : S.options ? S.options.values[0] : '';
     var qv = document.getElementById('qv');
     document.getElementById('qm').onclick = function () { q = Math.max(1, q - 1); qv.textContent = q; };
     document.getElementById('qp').onclick = function () { q++; qv.textContent = q; };
@@ -376,12 +444,12 @@
     var a = hit ? hit.name + ' is ' + tk(hit.price) + ' (was ' + tk(hit.old) + ') and in stock.'
       : /deliver|ডেলিভারি|charge/.test(l) ? 'Delivery: ৳ 60 inside Dhaka, ৳ 120 outside. ' + S.note
       : /dose|ডোজ|খাব/.test(l) && S.pharmacy ? 'For dose, please ask your doctor or our pharmacist. I can help you order.'
-      : 'Thanks! In a real store the owner gets this message in the ROSE app at once and can reply.';
+      : S.live ? 'Thanks! Please call ' + (S.phone || 'the shop') + ' or place the order, the shop will contact you.' : 'Thanks! In a real store the owner gets this message in the ROSE app at once and can reply.';
     setTimeout(function () { say(a, 'b'); }, 600);
   };
 
   counts(); route();
-})();
+}
 </script>
 </body>
 </html>

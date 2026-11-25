@@ -34,6 +34,7 @@ import { AdminReportsPage } from './AdminReportsPage';
 import { TeamChecklist } from '../settings/TeamChecklist';
 import { AdminVideosPage, AdminGuidePage } from './AdminGuideVideos';
 import { AdminWebsiteBuilderDemo } from './AdminWebsiteBuilderDemo';
+import { AdminWebsiteAccessPage } from './AdminWebsiteAccessPage';
 import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
@@ -60,7 +61,8 @@ type AdminView =
   | 'gifts'
   | 'income'
   | 'developer_tools'
-  | 'website_builder';
+  | 'website_builder'
+  | 'website_access';
 
 interface AdminScreenProps {
   settings: TiyaSettings;
@@ -446,6 +448,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               store: '20 Store Readiness',
               videos: '21 Tutorial Videos',
               website_builder: '22 Website Builder',
+              website_access: '23 Website Access',
               guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
@@ -498,6 +501,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="20" title="STORE READINESS" value="PLAY · MS" tone={activeView === 'store' ? 'accent' : 'default'} onClick={() => go('store')} testId="admin-bar-store" />
             <SettingsBar badge="21" title="TUTORIAL VIDEOS" value="YOUTUBE" tone={activeView === 'videos' ? 'accent' : 'default'} onClick={() => go('videos')} testId="admin-bar-videos" />
             <SettingsBar badge="22" title="WEBSITE BUILDER" value="DEMO" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
+            <SettingsBar badge="23" title="WEBSITE ACCESS" value="GMAIL" tone={activeView === 'website_access' ? 'accent' : 'default'} onClick={() => go('website_access')} testId="admin-bar-website-access" />
           </div>
   );
 
@@ -604,6 +608,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'store' && <TeamChecklist canEdit listName="STORE READINESS" />}
         {view === 'videos' && <AdminVideosPage />}
         {view === 'website_builder' && <AdminWebsiteBuilderDemo />}
+        {view === 'website_access' && <AdminWebsiteAccessPage />}
         {view === 'guide' && <AdminGuidePage onOpen={(v) => setView(v as AdminView)} />}
 
         {view === 'dashboard' && (

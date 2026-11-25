@@ -76,6 +76,7 @@ const GUIDE: Array<[string, string, string, string]> = [
   ['20', 'store', 'STORE READINESS', 'Everything Google Play and Microsoft Store need: policies, data safety, rating, payments, screenshots.'],
   ['21', 'videos', 'TUTORIAL VIDEOS', 'YouTube links for Personal, Student and Business how-to videos.'],
   ['22', 'website_builder', 'WEBSITE BUILDER', 'DEMO plan of the ROSE store builder: hosting, plans, 6 demo stores, store admin bars, SEO, live chat.'],
+  ['23', 'website_access', 'WEBSITE ACCESS', 'Give the Store Builder by Gmail (plan, months, trial), extend or remove; see every store and suspend it.'],
 ];
 
 /** Admin > 00 ADMIN GUIDE: what every admin bar is for. */

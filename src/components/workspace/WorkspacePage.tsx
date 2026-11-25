@@ -9,6 +9,7 @@ import { WriterPanel } from '../desktop/WriterPanel';
 import { CustomerCheck } from './CustomerCheck';
 import { TutorialStrip } from '../TutorialVideos';
 import { SocialPostPanel } from './SocialPostPanel';
+import { StorePanel } from './StorePanel';
 
 type Mode = 'personal' | 'student' | 'business';
 
@@ -383,6 +384,7 @@ const APPROVALS: CrudConfig = {
 type View =
   | 'hub'
   | 'social'
+  | 'store'
   | 'mode'
   | 'tasks'
   | 'content'
@@ -410,6 +412,7 @@ const TITLES: Record<View, string> = {
   mode: 'MODE',
   writer: 'WRITER',
   social: 'SOCIAL POST',
+  store: 'MY STORE',
   customer_check: 'CUSTOMER CHECK',
   biz_guide: 'START HERE · GUIDE',
   tasks: TASKS.title,
@@ -658,8 +661,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
 
   let body: React.ReactNode = null;
   if (view === 'hub') {
-    const personal = [bar('01', 'tasks'), bar('02', 'content'), bar('03', 'writer'), bar('04', 'social', 'YT · FB · TT · IG')];
-    const student = [bar('01', 'notes'), bar('02', 'routine'), bar('03', 'tests'), bar('04', 'tasks'), bar('05', 'writer'), bar('06', 'social', 'YT · FB · TT · IG')];
+    const personal = [bar('01', 'tasks'), bar('02', 'content'), bar('03', 'writer'), bar('04', 'social', 'YT · FB · TT · IG'), bar('05', 'store', 'WEBSITE')];
+    const student = [bar('01', 'notes'), bar('02', 'routine'), bar('03', 'tests'), bar('04', 'tasks'), bar('05', 'writer'), bar('06', 'social', 'YT · FB · TT · IG'), bar('07', 'store', 'WEBSITE')];
     const label = (t: string) => (
       <p key={`l_${t}`} className="px-1 pt-2 text-[10px] font-bold tracking-wider text-slate-400">
         {t}
@@ -688,6 +691,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             label('TOOLS'),
             bar('13', 'writer'),
             bar('15', 'social', 'YT · FB · TT · IG'),
+            bar('16', 'store', 'WEBSITE'),
             label('CHANNELS'),
             bar('14', 'channels', 'KEYS'),
           ]
@@ -708,7 +712,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             {label('STUDENT')}
             {[bar('S1', 'notes'), bar('S2', 'routine'), bar('S3', 'tests')]}
             {label('WRITE & POST')}
-            {[bar('W1', 'writer'), bar('W2', 'social', 'YT · FB · TT · IG')]}
+            {[bar('W1', 'writer'), bar('W2', 'social', 'YT · FB · TT · IG'), bar('W3', 'store', 'WEBSITE')]}
             {label('BUSINESS')}
           </div>
         )}
@@ -750,6 +754,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
       </div>
     );
   } else if (view === 'social') body = <SocialPostPanel />;
+  else if (view === 'store') body = <StorePanel userId={userId} />;
   else if (view === 'writer') body = <div className="h-[calc(100dvh-140px)]"><WriterPanel /></div>;
   else if (view === 'tasks') body = <CrudSection config={TASKS} scope={uScope} />;
   else if (view === 'content') body = <CrudSection config={CONTENT} scope={uScope} />;
