@@ -183,9 +183,13 @@
   .linkb { background: none; border: 0; color: var(--c); font-weight: 600; text-align: left; padding: 0; font-size: 14px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chips span { background: #f1f5f9; border-radius: 999px; padding: 5px 10px; font-size: 12px; }
-  .ptab { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 12px; overflow-x: auto; }
-  .ptab button { background: none; border: 0; padding: 10px 12px; font-weight: 700; color: #64748b; border-bottom: 3px solid transparent; white-space: nowrap; }
-  .ptab button.on { color: var(--c); border-color: var(--c); }
+  .ptab { display: grid; gap: 4px; background: #f1f5f9; border-radius: 14px; padding: 4px; margin-bottom: 14px; }
+  .ptab button { background: none; border: 0; border-radius: 11px; padding: 10px 4px; font-weight: 700; font-size: 14px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ptab button.on { background: #fff; color: var(--c); box-shadow: 0 1px 4px rgba(15,23,42,.12); }
+  .kv2 th { width: 40%; background: #f8fafc; font-weight: 600; color: #475569; }
+  .shl { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .shl:last-child { border: 0; }
+  * { scrollbar-width: none; } *::-webkit-scrollbar { display: none; }
   .pane { font-size: 14.5px; line-height: 1.65; color: #334155; }
   .tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 10px 0; }
   .tbl th { background: #f8fafc; text-align: left; padding: 9px; border-bottom: 1px solid var(--line); }
@@ -246,6 +250,19 @@
   @media (min-width: 761px) { .bbp { display: flex; } .pt { font-size: 28px; } .pd { grid-template-columns: 1.05fr 1fr; } }
   @media (max-width: 760px) { .co { grid-template-columns: 1fr; } .cosum { position: static; } .two { grid-template-columns: 1fr; gap: 0; } .ib { grid-template-columns: 1fr; } .authb { grid-template-columns: 1fr; } .pbtns { display: none; } .rsum { gap: 12px; } .lang { padding: 3px 8px; font-size: 12px; } }
   @media print { header, nav, .demo, footer, .chatbtn, .chat, .buybar, .noprint, .crumb, .toast { display: none !important; } body { background: #fff; } main { padding: 0 !important; } .inv { border: 0; } }
+
+  .gacc { width: 36px; height: 36px; border-radius: 99px; border: 1.5px solid var(--line); background: #fff; display: grid; place-items: center; padding: 0; flex-shrink: 0; }
+  .gacc .ini { width: 30px; height: 30px; border-radius: 99px; background: var(--c); color: #fff; display: grid; place-items: center; font-weight: 800; }
+  .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .pays { grid-template-columns: repeat(3, 1fr) !important; }
+  .paycard { flex-direction: column; text-align: center; gap: 6px; padding: 12px 8px; position: relative; }
+  .paycard input { position: absolute; top: 8px; left: 8px; margin: 0; }
+  .paycard b { font-size: 13.5px; } .paycard small { font-size: 11px; }
+  @media (max-width: 760px) { .three { grid-template-columns: 1fr; gap: 0; } .pays { grid-template-columns: 1fr 1fr !important; } .paycard .pl { width: 34px; height: 34px; font-size: 16px; } .bar { gap: 6px; } .gacc { width: 32px; height: 32px; } }
+
+  @media (min-width: 761px) { body.onp .buybar.cob { display: none; } }
+  .logo span { min-width: 0; } .logo b, .logo small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 420px) { .logo small { display: none; } .logo b { font-size: 19px; } .city { font-size: 13px; } .city .dn { display: none; } }
 </style>
 </head>
 <body>
@@ -257,6 +274,7 @@
     <button class="city" id="city" type="button"></button>
     <a class="icon hideM" href="#/wishlist" title="Wishlist" id="hWish"><i id="wCount" hidden></i></a>
     <a class="icon hideM" href="#/cart" title="Cart" id="hCart"><i id="cCount" hidden></i></a>
+    <button class="gacc" id="gAcc" type="button" title="Log in with Google"></button>
     <button class="lang" id="langBtn" type="button"></button>
     <a class="icon" href="#/account" title="Notifications" id="hBell"><i id="bCount" hidden></i></a>
   </div>
@@ -360,7 +378,7 @@ if (liveSlug) {
       });
       if (banners.length < 2) banners.push({ title: 'Best Quality, Best Price', badge: 'Order now', icon: r.logo, bg: 'linear-gradient(120deg,#fef3c7,' + r.accent + ')' });
       var S = {
-        live: true, slug: r.slug, logoUrl: r.logo_url || '', name: r.name, tagline: r.tagline || '', logo: r.logo || '🛍️', type: 'Store', color: r.color, accent: r.accent,
+        live: true, slug: r.slug, template: r.template, logoUrl: r.logo_url || '', name: r.name, tagline: r.tagline || '', logo: r.logo || '🛍️', type: 'Store', color: r.color, accent: r.accent,
         city: r.city || 'Dhaka', phone: r.phone, email: r.email, address: r.address, licence: r.licence,
         pharmacy: prods.some(function (p) { return p.rx; }), banners: banners,
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
@@ -370,7 +388,7 @@ if (liveSlug) {
       };
       var P = prods.map(function (p, i) {
         return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', e: p.emoji || '📦', img: fullImg((p.images || [])[0], 600), imgs: (p.images || []).map(function (u) { return fullImg(u, 900); }),
-          price: +p.price, old: +(p.old_price || p.price), rx: p.rx, desc: p.description || '', optLabel: p.options_label, opts: p.options || [],
+          price: +p.price, old: +(p.old_price || p.price), rx: p.rx, desc: p.description || '', short: p.short_description || '', long: p.description || '', specs: p.specs || {}, stock: p.stock, optLabel: p.options_label, opts: p.options || [],
           rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 0 };
       });
       if (P.some(function (p) { return p.cat === 'Others'; }) && !S.categories.some(function (c) { return c[0] === 'Others'; })) S.categories.push(['Others', '🏷️']);
@@ -402,6 +420,7 @@ function start(S, P, liveId) {
   var pic = function (p, big) { return p.img ? '<img src="' + esc(p.img) + '" alt="' + esc(p.name) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;font-size:12px" onerror="this.parentNode.textContent=\'' + p.e + '\'">' : p.e; };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
 
+  var KIND = window.ROSE_KINDS[window.ROSE_KIND_OF[S.template || id] || 'fashion'] || window.ROSE_KINDS.fashion;
   var DIN = S.delIn != null ? +S.delIn : 60, DOUT = S.delOut != null ? +S.delOut : 120;
   var PAYS = [['cod', '💵 Cash on Delivery'], ['bkash', 'bKash'], ['nagad', 'Nagad'], ['rocket', 'Rocket']].concat(S.live ? [] : [['card', '💳 Card (VISA/Master)'], ['bank', '🏦 Bank transfer']]);
   // cart + wishlist (memory, with storage when allowed)
@@ -534,6 +553,9 @@ function start(S, P, liveId) {
   function paintLang() { lb.textContent = LANG === 'bn' ? 'EN' : 'বাংলা'; lb.title = LANG === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন'; document.documentElement.lang = LANG === 'bn' ? 'bn' : 'en'; }
   lb.onclick = function () { LANG = LANG === 'bn' ? 'en' : 'bn'; try { localStorage.setItem('rose_lang', LANG); } catch (e) {} paintLang(); route(); };
   paintLang();
+  var GSVG = '<svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+  function paintAcc() { var g = document.getElementById('gAcc'); if (cust.email) { g.innerHTML = '<span class="ini">' + esc((cust.name || cust.email).charAt(0).toUpperCase()) + '</span>'; g.title = cust.email; } else { g.innerHTML = GSVG; g.title = LANG === 'bn' ? 'Google দিয়ে লগইন' : 'Log in with Google'; } }
+  document.getElementById('gAcc').onclick = function () { if (cust.email) location.hash = '#/account'; else openAuth('google'); };
   var place = function (p) { return LANG === 'bn' && p[1] ? p[1] : p[0]; };
 
   // ---------------- customer (saved info, demo login) ----------------
@@ -570,15 +592,21 @@ function start(S, P, liveId) {
   }
   function product(p) {
     var O = p.opts && p.opts.length ? { label: p.optLabel || 'Option', values: p.opts } : S.options;
-    var isSize = O && /size|সাইজ/i.test(O.label);
-    var opt = O ? '<div><div style="display:flex;justify-content:space-between"><b style="font-size:14px">' + esc(O.label) + '</b>' + (isSize ? '<a href="#" onclick="document.querySelector(\'[data-tab=size]\').click();document.getElementById(\'ptabs\').scrollIntoView({behavior:\'smooth\'});return false" style="color:var(--c);font-size:13px;font-weight:600">📏 ' + t('sizeGuide') + '</a>' : '') + '</div><div class="opts" id="opts">' + O.values.map(function (v, i) { return '<button class="' + (i ? '' : 'on') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div></div>' : '';
+    var isSize = O && /size|সাইজ/i.test(O.label) && KIND.tabs.some(function (x) { return x[0] === 'size'; });
+    var opt = O ? '<div><div style="display:flex;justify-content:space-between"><b style="font-size:14px">' + esc(O.label) + '</b>' + (isSize ? '<a href="#" onclick="var z=document.querySelector(\'[data-tab=size]\');if(z)z.click();document.getElementById(\'ptabs\').scrollIntoView({behavior:\'smooth\'});return false" style="color:var(--c);font-size:13px;font-weight:600">📏 ' + t('sizeGuide') + '</a>' : '') + '</div><div class="opts" id="opts">' + O.values.map(function (v, i) { return '<button class="' + (i ? '' : 'on') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div></div>' : '';
     var R = revList(p), avg = R.length ? (R.reduce(function (a, r) { return a + r.s; }, 0) / R.length).toFixed(1) : '';
     var rel = P.filter(function (x) { return x.cat === p.cat && x.id !== p.id; }).concat(P.filter(function (x) { return x.cat !== p.cat; })).slice(0, 8);
     var stock = p.stock == null ? 12 : p.stock;
-    var tabs = '<div class="panel" id="ptabs" style="margin-top:14px"><div class="ptab">' + [['desc', t('desc')], ['size', t('sizeGuide')], ['ret', t('delRet')]].filter(function (x) { return x[0] !== 'size' || isSize; }).map(function (x, i) { return '<button data-tab="' + x[0] + '" class="' + (i ? '' : 'on') + '">' + x[1] + '</button>'; }).join('') + '</div>' +
-      '<div data-pane="desc" class="pane">' + esc(long(p)).replace(/\n/g, '<br>') + '</div>' +
-      (isSize ? '<div data-pane="size" class="pane" hidden><table class="tbl"><tr><th>Size</th><th>Chest</th><th>Length</th></tr>' + O.values.map(function (v, i) { return '<tr><td>' + esc(v) + '</td><td>' + (36 + i * 2) + '"</td><td>' + (27 + i) + '"</td></tr>'; }).join('') + '</table><p class="small">Measure a shirt that fits you and compare.</p></div>' : '') +
-      '<div data-pane="ret" class="pane" hidden>🚚 ' + t('inside') + ': ৳ ' + DIN + ' (' + t('days1') + ')<br>🚚 ' + t('outside') + ': ৳ ' + DOUT + ' (' + t('days3') + ')<br>💵 ' + t('cod') + '<br>🔁 7-day easy return or exchange with the invoice.</div></div>';
+    var KT = KIND.tabs.filter(function (x) { return x[0] !== 'size' || isSize || !S.live; });
+    var specRows = KIND.specs.map(function (f) { var v = (p.specs && p.specs[f[0]]) || (S.live ? '' : f[3]); return v ? '<tr><th>' + esc(LANG === 'bn' ? f[2] : f[1]) + '</th><td>' + esc(v) + '</td></tr>' : ''; }).join('');
+    var pane = function (id) {
+      if (id === 'desc') return esc(long(p)).replace(/\n/g, '<br>');
+      if (id === 'size') return (O && O.values.length ? '<table class="tbl"><tr><th>Size</th><th>Chest</th><th>Length</th></tr>' + O.values.map(function (v, i) { return '<tr><td>' + esc(v) + '</td><td>' + (36 + i * 2) + '"</td><td>' + (27 + i) + '"</td></tr>'; }).join('') + '</table><p class="small">Measure a shirt that fits you and compare.</p>' : '') + (specRows ? '<table class="tbl kv2">' + specRows + '</table>' : '');
+      if (id === 'specs') return specRows ? '<table class="tbl kv2">' + specRows + '</table>' : '<p class="small">No extra info.</p>';
+      return KIND.ship.map(function (x) { return '<div class="shl">' + esc(x) + '</div>'; }).join('') + '<div class="shl">🚚 ' + t('inside') + ' ৳' + DIN + ' · ' + t('outside') + ' ৳' + DOUT + '</div>';
+    };
+    var tabs = '<div class="panel" id="ptabs" style="margin-top:14px"><div class="ptab" style="grid-template-columns:repeat(' + KT.length + ',1fr)">' + KT.map(function (x, i) { return '<button data-tab="' + x[0] + '" class="' + (i ? '' : 'on') + '">' + (LANG === 'bn' ? x[2] : x[1]) + '</button>'; }).join('') + '</div>' +
+      KT.map(function (x, i) { return '<div data-pane="' + x[0] + '" class="pane"' + (i ? ' hidden' : '') + '>' + pane(x[0]) + '</div>'; }).join('') + '</div>';
     return '<div class="crumb"><a href="#/">' + t('home') + '</a> › <a href="#/c/' + encodeURIComponent(p.cat) + '">' + esc(p.cat) + '</a> › ' + esc(p.name) + '</div>' +
       '<div class="pd"><div class="gal">' + gallery(p) + '</div>' +
       '<div class="panel info"><h1 class="pt">' + esc(p.name) + '</h1>' +
@@ -619,7 +647,7 @@ function start(S, P, liveId) {
       if (f) { var rd = new FileReader(); rd.onload = function () { put(rd.result); }; rd.readAsDataURL(f); } else put('');
     };
   }
-  function showBar(html) { var b = document.getElementById('buybar'); b.innerHTML = '<div class="in">' + html + '</div>'; document.body.classList.add('onp'); }
+  function showBar(html, cls) { var b = document.getElementById('buybar'); b.className = 'buybar ' + (cls || ''); b.innerHTML = '<div class="in">' + html + '</div>'; document.body.classList.add('onp'); }
 
   // ---------------- cart ----------------
   function cartPage() {
@@ -653,22 +681,21 @@ function start(S, P, liveId) {
       ? '<div class="acct"><div class="ravatar">' + esc((cust.name || cust.email).charAt(0).toUpperCase()) + '</div><div style="flex:1"><small>' + t('signedIn') + '</small><b style="display:block">' + esc(cust.email) + '</b></div><button class="btn alt" style="width:auto" onclick="logoutCust()">' + t('logout') + '</button></div>' + (cust.address ? '<button class="btn alt" style="margin-top:8px" onclick="fillSaved()">📍 ' + t('useSaved') + '</button>' : '')
       : '<div class="authb"><button class="btn gbtn" onclick="openAuth(\'google\')"><svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>' + t('google') + '</button><button class="btn alt" onclick="openAuth(\'login\')">✉️ ' + t('emailLogin') + '</button></div><p class="small" style="margin:8px 0 0">✓ ' + t('guest') + '</p>';
     var divOpts = '<option value="">' + t('choose') + ' ' + t('division') + '</option>' + BD.map(function (d, i) { return '<option value="' + i + '">' + esc(d[0]) + ' · ' + d[1] + '</option>'; }).join('');
-    var pays = PAYLIST.map(function (m, i) { return '<label class="paycard"><input type="radio" name="pay" value="' + m[0] + '"' + (i ? '' : ' checked') + '><span class="pl" style="background:' + m[4] + '">' + m[1] + '</span><span><b>' + esc(m[2]) + '</b>' + (m[3] ? '<small>' + esc(m[3]) + '</small>' : '') + '</span></label>'; }).join('');
+    var pays = PAYLIST.map(function (m, i) { return '<label class="paycard"><input type="radio" name="pay" value="' + m[0] + '"' + (i ? '' : ' checked') + '><span class="pl" style="background:' + m[4] + '">' + m[1] + '</span><span><b>' + esc(m[0] === 'cod' ? (LANG === 'bn' ? 'ক্যাশ অন ডেলিভারি' : 'Cash on Delivery') : m[0] === 'card' ? (LANG === 'bn' ? 'কার্ড' : 'Card') : m[2]) + '</b>' + (m[0] === 'cod' ? '<small>' + (LANG === 'bn' ? 'হাতে পেয়ে টাকা' : 'Pay on delivery') + '</small>' : m[0] === 'card' ? '<small>VISA · Mastercard</small>' : '') + '</span></label>'; }).join('');
     var nums = S.live ? S.payNumbers || {} : { bkash: '01XXXXXXXXX', nagad: '01XXXXXXXXX', rocket: '01XXXXXXXXX' };
     return '<div class="crumb"><a href="#/cart">' + t('cart') + '</a> › ' + t('checkout') + '</div><div class="co"><div>' +
-      sec(1, t('acc'), accBody) +
-      sec(2, t('details'),
+      sec(1, t('details'),
         fld('name', t('fullName'), '<input id="fName" autocomplete="name" placeholder="' + t('namePh') + '" value="' + esc(cust.name || '') + '">', 1) +
         fld('phone', t('mobile'), '<input id="fPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="11" placeholder="01XXXXXXXXX" value="' + esc(cust.phone || '') + '">', 1) +
-        fld('email', t('email'), '<input id="fEmail" type="email" autocomplete="email" placeholder="name@gmail.com" value="' + esc(cust.email || '') + '"' + (cust.email ? ' readonly' : '') + '>')) +
-      sec(3, t('address'),
-        '<div class="two">' + fld('div', t('division'), '<select id="fDiv">' + divOpts + '</select>', 1) + fld('dist', t('district'), '<select id="fDist" disabled><option value="">' + t('choose') + ' ' + t('district') + '</option></select>', 1) + '</div>' +
-        fld('upz', t('upazila'), '<select id="fUpz" disabled><option value="">' + t('choose') + ' ' + t('upazila') + '</option></select><input id="fUpzT" placeholder="' + t('upazila') + '" hidden style="margin-top:6px">', 1) +
         fld('addr', t('fullAddr'), '<textarea id="fAddr" rows="2" autocomplete="street-address" placeholder="' + t('addrPh') + '">' + esc(cust.address || '') + '</textarea>', 1) +
+        '<div class="three">' + fld('div', t('division'), '<select id="fDiv">' + divOpts + '</select>', 1) + fld('dist', t('district'), '<select id="fDist" disabled><option value="">' + t('choose') + ' ' + t('district') + '</option></select>', 1) +
+        fld('upz', t('upazila'), '<select id="fUpz" disabled><option value="">' + t('choose') + ' ' + t('upazila') + '</option></select><input id="fUpzT" placeholder="' + t('upazila') + '" hidden style="margin-top:6px">', 1) + '</div>' +
+        fld('email', t('email'), '<input id="fEmail" type="email" autocomplete="email" placeholder="name@gmail.com" value="' + esc(cust.email || cust.emailTyped || '') + '"' + (cust.email ? ' readonly' : '') + '>') +
+        (cust.email ? '<p class="small" style="margin:-4px 0 8px">✓ ' + t('signedIn') + ' ' + esc(cust.email) + '</p>' : '') +
         '<label class="chk"><input type="checkbox" id="fSave" checked> ' + t('saveInfo') + '</label>' +
         (needRx ? '<div class="note warn" style="margin-top:10px">📄 <b>Prescription required</b> for Rx medicine.<br><input type="file" accept="image/*,.pdf" style="margin-top:8px"></div>' : '')) +
-      sec(4, t('delivery'), '<div id="zoneBox" class="zone"><span class="small">' + t('pickDist') + '</span></div>') +
-      sec(5, t('payment'), '<div class="pays" id="pays">' + pays + '</div><div id="payNote"></div>' + fld('trx', t('trx'), '<input id="fTrx" placeholder="8N7A6XXXXX" autocomplete="off">', 1).replace('class="field"', 'class="field" hidden')) +
+      sec(2, t('delivery'), '<div id="zoneBox" class="zone"><span class="small">' + t('pickDist') + '</span></div>') +
+      sec(3, t('payment'), '<div class="pays" id="pays">' + pays + '</div><div id="payNote"></div>' + fld('trx', t('trx'), '<input id="fTrx" placeholder="8N7A6XXXXX" autocomplete="off">', 1).replace('class="field"', 'class="field" hidden')) +
       '</div><div><div class="panel cosum"><h3 style="margin-top:0">' + t('summary') + '</h3>' +
       st.cart.map(function (c) { var p = P[c.id]; return '<div class="row"><span class="e" style="width:48px;height:48px;overflow:hidden;border-radius:10px;font-size:26px">' + (p.img ? '<img src="' + p.img + '" alt="" style="width:48px;height:48px;object-fit:cover">' : p.e) + '</span><div style="flex:1;font-size:13px"><b>' + esc(p.name) + '</b><div style="color:#64748b">' + esc(c.opt) + ' × ' + c.q + '</div></div><b style="font-size:14px">' + tk(p.price * c.q) + '</b></div>'; }).join('') +
       '<div style="display:flex;gap:6px;margin:12px 0"><input id="fCoupon" placeholder="' + t('coupon') + '" style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:10px"><button class="btn alt" style="width:auto" onclick="toast(\'' + (S.live ? 'Coupon not valid' : 'Demo: coupon applied') + '\')">' + t('apply') + '</button></div>' +
@@ -678,7 +705,7 @@ function start(S, P, liveId) {
   function bindCheckout() {
     var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0);
     var $ = function (x) { return document.getElementById(x); };
-    showBar('<div class="bbp show"><div><small>' + t('total') + '</small><b id="bbTot" style="font-size:18px;color:#dc2626">' + tk(sub) + '</b></div></div><button class="btn" style="flex:1.4" onclick="placeOrder()">' + t('confirm') + '</button>');
+    showBar('<div class="bbp show"><div><small>' + t('total') + '</small><b id="bbTot" style="font-size:18px;color:#dc2626">' + tk(sub) + '</b></div></div><button class="btn" style="flex:1.4" onclick="placeOrder()">' + t('confirm') + '</button>', 'cob');
     var ph = $('fPhone');
     ph.oninput = function () { var v = ph.value.replace(/[০-৯]/g, function (d) { return '০১২৩৪৫৬৭৮৯'.indexOf(d); }).replace(/^\+?88/, '').replace(/\D/g, '').slice(0, 11); ph.value = v; if (v.length === 11) check('phone'); };
     var dv = $('fDiv'), ds = $('fDist'), up = $('fUpz'), upt = $('fUpzT');
@@ -736,7 +763,7 @@ function start(S, P, liveId) {
   window.fillSaved = function () { route(); toast('Saved address added'); };
   window.logoutCust = function () { cust = {}; saveCust(); toast('Logged out'); route(); };
   window.placeOrder = function () {
-    var keys = ['name', 'phone', 'email', 'div', 'dist', 'upz', 'addr', 'trx'], bad = keys.filter(function (k) { return !check(k); });
+    var keys = ['name', 'phone', 'addr', 'div', 'dist', 'upz', 'email', 'trx'], bad = keys.filter(function (k) { return !check(k); });
     if (bad.length) { var w = document.getElementById('w_' + bad[0]); if (w) { w.scrollIntoView({ behavior: 'smooth', block: 'center' }); var i = w.querySelector('input,select,textarea'); if (i) setTimeout(function () { i.focus(); }, 300); } toast(LANG === 'bn' ? 'লাল দাগ দেওয়া ঘরগুলো ঠিক করুন' : 'Please fix the fields in red'); return; }
     var v = function (x) { return document.getElementById(x).value.trim(); };
     var di = BD[+v('fDiv')], d = di[2][+v('fDist')], u = v('fUpz') === '__other' ? v('fUpzT') : v('fUpz');
@@ -747,9 +774,9 @@ function start(S, P, liveId) {
     var finish = function () { var all = myOrders(); all.unshift(O); try { localStorage.setItem(OKEY, JSON.stringify(all.slice(0, 30))); } catch (e) {} st.cart = []; save(); location.hash = '#/invoice/' + O.no; };
     if (!S.live) { O.no = 1025 + myOrders().length; return finish(); }
     var b = document.getElementById('placeBtn'); if (b) { b.disabled = true; b.textContent = 'Placing…'; }
-    sb('rpc/place_store_order', {
-      p_slug: S.slug, p_name: O.name, p_phone: O.phone, p_address: O.address + ', ' + O.upazila + ', ' + O.district + ', ' + O.division, p_area: O.zone,
-      p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: O.pay, p_trx: O.trx, p_note: O.email ? 'Email: ' + O.email : '',
+    sb('rpc/place_store_order_v2', {
+      p_slug: S.slug, p_name: O.name, p_phone: O.phone, p_email: O.email, p_division: O.division, p_district: O.district, p_upazila: O.upazila, p_address: O.address,
+      p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: O.pay, p_trx: O.trx, p_note: '',
     }).then(function (r) { O.no = r.order_no; if (r.total) { O.total = +r.total; O.del = O.total - O.sub; } finish(); })
       .catch(function (e) { if (b) { b.disabled = false; b.textContent = t('confirm'); } toast(e.message); });
   };
@@ -828,7 +855,7 @@ function start(S, P, liveId) {
     else if (h === '/account') html = account();
     else if (h.indexOf('/page/') === 0) { var pg = PAGES[h.slice(6)] || PAGES.about; html = '<div class="panel"><h2 style="margin-top:0">' + pg[0] + '</h2><p>' + esc(pg[1]) + '</p></div>'; }
     else html = home();
-    document.body.classList.remove('onp'); document.getElementById('buybar').innerHTML = '';
+    document.body.classList.remove('onp'); document.getElementById('buybar').innerHTML = ''; paintAcc();
     v.innerHTML = html;
     window.scrollTo(0, 0);
     renderNav();

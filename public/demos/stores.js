@@ -155,3 +155,27 @@ window.ROSE_STORES = {
     note: 'Medicines marked Rx need a doctor’s prescription. A licensed pharmacist checks every prescription. Ask your doctor or pharmacist about dose.',
   },
 };
+
+// Each kind of shop shows its own product tabs and info fields (food ≠ medicine ≠ furniture).
+// tabs: [id, English, বাংলা] (short, so 3 fit on a phone). specs: [key, English label, বাংলা label, demo value]
+window.ROSE_KINDS = {
+  food: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Ingredients', 'উপকরণ'], ['ship', 'Delivery', 'ডেলিভারি']],
+    specs: [['ingredients', 'Ingredients', 'উপকরণ', 'Fresh meat, vegetables, house sauce'], ['serves', 'Serves', 'কতজনের', '1 person'], ['spice', 'Spice level', 'ঝাল', 'Medium'], ['ready', 'Ready in', 'তৈরি হতে', '20-30 min'], ['allergy', 'Contains', 'যা আছে', 'Wheat, milk, egg']],
+    ship: ['🛵 Hot delivery in 30-45 min inside Dhaka', '🕒 Choose a time slot at checkout', '💵 Cash on delivery', '📞 Call us if anything is wrong, we fix it at once'] },
+  fashion: { tabs: [['desc', 'Details', 'বিবরণ'], ['size', 'Size', 'সাইজ'], ['ship', 'Return', 'রিটার্ন']],
+    specs: [['fabric', 'Fabric', 'কাপড়', '100% cotton, 180 GSM'], ['fit', 'Fit', 'ফিট', 'Regular fit'], ['care', 'Care', 'যত্ন', 'Machine wash cold, do not bleach'], ['origin', 'Made in', 'তৈরি', 'Bangladesh']],
+    ship: ['🚚 1-2 days in Dhaka, 2-4 days outside', '🔁 7-day easy exchange for size', '💵 Cash on delivery', '👀 Check the parcel before you pay'] },
+  grocery: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Info', 'তথ্য'], ['ship', 'Delivery', 'ডেলিভারি']],
+    specs: [['weight', 'Weight', 'ওজন', 'As shown in the name'], ['origin', 'Origin', 'উৎস', 'Bangladesh'], ['storage', 'Storage', 'রাখার নিয়ম', 'Keep in a cool, dry place'], ['expiry', 'Best before', 'মেয়াদ', 'Printed on the pack']],
+    ship: ['🚚 Same day in Dhaka (order before 2 PM)', '🧊 Fresh items packed cold', '💵 Cash on delivery', '🔁 Bad item? We replace it free'] },
+  market: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Specs', 'স্পেক'], ['ship', 'Warranty', 'ওয়ারেন্টি']],
+    specs: [['brand', 'Brand', 'ব্র্যান্ড', 'Original brand'], ['model', 'Model', 'মডেল', 'Latest model'], ['warranty', 'Warranty', 'ওয়ারেন্টি', '6 months service warranty'], ['box', 'In the box', 'বক্সে যা আছে', 'Product, cable, manual']],
+    ship: ['🛡️ Warranty with the invoice', '🚚 1-2 days in Dhaka, 2-4 days outside', '💵 Cash on delivery', '🔁 7-day replacement if it does not work'] },
+  furniture: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Size', 'মাপ'], ['ship', 'Delivery', 'ডেলিভারি']],
+    specs: [['material', 'Material', 'কাঠ / উপকরণ', 'Seasoned segun (teak) wood'], ['size', 'Size (W×D×H)', 'মাপ (চওড়া×গভীর×উঁচু)', '72 × 30 × 34 in'], ['colour', 'Colour', 'রং', 'Natural polish'], ['warranty', 'Warranty', 'ওয়ারেন্টি', '5 years on wood'], ['assembly', 'Fitting', 'ফিটিং', 'Free fitting at home']],
+    ship: ['🚛 Home delivery with fitting', '📅 3-7 days, we call before delivery', '💳 EMI and cash on delivery', '🏬 See it in our showroom first'] },
+  pharmacy: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Medicine', 'ওষুধ'], ['ship', 'Safety', 'সতর্কতা']],
+    specs: [['generic', 'Generic name', 'জেনেরিক নাম', 'See the pack'], ['strength', 'Strength', 'মাত্রা', 'As on the pack'], ['company', 'Company', 'কোম্পানি', 'Licensed manufacturer'], ['form', 'Form', 'ধরন', 'Tablet'], ['pack', 'Pack', 'প্যাক', '1 strip']],
+    ship: ['👩‍⚕️ Take it only as your doctor or pharmacist says', '📄 Rx medicine needs a prescription', '🌡️ Keep below 30°C, away from children', '✅ Genuine medicine from licensed sources'] },
+};
+window.ROSE_KIND_OF = { foodbazaar: 'food', fashionhub: 'fashion', sotadari: 'grocery', shopshotoi: 'market', homenest: 'furniture', medicare: 'pharmacy' };

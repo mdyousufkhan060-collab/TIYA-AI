@@ -344,11 +344,13 @@
   // ---------- product (photos, size, short + long description, live preview) ----------
   var SIZESETS = [['Shirt / T-shirt', ['S', 'M', 'L', 'XL', 'XXL']], ['Pant / Waist', ['28', '30', '32', '34', '36', '38']], ['Shoe', ['39', '40', '41', '42', '43', '44']], ['Kids', ['1-2Y', '3-4Y', '5-6Y', '7-8Y']], ['Free size', ['Free size']]];
   var draft = null;
+  var KIND = window.ROSE_KINDS[window.ROSE_KIND_OF[k] || 'fashion'];
+  var demoSpecs = function () { var o = {}; KIND.specs.forEach(function (f) { o[f[0]] = f[3]; }); return o; };
   function draftOf(id) {
     if (draft && draft.key === id) return draft;
     var p = id === 'new' ? null : P(+id);
-    draft = p ? { key: id, id: p.id, name: p.name, price: p.price, old: p.old, stock: p.stock, cat: p.cat, imgs: p.imgs.slice(), e: p.e, optLabel: p.optLabel || 'Size', opts: p.opts.slice(), short: p.short || (p.name + ' from ' + S.name + '. Best quality, checked before delivery.'), long: p.long || p.desc, active: p.active, seo: p.name + ' | ' + S.name }
-      : { key: id, id: -1, name: '', price: '', old: '', stock: 10, cat: st.cats[0] ? st.cats[0].name : '', imgs: [], e: '📦', optLabel: 'Size', opts: [], short: '', long: '', active: true, seo: '' };
+    draft = p ? { key: id, id: p.id, name: p.name, price: p.price, old: p.old, stock: p.stock, cat: p.cat, imgs: p.imgs.slice(), e: p.e, optLabel: p.optLabel || 'Size', opts: p.opts.slice(), short: p.short || (p.name + ' from ' + S.name + '. Best quality, checked before delivery.'), long: p.long || p.desc, active: p.active, seo: p.name + ' | ' + S.name, specs: Object.assign({}, p.specs || demoSpecs()) }
+      : { key: id, id: -1, name: '', price: '', old: '', stock: 10, cat: st.cats[0] ? st.cats[0].name : '', imgs: [], e: '📦', optLabel: 'Size', opts: [], short: '', long: '', active: true, seo: '', specs: {} };
     return draft;
   }
   function pvHTML(d) {
@@ -375,6 +377,7 @@
       '<div class="field"><span>Quick pick</span><select onchange="optSet(this.value);this.value=\'\'"><option value="">Choose a set…</option>' + SIZESETS.map(function (s, i) { return '<option value="' + i + '">' + s[0] + ' (' + s[1].join(', ') + ')</option>'; }).join('') + '</select></div></div>' +
       '<div class="field"><span>' + esc(d.optLabel) + 's · tap to add, or write your own and press Enter</span><div class="chips">' + chips + '<input id="optIn" placeholder="Write, e.g. XXL or 42" onkeydown="if(event.key===\'Enter\'){event.preventDefault();optAdd(this.value)}"></div>' +
       '<div class="quick">' + (d.optLabel === 'Size' ? ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '28', '30', '32', '34', '36', 'Free size'] : d.optLabel === 'Colour' ? ['Black', 'White', 'Red', 'Blue', 'Green', 'Navy', 'Grey', 'Maroon'] : d.optLabel === 'Weight' ? ['250g', '500g', '1kg', '2kg', '5kg'] : ['1 pc', '2 pcs', '3 pcs']).filter(function (x) { return d.opts.indexOf(x) < 0; }).map(function (x) { return '<button onclick="optAdd(\'' + x + '\')">+ ' + x + '</button>'; }).join('') + '</div></div></div>' +
+      '<div class="sizebox" style="border-color:#1e3a8a;background:#0b1224"><div class="field"><span>PRODUCT INFO for this kind of shop (' + (window.ROSE_KIND_OF[k] || '') + ') · shows in the "' + KIND.tabs[1][1] + '" tab</span></div>' + KIND.specs.map(function (f) { return '<div class="field"><span>' + f[1] + '</span><input data-k="sp_' + f[0] + '" value="' + esc(d.specs[f[0]] || '') + '" placeholder="' + esc(f[3]) + '"></div>'; }).join('') + '</div>' +
       '<div class="field"><span>Short description · shows next to the price (max 160)</span><textarea data-k="short" rows="2" maxlength="160">' + esc(d.short) + '</textarea><small class="cnt">' + d.short.length + ' / 160</small></div>' +
       '<div class="field"><span>Long description · full details: material, size chart, care, delivery, return</span><textarea data-k="long" rows="6">' + esc(d.long) + '</textarea></div>' +
       '<div class="field"><span>SEO title (Google)</span><input data-k="seo" value="' + esc(d.seo) + '"></div>' +
@@ -386,7 +389,7 @@
   function afterProduct() {
     [].forEach.call(main.querySelectorAll('[data-k]'), function (el) {
       el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function () {
-        var key = el.dataset.k; draft[key] = /price|old|stock/.test(key) ? (+el.value || '') : el.value;
+        var key = el.dataset.k; if (/^sp_/.test(key)) { draft.specs[key.slice(3)] = el.value; return; } draft[key] = /price|old|stock/.test(key) ? (+el.value || '') : el.value;
         if (key === 'optLabel') return render();
         if (key === 'short') { var c = el.parentNode.querySelector('.cnt'); if (c) c.textContent = el.value.length + ' / 160'; }
         document.getElementById('pv').innerHTML = pvHTML(draft); document.getElementById('sv').innerHTML = seoHTML(draft);
@@ -405,7 +408,7 @@
     if (!d.name || !(+d.price > 0)) return toast('Name and price are needed');
     if (d.short.length < 20) return toast('Write a short description (at least 20 letters)');
     var p = d.id >= 0 ? P(d.id) : { id: st.products.length, e: '📦', rx: false };
-    p.name = d.name; p.price = +d.price; p.old = +d.old || p.price; p.stock = +d.stock || 0; p.cat = d.cat; p.short = d.short; p.long = d.long; p.desc = d.short; p.imgs = d.imgs.slice(); p.optLabel = d.optLabel; p.opts = d.opts.slice(); p.active = d.active;
+    p.name = d.name; p.price = +d.price; p.old = +d.old || p.price; p.stock = +d.stock || 0; p.cat = d.cat; p.short = d.short; p.long = d.long; p.desc = d.short; p.imgs = d.imgs.slice(); p.optLabel = d.optLabel; p.opts = d.opts.slice(); p.active = d.active; p.specs = Object.assign({}, d.specs);
     if (d.id < 0) st.products.unshift(p);
     st.products.forEach(function (x, i) { x.id = i; });
     draft = null; toast('Saved ✓'); go('products');

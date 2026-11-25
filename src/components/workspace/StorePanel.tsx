@@ -3,6 +3,7 @@ import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, storePrice, tk, type StorePlanId } from '../../utils/storePlans';
+import { INVOICE_SIZES, PRINT_CSS, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
  * Workspace > MY STORE: the ROSE Store Builder for the store owner.
@@ -14,17 +15,19 @@ type Store = {
   id: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
   delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[];
-  pay_numbers: Record<string, string>; published: boolean; suspended: boolean;
+  pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings;
 };
 type Banner = { title: string; badge: string; icon: string; bg?: string };
 type Cat = { id: string; name: string; icon: string; sort: number };
 type Prod = {
   id: string; name: string; category_id: string | null; price: number; old_price: number | null; stock: number; emoji: string;
   description: string; images: string[]; options_label: string; options: string[]; rx: boolean; active: boolean;
+  short_description: string; specs: Record<string, string>;
 };
 type Order = {
   id: string; order_no: number; customer_name: string; phone: string; address: string; area: string;
   items: Array<{ name: string; q: number; price: number; opt?: string }>; total: number; payment_method: string; trx_id: string; status: string; created_at: string;
+  email: string; division: string; district: string; upazila: string; courier: string; tracking: string; note: string; subtotal: number; delivery: number;
 };
 type Demo = {
   name: string; tagline: string; logo: string; type: string; color: string; accent: string; banners: Banner[]; trust: string[];
@@ -36,6 +39,10 @@ const box = 'rounded-xl border border-white/[0.08] bg-[#11151E] p-3';
 const input = 'w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white';
 const btn = 'flex h-10 items-center justify-center gap-1.5 rounded-lg bg-teal-600 px-3 text-[11px] font-bold text-white disabled:opacity-60';
 const STATUSES = ['new', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled', 'returned'];
+const SIZE_SETS: Array<[string, string[]]> = [['Shirt / T-shirt: S-XXL', ['S', 'M', 'L', 'XL', 'XXL']], ['Pant / waist: 28-38', ['28', '30', '32', '34', '36', '38']], ['Shoe: 39-44', ['39', '40', '41', '42', '43', '44']], ['Kids: 1-8 years', ['1-2Y', '3-4Y', '5-6Y', '7-8Y']], ['Free size', ['Free size']]];
+const QUICK: Record<string, string[]> = { Size: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free size'], Colour: ['Black', 'White', 'Red', 'Blue', 'Green', 'Navy', 'Grey'], Weight: ['250g', '500g', '1kg', '2kg', '5kg'], Pack: ['1 pc', '2 pcs', '3 pcs'], Model: [] };
+type Kind = { tabs: Array<[string, string, string]>; specs: Array<[string, string, string, string]> };
+const kindOf = (template: string): Kind | null => { const w = window as any; return (w.ROSE_KINDS && w.ROSE_KINDS[(w.ROSE_KIND_OF || {})[template] || 'fashion']) || null; };
 
 function loadDemos(): Promise<Record<string, Demo>> {
   const w = window as any;
@@ -79,7 +86,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'create'>('home');
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
@@ -189,6 +196,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'products' && <ProductsTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} />}
         {tab === 'categories' && <CategoriesTab store={store} />}
         {tab === 'design' && <DesignTab store={store} onSaved={() => void load()} />}
+        {tab === 'delivery' && <DeliveryTab store={store} onSaved={() => void load()} />}
       </div>
     );
   }
@@ -208,9 +216,10 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         <SettingsBar badge="02" title="PRODUCTS" onClick={() => setTab('products')} testId="store-products" />
         <SettingsBar badge="03" title="CATEGORIES" onClick={() => setTab('categories')} testId="store-categories" />
         <SettingsBar badge="04" title="HOMEPAGE & DESIGN" value="BANNERS · COLOURS" onClick={() => setTab('design')} testId="store-design" />
+        <SettingsBar badge="05" title="DELIVERY & COURIER" value="STICKER · INVOICE" onClick={() => setTab('delivery')} testId="store-delivery" />
         {stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
-      <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Delivery, Pixels & Analytics, Live chat, Staff, Own domain.</p>
+      <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Pixels & Analytics, Live chat, Staff, Own domain.</p>
     </div>
   );
 };
@@ -333,8 +342,14 @@ const CreateStore: React.FC<{ demos: Record<string, Demo>; canCreate: boolean; o
 const OrdersTab: React.FC<{ store: Store }> = ({ store }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [open, setOpen] = useState<string>('');
+  const [edit, setEdit] = useState<Partial<Order> | null>(null);
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState('');
+  const ps = (store.print_settings || {}) as PrintSettings;
   const load = useCallback(async () => {
-    const { data } = await supabase.from('store_orders').select('*').eq('store_id', store.id).order('created_at', { ascending: false }).limit(100);
+    const { data } = await supabase.from('store_orders').select('*').eq('store_id', store.id).order('created_at', { ascending: false }).limit(200);
     setOrders((data as Order[]) || []);
     setLoading(false);
   }, [store.id]);
@@ -345,29 +360,224 @@ const OrdersTab: React.FC<{ store: Store }> = ({ store }) => {
     await supabase.from('store_orders').update({ status, updated_at: new Date().toISOString() }).eq('id', o.id);
     void load();
   };
+  const saveEdit = async () => {
+    if (!edit?.id) return;
+    const ph = String(edit.phone || '').replace(/\D/g, '');
+    if (!/^01[3-9]\d{8}$/.test(ph)) return setMsg('Mobile must be 11 digits (01XXXXXXXXX).');
+    if (String(edit.customer_name || '').trim().split(/\s+/).length < 2) return setMsg('Write the full name.');
+    if (String(edit.address || '').trim().length < 15) return setMsg('Write the full address.');
+    const del = Number(edit.delivery) || 0;
+    const sub = (edit.items || []).reduce((a, i) => a + Number(i.price) * Number(i.q), 0);
+    const { error } = await supabase.from('store_orders').update({
+      customer_name: String(edit.customer_name).trim(), phone: ph, email: edit.email || '', division: edit.division || '', district: edit.district || '', upazila: edit.upazila || '',
+      address: String(edit.address).trim(), note: edit.note || '', items: edit.items, subtotal: sub, delivery: del, total: sub + del, updated_at: new Date().toISOString(),
+    }).eq('id', edit.id);
+    if (error) return setMsg(error.message);
+    setEdit(null); setMsg('Order saved.'); void load();
+  };
+  const book = async (o: Order) => {
+    setBusy(o.id); setMsg('');
+    const { data, error } = await supabase.functions.invoke('store-courier', { body: { order_id: o.id, courier: 'steadfast' } });
+    setBusy('');
+    const err = (data as any)?.error || (error ? await (error as any).context?.json?.().then((j: any) => j.error).catch(() => error.message) : '');
+    if (err) return setMsg(String(err));
+    setMsg(`Booked with Steadfast · tracking ${(data as any).tracking}`); void load();
+  };
+  const print = (kind: 'sticker' | 'invoice', list: Order[]) => { const e = printOrders(kind, list, ps, store); if (e) setMsg(e); };
+
   if (loading) return <p className="text-xs text-slate-400">Loading…</p>;
   if (!orders.length) return <div className={box}><p className="text-[12px] text-slate-300">No orders yet. Share your store link to get orders.</p></div>;
   const today = orders.filter((o) => new Date(o.created_at).toDateString() === new Date().toDateString());
+  const list = orders.filter((o) => filter === 'all' || o.status === filter);
+  const openOnes = orders.filter((o) => ['new', 'confirmed', 'packed'].includes(o.status));
+
+  if (edit) {
+    const set = (k: keyof Order, v: unknown) => setEdit((e) => ({ ...(e || {}), [k]: v }));
+    return (
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">EDIT ORDER #{edit.order_no}</p>
+        <input className={input} value={edit.customer_name || ''} onChange={(e) => set('customer_name', e.target.value)} placeholder="Full name" />
+        <input className={input} value={edit.phone || ''} maxLength={11} inputMode="numeric" onChange={(e) => set('phone', e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="01XXXXXXXXX" />
+        <input className={input} value={edit.email || ''} onChange={(e) => set('email', e.target.value)} placeholder="Email" />
+        <div className="grid grid-cols-3 gap-2">
+          <input className={input} value={edit.division || ''} onChange={(e) => set('division', e.target.value)} placeholder="Division" />
+          <input className={input} value={edit.district || ''} onChange={(e) => set('district', e.target.value)} placeholder="District" />
+          <input className={input} value={edit.upazila || ''} onChange={(e) => set('upazila', e.target.value)} placeholder="Upazila" />
+        </div>
+        <textarea className={input} rows={2} value={edit.address || ''} onChange={(e) => set('address', e.target.value)} placeholder="Full address" />
+        {(edit.items || []).map((it, i) => (
+          <div key={i} className="flex items-center gap-2 text-[12px] text-slate-300">
+            <span className="min-w-0 flex-1 truncate">{it.name}{it.opt ? ` (${it.opt})` : ''}</span>
+            <input className={input + ' w-16 text-center'} inputMode="numeric" value={it.q} onChange={(e) => set('items', (edit.items || []).map((x, j) => (j === i ? { ...x, q: Math.max(1, Number(e.target.value.replace(/\D/g, '')) || 1) } : x)))} />
+          </div>
+        ))}
+        <div className="grid grid-cols-2 gap-2">
+          <input className={input} inputMode="numeric" value={edit.delivery ?? ''} onChange={(e) => set('delivery', e.target.value.replace(/\D/g, ''))} placeholder="Delivery charge" />
+          <input className={input} value={edit.note || ''} onChange={(e) => set('note', e.target.value)} placeholder="Note for courier" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setEdit(null)} className={btn + ' bg-white/10'}>CANCEL</button>
+          <button type="button" onClick={() => void saveEdit()} className={btn}>SAVE</button>
+        </div>
+        {msg && <p className="text-[12px] text-rose-300">{msg}</p>}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <div className={box + ' grid grid-cols-2 gap-2 text-center'}>
         <div><p className="text-lg font-bold text-white">{today.length}</p><p className="text-[10.5px] text-slate-400">ORDERS TODAY</p></div>
         <div><p className="text-lg font-bold text-white">{tk(today.reduce((a, o) => a + Number(o.total), 0))}</p><p className="text-[10.5px] text-slate-400">SALES TODAY</p></div>
       </div>
-      {orders.map((o) => (
+      <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+        {['all', ...STATUSES].map((s) => {
+          const n = orders.filter((o) => s === 'all' || o.status === s).length;
+          return (
+            <button key={s} type="button" onClick={() => setFilter(s)} className={`shrink-0 rounded-full border px-3 py-1 text-[10.5px] font-bold ${filter === s ? 'border-teal-500 bg-teal-500 text-black' : 'border-white/15 text-slate-300'}`}>
+              {s.toUpperCase()} {n}
+            </button>
+          );
+        })}
+      </div>
+      {openOnes.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" className={btn + ' bg-white/10'} onClick={() => print('sticker', openOnes)}>🏷️ STICKERS ({openOnes.length})</button>
+          <button type="button" className={btn + ' bg-white/10'} onClick={() => print('invoice', openOnes)}>🧾 INVOICES ({openOnes.length})</button>
+        </div>
+      )}
+      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
+      {list.map((o) => (
         <div key={o.id} className={box + ' space-y-1'}>
-          <div className="flex items-center justify-between">
+          <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpen(open === o.id ? '' : o.id)}>
             <p className="text-[12.5px] font-bold text-white">#{o.order_no} · {tk(Number(o.total))}</p>
-            <select className="rounded-md border border-white/10 bg-black/40 px-2 py-1 text-[11px] text-white" value={o.status} onChange={(e) => void setStatus(o, e.target.value)}>
-              {STATUSES.map((s) => <option key={s} value={s}>{s.toUpperCase()}</option>)}
-            </select>
-          </div>
+            <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold text-slate-200">{o.status.toUpperCase()}</span>
+          </button>
           <p className="text-[11.5px] text-slate-300">{o.customer_name} · <a className="text-teal-300" href={`tel:${o.phone}`}>{o.phone}</a></p>
-          <p className="text-[11px] text-slate-400">{o.address} ({o.area})</p>
+          <p className="text-[11px] text-slate-400">{[o.address, o.upazila, o.district, o.division].filter(Boolean).join(', ')} ({o.area})</p>
           <p className="text-[11px] text-slate-300">{o.items.map((i) => `${i.name}${i.opt ? ` (${i.opt})` : ''} ×${i.q}`).join(', ')}</p>
-          <p className="text-[10.5px] text-slate-500">{o.payment_method.toUpperCase()}{o.trx_id ? ` · TrxID ${o.trx_id}` : ''} · {new Date(o.created_at).toLocaleString('en-GB')}</p>
+          <p className="text-[10.5px] text-slate-500">{o.payment_method.toUpperCase()}{o.trx_id ? ` · TrxID ${o.trx_id}` : ''}{o.email ? ` · ${o.email}` : ''} · {new Date(o.created_at).toLocaleString('en-GB')}</p>
+          {o.tracking && <p className="text-[11px] text-emerald-300">🚚 {o.courier} · {o.tracking}</p>}
+          {open === o.id && (
+            <div className="space-y-2 pt-2">
+              <select className={input} value={o.status} onChange={(e) => void setStatus(o, e.target.value)}>
+                {STATUSES.map((s) => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+              </select>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" className={btn + ' bg-white/10'} onClick={() => { setMsg(''); setEdit({ ...o, items: o.items.map((x) => ({ ...x })) }); }}>✏️ EDIT</button>
+                <button type="button" className={btn} disabled={Boolean(o.tracking) || busy === o.id} onClick={() => void book(o)}>{busy === o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : '🚚'} {o.tracking ? 'BOOKED' : 'BOOK STEADFAST'}</button>
+                <button type="button" className={btn + ' bg-white/10'} onClick={() => print('invoice', [o])}>🧾 INVOICE</button>
+                <button type="button" className={btn + ' bg-white/10'} onClick={() => print('sticker', [o])}>🏷️ STICKER</button>
+              </div>
+            </div>
+          )}
         </div>
       ))}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- delivery & courier + printing
+const COURIERS: Array<[string, string, string]> = [
+  ['steadfast', 'Steadfast', 'Book parcels from ROSE (works now)'],
+  ['pathao', 'Pathao', 'Save keys now, booking comes next'],
+  ['redx', 'RedX', 'Save keys now, booking comes next'],
+  ['paperfly', 'Paperfly', 'Save keys now, booking comes next'],
+  ['ecourier', 'eCourier', 'Save keys now, booking comes next'],
+];
+const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
+  const [conn, setConn] = useState<string[]>([]);
+  const [open, setOpen] = useState('');
+  const [key, setKey] = useState('');
+  const [secret, setSecret] = useState('');
+  const [inside, setInside] = useState(String(store.delivery_inside));
+  const [outside, setOutside] = useState(String(store.delivery_outside));
+  const [ps, setPs] = useState<PrintSettings>({ stk: '4x6', inv: 'a4', sender: store.name, phone: store.phone, logo: true, cod: true, items: true, bar: true, note: 'Handle with care', ...(store.print_settings || {}) });
+  const [msg, setMsg] = useState('');
+  const loadConn = useCallback(async () => {
+    const { data } = await supabase.rpc('courier_status', { p_store: store.id });
+    setConn(((data as Array<{ courier: string }>) || []).map((x) => x.courier));
+  }, [store.id]);
+  useEffect(() => {
+    void loadConn();
+  }, [loadConn]);
+  const saveKeys = async (c: string, remove = false) => {
+    if (!remove && (!key.trim() || !secret.trim())) return setMsg('Paste both keys.');
+    const { error } = await supabase.rpc('save_courier_keys', { p_store: store.id, p_courier: c, p_key: remove ? '' : key, p_secret: remove ? '' : secret });
+    if (error) return setMsg(error.message);
+    setKey(''); setSecret(''); setOpen(''); setMsg(remove ? 'Disconnected.' : 'Connected. Keys are kept on the server only.'); void loadConn();
+  };
+  const saveStore = async () => {
+    const { error } = await supabase.from('stores').update({ delivery_inside: Number(inside) || 0, delivery_outside: Number(outside) || 0, print_settings: ps, updated_at: new Date().toISOString() }).eq('id', store.id);
+    setMsg(error ? error.message : 'Saved.');
+    if (!error) onSaved();
+  };
+  const [w, h] = stickerSize(ps);
+  const sample: PrintOrder = { order_no: 1001, customer_name: 'Rahim Uddin', phone: '01712345678', address: 'House 12, Road 5, Mirpur 10', upazila: 'Mirpur', district: 'Dhaka', division: 'Dhaka', items: [{ name: 'Sample product', q: 1, price: 450 }], total: 510, delivery: 60, payment_method: 'cod' };
+  const scale = Math.min(1, 280 / (w * 3.78));
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">DELIVERY CHARGE</p>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-[11px] text-slate-400">Inside Dhaka<input className={input} inputMode="numeric" value={inside} onChange={(e) => setInside(e.target.value.replace(/\D/g, ''))} /></label>
+          <label className="text-[11px] text-slate-400">Outside Dhaka<input className={input} inputMode="numeric" value={outside} onChange={(e) => setOutside(e.target.value.replace(/\D/g, ''))} /></label>
+        </div>
+      </div>
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">COURIERS</p>
+        {COURIERS.map(([id, name, note]) => (
+          <div key={id} className="rounded-lg bg-black/30 p-2">
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] font-bold text-white">{name} {conn.includes(id) && <span className="text-emerald-400">· CONNECTED</span>}</p>
+                <p className="text-[10.5px] text-slate-400">{note}</p>
+              </div>
+              {conn.includes(id)
+                ? <button type="button" className={btn + ' h-8 bg-white/10'} onClick={() => void saveKeys(id, true)}>REMOVE</button>
+                : <button type="button" className={btn + ' h-8'} onClick={() => { setOpen(open === id ? '' : id); setKey(''); setSecret(''); }}>CONNECT</button>}
+            </div>
+            {open === id && (
+              <div className="mt-2 space-y-2">
+                <input className={input} value={key} onChange={(e) => setKey(e.target.value)} placeholder={`${name} API key`} autoComplete="off" />
+                <input className={input} type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder={`${name} secret key`} autoComplete="off" />
+                <button type="button" className={btn + ' w-full'} onClick={() => void saveKeys(id)}>SAVE & CONNECT</button>
+                <p className="text-[10.5px] text-slate-400">Get the keys from your {name} merchant panel. You type them yourself; nobody can read them back, not even staff.</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">INVOICE & STICKER</p>
+        <select className={input} value={ps.stk} onChange={(e) => setPs({ ...ps, stk: e.target.value })}>
+          {STICKER_SIZES.map((s) => <option key={s[0]} value={s[0]}>Sticker: {s[1]}</option>)}
+        </select>
+        {ps.stk === 'custom' && (
+          <div className="grid grid-cols-2 gap-2">
+            <input className={input} inputMode="numeric" value={ps.cw || ''} onChange={(e) => setPs({ ...ps, cw: Number(e.target.value.replace(/\D/g, '')) })} placeholder="Width mm" />
+            <input className={input} inputMode="numeric" value={ps.ch || ''} onChange={(e) => setPs({ ...ps, ch: Number(e.target.value.replace(/\D/g, '')) })} placeholder="Height mm" />
+          </div>
+        )}
+        <select className={input} value={ps.inv} onChange={(e) => setPs({ ...ps, inv: e.target.value })}>
+          {INVOICE_SIZES.map((s) => <option key={s[0]} value={s[0]}>Invoice: {s[1]}</option>)}
+        </select>
+        <input className={input} value={ps.sender || ''} onChange={(e) => setPs({ ...ps, sender: e.target.value })} placeholder="Company name on the sticker" />
+        <input className={input} value={ps.phone || ''} onChange={(e) => setPs({ ...ps, phone: e.target.value })} placeholder="Sender phone" />
+        <input className={input} value={ps.note || ''} onChange={(e) => setPs({ ...ps, note: e.target.value })} placeholder="Bottom note" />
+        <div className="grid grid-cols-2 gap-1 text-[12px] text-slate-300">
+          {([['logo', 'Logo'], ['cod', 'COD amount'], ['items', 'Product name'], ['bar', 'Barcode']] as Array<[keyof PrintSettings, string]>).map(([k, l]) => (
+            <label key={k} className="flex items-center gap-2"><input type="checkbox" checked={ps[k] !== false} onChange={(e) => setPs({ ...ps, [k]: e.target.checked })} /> {l}</label>
+          ))}
+        </div>
+        <style>{PRINT_CSS}</style>
+        <div className="overflow-hidden rounded-lg bg-slate-200 p-2" style={{ height: Math.round(h * 3.78 * scale + 16) }}>
+          <div style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }} dangerouslySetInnerHTML={{ __html: stickerHTML(sample, ps, store) }} />
+        </div>
+        <button type="button" className={btn + ' w-full bg-white/10'} onClick={() => { const e = printOrders('sticker', [sample], ps, store); if (e) setMsg(e); }}>TEST PRINT 1 STICKER</button>
+      </div>
+      <button type="button" className={btn + ' w-full'} onClick={() => void saveStore()}>SAVE</button>
+      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
     </div>
   );
 };
@@ -411,7 +621,7 @@ const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
 };
 
 // ---------------------------------------------------------------- products
-const emptyProd = (): Partial<Prod> => ({ name: '', price: 0, old_price: null, stock: 10, emoji: '📦', description: '', images: [], options_label: '', options: [], rx: false, active: true, category_id: null });
+const emptyProd = (): Partial<Prod> => ({ name: '', price: 0, old_price: null, stock: 10, emoji: '📦', description: '', images: [], options_label: 'Size', options: [], rx: false, active: true, category_id: null, short_description: '', specs: {} });
 
 const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) => {
   const [prods, setProds] = useState<Prod[]>([]);
@@ -419,6 +629,8 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
   const [edit, setEdit] = useState<Partial<Prod> | null>(null);
   const [msg, setMsg] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [optIn, setOptIn] = useState('');
+  const kind = kindOf(store.template);
   const load = useCallback(async () => {
     const [p, c] = await Promise.all([
       supabase.from('store_products').select('*').eq('store_id', store.id).order('sort'),
@@ -439,7 +651,8 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
       store_id: store.id, name: edit.name.trim(), category_id: edit.category_id || null, price: Number(edit.price),
       old_price: edit.old_price ? Number(edit.old_price) : null, stock: Number(edit.stock) || 0, emoji: edit.emoji || '📦',
       description: edit.description || '', images: (edit.images || []).filter(Boolean),
-      options_label: edit.options_label || '', options: (edit.options || []).filter(Boolean), rx: Boolean(edit.rx), active: edit.active !== false,
+      options_label: (edit.options || []).filter(Boolean).length ? edit.options_label || 'Size' : '', options: (edit.options || []).filter(Boolean), rx: Boolean(edit.rx), active: edit.active !== false,
+      short_description: (edit.short_description || '').slice(0, 160), specs: edit.specs || {},
       updated_at: new Date().toISOString(),
     };
     const { error } = edit.id ? await supabase.from('store_products').update(row).eq('id', edit.id) : await supabase.from('store_products').insert({ ...row, sort: prods.length });
@@ -467,40 +680,82 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
           <input className={input} value={edit.old_price ?? ''} onChange={(e) => set('old_price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="Old price" inputMode="decimal" />
           <input className={input} value={edit.stock ?? ''} onChange={(e) => set('stock', e.target.value.replace(/[^\d]/g, ''))} placeholder="Stock" inputMode="numeric" />
         </div>
-        <textarea className={input} rows={3} value={edit.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Description (helps Google)" />
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap gap-1.5">
+        <div className="space-y-1">
+          <p className="text-[10.5px] text-slate-400">Photos · up to 8 · ★ = main photo</p>
+          <div className="flex flex-wrap gap-2">
             {(edit.images || []).filter(Boolean).map((u, i) => (
-              <div key={u + i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-white/10">
-                <img src={u} alt="" className="h-full w-full object-cover" />
-                <button type="button" aria-label="Remove photo" onClick={() => set('images', (edit.images || []).filter((x) => x !== u))} className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] text-white">✕</button>
+              <div key={u + i} className={`relative h-16 w-16 overflow-hidden rounded-lg border-2 ${i ? 'border-white/10' : 'border-teal-400'}`}>
+                <img src={u.startsWith('http') ? u : `https://images.unsplash.com/${u}?w=160&q=60&auto=format&fit=crop`} alt="" className="h-full w-full object-cover" />
+                {i > 0 && <button type="button" aria-label="Main photo" onClick={() => { const l = (edit.images || []).filter(Boolean); set('images', [l[i], ...l.filter((_, j) => j !== i)]); }} className="absolute left-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[11px] text-black">★</button>}
+                <button type="button" aria-label="Remove photo" onClick={() => set('images', (edit.images || []).filter((_, j) => j !== i))} className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] text-white">✕</button>
+                {i === 0 && <span className="absolute inset-x-0 bottom-0 bg-teal-500 text-center text-[8px] font-bold text-black">MAIN</span>}
               </div>
             ))}
           </div>
-          <label className={btn + ' w-full cursor-pointer bg-white/10'}>
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} ADD PHOTOS (GALLERY / CAMERA)
-            <input type="file" accept="image/*" multiple hidden onChange={async (e) => {
-              const files = Array.from(e.target.files || []).slice(0, 6);
-              e.target.value = '';
-              if (!files.length) return;
-              setUploading(true);
-              setMsg('');
-              try {
-                const urls: string[] = [];
-                for (const f of files) urls.push(await uploadImage(store.id, f));
-                setEdit((x) => ({ ...(x || {}), images: [...((x?.images || []).filter(Boolean)), ...urls] }));
-              } catch (err: any) {
-                setMsg(String(err?.message || err));
-              } finally {
-                setUploading(false);
-              }
+          {(edit.images || []).filter(Boolean).length < 8 && (
+            <label className={btn + ' w-full cursor-pointer bg-white/10'}>
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} ADD PHOTOS (GALLERY / CAMERA)
+              <input type="file" accept="image/*" multiple hidden onChange={async (e) => {
+                const room = 8 - (edit.images || []).filter(Boolean).length;
+                const files = Array.from(e.target.files || []).slice(0, room);
+                e.target.value = '';
+                if (!files.length) return;
+                setUploading(true);
+                setMsg('');
+                try {
+                  const urls: string[] = [];
+                  for (const f of files) urls.push(await uploadImage(store.id, f));
+                  setEdit((x) => ({ ...(x || {}), images: [...((x?.images || []).filter(Boolean)), ...urls].slice(0, 8) }));
+                } catch (err: any) {
+                  setMsg(String(err?.message || err));
+                } finally {
+                  setUploading(false);
+                }
+              }} />
+            </label>
+          )}
+        </div>
+        <div className="space-y-2 rounded-lg border border-teal-900 bg-teal-950/30 p-2">
+          <div className="grid grid-cols-2 gap-2">
+            <select className={input} value={edit.options_label || 'Size'} onChange={(e) => set('options_label', e.target.value)}>
+              {['Size', 'Colour', 'Weight', 'Pack', 'Model'].map((x) => <option key={x}>{x}</option>)}
+            </select>
+            <select className={input} value="" onChange={(e) => { const s = SIZE_SETS[Number(e.target.value)]; if (s) { set('options_label', 'Size'); set('options', s[1]); } }}>
+              <option value="">Quick pick…</option>
+              {SIZE_SETS.map((s, i) => <option key={s[0]} value={i}>{s[0]}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-white/10 bg-black/30 p-1.5">
+            {(edit.options || []).filter(Boolean).map((o, i) => (
+              <span key={o + i} className="flex items-center gap-1 rounded-md bg-teal-500 py-0.5 pl-2 pr-0.5 text-[12px] font-bold text-black">
+                {o}<button type="button" aria-label={`Remove ${o}`} onClick={() => set('options', (edit.options || []).filter((_, j) => j !== i))} className="flex h-5 w-5 items-center justify-center rounded bg-black/15 text-[10px]">✕</button>
+              </span>
+            ))}
+            <input className="min-w-[110px] flex-1 bg-transparent px-1 py-1 text-[12.5px] text-white outline-none" value={optIn} onChange={(e) => setOptIn(e.target.value)} placeholder="Write, then Enter" onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              const add = optIn.split(',').map((x) => x.trim()).filter((x) => x && !(edit.options || []).includes(x));
+              if (add.length) set('options', [...(edit.options || []).filter(Boolean), ...add]);
+              setOptIn('');
             }} />
-          </label>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {(QUICK[edit.options_label || 'Size'] || []).filter((x) => !(edit.options || []).includes(x)).map((x) => (
+              <button key={x} type="button" onClick={() => set('options', [...(edit.options || []).filter(Boolean), x])} className="rounded-md border border-dashed border-white/20 px-2 py-0.5 text-[11px] text-slate-300">+ {x}</button>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <input className={input} value={edit.options_label || ''} onChange={(e) => set('options_label', e.target.value)} placeholder="Size / Colour" />
-          <input className={input + ' col-span-2'} value={(edit.options || []).join(', ')} onChange={(e) => set('options', e.target.value.split(',').map((x) => x.trim()))} placeholder="S, M, L, XL" />
-        </div>
+        {kind && (
+          <div className="space-y-1.5 rounded-lg border border-blue-900 bg-blue-950/30 p-2">
+            <p className="text-[10.5px] font-bold tracking-wider text-blue-300">PRODUCT INFO · shows in the "{kind.tabs[1][1]}" tab</p>
+            {kind.specs.map((f) => (
+              <input key={f[0]} className={input} value={(edit.specs || {})[f[0]] || ''} onChange={(e) => set('specs', { ...(edit.specs || {}), [f[0]]: e.target.value })} placeholder={`${f[1]} · e.g. ${f[3]}`} />
+            ))}
+          </div>
+        )}
+        <textarea className={input} rows={2} maxLength={160} value={edit.short_description || ''} onChange={(e) => set('short_description', e.target.value)} placeholder="Short description · next to the price (max 160)" />
+        <p className="-mt-1 text-right text-[10px] text-slate-500">{(edit.short_description || '').length} / 160</p>
+        <textarea className={input} rows={5} value={edit.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Long description · material, size chart, care, delivery, return (helps Google)" />
         <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={edit.active !== false} onChange={(e) => set('active', e.target.checked)} /> Show in store</label>
         <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={Boolean(edit.rx)} onChange={(e) => set('rx', e.target.checked)} /> Needs prescription (pharmacy)</label>
         <div className="grid grid-cols-2 gap-2">
