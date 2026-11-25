@@ -30,10 +30,34 @@
   .plans b { color: #fff; }
   @media (max-width: 860px) { .grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .demoban { margin: 22px 0 6px; border-radius: 22px; padding: 26px 22px; background: radial-gradient(120% 140% at 0% 0%, #0f3b3a 0%, #0b1730 55%, #1a0f2e 100%); border: 1px solid #2dd4bf55; box-shadow: 0 10px 40px rgba(45,212,191,.12); }
+  .demoban .tag { display: inline-block; background: #facc15; color: #111; font-weight: 900; font-size: 12px; letter-spacing: .14em; border-radius: 8px; padding: 5px 10px; }
+  .demoban h2 { margin: 12px 0 8px; font-size: clamp(24px, 4.4vw, 40px); line-height: 1.15; color: #fff; }
+  .demoban p { margin: 0; color: #cbd5e1; font-size: 15.5px; line-height: 1.55; max-width: 760px; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
+  .steps div { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 12px; font-size: 13.5px; color: #e2e8f0; }
+  .steps b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 99px; background: #2dd4bf; color: #021014; margin-bottom: 6px; }
+  .demoban .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .demoban .row a { border-radius: 12px; padding: 13px 20px; font-weight: 800; font-size: 14.5px; }
+  .demoban .go { background: linear-gradient(90deg,#2dd4bf,#38bdf8); color: #021014; }
+  .demoban .see { border: 1px solid #475569; color: #e2e8f0; }
+  @media (max-width: 720px) { .steps { grid-template-columns: 1fr 1fr; } .demoban { padding: 20px 16px; } .demoban .row a { flex: 1; text-align: center; } }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <section class="demoban" aria-label="About these demo stores">
+    <span class="tag">DEMO STORES</span>
+    <h2>Everything here is a demo. Get a real store like this for your business.</h2>
+    <p>The shop names, products and prices on this page are samples so you can try it. Pick a design you like and ROSE builds your own store with your name, logo and products, ready to take real orders with cash on delivery, bKash, Nagad and courier booking.</p>
+    <div class="steps">
+      <div><b>1</b>Pick a design you like</div>
+      <div><b>2</b>Start the 5-day free trial</div>
+      <div><b>3</b>Add your logo and products</div>
+      <div><b>4</b>Go live on yourshop.myrosebd.com or your own domain</div>
+    </div>
+    <div class="row"><a class="go" href="/app">START 5-DAY FREE TRIAL</a><a class="see" href="#g">SEE THE DEMOS</a></div>
+  </section>
   <header>
     <span class="k">ROSE STORE BUILDER · DEMO</span>
     <h1>Your online store, ready in minutes</h1>
