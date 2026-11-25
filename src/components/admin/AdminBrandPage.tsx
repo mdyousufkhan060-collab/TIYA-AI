@@ -75,7 +75,7 @@ export const AdminBrandPage: React.FC = () => (
 
 /** 24 SITE SWITCHES: the admin turns ROSE branding on stores on or off. */
 const SWITCHES: Array<[string, string, string]> = [
-  ['store_footer_made_with_rose', 'MADE WITH ROSE IN STORE FOOTER', 'Small ROSE photo + "Made with ROSE · myrosebd.com" at the bottom of every store. Tap opens ROSE contact.'],
+  ['store_footer_made_with_rose', 'MADE WITH ROSE IN STORE FOOTER', 'Master switch for ALL stores. To hide it for one store only, open 23 WEBSITE ACCESS and use the switch under that store.'],
   ['store_admin_rose_card', 'ROSE SUPPORT CARD IN STORE ADMIN', 'Big ROSE card at the top of every store owner’s admin, with your numbers and WhatsApp.'],
   ['app_rose_card', 'ROSE SUPPORT CARD IN THE APP', 'ROSE card at the top of Settings for every Personal, Student and Business user.'],
 ];

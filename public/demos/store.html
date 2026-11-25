@@ -139,11 +139,11 @@
     nav.bottom svg { width: 32px; height: 32px; }
     main { padding-bottom: 120px; }
     footer { padding-bottom: 120px !important; }
-    .chatbtn { bottom: 108px !important; right: 24px !important; width: 62px !important; height: 62px !important; }
-    .chat { bottom: 182px !important; right: 24px !important; }
+    .chatbtn { bottom: 128px !important; right: 24px !important; width: 62px !important; height: 62px !important; }
+    .chat { bottom: 202px !important; right: 24px !important; }
   }
-  .chatbtn { position: fixed; right: 14px; bottom: 88px; display: grid; place-items: center; z-index: 31; width: 56px; height: 56px; border-radius: 99px; border: 0; background: var(--c); color: #fff; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
-  .chat { position: fixed; right: 14px; bottom: 154px; z-index: 32; width: min(340px, calc(100vw - 28px)); background: #fff; border-radius: 16px; box-shadow: 0 12px 34px rgba(0,0,0,.25); overflow: hidden; display: none; }
+  .chatbtn { position: fixed; right: 14px; bottom: 118px; display: grid; place-items: center; z-index: 31; width: 52px; height: 52px; border-radius: 99px; border: 0; background: var(--c); color: #fff; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+  .chat { position: fixed; right: 14px; bottom: 180px; z-index: 32; width: min(340px, calc(100vw - 28px)); background: #fff; border-radius: 16px; box-shadow: 0 12px 34px rgba(0,0,0,.25); overflow: hidden; display: none; }
   .chat.on { display: block; }
   .chat .h { background: var(--c); color: #fff; padding: 10px 12px; font-weight: 700; display: flex; justify-content: space-between; }
   .chat .m { height: 240px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; background: #f8fafc; }
@@ -427,7 +427,7 @@ if (liveSlug || ownDomain) {
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
         categories: cats.map(function (c) { return [c.name, c.icon || '🏷️']; }), sectionTitle: 'Popular Products',
         note: r.note || ('Delivery: ' + r.delivery_inside + ' Tk inside Dhaka, ' + r.delivery_outside + ' Tk outside.'),
-        delIn: r.delivery_inside, delOut: r.delivery_outside, payNumbers: r.pay_numbers || {}, pixels: r.pixels || {},
+        delIn: r.delivery_inside, delOut: r.delivery_outside, payNumbers: r.pay_numbers || {}, pixels: r.pixels || {}, hideRose: !!r.hide_rose,
       };
       var P = prods.map(function (p, i) {
         return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', e: p.emoji || '📦', img: fullImg((p.images || [])[0], 600), imgs: (p.images || []).map(function (u) { return fullImg(u, 900); }),
@@ -514,6 +514,7 @@ function start(S, P, liveId) {
   }
   window.roseTrack = track;
   if (S.live) loadPixels(S.pixels);
+  if (S.hideRose) { var hr = document.createElement('style'); hr.textContent = '.made-rose{display:none!important}'; document.head.appendChild(hr); }
   function addCart(pid, opt, q) {
     var ex = st.cart.find(function (x) { return x.id === pid && x.opt === (opt || ''); });
     if (ex) ex.q += q || 1; else st.cart.push({ id: pid, opt: opt || '', q: q || 1 });

@@ -18,7 +18,7 @@ type Row = {
   amount: number | null;
   note: string | null;
 };
-type StoreRow = { id: string; slug: string; name: string; name_bn?: string; published: boolean; suspended: boolean; created_at: string; owner_email?: string; email?: string; email2?: string; phone?: string; phone2?: string; whatsapp?: string; address?: string; custom_domain?: string | null; plan?: string | null; ends_at?: string | null; products?: number; orders?: number };
+type StoreRow = { id: string; slug: string; name: string; name_bn?: string; published: boolean; suspended: boolean; created_at: string; owner_email?: string; email?: string; email2?: string; phone?: string; phone2?: string; whatsapp?: string; address?: string; custom_domain?: string | null; plan?: string | null; ends_at?: string | null; products?: number; orders?: number; hide_rose?: boolean };
 
 const box = 'rounded-xl border border-white/[0.08] bg-[#11151E] p-3';
 const input = 'w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white';
@@ -224,6 +224,11 @@ export const AdminWebsiteAccessPage: React.FC = () => {
     void load();
   };
 
+  const toggleRose = async (s: StoreRow) => {
+    await supabase.from('stores').update({ hide_rose: !s.hide_rose }).eq('id', s.id);
+    void load();
+  };
+
   const active = (r: Row) => new Date(r.ends_at) > new Date();
 
   return (
@@ -319,6 +324,12 @@ export const AdminWebsiteAccessPage: React.FC = () => {
             {s.phone2 ? <> · <a className="underline" href={`tel:${s.phone2}`}>{s.phone2}</a></> : null}
           </p>
           {s.address && <p className="text-[11px] text-slate-400">📍 {s.address}</p>}
+          <div className="flex items-center gap-2 rounded-lg bg-black/30 px-2 py-1.5">
+            <span className="flex-1 text-[11px] text-slate-300">"Made with ROSE" in this store's footer</span>
+            <button type="button" role="switch" aria-checked={!s.hide_rose} onClick={() => void toggleRose(s)} className={`relative h-6 w-11 shrink-0 ${!s.hide_rose ? 'bg-teal-500' : 'bg-slate-600'}`}>
+              <span className={`absolute top-1 h-4 w-4 bg-white transition-all ${!s.hide_rose ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
         </div>
       ))}
       <PlanPrices />
