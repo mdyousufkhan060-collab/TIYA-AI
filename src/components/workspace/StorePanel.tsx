@@ -3,6 +3,7 @@ import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, storePrice, tk, type StorePlanId } from '../../utils/storePlans';
+import { AdminBrandPage } from '../admin/AdminBrandPage';
 import { INVOICE_SIZES, PRINT_CSS, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
@@ -12,7 +13,7 @@ import { INVOICE_SIZES, PRINT_CSS, STICKER_SIZES, printOrders, stickerHTML, stic
  */
 type Access = { plan: StorePlanId; ends_at: string; stores_limit: number; products_limit: number } | null;
 type Store = {
-  id: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
+  id: string; owner_id?: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
   delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[];
   pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean;
@@ -88,20 +89,34 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'create'>('home');
+  const [roles, setRoles] = useState<Record<string, string>>({});
+  const [showRose, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: adm }, { data: acc }, { data: st }, d] = await Promise.all([
+    const [{ data: adm }, { data: acc }, { data: st }, d, { data: mine }, { data: flags }] = await Promise.all([
       supabase.rpc('is_admin'),
       supabase.rpc('my_website_access'),
       supabase.from('stores').select('*').eq('owner_id', userId).order('created_at'),
       loadDemos(),
+      supabase.rpc('my_staff_stores'),
+      supabase.from('site_settings').select('key, value'),
     ]);
+    const staffRows = ((mine as Array<{ store_id: string; role: string }>) || []);
+    const r: Record<string, string> = {};
+    staffRows.forEach((x) => { r[x.store_id] = x.role; });
+    let staffStores: Store[] = [];
+    if (staffRows.length) {
+      const { data: ss } = await supabase.from('stores').select('*').in('id', staffRows.map((x) => x.store_id));
+      staffStores = ((ss as Store[]) || []).filter((x) => x.owner_id !== userId);
+    }
+    setRoles(r);
+    setShowRose(!((flags as Array<{ key: string; value: unknown }>) || []).some((f) => f.key === 'store_admin_rose_card' && f.value === false));
     setIsAdmin(Boolean(adm));
     setAccess(acc && (acc as any).email ? (acc as Access) : null);
-    const list = (st as Store[]) || [];
+    const list = [...((st as Store[]) || []), ...staffStores];
     setStores(list);
     setStore((cur) => (cur ? list.find((x) => x.id === cur.id) || list[0] || null : list[0] || null));
     setDemos(d);
@@ -111,7 +126,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
     void load();
   }, [load]);
 
-  const active = isAdmin || (access && new Date(access.ends_at) > new Date());
+  const active = isAdmin || (access && new Date(access.ends_at) > new Date()) || Object.keys(roles).length > 0;
 
   if (loading) return <p className="px-1 text-xs text-slate-400">Loading…</p>;
 
@@ -156,6 +171,12 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
     return <CreateStore demos={demos} canCreate={stores.length < limit} onBack={stores.length ? () => setTab('home') : undefined} onDone={() => { setTab('home'); void load(); }} />;
   }
   if (!store) return null;
+  const myRole = roles[store.id] && store.owner_id !== userId && !isAdmin ? roles[store.id] : 'owner';
+  const can = (area: 'orders' | 'products' | 'design' | 'owner') =>
+    myRole === 'owner' ||
+    (myRole === 'manager' && area !== 'owner') ||
+    (area === 'orders' && ['orders', 'support', 'accounts'].includes(myRole)) ||
+    (area === 'products' && ['products', 'marketing'].includes(myRole));
 
   const url = store.custom_domain && store.domain_ready ? `https://${store.custom_domain}` : store.subdomain_ready ? `https://${store.slug}.myrosebd.com` : `${window.location.origin}/shop/${store.slug}`;
   const makeSubdomain = async () => {
@@ -224,6 +245,8 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'design' && <DesignTab store={store} onSaved={() => void load()} />}
         {tab === 'delivery' && <DeliveryTab store={store} onSaved={() => void load()} />}
         {tab === 'domain' && <DomainTab store={store} onSaved={() => void load()} />}
+        {tab === 'staff' && <StaffTab store={store} limit={isAdmin ? 50 : access?.staff_limit || 0} />}
+        {tab === 'rose' && <AdminBrandPage />}
       </div>
     );
   }
@@ -237,17 +260,20 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
           ))}
         </select>
       )}
+      {showRose && <RoseSupportCard onOpen={() => setTab('rose')} />}
       {header}
+      {myRole !== 'owner' && <p className="px-1 text-[11px] font-bold text-amber-300">You are STAFF here · role: {myRole.toUpperCase()}</p>}
       <div className="space-y-1.5">
-        <SettingsBar badge="01" title="ORDERS" onClick={() => setTab('orders')} testId="store-orders" />
-        <SettingsBar badge="02" title="PRODUCTS" onClick={() => setTab('products')} testId="store-products" />
-        <SettingsBar badge="03" title="CATEGORIES" onClick={() => setTab('categories')} testId="store-categories" />
-        <SettingsBar badge="04" title="HOMEPAGE & DESIGN" value="BANNERS · COLOURS" onClick={() => setTab('design')} testId="store-design" />
-        <SettingsBar badge="05" title="DELIVERY & COURIER" value="STICKER · INVOICE" onClick={() => setTab('delivery')} testId="store-delivery" />
-        <SettingsBar badge="06" title="OWN DOMAIN" value={store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'CONNECT'} onClick={() => setTab('domain')} testId="store-domain" />
-        {stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
+        {can('orders') && <SettingsBar badge="01" title="ORDERS" onClick={() => setTab('orders')} testId="store-orders" />}
+        {can('products') && <SettingsBar badge="02" title="PRODUCTS" onClick={() => setTab('products')} testId="store-products" />}
+        {can('products') && <SettingsBar badge="03" title="CATEGORIES" onClick={() => setTab('categories')} testId="store-categories" />}
+        {can('design') && <SettingsBar badge="04" title="HOMEPAGE & DESIGN" value="BANNERS · COLOURS" onClick={() => setTab('design')} testId="store-design" />}
+        {can('design') && <SettingsBar badge="05" title="DELIVERY & COURIER" value="STICKER · INVOICE" onClick={() => setTab('delivery')} testId="store-delivery" />}
+        {can('owner') && <SettingsBar badge="06" title="OWN DOMAIN" value={store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'CONNECT'} onClick={() => setTab('domain')} testId="store-domain" />}
+        {can('owner') && <SettingsBar badge="07" title="STAFF" value="GMAIL · ROLES" onClick={() => setTab('staff')} testId="store-staff" />}
+        {can('owner') && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
-      <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Pixels & Analytics, Live chat, Staff.</p>
+      <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Pixels & Analytics, Live chat.</p>
     </div>
   );
 };
@@ -681,6 +707,85 @@ const DomainTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
     </div>
   );
 };
+
+// ---------------------------------------------------------------- staff (owner adds by Gmail with a role)
+const ROLES: Array<[string, string]> = [
+  ['manager', 'Manager · everything except domain & staff'],
+  ['orders', 'Orders · see, edit, book courier, print'],
+  ['products', 'Products · products, photos, categories'],
+  ['support', 'Support · see orders, help customers'],
+  ['marketing', 'Marketing · see products for posts & ads'],
+  ['accounts', 'Accounts · see orders & sales'],
+];
+const StaffTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) => {
+  const [list, setList] = useState<Array<{ email: string; role: string }>>([]);
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('orders');
+  const [msg, setMsg] = useState('');
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('store_staff').select('email, role').eq('store_id', store.id).order('created_at');
+    setList((data as Array<{ email: string; role: string }>) || []);
+  }, [store.id]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const add = async () => {
+    setMsg('');
+    const { error } = await supabase.rpc('add_store_staff', { p_store: store.id, p_email: email, p_role: role });
+    if (error) return setMsg(error.message);
+    setEmail('');
+    setMsg('Added. They log in to ROSE with this Gmail (Continue with Google) and open Workspace → MY STORE.');
+    void load();
+  };
+  const remove = async (e: string) => {
+    await supabase.from('store_staff').delete().eq('store_id', store.id).eq('email', e);
+    setMsg('Access removed.');
+    void load();
+  };
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">STAFF · {list.length} / {limit}</p>
+        {list.length === 0 && <p className="text-[12px] text-slate-400">No staff yet.</p>}
+        {list.map((s) => (
+          <div key={s.email} className="flex items-center gap-2 rounded-lg bg-black/30 p-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12.5px] font-bold text-white">{s.email}</p>
+              <p className="text-[10.5px] text-teal-300">{s.role.toUpperCase()}</p>
+            </div>
+            <button type="button" onClick={() => void remove(s.email)} className={btn + ' h-8 bg-white/10'}>REMOVE</button>
+          </div>
+        ))}
+      </div>
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">ADD STAFF</p>
+        <input className={input} value={email} onChange={(e) => setEmail(e.target.value.trim())} placeholder="staff@gmail.com" type="email" autoCapitalize="off" />
+        <select className={input} value={role} onChange={(e) => setRole(e.target.value)}>
+          {ROLES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+        <button type="button" disabled={!email || list.length >= limit} onClick={() => void add()} className={btn + ' w-full'}>GIVE ACCESS</button>
+        {list.length >= limit && <p className="text-[11px] text-amber-300">Your plan allows {limit} staff. Upgrade for more.</p>}
+        {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+      </div>
+      <div className={box + ' text-[11.5px] text-slate-300'}>
+        Staff see only their part. Courier keys, domain, staff and the plan stay with the owner. When the plan ends, staff access stops too.
+      </div>
+    </div>
+  );
+};
+
+/** Big ROSE support card at the top of the store admin (admin can switch it off). */
+const RoseSupportCard: React.FC<{ onOpen: () => void }> = ({ onOpen }) => (
+  <button type="button" onClick={onOpen} className="flex min-h-[72px] w-full items-center gap-3 border border-teal-400/50 bg-gradient-to-r from-teal-500/15 to-fuchsia-500/10 p-3 text-left">
+    <img src="/tiya-home.jpg?v=3" alt="ROSE" className="h-12 w-12 shrink-0 rounded-full border-2 border-teal-400 object-cover object-[center_30%]" />
+    <span className="min-w-0 flex-1">
+      <span className="block text-[10.5px] font-bold tracking-[0.16em] text-teal-300">ROSE SUPPORT</span>
+      <span className="block text-[16px] font-extrabold text-white">MYROSEBD.COM</span>
+      <span className="block text-[11px] text-slate-300">Need help? Call or WhatsApp ROSE</span>
+    </span>
+    <span className="text-[10px] font-bold text-teal-200">OPEN ›</span>
+  </button>
+);
 
 // ---------------------------------------------------------------- categories
 const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {

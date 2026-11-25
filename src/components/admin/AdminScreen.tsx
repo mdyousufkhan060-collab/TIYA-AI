@@ -35,7 +35,7 @@ import { TeamChecklist } from '../settings/TeamChecklist';
 import { AdminVideosPage, AdminGuidePage } from './AdminGuideVideos';
 import { AdminWebsiteBuilderDemo } from './AdminWebsiteBuilderDemo';
 import { AdminWebsiteAccessPage } from './AdminWebsiteAccessPage';
-import { AdminBrandCard, AdminBrandPage } from './AdminBrandPage';
+import { AdminBrandCard, AdminBrandPage, AdminSiteSwitchesPage } from './AdminBrandPage';
 import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
@@ -64,7 +64,8 @@ type AdminView =
   | 'developer_tools'
   | 'website_builder'
   | 'website_access'
-  | 'brand';
+  | 'brand'
+  | 'site_switches';
 
 interface AdminScreenProps {
   settings: TiyaSettings;
@@ -452,6 +453,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               website_builder: '22 Website Builder',
               website_access: '23 Website Access',
               brand: 'myrosebd.com',
+              site_switches: '24 Site Switches',
               guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
@@ -506,6 +508,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="21" title="TUTORIAL VIDEOS" value="YOUTUBE" tone={activeView === 'videos' ? 'accent' : 'default'} onClick={() => go('videos')} testId="admin-bar-videos" />
             <SettingsBar badge="22" title="WEBSITE BUILDER" value="DEMO" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
             <SettingsBar badge="23" title="WEBSITE ACCESS" value="GMAIL" tone={activeView === 'website_access' ? 'accent' : 'default'} onClick={() => go('website_access')} testId="admin-bar-website-access" />
+            <SettingsBar badge="24" title="SITE SWITCHES" value="ROSE BRANDING" tone={activeView === 'site_switches' ? 'accent' : 'default'} onClick={() => go('site_switches')} testId="admin-bar-site-switches" />
           </div>
   );
 
@@ -614,6 +617,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'website_builder' && <AdminWebsiteBuilderDemo />}
         {view === 'website_access' && <AdminWebsiteAccessPage />}
         {view === 'brand' && <AdminBrandPage />}
+        {view === 'site_switches' && <AdminSiteSwitchesPage />}
         {view === 'guide' && <AdminGuidePage onOpen={(v) => setView(v as AdminView)} />}
 
         {view === 'dashboard' && (
