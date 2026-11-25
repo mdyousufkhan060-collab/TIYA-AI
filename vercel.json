@@ -14,6 +14,26 @@
     },
     {
       "source": "/((?!.*\\.).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.myrosebd.com"
+        }
+      ],
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?!.*\\.).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<sub>[a-z0-9-]+)\\.myrosebd\\.com"
+        }
+      ],
+      "destination": "/demos/store.html"
+    },
+    {
+      "source": "/((?!.*\\.).*)",
       "destination": "/index.html"
     }
   ]

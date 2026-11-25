@@ -118,6 +118,7 @@
   .ph8 .pm { left: -6px; background: #facc15; color: #111; } .ph8 .px { right: -6px; background: #dc2626; color: #fff; }
   .ph8 em { position: absolute; bottom: 2px; left: 2px; right: 2px; font-style: normal; font-size: 8.5px; font-weight: 800; text-align: center; background: #14b8a6; color: #021014; border-radius: 0 0 8px 8px; }
   .radio { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #1e293b; cursor: pointer; }
+  .row .lg { min-width: 96px; height: 46px; background: #fff; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 6px; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -145,7 +146,7 @@
     }),
     cats: S.categories.map(function (c) { return { name: c[0], icon: c[1] }; }),
     coupons: [{ code: 'ROSE10', text: '10% off, min 1,000 Tk', on: true }, { code: 'FREESHIP', text: 'Free delivery over 1,500 Tk', on: true }, { code: 'EID500', text: '500 Tk off, min 5,000 Tk', on: false }],
-    pay: [['Cash on Delivery', true], ['bKash (Send Money + TrxID)', true], ['Nagad', true], ['Rocket', false], ['Bank transfer', false]],
+    pay: [['Cash on Delivery', true, 'cod'], ['bKash (Send Money + TrxID)', true, 'bkash'], ['Nagad', true, 'nagad'], ['Rocket', false, 'rocket'], ['Bank transfer', false, 'bank']],
     couriers: [['Steadfast', true, '#0f766e', 'Most used · 60/110 Tk'], ['Pathao', false, '#e11d48', 'Fast in Dhaka'], ['RedX', false, '#dc2626', 'All 64 districts'], ['Paperfly', false, '#2563eb', 'Good for outside Dhaka'], ['eCourier', false, '#7c3aed', 'Same day in Dhaka'], ['Sundarban Courier', false, '#16a34a', 'Office pickup, all districts'], ['SA Paribahan', false, '#ea580c', 'Heavy parcels, furniture']],
     staff: [['rahim.staff@gmail.com', 'ORDER STAFF'], ['mitu.design@gmail.com', 'PRODUCT STAFF']],
     banners: S.banners.map(function (b) { return { title: b.title, badge: b.badge, img: b.img }; }),
@@ -262,11 +263,11 @@
     return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">Nusrat J. · <span style="color:#34d399">online</span></b><span class="pill" style="background:' + (st.takeover ? '#7c3aed' : '#0f766e') + '">' + (st.takeover ? 'YOU ARE REPLYING' : 'ROSE IS REPLYING') + '</span></div>' +
       '<div class="chat" id="chatBox" style="margin-top:10px">' + st.chats.map(function (m) { return '<div class="' + m[0] + '">' + esc(m[1]) + '</div>'; }).join('') + '</div>' +
       '<div style="display:flex;gap:6px;margin-top:10px"><input id="chatIn" placeholder="' + (st.takeover ? 'Type your reply…' : 'Type as the customer to test ROSE…') + '" style="flex:1;background:#0a0f1a;border:1px solid #334155;border-radius:10px;color:#fff;padding:10px" onkeydown="if(event.key===\'Enter\')sendChat()">' + btn('SEND', 'sendChat()') + '</div>' +
-      '<div class="btns">' + btn(st.takeover ? 'Give back to ROSE' : 'TAKE OVER', 'st.takeover=!st.takeover;render()', st.takeover ? 'alt' : '') + btn('Send order link', "st.chats.push(['o','Here is your order link: myrosebd.com/shop/" + k + "']);render()", 'alt') + '</div></div><p class="note">Every website chat also reaches the owner’s ROSE app, and ROSE tells you by voice what the customer wants.</p>';
+      '<div class="btns">' + btn(st.takeover ? 'Give back to ROSE' : 'TAKE OVER', 'st.takeover=!st.takeover;render()', st.takeover ? 'alt' : '') + btn('Send order link', "st.chats.push(['o','Here is your order link: " + k + ".myrosebd.com']);render()", 'alt') + '</div></div><p class="note">Every website chat also reaches the owner’s ROSE app, and ROSE tells you by voice what the customer wants.</p>';
   };
   V.payments = function () {
-    return '<div class="card">' + st.pay.map(function (m, i) { return '<div class="row"><span class="ph">💳</span><div class="f"><b>' + m[0] + '</b></div><button class="toggle' + (m[1] ? ' on' : '') + '" onclick="st.pay[' + i + '][1]=!st.pay[' + i + '][1];render()"></button></div>'; }).join('') +
-      '<div class="row"><span class="ph">💳</span><div class="f"><b>Card: SSLCommerz / aamarPay</b><p>Needs a trade licence and merchant account</p></div><span class="pill" style="background:#475569">SET UP</span></div></div>' +
+    return '<div class="card">' + st.pay.map(function (m, i) { return '<div class="row"><span class="lg">' + window.ROSE_LOGO(m[2], 30) + '</span><div class="f"><b>' + m[0] + '</b></div><button class="toggle' + (m[1] ? ' on' : '') + '" onclick="st.pay[' + i + '][1]=!st.pay[' + i + '][1];render()"></button></div>'; }).join('') +
+      '<div class="row"><span class="lg">' + window.ROSE_LOGO('visa', 22) + window.ROSE_LOGO('mastercard', 22) + '</span><div class="f"><b>Card: SSLCommerz / aamarPay</b><p>Needs a trade licence and merchant account</p></div><span class="pill" style="background:#475569">SET UP</span></div></div>' +
       '<div class="card" style="margin-top:10px"><div class="two"><div class="field"><span>bKash number</span><input value="017XXXXXXXX"></div><div class="field"><span>Nagad number</span><input value="018XXXXXXXX"></div></div>' + btn('SAVE', "toast('Payment numbers saved')") + '</div>';
   };
   V.pixels = function () {
@@ -282,7 +283,7 @@
       '<div class="card" style="margin-top:10px"><div class="field"><span>Staff Gmail</span><input id="sfMail" placeholder="staff@gmail.com"></div><div class="field"><span>Role</span><select id="sfRole"><option>MANAGER</option><option>ORDER STAFF</option><option>PRODUCT STAFF</option><option>CHAT SUPPORT</option><option>MARKETING</option><option>ACCOUNTS</option><option>CUSTOM</option></select></div>' + btn('SEND INVITE', 'addStaff()') + '<p class="note">Staff sign in with that Gmail and see only their bars. Activity log shows who changed what.</p></div>';
   };
   V.domain = function () {
-    return '<div class="card"><b style="font-size:13px">Store link</b><p class="note" style="margin-top:4px">myrosebd.com/shop/' + k + '</p></div><div class="card" style="margin-top:10px"><b style="font-size:13px">Own domain</b><div class="field" style="margin-top:8px"><span>Your domain</span><input id="dmIn" placeholder="yourshop.com"></div><p class="note">Add these 2 records where you bought the domain:<br>A · @ · 216.198.79.1<br>CNAME · www · cname.vercel-dns.com</p>' + btn('CHECK DOMAIN', 'checkDomain()') + '<p class="note" id="dmOut"></p></div>' +
+    return '<div class="card"><b style="font-size:13px">Store link</b><p class="note" style="margin-top:4px">' + k + '.myrosebd.com</p></div><div class="card" style="margin-top:10px"><b style="font-size:13px">Own domain</b><div class="field" style="margin-top:8px"><span>Your domain</span><input id="dmIn" placeholder="yourshop.com"></div><p class="note">Add these 2 records where you bought the domain:<br>A · @ · 216.198.79.1<br>CNAME · www · cname.vercel-dns.com</p>' + btn('CHECK DOMAIN', 'checkDomain()') + '<p class="note" id="dmOut"></p></div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">Hostinger</b><p class="note">Business plan: DOWNLOAD FOR HOSTINGER (ZIP) with a step-by-step guide.</p>' + btn('DOWNLOAD ZIP', "toast('Business plan: ZIP download starts')", 'alt') + '</div>';
   };
   V.reports = function () {
@@ -363,7 +364,7 @@
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><div style="border:1.5px solid ' + S.color + ';color:' + S.color + ';border-radius:10px;padding:9px;text-align:center;font-weight:800;font-size:13px">Add to Cart</div><div style="background:' + S.color + ';color:#fff;border-radius:10px;padding:9px;text-align:center;font-weight:800;font-size:13px">Order Now</div></div>' +
       '<div style="border-top:1px solid #e5e7eb;margin-top:10px;padding-top:8px;font-size:12px;color:#475569;white-space:pre-line">' + esc((d.long || 'Long description shows in the Description tab under the photos.').slice(0, 260)) + '</div></div></div>';
   }
-  function seoHTML(d) { return '<div class="seo" style="margin-top:8px"><small>myrosebd.com/shop/' + k + '/product/' + (d.name || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '</small>' + esc(d.seo || ((d.name || 'Product') + ' | ' + S.name)) + '<p>' + tk(+d.price || 0) + ' · In stock · ' + esc(d.short).slice(0, 110) + '</p></div>'; }
+  function seoHTML(d) { return '<div class="seo" style="margin-top:8px"><small>' + k + '.myrosebd.com/product/' + (d.name || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '</small>' + esc(d.seo || ((d.name || 'Product') + ' | ' + S.name)) + '<p>' + tk(+d.price || 0) + ' · In stock · ' + esc(d.short).slice(0, 110) + '</p></div>'; }
   V.product = function (id) {
     var d = draftOf(id), isNew = id === 'new';
     var chips = d.opts.map(function (o, i) { return '<span class="chip">' + esc(o) + '<button onclick="optDel(' + i + ')">✕</button></span>'; }).join('');
@@ -418,7 +419,7 @@
   V.delivery = function () {
     return '<div class="card"><b style="font-size:13px">DELIVERY CHARGE</b><div class="two" style="margin-top:10px"><div class="field"><span>Inside Dhaka (Tk)</span><input value="60"></div><div class="field"><span>Outside Dhaka (Tk)</span><input value="120"></div></div><div class="two"><div class="field"><span>Dhaka suburbs: Savar, Gazipur, Narayanganj (Tk)</span><input value="100"></div><div class="field"><span>Free delivery over (Tk)</span><input value="1500"></div></div>' + btn('SAVE', "toast('Delivery charges saved')") + '<p class="note">The checkout picks the charge from the district the customer chooses.</p></div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">COURIERS · connect with your own courier account</b>' + st.couriers.map(function (c, i) {
-        return '<div class="row"><span class="ph" style="font-size:20px;background:' + c[2] + ';color:#fff;font-weight:900">' + c[0].charAt(0) + '</span><div class="f"><b>' + c[0] + '</b><p>' + (c[1] ? '✅ Connected · auto booking · tracking sent to the customer by SMS' : c[3]) + '</p></div>' + btn(c[1] ? 'Disconnect' : 'Connect', 'courierToggle(' + i + ')', c[1] ? 'alt' : '') + '</div>' + (courierOpen === i ? '<div class="card" style="margin:0 0 8px;background:#0a0f1a"><div class="two"><div class="field"><span>API key</span><input placeholder="from your ' + c[0] + ' merchant panel"></div><div class="field"><span>Secret key</span><input type="password" placeholder="••••••"></div></div><div class="field"><span>Pickup address</span><input value="House 12, Road 5, Dhaka"></div>' + btn('SAVE & CONNECT', 'courierSave(' + i + ')') + '<p class="note">Keys are kept on the server only. Staff and customers never see them.</p></div>' : '');
+        return '<div class="row"><span class="lg">' + window.ROSE_LOGO(c[0].toLowerCase().replace(' courier', '').replace(/ /g, '_'), 30) + '</span><div class="f"><b>' + c[0] + '</b><p>' + (c[1] ? '✅ Connected · auto booking · tracking sent to the customer by SMS' : c[3]) + '</p></div>' + btn(c[1] ? 'Disconnect' : 'Connect', 'courierToggle(' + i + ')', c[1] ? 'alt' : '') + '</div>' + (courierOpen === i ? '<div class="card" style="margin:0 0 8px;background:#0a0f1a"><div class="two"><div class="field"><span>API key</span><input placeholder="from your ' + c[0] + ' merchant panel"></div><div class="field"><span>Secret key</span><input type="password" placeholder="••••••"></div></div><div class="field"><span>Pickup address</span><input value="House 12, Road 5, Dhaka"></div>' + btn('SAVE & CONNECT', 'courierSave(' + i + ')') + '<p class="note">Keys are kept on the server only. Staff and customers never see them.</p></div>' : '');
       }).join('') + '</div>';
   };
   var courierOpen = -1;
@@ -443,7 +444,7 @@
   function invoiceHTML(o, size) {
     var p = P(o.items[0].p), pos = /pos/.test(size), w = size === 'pos58' ? 58 : size === 'pos80' ? 80 : size === 'a5' ? 148 : 210;
     return '<div class="ivc" style="width:' + w + 'mm;font-size:' + (pos ? 8 : size === 'a5' ? 9 : 10.5) + 'pt;padding:' + (pos ? '3mm' : '12mm') + '">' +
-      '<div style="display:flex;justify-content:space-between;' + (pos ? 'flex-direction:column;text-align:center' : '') + ';border-bottom:2px solid #111;padding-bottom:3mm"><div><b style="font-size:1.6em">' + S.logo + ' ' + esc(st.print.sender) + '</b><div>' + esc(st.print.phone) + ' · myrosebd.com/shop/' + k + '</div></div><div style="' + (pos ? '' : 'text-align:right') + '"><b style="font-size:1.4em">INVOICE</b><div>#' + o.no + ' · ' + new Date().toLocaleDateString('en-GB') + '</div></div></div>' +
+      '<div style="display:flex;justify-content:space-between;' + (pos ? 'flex-direction:column;text-align:center' : '') + ';border-bottom:2px solid #111;padding-bottom:3mm"><div><b style="font-size:1.6em">' + S.logo + ' ' + esc(st.print.sender) + '</b><div>' + esc(st.print.phone) + ' · ' + k + '.myrosebd.com</div></div><div style="' + (pos ? '' : 'text-align:right') + '"><b style="font-size:1.4em">INVOICE</b><div>#' + o.no + ' · ' + new Date().toLocaleDateString('en-GB') + '</div></div></div>' +
       '<div style="margin:3mm 0"><b>Bill to:</b> ' + esc(o.name) + ' · ' + o.phone + '<br>' + esc(o.area) + ', ' + esc(o.upazila) + ', ' + esc(o.district) + ', ' + esc(o.division) + '</div>' +
       '<table style="width:100%;border-collapse:collapse"><tr style="border-bottom:1px solid #999"><th align="left">Item</th><th>Qty</th><th align="right">Amount</th></tr><tr><td>' + esc(p.name) + (o.opt ? ' (' + esc(o.opt) + ')' : '') + '</td><td align="center">' + o.items[0].q + '</td><td align="right">' + tk(p.price * o.items[0].q) + '</td></tr>' +
       '<tr><td colspan="2" align="right">Delivery</td><td align="right">' + tk(o.del) + '</td></tr><tr style="border-top:1px solid #111;font-weight:800"><td colspan="2" align="right">Total</td><td align="right">' + tk(o.total) + '</td></tr></table>' +
@@ -503,7 +504,7 @@
 
   // ---------------- routing ----------------
   var side = document.getElementById('side'), main = document.getElementById('main');
-  var head = '<div class="card store">' + (S.banners[0].img ? '<img src="' + IMG(S.banners[0].img, 120) + '" alt="">' : '<span style="font-size:32px">' + S.logo + '</span>') + '<div style="flex:1"><b>' + esc(S.name) + '</b><div style="font-size:11px;color:#94a3b8">myrosebd.com/shop/' + k + '</div></div><span class="pill live">LIVE</span></div>';
+  var head = '<div class="card store">' + (S.banners[0].img ? '<img src="' + IMG(S.banners[0].img, 120) + '" alt="">' : '<span style="font-size:32px">' + S.logo + '</span>') + '<div style="flex:1"><b>' + esc(S.name) + '</b><div style="font-size:11px;color:#94a3b8">' + k + '.myrosebd.com</div></div><span class="pill live">LIVE</span></div>';
   var route = '';
   window.go = function (r) { location.hash = r; };
   function render() {

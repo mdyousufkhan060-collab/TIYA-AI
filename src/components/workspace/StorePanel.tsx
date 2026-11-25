@@ -15,7 +15,7 @@ type Store = {
   id: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
   delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[];
-  pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings;
+  pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean;
 };
 type Banner = { title: string; badge: string; icon: string; bg?: string };
 type Cat = { id: string; name: string; icon: string; sort: number };
@@ -77,7 +77,9 @@ async function uploadImage(storeId: string, file: File, max = 1200): Promise<str
   return supabase.storage.from('store-media').getPublicUrl(path).data.publicUrl;
 }
 
-const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+/** Names that cannot become yourshop.myrosebd.com (site pages, mail, demo stores). */
+const RESERVED_SLUGS = ['www', 'app', 'api', 'admin', 'mail', 'webmail', 'shop', 'demos', 'demo', 'autodiscover', 'autoconfig', 'ftp', 'cpanel', 'ns1', 'ns2', 'rose', 'help', 'support', 'blog', 'foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare'];
 
 export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [loading, setLoading] = useState(true);
@@ -150,7 +152,15 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   }
   if (!store) return null;
 
-  const url = `${window.location.origin}/shop/${store.slug}`;
+  const url = store.subdomain_ready ? `https://${store.slug}.myrosebd.com` : `${window.location.origin}/shop/${store.slug}`;
+  const makeSubdomain = async () => {
+    setMsg('Setting up your address…');
+    const { data, error } = await supabase.functions.invoke('store-subdomain', { body: { store_id: store.id } });
+    const err = (data as any)?.error || (error ? await (error as any).context?.json?.().then((j: any) => j.error).catch(() => error.message) : '');
+    if (err) return setMsg(String(err));
+    setMsg((data as any)?.ok ? `Your store is live at ${(data as any).address}` : (data as any)?.message || 'Please try again.');
+    void load();
+  };
   const header = (
     <div className={box + ' space-y-2'}>
       <div className="flex items-center gap-2">
@@ -168,7 +178,12 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
           type="button"
           className={btn + (store.published ? ' bg-white/10' : '')}
           onClick={async () => {
-            await supabase.from('stores').update({ published: !store.published, updated_at: new Date().toISOString() }).eq('id', store.id);
+            const going = !store.published;
+            await supabase.from('stores').update({ published: going, updated_at: new Date().toISOString() }).eq('id', store.id);
+            if (going && !store.subdomain_ready) {
+              const { data } = await supabase.functions.invoke('store-subdomain', { body: { store_id: store.id } });
+              if ((data as any)?.ok) setMsg(`Your store is live at ${(data as any).address}`);
+            }
             void load();
           }}
         >
@@ -179,6 +194,12 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         </a>
       </div>
       {!store.published && <p className="text-[11px] text-slate-400">Customers can see the store only after PUBLISH.</p>}
+      {store.published && !store.subdomain_ready && (
+        <button type="button" onClick={() => void makeSubdomain()} className={btn + ' w-full bg-white/10'}>
+          GET MY ADDRESS: {store.slug}.myrosebd.com
+        </button>
+      )}
+      {msg && <p className="text-[11px] text-teal-200">{msg}</p>}
       {!isAdmin && access && <p className="text-[11px] text-slate-400">{STORE_PLANS[access.plan]?.label} until {new Date(access.ends_at).toLocaleDateString('en-GB')}</p>}
     </div>
   );
@@ -263,6 +284,7 @@ const CreateStore: React.FC<{ demos: Record<string, Demo>; canCreate: boolean; o
     const s = slugify(slug || name);
     if (!d) return setMsg('Choose a design first.');
     if (!name.trim() || s.length < 3) return setMsg('Write the store name (3+ letters).');
+    if (RESERVED_SLUGS.includes(s)) return setMsg('This address is taken. Choose another name.');
     setBusy(true);
     setMsg('');
     const { data: st, error } = await supabase
@@ -319,8 +341,8 @@ const CreateStore: React.FC<{ demos: Record<string, Demo>; canCreate: boolean; o
       <div className={box + ' space-y-2'}>
         <input className={input} value={name} onChange={(e) => { setName(e.target.value); if (!slug) setSlug(''); }} placeholder="Store name (e.g. Rahim Fashion)" />
         <div className="flex items-center gap-1 text-[12px] text-slate-400">
-          <span>myrosebd.com/shop/</span>
           <input className={input} value={slug || slugify(name)} onChange={(e) => setSlug(slugify(e.target.value))} placeholder="rahim-fashion" />
+          <span className="shrink-0">.myrosebd.com</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" inputMode="tel" />
@@ -529,6 +551,10 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
         {COURIERS.map(([id, name, note]) => (
           <div key={id} className="rounded-lg bg-black/30 p-2">
             <div className="flex items-center gap-2">
+              <span className="flex h-9 w-20 shrink-0 items-center justify-center rounded-md bg-white px-1">
+                <img src={`/brand/${id}.png`} alt={name} className="max-h-7 max-w-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; const t = e.currentTarget.nextElementSibling as HTMLElement | null; if (t) t.style.display = 'inline'; }} />
+                <b className="hidden text-[11px] text-slate-900">{name}</b>
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[12.5px] font-bold text-white">{name} {conn.includes(id) && <span className="text-emerald-400">· CONNECTED</span>}</p>
                 <p className="text-[10.5px] text-slate-400">{note}</p>

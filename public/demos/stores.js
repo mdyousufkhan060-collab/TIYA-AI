@@ -179,3 +179,18 @@ window.ROSE_KINDS = {
     ship: ['👩‍⚕️ Take it only as your doctor or pharmacist says', '📄 Rx medicine needs a prescription', '🌡️ Keep below 30°C, away from children', '✅ Genuine medicine from licensed sources'] },
 };
 window.ROSE_KIND_OF = { foodbazaar: 'food', fashionhub: 'fashion', sotadari: 'grocery', shopshotoi: 'market', homenest: 'furniture', medicare: 'pharmacy' };
+
+// Brand logos for payment methods and couriers. Put the official logo files in /public/brand/ with these names
+// (PNG or SVG renamed to .png is fine). Until a file is there, a neat text badge in the brand colour shows instead.
+window.ROSE_BRAND = {
+  bkash: ['bKash', '#e2136e'], nagad: ['Nagad', '#f6921e'], rocket: ['Rocket', '#8c3494'], upay: ['Upay', '#0a3d91'],
+  visa: ['VISA', '#1a1f71'], mastercard: ['Mastercard', '#eb001b'], amex: ['AMEX', '#2e77bc'], cod: ['Cash on Delivery', '#16a34a'], bank: ['Bank', '#334155'],
+  steadfast: ['Steadfast', '#0f766e'], pathao: ['Pathao', '#e11d48'], redx: ['RedX', '#dc2626'], paperfly: ['Paperfly', '#2563eb'],
+  ecourier: ['eCourier', '#7c3aed'], sundarban: ['Sundarban', '#16a34a'], sa_paribahan: ['SA Paribahan', '#ea580c'],
+};
+window.ROSE_LOGO = function (key, h) {
+  var b = window.ROSE_BRAND[key] || [key, '#334155'];
+  h = h || 28;
+  var fb = '<b style=&quot;color:' + b[1] + ';font:800 ' + Math.round(h * 0.42) + 'px system-ui,sans-serif;white-space:nowrap&quot;>' + b[0] + '</b>';
+  return '<span class="rlogo" style="height:' + h + 'px;display:inline-flex;align-items:center;justify-content:center"><img src="/brand/' + key + '.png" alt="' + b[0] + '" style="max-height:' + h + 'px;max-width:' + Math.round(h * 3.2) + 'px;object-fit:contain" onerror="this.outerHTML=\'' + fb.replace(/'/g, '') + '\'"></span>';
+};
