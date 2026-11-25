@@ -43,10 +43,10 @@
   <div class="grid" id="g"></div>
   <div class="plans">
     <b>Premium only.</b> Free users can open every demo. Website plans come for 3, 6, 9 or 12 months, with an extra discount for 2 years, and a <b>5-day free trial</b>.
-    Store link: <b>yourshop.myrosebd.com</b>, your own domain, or download and host on Hostinger.
+    Store link: <b>myrosebd.com/shop/yourshop</b>, your own domain, or download and host on Hostinger.
   </div>
 </div>
-<script src="stores.js"></script>
+<script src="/demos/stores.js"></script>
 <script>
   var S = window.ROSE_STORES, g = document.getElementById('g');
   var bg = { foodbazaar: '#d9f99d,#facc15', fashionhub: '#ede9fe,#a78bfa', sotadari: '#dcfce7,#86efac', shopshotoi: '#fed7aa,#fb923c', homenest: '#fef3c7,#d6a46a', medicare: '#cffafe,#5eead4' };
@@ -57,7 +57,7 @@
     if (k === 'homenest') feats.push('Wood / colour options, EMI, free fitting');
     return '<div class="card"><div class="shot" style="background:linear-gradient(120deg,' + bg[k] + ')"><div><b>' + s.name + '</b><small>' + s.type + ' · ' + s.tagline + '</small></div><span>' + s.logo + '</span></div>' +
       '<div class="body"><ul>' + feats.map(function (f) { return '<li>' + f + '</li>'; }).join('') + '</ul>' +
-      '<div class="btns"><a class="btn" href="store.html?s=' + k + '">OPEN DEMO</a><a class="btn alt" href="/app">USE THIS DESIGN</a></div></div></div>';
+      '<div class="btns"><a class="btn" href="/demos/store.html?s=' + k + '">OPEN DEMO</a><a class="btn alt" href="/app">USE THIS DESIGN</a></div></div></div>';
   }).join('');
 </script>
 </body>
