@@ -119,6 +119,8 @@
   .ph8 em { position: absolute; bottom: 2px; left: 2px; right: 2px; font-style: normal; font-size: 8.5px; font-weight: 800; text-align: center; background: #14b8a6; color: #021014; border-radius: 0 0 8px 8px; }
   .radio { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #1e293b; cursor: pointer; }
   .row .lg img { width: auto !important; height: 30px !important; max-width: 88px; background: none !important; border-radius: 0 !important; object-fit: contain !important; }
+  .row .lg2 { overflow: hidden; gap: 8px; } .row .lg2 img { height: 18px !important; max-width: 46px; }
+  .row .f { min-width: 0; } .row .f b, .row .f p { overflow-wrap: anywhere; }
   .row .lg { width: 112px; min-width: 112px; height: 46px; background: #fff; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 6px; flex-shrink: 0; }
 </style>
 </head>
@@ -180,7 +182,7 @@
     ['categories', 'CATEGORIES', '🗂️', '#ca8a04', function () { return st.cats.length; }],
     ['design', 'HOMEPAGE & DESIGN', '🎨', '#db2777', function () { return 'BANNERS'; }],
     ['customers', 'CUSTOMERS', '👥', '#2563eb', function () { return '312'; }],
-    ['offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', function () { return st.coupons.filter(function (c) { return c.on; }).length + ' ACTIVE'; }],
+    ['offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', function () { return st.products.filter(function (p) { return p.onOffer || p.old > p.price; }).length + ' OFFERS · ' + st.coupons.filter(function (c) { return c.on; }).length + ' COUPONS'; }],
     ['reviews', 'REVIEWS', '⭐', '#eab308', function () { return '4.6 ★'; }],
     ['chat', 'LIVE CHAT', '💬', '#059669', function () { return st.takeover ? 'YOU' : 'ROSE'; }],
     ['payments', 'PAYMENTS', '💳', '#4f46e5', function () { return st.pay.filter(function (p) { return p[1]; }).length + ' ON'; }],
@@ -285,8 +287,36 @@
       return row('<span class="ph">👤</span>', esc(o.name), o.phone + ' · ' + esc(o.district) + ' · ' + o.history + ' · ' + (120 + i * 40) + ' points', /2 returned/.test(o.history) ? '<span class="st s-cancelled">RISK</span>' : '<span class="chev">›</span>', "toast('" + esc(o.name) + ": " + (3 + i) + " orders, " + tk(2400 + i * 1350) + " spent')");
     }).join('') + '</div>';
   };
+  st.offerBanners = st.offerBanners || [];
+  var ofAdd = null;
+  window.ofBanner = function (inp) { var f = inp.files && inp.files[0]; if (!f) return; if (st.offerBanners.length >= 5) return toast('Up to 5 banners'); st.offerBanners.push({ img: URL.createObjectURL(f), title: '' }); toast('Offer banner uploaded'); render(); };
+  window.ofToggle = function (id, on) { P(id).onOffer = on; toast(on ? 'Added to Offers' : 'Removed from Offers'); render(); };
+  window.ofPrice = function (id) { var p = P(id), np = +document.getElementById('ofp' + id).value, no = +document.getElementById('ofo' + id).value; if (!(np > 0)) return toast('Write the offer price'); p.price = np; p.old = no > np ? no : np; toast('Price saved'); render(); };
+  window.ofNew = function (on) { ofAdd = on ? { img: '' } : null; render(); };
+  window.ofPhoto = function (inp) { var f = inp.files && inp.files[0]; if (!f || !ofAdd) return; ofAdd.img = URL.createObjectURL(f); render(); };
+  window.ofSave = function () {
+    var g = function (i) { return document.getElementById(i).value; };
+    var n = g('ofN').trim(), np = +g('ofP'), no = +g('ofO');
+    if (!n || !(np > 0)) return toast('Name and offer price are needed');
+    st.products.push({ id: st.products.length, name: n, cat: g('ofC'), e: '🏷️', price: np, old: no > np ? no : np, imgs: ofAdd && ofAdd.img ? [ofAdd.img] : [], stock: +g('ofS') || 0, active: true, onOffer: true, opts: [], optLabel: 'Size', specs: {} });
+    ofAdd = null; toast('Offer product added · also in PRODUCTS'); render();
+  };
   V.offers = function () {
-    return '<div class="card">' + st.coupons.map(function (c, i) {
+    var pct = function (p) { return p.old > p.price ? Math.round((1 - p.price / p.old) * 100) : 0; };
+    var inOf = st.products.filter(function (p) { return p.onOffer || pct(p) > 0; }), others = st.products.filter(function (p) { return !p.onOffer && !pct(p); });
+    var inp = 'style="width:70px;background:#0a0f1a;border:1px solid #334155;border-radius:8px;color:#fff;padding:5px"';
+    return '<div class="card"><b style="font-size:13px">OFFER BANNERS · top of the Offers page</b><p class="note">Best 1600 × 600 px (wide). Up to 5.</p>' +
+      st.offerBanners.map(function (b, i) { return '<div style="margin-top:8px"><img src="' + b.img + '" alt="" style="width:100%;aspect-ratio:8/3;object-fit:cover;border-radius:10px"><div style="display:flex;gap:6px;margin-top:6px"><input value="' + esc(b.title) + '" placeholder="Text on banner (optional)" onchange="st.offerBanners[' + i + '].title=this.value" style="flex:1;background:#0a0f1a;border:1px solid #334155;border-radius:8px;color:#fff;padding:6px">' + btn('✕', 'st.offerBanners.splice(' + i + ',1);render()', 'alt') + '</div></div>'; }).join('') +
+      (st.offerBanners.length < 5 ? '<div class="btns"><label class="btn" style="cursor:pointer">+ UPLOAD OFFER BANNER<input type="file" accept="image/*" hidden onchange="ofBanner(this)"></label></div>' : '') + '</div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">OFFER PRODUCTS · ' + inOf.length + '</b><p class="note">A product with an old price (PRODUCTS) shows here by itself. You can also add a new offer product here, or put any product in Offers.</p>' +
+      inOf.map(function (p) { return '<div class="row">' + thumb(p) + '<div class="f"><b>' + esc(p.name) + (pct(p) ? ' <span class="pill" style="background:#ef4444">-' + pct(p) + '%</span>' : '') + '</b><div style="display:flex;gap:6px;margin-top:5px;align-items:center"><input id="ofp' + p.id + '" value="' + p.price + '" inputmode="numeric" ' + inp + '><input id="ofo' + p.id + '" value="' + (p.old > p.price ? p.old : '') + '" placeholder="Old" inputmode="numeric" ' + inp + '>' + btn('SAVE', 'ofPrice(' + p.id + ')', 'alt') + '</div></div>' + (p.onOffer ? btn('✕', 'ofToggle(' + p.id + ',false)', 'alt') : '') + '</div>'; }).join('') +
+      (ofAdd ? '<div class="card" style="background:#0a0f1a;margin-top:8px"><b style="font-size:12px;color:#5eead4">NEW OFFER PRODUCT</b><div style="display:flex;gap:8px;align-items:center;margin-top:8px">' + (ofAdd.img ? '<img src="' + ofAdd.img + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px">' : '<span class="ph">🏷️</span>') + '<label class="btn alt" style="cursor:pointer">PHOTO<input type="file" accept="image/*" hidden onchange="ofPhoto(this)"></label></div>' +
+        '<div class="field"><span>Product name</span><input id="ofN"></div><div class="field"><span>Category</span><select id="ofC">' + st.cats.map(function (c) { return '<option>' + esc(c.name) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="two"><div class="field"><span>Offer price</span><input id="ofP" inputmode="numeric"></div><div class="field"><span>Old price</span><input id="ofO" inputmode="numeric"></div></div><div class="field"><span>Stock</span><input id="ofS" value="10" inputmode="numeric"></div>' +
+        '<div class="btns">' + btn('ADD TO OFFERS', 'ofSave()') + btn('CANCEL', 'ofNew(false)', 'alt') + '</div></div>'
+        : '<div class="btns">' + btn('+ ADD NEW OFFER PRODUCT', 'ofNew(true)') + '</div>') +
+      (others.length ? '<div class="field" style="margin-top:8px"><span>Put an existing product in Offers</span><select onchange="if(this.value)ofToggle(+this.value,true)"><option value="">Choose a product…</option>' + others.map(function (p) { return '<option value="' + p.id + '">' + esc(p.name) + ' · ' + tk(p.price) + '</option>'; }).join('') + '</select></div>' : '') + '</div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">COUPONS</b>' + st.coupons.map(function (c, i) {
       return '<div class="row"><span class="ph">🏷️</span><div class="f"><b>' + c.code + '</b><p>' + esc(c.text) + '</p></div><button class="toggle' + (c.on ? ' on' : '') + '" onclick="st.coupons[' + i + '].on=!st.coupons[' + i + '].on;render()"></button></div>';
     }).join('') + '</div><div class="card" style="margin-top:10px"><div class="two"><div class="field"><span>Code</span><input id="cpCode" placeholder="SALE20"></div><div class="field"><span>Discount</span><input id="cpText" placeholder="20% off, min 800 Tk"></div></div>' + btn('+ NEW COUPON', 'addCoupon()') + '</div>';
   };
@@ -306,7 +336,7 @@
   };
   V.payments = function () {
     return '<div class="card">' + st.pay.map(function (m, i) { return '<div class="row"><span class="lg">' + window.ROSE_LOGO(m[2], 30) + '</span><div class="f"><b>' + m[0] + '</b></div><button class="toggle' + (m[1] ? ' on' : '') + '" onclick="st.pay[' + i + '][1]=!st.pay[' + i + '][1];render()"></button></div>'; }).join('') +
-      '<div class="row"><span class="lg">' + window.ROSE_LOGO('visa', 22) + window.ROSE_LOGO('mastercard', 22) + '</span><div class="f"><b>Card: SSLCommerz / aamarPay</b><p>Needs a trade licence and merchant account</p></div><span class="pill" style="background:#475569">SET UP</span></div></div>' +
+      '<div class="row"><span class="lg lg2">' + window.ROSE_LOGO('visa', 18, true) + window.ROSE_LOGO('mastercard', 18, true) + '</span><div class="f"><b>Card (Visa · Mastercard)</b><p>SSLCommerz / aamarPay · needs trade licence</p></div><span class="pill" style="background:#475569">SET UP</span></div></div>' +
       '<div class="card" style="margin-top:10px"><div class="two"><div class="field"><span>bKash number</span><input value="017XXXXXXXX"></div><div class="field"><span>Nagad number</span><input value="018XXXXXXXX"></div></div>' + btn('SAVE', "toast('Payment numbers saved')") + '</div>';
   };
   V.pixels = function () {
@@ -506,7 +536,8 @@
       (c.stk === 'custom' ? '<div class="two"><div class="field"><span>Width (mm)</span><input inputmode="numeric" value="' + c.cw + '" onchange="st.print.cw=+this.value;render()"></div><div class="field"><span>Height (mm)</span><input inputmode="numeric" value="' + c.ch + '" onchange="st.print.ch=+this.value;render()"></div></div>' : '') + '</div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">YOUR COMPANY ON THE STICKER</b><div class="field" style="margin-top:8px"><span>Company / sender name</span><input value="' + esc(c.sender) + '" onchange="st.print.sender=this.value;render()"></div><div class="field"><span>Sender phone</span><input value="' + esc(c.phone) + '" onchange="st.print.phone=this.value;render()"></div><div class="field"><span>Bottom note</span><input value="' + esc(c.note) + '" onchange="st.print.note=this.value;render()"></div>' +
       [['logo', 'Show logo'], ['cod', 'Show COD amount'], ['items', 'Show product name'], ['bar', 'Show barcode'], ['photos', 'Product photos on invoice']].map(function (x) { return '<div class="row"><div class="f"><b>' + x[1] + '</b></div><button class="toggle' + (c[x[0]] ? ' on' : '') + '" onclick="st.print.' + x[0] + '=!st.print.' + x[0] + ';render()"></button></div>'; }).join('') + '</div>' +
-      '<div class="card" style="margin-top:10px"><b style="font-size:13px">INVOICE SIZE</b><div style="margin-top:8px">' + INV.map(function (s) { return '<label class="radio"><input type="radio" name="inv" ' + (c.inv === s[0] ? 'checked' : '') + ' onchange="st.print.inv=\'' + s[0] + '\';render()"> ' + s[1] + '</label>'; }).join('') + '</div></div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">INVOICE SIZE</b><div style="margin-top:8px">' + INV.map(function (s) { return '<label class="radio"><input type="radio" name="inv" ' + (c.inv === s[0] ? 'checked' : '') + ' onchange="st.print.inv=\'' + s[0] + '\';render()"> ' + s[1] + '</label>'; }).join('') + '</div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">INVOICE PREVIEW · ' + RP.invoiceDims(c.inv)[2] + '</b><div style="margin-top:10px">' + RP.invoicePreviewHTML(pOrder(o), st.print, pStore(), 280) + '</div><p class="note">' + (RP.invoiceDims(c.inv)[1] ? 'Prints on ' + RP.invoiceDims(c.inv)[2] + ' paper. If the print window shows another paper (Letter), change Paper size to ' + c.inv.toUpperCase() + '.' : 'For a POS roll printer. The paper length fits the items by itself.') + '</p>' + btn('🧾 Test print 1 invoice', 'printDoc(\'invoice\',[' + o.no + '])', 'alt') + '</div>' + '</div>' +
       '<div><div class="card"><b style="font-size:13px">STICKER PREVIEW · ' + sz[0] + ' × ' + sz[1] + ' mm</b><div style="margin-top:10px;background:#e5e7eb;border-radius:10px;padding:10px;overflow:hidden;height:' + Math.round(sz[1] * 3.78 * scale + 20) + 'px"><div style="transform:scale(' + scale + ');transform-origin:0 0">' + stickerHTML(o) + '</div></div></div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">PRINT</b><div class="btns">' + btn('🏷️ Stickers for ' + newNos.length + ' open orders', 'printDoc(\'sticker\',[' + newNos.join(',') + '])') + btn('🧾 Invoices for ' + newNos.length + ' open orders', 'printDoc(\'invoice\',[' + newNos.join(',') + '])', 'alt') + btn('Test print 1 sticker', 'printDoc(\'sticker\',[' + o.no + '])', 'alt') + '</div><p class="note">Works with any label printer (Xprinter, TSC, Zebra) or a normal printer. In the print window choose your printer and "Actual size".</p></div></div></div>';
   };

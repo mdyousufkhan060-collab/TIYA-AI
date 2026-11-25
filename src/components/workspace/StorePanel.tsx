@@ -5,7 +5,7 @@ import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { AdminBrandPage, RoseSupportCard } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
-import { INVOICE_SIZES, PRINT_CSS, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
+import { INVOICE_SIZES, PRINT_CSS, invoiceDims, invoicePreviewHTML, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
  * Workspace > MY STORE: the ROSE Store Builder for the store owner.
@@ -17,15 +17,16 @@ type Store = {
   id: string; owner_id?: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
   name_bn?: string; email2?: string; whatsapp?: string; phone2?: string; pixels?: Record<string, string>; chat_ai?: boolean;
-  delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[];
+  delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[]; offer_banners?: OfferBanner[];
   pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean;
 };
 type Banner = { title: string; badge: string; icon: string; bg?: string; img?: string };
+type OfferBanner = { img: string; title?: string; link?: string };
 type Cat = { id: string; name: string; icon: string; sort: number };
 type Prod = {
   id: string; name: string; category_id: string | null; price: number; old_price: number | null; stock: number; emoji: string;
   description: string; images: string[]; options_label: string; options: string[]; rx: boolean; active: boolean;
-  short_description: string; specs: Record<string, string>; cost_price?: number;
+  short_description: string; specs: Record<string, string>; cost_price?: number; on_offer?: boolean; sort?: number;
 };
 type Order = {
   id: string; order_no: number; customer_name: string; phone: string; address: string; area: string;
@@ -121,7 +122,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create'>('home');
   const [roles, setRoles] = useState<Record<string, string>>({});
   const [showRose, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
@@ -285,6 +286,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'expenses' && <ExpensesTab store={store} />}
         {tab === 'pixels' && <PixelsTab store={store} onSaved={() => void load()} />}
         {tab === 'chat' && <StoreChatTab store={store} />}
+        {tab === 'offers' && <OffersTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} onSaved={() => void load()} />}
       </div>
     );
   }
@@ -313,6 +315,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {can('design') && <SettingsBar badge="09" title="COMPANY INFO" value="NAME · EMAIL · PHONE · ADDRESS" onClick={() => setTab('company')} testId="store-company" />}
         {can('money') && <SettingsBar badge="10" title="REPORTS & PROFIT" value="DAY · MONTH · YEAR" onClick={() => setTab('reports')} testId="store-reports" />}
         {can('money') && <SettingsBar badge="11" title="EXPENSES & PURCHASES" value="ADS · STOCK · RENT" onClick={() => setTab('expenses')} testId="store-expenses" />}
+        {can('products') && <SettingsBar badge="14" title="OFFERS" value="BANNERS · OFFER PRODUCTS" onClick={() => setTab('offers')} testId="store-offers" />}
         {can('orders') && <SettingsBar badge="13" title="LIVE CHAT" value="ROSE · CUSTOMERS" onClick={() => setTab('chat')} testId="store-chat" />}
         {can('design') && <SettingsBar badge="12" title="PIXELS & ANALYTICS" value="FACEBOOK · GOOGLE · TIKTOK" onClick={() => setTab('pixels')} testId="store-pixels" />}
         {can('owner') && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
@@ -1045,8 +1048,12 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
         </div>
         <input className={input} value={ps.terms || ''} onChange={(e) => setPs({ ...ps, terms: e.target.value })} placeholder="Invoice terms (e.g. 7-day return with this invoice)" />
         <p className="text-[10.5px] text-slate-400">Your logo, name, WhatsApp, bKash number, emails and address come on the invoice and sticker by themselves (04 HOMEPAGE & DESIGN, 09 COMPANY INFO). Best sticker: 100 × 70 mm.</p>
-        <button type="button" className={btn + ' w-full bg-white/10'} onClick={() => { const e = printOrders('invoice', [sample], ps, store); if (e) setMsg(e); }}>TEST PRINT 1 INVOICE</button>
         <style>{PRINT_CSS}</style>
+        <p className="text-[11px] font-bold tracking-wider text-slate-300">INVOICE PREVIEW · {invoiceDims(ps.inv)[2]}</p>
+        <div dangerouslySetInnerHTML={{ __html: invoicePreviewHTML(sample, ps, store, 280) }} />
+        <p className="text-[10.5px] text-slate-400">{invoiceDims(ps.inv)[1] ? `Prints on ${invoiceDims(ps.inv)[2]} paper. If the print window shows another paper (Letter), change Paper size to ${(ps.inv || 'a4').toUpperCase()}.` : 'For a POS roll printer. The paper length fits the items by itself.'}</p>
+        <button type="button" className={btn + ' w-full bg-white/10'} onClick={() => { const e = printOrders('invoice', [sample], ps, store); if (e) setMsg(e); }}>TEST PRINT 1 INVOICE</button>
+        <p className="text-[11px] font-bold tracking-wider text-slate-300">STICKER PREVIEW</p>
         <div className="overflow-hidden rounded-lg bg-slate-200 p-2" style={{ height: Math.round(h * 3.78 * scale + 16) }}>
           <div style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }} dangerouslySetInnerHTML={{ __html: stickerHTML(sample, ps, store) }} />
         </div>
@@ -1262,7 +1269,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
       old_price: edit.old_price ? Number(edit.old_price) : null, stock: Number(edit.stock) || 0, emoji: edit.emoji || '📦',
       description: edit.description || '', images: (edit.images || []).filter(Boolean),
       options_label: (edit.options || []).filter(Boolean).length ? edit.options_label || 'Size' : '', options: (edit.options || []).filter(Boolean), rx: Boolean(edit.rx), active: edit.active !== false,
-      short_description: (edit.short_description || '').slice(0, 160), specs: edit.specs || {}, cost_price: Number(edit.cost_price) || 0,
+      short_description: (edit.short_description || '').slice(0, 160), specs: edit.specs || {}, cost_price: Number(edit.cost_price) || 0, on_offer: Boolean(edit.on_offer),
       updated_at: new Date().toISOString(),
     };
     const { error } = edit.id ? await supabase.from('store_products').update(row).eq('id', edit.id) : await supabase.from('store_products').insert({ ...row, sort: prods.length });
@@ -1373,6 +1380,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
         <textarea className={input} rows={5} value={edit.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Long description · material, size chart, care, delivery, return (helps Google)" />
         <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={edit.active !== false} onChange={(e) => set('active', e.target.checked)} /> Show in store</label>
         <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={Boolean(edit.rx)} onChange={(e) => set('rx', e.target.checked)} /> Needs prescription (pharmacy)</label>
+        <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={Boolean(edit.on_offer)} onChange={(e) => set('on_offer', e.target.checked)} /> Show in OFFERS page (a product with an old price shows there by itself)</label>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => setEdit(null)} className={btn + ' bg-white/10'}>CANCEL</button>
           <button type="button" onClick={() => void save()} className={btn}>SAVE</button>
@@ -1403,6 +1411,168 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
           </div>
         </button>
       ))}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- offers
+/**
+ * 14 OFFERS: offer banners for the store's Offers page, plus offer products.
+ * Two ways a product shows in Offers: (1) any product with an old price (from 02 PRODUCTS),
+ * (2) a product added or marked here (on_offer).
+ */
+const OffersTab: React.FC<{ store: Store; limit: number; onSaved: () => void }> = ({ store, limit, onSaved }) => {
+  const [banners, setBanners] = useState<OfferBanner[]>(store.offer_banners || []);
+  const [prods, setProds] = useState<Prod[]>([]);
+  const [cats, setCats] = useState<Cat[]>([]);
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState('');
+  const [add, setAdd] = useState<{ name: string; price: string; old: string; stock: string; cat: string; img: string } | null>(null);
+  const load = useCallback(async () => {
+    const [p, c] = await Promise.all([
+      supabase.from('store_products').select('*').eq('store_id', store.id).order('sort'),
+      supabase.from('store_categories').select('*').eq('store_id', store.id).order('sort'),
+    ]);
+    setProds((p.data as Prod[]) || []);
+    setCats((c.data as Cat[]) || []);
+  }, [store.id]);
+  useEffect(() => { void load(); }, [load]);
+  const offPct = (p: Prod) => (p.old_price && Number(p.old_price) > Number(p.price) ? Math.round((1 - Number(p.price) / Number(p.old_price)) * 100) : 0);
+  const inOffers = prods.filter((p) => p.on_offer || offPct(p) > 0);
+  const others = prods.filter((p) => !p.on_offer && !offPct(p));
+
+  const saveBanners = async (list: OfferBanner[]) => {
+    setBanners(list);
+    const { error } = await supabase.from('stores').update({ offer_banners: list, updated_at: new Date().toISOString() }).eq('id', store.id);
+    setMsg(error ? error.message : 'Offer banners saved.');
+    if (!error) onSaved();
+  };
+  const upload = async (f: File, max: number) => { setBusy('img'); try { return await uploadImage(store.id, f, max); } finally { setBusy(''); } };
+  const setOffer = async (p: Prod, on: boolean) => {
+    const { error } = await supabase.from('store_products').update({ on_offer: on, updated_at: new Date().toISOString() }).eq('id', p.id);
+    if (error) return setMsg(error.message);
+    void load();
+  };
+  const setPrice = async (p: Prod, price: string, old: string) => {
+    const np = Number(price), no = Number(old);
+    if (!(np > 0)) return setMsg('Write the offer price.');
+    const { error } = await supabase.from('store_products').update({ price: np, old_price: no > np ? no : null, updated_at: new Date().toISOString() }).eq('id', p.id);
+    setMsg(error ? error.message : 'Price saved.');
+    void load();
+  };
+  const addProduct = async () => {
+    if (!add) return;
+    if (!add.name.trim() || !(Number(add.price) > 0)) return setMsg('Name and offer price are needed.');
+    if (prods.length >= limit) return setMsg(`Your plan allows ${limit} products.`);
+    const np = Number(add.price), no = Number(add.old);
+    const { error } = await supabase.from('store_products').insert({
+      store_id: store.id, name: add.name.trim(), category_id: add.cat || null, price: np, old_price: no > np ? no : null, stock: Number(add.stock) || 0,
+      emoji: '🏷️', images: add.img ? [add.img] : [], description: '', options_label: '', options: [], rx: false, active: true, short_description: '', specs: {},
+      on_offer: true, sort: prods.length,
+    });
+    if (error) return setMsg(error.message);
+    setAdd(null);
+    setMsg('Offer product added. It also shows in 02 PRODUCTS.');
+    void load();
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">OFFER BANNERS · top of the Offers page</p>
+        <p className="text-[10.5px] text-slate-400">{IMG_HINT.banner} Up to 5 banners.</p>
+        {banners.map((b, i) => (
+          <div key={i} className="space-y-1.5 rounded-lg border border-white/10 p-2">
+            <img src={b.img} alt="" className="aspect-[8/3] w-full rounded-md bg-black/30 object-cover" />
+            <input className={input} value={b.title || ''} onChange={(e) => setBanners(banners.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} placeholder="Text on banner (optional), e.g. Eid Sale 30% OFF" />
+            <select className={input} value={b.link || ''} onChange={(e) => setBanners(banners.map((x, j) => (j === i ? { ...x, link: e.target.value } : x)))}>
+              <option value="">Tap opens: nothing</option>
+              {inOffers.map((p) => <option key={p.id} value={p.id}>Tap opens: {p.name}</option>)}
+            </select>
+            <div className="flex gap-3">
+              <button type="button" className="text-[11px] font-bold text-teal-300" onClick={() => void saveBanners(banners)}>SAVE</button>
+              {i > 0 && <button type="button" className="text-[11px] font-bold text-slate-300" onClick={() => { const l = banners.slice(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; void saveBanners(l); }}>MOVE UP</button>}
+              <button type="button" className="ml-auto text-[11px] font-bold text-rose-300" onClick={() => void saveBanners(banners.filter((_, j) => j !== i))}>DELETE</button>
+            </div>
+          </div>
+        ))}
+        {banners.length < 5 && (
+          <label className={btn + ' cursor-pointer bg-white/10'}>
+            {busy === 'img' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} UPLOAD OFFER BANNER
+            <input type="file" accept="image/*" hidden onChange={async (e) => {
+              const f = e.target.files?.[0]; e.target.value = '';
+              if (!f) return;
+              try { const url = await upload(f, 1600); await saveBanners([...banners, { img: url, title: '' }]); } catch (err: any) { setMsg(String(err?.message || err)); }
+            }} />
+          </label>
+        )}
+      </div>
+
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">OFFER PRODUCTS · {inOffers.length}</p>
+        <p className="text-[10.5px] text-slate-400">A product with an old price (02 PRODUCTS) shows here by itself. You can also add a new offer product here, or put any product in Offers.</p>
+        {inOffers.map((p) => <OfferRow key={p.id} p={p} pct={offPct(p)} onPrice={setPrice} onRemove={p.on_offer ? () => void setOffer(p, false) : undefined} />)}
+        {!inOffers.length && <p className="text-[12px] text-slate-400">No offer products yet.</p>}
+        {add ? (
+          <div className="space-y-2 rounded-lg border border-teal-500/40 p-2">
+            <p className="text-[11px] font-bold text-teal-300">NEW OFFER PRODUCT</p>
+            <div className="flex items-center gap-2">
+              {add.img ? <img src={add.img} alt="" className="h-12 w-12 rounded-md object-cover" /> : <span className="flex h-12 w-12 items-center justify-center rounded-md bg-black/30">🏷️</span>}
+              <label className={btn + ' flex-1 cursor-pointer bg-white/10'}>
+                {busy === 'img' ? <Loader2 className="h-4 w-4 animate-spin" /> : null} PHOTO
+                <input type="file" accept="image/*" hidden onChange={async (e) => {
+                  const f = e.target.files?.[0]; e.target.value = '';
+                  if (!f) return;
+                  try { const url = await upload(f, 1200); setAdd((a) => (a ? { ...a, img: url } : a)); } catch (err: any) { setMsg(String(err?.message || err)); }
+                }} />
+              </label>
+            </div>
+            <input className={input} value={add.name} onChange={(e) => setAdd({ ...add, name: e.target.value })} placeholder="Product name" />
+            <select className={input} value={add.cat} onChange={(e) => setAdd({ ...add, cat: e.target.value })}>
+              <option value="">No category</option>
+              {cats.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+            </select>
+            <div className="grid grid-cols-3 gap-2">
+              <input className={input} value={add.price} onChange={(e) => setAdd({ ...add, price: e.target.value.replace(/[^\d.]/g, '') })} placeholder="Offer price" inputMode="decimal" />
+              <input className={input} value={add.old} onChange={(e) => setAdd({ ...add, old: e.target.value.replace(/[^\d.]/g, '') })} placeholder="Old price" inputMode="decimal" />
+              <input className={input} value={add.stock} onChange={(e) => setAdd({ ...add, stock: e.target.value.replace(/[^\d]/g, '') })} placeholder="Stock" inputMode="numeric" />
+            </div>
+            <div className="flex gap-2">
+              <button type="button" className={btn + ' flex-1'} onClick={() => void addProduct()}>ADD TO OFFERS</button>
+              <button type="button" className={btn + ' bg-white/10'} onClick={() => setAdd(null)}>CANCEL</button>
+            </div>
+            <p className="text-[10.5px] text-slate-400">More details (sizes, long description) later from 02 PRODUCTS.</p>
+          </div>
+        ) : (
+          <button type="button" className={btn + ' w-full'} onClick={() => setAdd({ name: '', price: '', old: '', stock: '10', cat: '', img: '' })}><Plus className="h-4 w-4" /> ADD NEW OFFER PRODUCT</button>
+        )}
+        {others.length > 0 && (
+          <select className={input} value="" onChange={(e) => { const p = others.find((x) => x.id === e.target.value); if (p) void setOffer(p, true); }}>
+            <option value="">+ Put an existing product in Offers…</option>
+            {others.map((p) => <option key={p.id} value={p.id}>{p.name} · {tk(Number(p.price))}</option>)}
+          </select>
+        )}
+      </div>
+      {msg && <p className="px-1 text-[12px] text-teal-300">{msg}</p>}
+    </div>
+  );
+};
+
+const OfferRow: React.FC<{ p: Prod; pct: number; onPrice: (p: Prod, price: string, old: string) => void; onRemove?: () => void }> = ({ p, pct, onPrice, onRemove }) => {
+  const [price, setPrice] = useState(String(p.price));
+  const [old, setOld] = useState(p.old_price ? String(p.old_price) : '');
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-white/10 p-2">
+      {p.images?.[0] ? <img src={p.images[0]} alt="" className="h-11 w-11 shrink-0 rounded-md object-cover" /> : <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-black/30">{p.emoji}</span>}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12.5px] font-bold text-white">{p.name}{pct ? <span className="ml-1 rounded bg-rose-600 px-1 text-[10px]">-{pct}%</span> : null}</p>
+        <div className="mt-1 flex items-center gap-1">
+          <input className={input + ' h-8 px-2 py-1 text-[12px]'} value={price} onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))} aria-label="Offer price" inputMode="decimal" />
+          <input className={input + ' h-8 px-2 py-1 text-[12px]'} value={old} onChange={(e) => setOld(e.target.value.replace(/[^\d.]/g, ''))} placeholder="Old" aria-label="Old price" inputMode="decimal" />
+          <button type="button" className="shrink-0 text-[11px] font-bold text-teal-300" onClick={() => onPrice(p, price, old)}>SAVE</button>
+        </div>
+      </div>
+      {onRemove && <button type="button" className="shrink-0 text-[10.5px] font-bold text-rose-300" onClick={onRemove}>REMOVE</button>}
     </div>
   );
 };

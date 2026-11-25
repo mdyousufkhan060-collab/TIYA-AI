@@ -179,15 +179,37 @@ export const PRINT_CSS = `
 .ibox p{display:flex;justify-content:space-between;margin:.6mm 0}.ibox p span{color:#475569}.ibox .gt{border-top:1px solid #111;padding-top:1mm;font-size:1.15em}
 .ivc .bc{margin:3mm auto 0;height:8mm;width:55%!important}.ithanks{margin-top:2mm;background:#111;color:#fff;text-align:center;font-weight:800;letter-spacing:.12em;padding:2mm;border-radius:1.5mm}
 .ivc.pos{border:0}.ivc.pos .ih{flex-direction:column;text-align:center}.ivc.pos .igrid{grid-template-columns:1fr 1fr}.ivc.pos .ibot{grid-template-columns:1fr}
-@media (max-width:640px){.ivc:not(.pos) .ih{flex-direction:column;align-items:stretch}.ivc:not(.pos) .icards{max-width:none}.ivc:not(.pos) .igrid{grid-template-columns:1fr 1fr}.ivc:not(.pos) .ci{grid-column:span 1!important}.ivc:not(.pos) .ibot{grid-template-columns:1fr}}
+@media screen and (max-width:640px){.ivc.fluid:not(.pos) .ih{flex-direction:column;align-items:stretch}.ivc.fluid:not(.pos) .icards{max-width:none}.ivc.fluid:not(.pos) .igrid{grid-template-columns:1fr 1fr}.ivc.fluid:not(.pos) .ci{grid-column:span 1!important}.ivc.fluid:not(.pos) .ibot{grid-template-columns:1fr}}
+.ivpv{background:#cbd5e1;border-radius:10px;padding:10px;overflow:hidden}.ivpg{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25);margin:0 auto;overflow:hidden}.ivpg .ivc{border:0}
 `;
+
+/** Paper size of an invoice: [width mm, height mm or 0 for a roll, label]. */
+export function invoiceDims(inv?: string): [number, number, string] {
+  const k = inv || 'a4';
+  if (k === 'pos58') return [58, 0, 'POS roll 58 mm wide · length grows with the items'];
+  if (k === 'pos80') return [80, 0, 'POS roll 80 mm wide · length grows with the items'];
+  if (k === 'a6') return [105, 148, 'A6 · 105 × 148 mm'];
+  if (k === 'a5') return [148, 210, 'A5 · 148 × 210 mm'];
+  return [210, 297, 'A4 · 210 × 297 mm'];
+}
+
+/** Small preview of one invoice on its real paper, scaled to fit boxPx wide. */
+export function invoicePreviewHTML(o: PrintOrder, s: PrintSettings, st: PrintStore, boxPx = 300): string {
+  const [w, h] = invoiceDims(s.inv);
+  const z = Math.min(1, boxPx / (w * 3.78));
+  return `<div class="ivpv"><div style="zoom:${z.toFixed(3)}"><div class="ivpg" style="width:${w}mm;${h ? `height:${h}mm` : ''}">${invoiceHTML(o, s, st)}</div></div></div>`;
+}
 
 export function printPage(kind: 'sticker' | 'invoice', orders: PrintOrder[], s: PrintSettings, store: PrintStore): string {
   const [w, h] = stickerSize(s);
   const inv = s.inv || 'a4';
-  const page = kind === 'sticker' ? `${w}mm ${h}mm` : inv === 'a4' ? 'A4' : inv === 'a5' ? 'A5' : inv === 'a6' ? 'A6' : `${inv === 'pos58' ? '58mm' : '80mm'} auto`;
+  const [iw, ih] = invoiceDims(inv);
+  const roll = kind === 'invoice' && !ih;
+  const page = kind === 'sticker' ? `${w}mm ${h}mm` : roll ? `${iw}mm 297mm` : `${iw}mm ${ih}mm`;
+  // A roll has no fixed length: measure the longest invoice and set the page to that length.
+  const fit = roll ? `var m=0;[].forEach.call(document.querySelectorAll('.pg'),function(e){m=Math.max(m,e.scrollHeight)});var st=document.createElement('style');st.textContent='@page{size:${iw}mm '+Math.ceil(m/3.78+2)+'mm;margin:0}';document.head.appendChild(st);` : '';
   const body = orders.map((o) => `<div class="pg">${kind === 'sticker' ? stickerHTML(o, s, store) : invoiceHTML(o, s, store)}</div>`).join('');
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${kind === 'sticker' ? 'Stickers' : 'Invoices'} · ${esc(store.name)}</title><style>@page{size:${page};margin:0}body{margin:0}.pg{page-break-after:always}.ivc{border:0}${PRINT_CSS}</style></head><body>${body}<script>window.onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${kind === 'sticker' ? 'Stickers' : 'Invoices'} · ${esc(store.name)}</title><style>@page{size:${page};margin:0}body{margin:0}.pg{page-break-after:always;break-after:page;overflow:hidden}.pg:last-child{page-break-after:auto;break-after:auto}.ivc{border:0}${PRINT_CSS}</style></head><body>${body}<script>window.onload=function(){${fit}setTimeout(function(){print()},400)}<\/script></body></html>`;
 }
 
 export function printOrders(kind: 'sticker' | 'invoice', orders: PrintOrder[], s: PrintSettings, store: PrintStore): string | null {
