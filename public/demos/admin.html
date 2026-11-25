@@ -13,52 +13,74 @@
   button { font: inherit; cursor: pointer; }
   .demo { background: #facc15; color: #111; font-size: 12px; font-weight: 700; text-align: center; padding: 6px 10px; }
   header { position: sticky; top: 0; z-index: 10; background: #0b1120; border-bottom: 1px solid #1e293b; }
-  .hb { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+  .hb { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
   .hb .back { color: #2dd4bf; font-weight: 800; font-size: 13px; min-width: 70px; }
   .hb b { flex: 1; text-align: center; letter-spacing: .08em; font-size: 14px; }
   .hb a.store { font-size: 12px; border: 1px solid #334155; border-radius: 9px; padding: 6px 10px; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 14px; }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 14px; }
   .layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
-  .side { position: sticky; top: 64px; align-self: start; }
+  .side { position: sticky; top: 64px; align-self: start; max-height: calc(100vh - 80px); overflow-y: auto; scrollbar-width: none; }
   .card { background: #11151e; border: 1px solid #1e293b; border-radius: 14px; padding: 12px; }
-  .bar { width: 100%; display: flex; align-items: center; gap: 10px; height: 48px; border-radius: 12px; border: 1px solid #1e293b; background: #11151e; color: #e2e8f0; padding: 0 12px; margin-bottom: 6px; text-align: left; }
+  .bar { width: 100%; display: flex; align-items: center; gap: 10px; height: 50px; border-radius: 12px; border: 1px solid #1e293b; background: #11151e; color: #e2e8f0; padding: 0 10px; margin-bottom: 6px; text-align: left; transition: border-color .2s, background .2s; }
+  .bar:hover { background: #151b27; }
   .bar.on { border-color: #14b8a6; background: #0f1f24; }
   .bar .n { font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; color: #2dd4bf; background: #1e293b; border-radius: 6px; padding: 3px 6px; }
+  .bar .ic { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-size: 17px; flex-shrink: 0; }
   .bar .t { flex: 1; font-size: 12px; font-weight: 700; letter-spacing: .06em; }
   .bar .v { font-size: 10.5px; color: #94a3b8; }
+  .bar .chev { color: #475569; font-size: 16px; }
   .store { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .store img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
-  .pill { display: inline-block; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; }
-  .live { background: #059669; color: #fff; }
-  h2 { margin: 0 0 12px; font-size: 16px; letter-spacing: .06em; }
+  .pill { display: inline-block; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; color: #fff; }
+  .live { background: #059669; }
+  h2 { margin: 0 0 12px; font-size: 16px; letter-spacing: .06em; display: flex; align-items: center; gap: 8px; }
   .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .stat b { display: block; font-size: 22px; color: #fff; }
   .stat small { color: #94a3b8; font-size: 11px; letter-spacing: .06em; }
   .chart { display: flex; align-items: flex-end; gap: 6px; height: 120px; margin-top: 8px; }
-  .chart div { flex: 1; background: linear-gradient(#2dd4bf, #0e7490); border-radius: 6px 6px 0 0; }
+  .chart div { flex: 1; background: linear-gradient(#2dd4bf, #0e7490); border-radius: 6px 6px 0 0; position: relative; }
+  .chart div span { position: absolute; bottom: -18px; left: 0; right: 0; text-align: center; font-size: 10px; color: #64748b; }
   .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
+  .row.click { cursor: pointer; border-radius: 10px; }
+  .row.click:hover { background: #151b27; }
   .row:last-child { border-bottom: 0; }
-  .row img { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; }
+  .row img, .row .ph { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; flex-shrink: 0; display: grid; place-items: center; font-size: 26px; background: #0a0f1a; }
   .row .f { flex: 1; min-width: 0; }
   .row .f p { margin: 2px 0 0; color: #94a3b8; font-size: 11.5px; }
-  .st { font-size: 10px; font-weight: 800; border-radius: 6px; padding: 3px 7px; }
-  .s-new { background: #2563eb; } .s-confirmed { background: #7c3aed; } .s-shipped { background: #d97706; } .s-delivered { background: #059669; } .s-cancelled { background: #dc2626; }
+  .st { font-size: 10px; font-weight: 800; border-radius: 6px; padding: 3px 7px; color: #fff; white-space: nowrap; }
+  .s-new { background: #2563eb; } .s-confirmed { background: #7c3aed; } .s-packed { background: #0891b2; } .s-shipped { background: #d97706; } .s-delivered { background: #059669; } .s-cancelled { background: #dc2626; } .s-returned { background: #6b7280; }
   .btn { background: #14b8a6; color: #021014; border: 0; border-radius: 10px; padding: 9px 12px; font-weight: 800; font-size: 12px; }
   .btn.alt { background: transparent; color: #e2e8f0; border: 1px solid #334155; }
+  .btn.red { background: #dc2626; color: #fff; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; color: #94a3b8; }
-  .field input, .field select, .field textarea { background: #0a0f1a; border: 1px solid #334155; border-radius: 10px; color: #fff; padding: 10px; font-size: 13px; }
+  .field input, .field select, .field textarea { background: #0a0f1a; border: 1px solid #334155; border-radius: 10px; color: #fff; padding: 10px; font-size: 13px; font-family: inherit; }
+  .two { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; }
+  .field input, .field select, .field textarea { width: 100%; min-width: 0; }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-  .tabs span { border: 1px solid #334155; border-radius: 99px; padding: 5px 10px; font-size: 11px; }
-  .tabs span.on { background: #14b8a6; color: #021014; border-color: #14b8a6; font-weight: 800; }
-  .chat { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+  .tabs button { border: 1px solid #334155; background: transparent; color: #e2e8f0; border-radius: 99px; padding: 6px 11px; font-size: 11px; font-weight: 700; }
+  .tabs button.on { background: #14b8a6; color: #021014; border-color: #14b8a6; }
+  .tabs button i { font-style: normal; opacity: .7; margin-left: 3px; }
+  .chat { display: flex; flex-direction: column; gap: 6px; font-size: 13px; max-height: 340px; overflow-y: auto; }
   .chat div { max-width: 80%; padding: 8px 10px; border-radius: 12px; }
   .chat .c { background: #1e293b; align-self: flex-start; }
   .chat .r { background: #0f766e; align-self: flex-end; }
-  .note { font-size: 12px; color: #94a3b8; margin-top: 10px; }
+  .chat .o { background: #7c3aed; align-self: flex-end; }
+  .note { font-size: 12px; color: #94a3b8; margin-top: 10px; line-height: 1.5; }
+  .toggle { width: 44px; height: 24px; border-radius: 99px; background: #334155; position: relative; border: 0; flex-shrink: 0; }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 99px; background: #fff; transition: left .2s; }
+  .toggle.on { background: #14b8a6; } .toggle.on::after { left: 23px; }
+  .thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .thumbs img, .thumbs span { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: #0a0f1a; display: grid; place-items: center; font-size: 28px; border: 1px dashed #334155; }
+  .preview { background: #fff; color: #0f172a; border-radius: 14px; overflow: hidden; }
+  .preview img { width: 100%; height: 220px; object-fit: cover; display: block; }
+  .preview .b { padding: 12px; }
+  .seo { background: #fff; color: #1a0dab; border-radius: 10px; padding: 10px; font-size: 13px; }
+  .seo small { color: #006621; display: block; } .seo p { color: #4d5156; margin: 4px 0 0; font-size: 12px; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #14b8a6; color: #021014; font-weight: 800; padding: 9px 16px; border-radius: 99px; font-size: 13px; display: none; z-index: 50; }
   @media (max-width: 820px) {
     .layout { grid-template-columns: 1fr; }
-    .side { position: static; }
+    .side { position: static; max-height: none; }
     body.inview .side { display: none; }
     body:not(.inview) .main { display: none; }
     .grid4 { grid-template-columns: repeat(2, 1fr); }
@@ -66,111 +88,288 @@
 </style>
 </head>
 <body>
-<div class="demo">DEMO ADMIN · sample data · nothing is saved</div>
+<div class="demo">DEMO ADMIN · works like the real one · nothing is saved</div>
 <header><div class="hb"><a class="back" id="back" href="/demos">‹ Demos</a><b id="title">STORE ADMIN</b><a class="store" id="storeLink" href="#">View store</a></div></header>
 <div class="wrap"><div class="layout"><aside class="side" id="side"></aside><main class="main" id="main"></main></div></div>
 <div class="toast" id="toast"></div>
 <script src="/demos/stores.js"></script>
 <script>
+(function () {
   var k = new URLSearchParams(location.search).get('s') || 'fashionhub';
   var S = window.ROSE_STORES[k] || window.ROSE_STORES.fashionhub;
-  var IMG = function (id, w) { return id ? window.ROSE_IMG(id, w || 200) : ''; };
-  var P = S.products.map(function (p, i) { return { i: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', img: IMG(p[6]), stock: [24, 8, 3, 40, 15, 0, 12, 31, 6, 19, 22, 5][i % 12] }; });
+  var IMG = function (id, w) { return id ? (/^https?:|^blob:/.test(id) ? id : window.ROSE_IMG(id, w || 300)) : ''; };
   var tk = function (n) { return '৳ ' + Math.round(n).toLocaleString('en-IN'); };
-  var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-  function toast(t) { var e = document.getElementById('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(function () { e.style.display = 'none'; }, 1600); }
-  window.toast = toast;
+  var esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  function toast(t) { var e = document.getElementById('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(function () { e.style.display = 'none'; }, 1700); }
   document.getElementById('storeLink').href = '/demos/store.html?s=' + k;
   document.title = S.name + ' Admin (demo)';
 
-  var names = ['Rahim U.', 'Nusrat J.', 'Tanvir A.', 'Sadia R.', 'Kamal H.', 'Mitu K.'];
-  var areas = ['Mirpur, Dhaka', 'Uttara, Dhaka', 'Chattogram', 'Dhanmondi, Dhaka', 'Sylhet', 'Gazipur'];
-  var stat = ['new', 'confirmed', 'shipped', 'delivered', 'new', 'cancelled'];
-  var O = names.map(function (n, i) { var p = P[i % P.length]; return { no: 1024 - i, name: n, area: areas[i], item: p, q: 1 + (i % 2), st: stat[i] }; });
-  var thumb = function (p) { return p.img ? '<img src="' + p.img + '" alt="">' : '<span style="font-size:30px">' + p.e + '</span>'; };
-  var row = function (img, title, sub, right) { return '<div class="row">' + img + '<div class="f"><b>' + title + '</b><p>' + sub + '</p></div>' + (right || '') + '</div>'; };
-  var demoBtn = function (t, alt) { return '<button class="btn' + (alt ? ' alt' : '') + '" onclick="toast(\'Demo: ' + t + '\')">' + t + '</button>'; };
+  // ---------------- demo state (lives only in this tab) ----------------
+  var st = {
+    products: S.products.map(function (p, i) {
+      return { id: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', imgs: p[6] ? [p[6]] : [], stock: [24, 8, 3, 40, 15, 0, 12, 31, 6, 19, 22, 5][i % 12], active: true,
+        desc: p[0] + ' from ' + S.name + '. Best quality, checked before delivery. ' + (S.note || ''), opts: S.options ? S.options.values.slice() : [], optLabel: S.options ? S.options.label : '' };
+    }),
+    cats: S.categories.map(function (c) { return { name: c[0], icon: c[1] }; }),
+    coupons: [{ code: 'ROSE10', text: '10% off, min 1,000 Tk', on: true }, { code: 'FREESHIP', text: 'Free delivery over 1,500 Tk', on: true }, { code: 'EID500', text: '500 Tk off, min 5,000 Tk', on: false }],
+    pay: [['Cash on Delivery', true], ['bKash (Send Money + TrxID)', true], ['Nagad', true], ['Rocket', false], ['Bank transfer', false]],
+    couriers: [['Steadfast', true], ['Pathao', false], ['RedX', false]],
+    staff: [['rahim.staff@gmail.com', 'ORDER STAFF'], ['mitu.design@gmail.com', 'PRODUCT STAFF']],
+    banners: S.banners.map(function (b) { return { title: b.title, badge: b.badge, img: b.img }; }),
+    chats: [], takeover: false,
+  };
+  var names = ['Rahim U.', 'Nusrat J.', 'Tanvir A.', 'Sadia R.', 'Kamal H.', 'Mitu K.', 'Arif B.', 'Lima S.'];
+  var areas = ['Mirpur, Dhaka', 'Uttara, Dhaka', 'Chattogram', 'Dhanmondi, Dhaka', 'Sylhet', 'Gazipur', 'Khulna', 'Banani, Dhaka'];
+  var stat0 = ['new', 'new', 'confirmed', 'packed', 'shipped', 'delivered', 'delivered', 'cancelled'];
+  st.orders = names.map(function (n, i) {
+    var p = st.products[i % st.products.length], q = 1 + (i % 2), del = /Dhaka/.test(areas[i]) ? 60 : 120;
+    return { no: 1024 - i, name: n, phone: '01' + (7 + (i % 3)) + '1234567' + i, area: areas[i], items: [{ p: p.id, q: q }], del: del, total: p.price * q + del,
+      pay: i % 3 ? 'COD' : 'bKash', trx: i % 3 ? '' : 'BK7' + (3920 + i) + 'XQ', st: stat0[i], time: (i * 37 + 9) + ' min ago', history: i === 7 ? '3 orders, 2 returned' : (i + 1) + ' orders, 0 returned', track: '' };
+  });
+  st.reviews = st.products.slice(0, 4).map(function (p, i) { return { p: p.id, who: names[i], stars: i % 2 ? 4 : 5, text: ['Good quality, fast delivery.', 'Exactly as shown. Will order again.', 'Packing was nice, thanks!', 'Price is fair.'][i], reply: '', hidden: false }; });
+  var P = function (id) { return st.products[id]; };
+  var thumb = function (p) { return p && p.imgs[0] ? '<img src="' + IMG(p.imgs[0], 160) + '" alt="">' : '<span class="ph">' + (p ? p.e : '📦') + '</span>'; };
+  var row = function (img, title, sub, right, click) { return '<div class="row' + (click ? ' click" onclick="' + click : '') + '">' + img + '<div class="f"><b>' + title + '</b><p>' + sub + '</p></div>' + (right || '') + '</div>'; };
+  var btn = function (t, fn, cls) { return '<button class="btn ' + (cls || '') + '" onclick="' + fn + '">' + t + '</button>'; };
+  var STATUSES = ['new', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled', 'returned'];
 
-  var VIEWS = [
-    ['DASHBOARD', 'TODAY', function () {
-      var bars = [40, 65, 52, 80, 70, 95, 88].map(function (h) { return '<div style="height:' + h + '%"></div>'; }).join('');
-      return '<div class="grid4">' + [['18', 'ORDERS TODAY'], [tk(24650), 'SALES TODAY'], ['1,240', 'VISITORS'], ['3.2%', 'CONVERSION']].map(function (x) { return '<div class="card stat"><b>' + x[0] + '</b><small>' + x[1] + '</small></div>'; }).join('') + '</div>' +
-        '<div class="card" style="margin-top:10px"><b style="font-size:13px">SALES · LAST 7 DAYS</b><div class="chart">' + bars + '</div></div>' +
-        '<div class="card" style="margin-top:10px"><b style="font-size:13px">LOW STOCK</b>' + P.filter(function (p) { return p.stock < 7; }).map(function (p) { return row(thumb(p), esc(p.name), p.stock ? 'Only ' + p.stock + ' left' : 'Out of stock', demoBtn('Restock', true)); }).join('') + '</div>';
-    }],
-    ['ORDERS', '6 NEW', function () {
-      return '<div class="tabs"><span class="on">ALL</span><span>NEW</span><span>CONFIRMED</span><span>SHIPPED</span><span>DELIVERED</span></div><div class="card">' + O.map(function (o) {
-        return row(thumb(o.item), '#' + o.no + ' · ' + tk(o.item.price * o.q + 60), esc(o.name) + ' · 017XXXXXXXX · ' + o.area + '<br>' + esc(o.item.name) + ' ×' + o.q + ' · COD', '<span class="st s-' + o.st + '">' + o.st.toUpperCase() + '</span>');
-      }).join('') + '</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">' + demoBtn('Book Steadfast') + demoBtn('Book Pathao', 1) + demoBtn('Print invoice', 1) + demoBtn('Call customer', 1) + '</div><p class="note">Fraud check: ROSE checks the phone number’s past courier returns before you confirm.</p>';
-    }],
-    ['PRODUCTS', P.length + ' ITEMS', function () {
-      return '<div style="display:flex;gap:8px;margin-bottom:10px">' + demoBtn('+ ADD PRODUCT') + demoBtn('Bulk upload (Excel)', 1) + '</div><div class="card">' + P.map(function (p) {
-        return row(thumb(p), esc(p.name) + (p.rx ? ' <span class="pill" style="background:#0e7490">Rx</span>' : ''), tk(p.price) + ' <s>' + tk(p.old) + '</s> · ' + esc(p.cat) + ' · stock ' + p.stock, demoBtn('Edit', true));
-      }).join('') + '</div><div class="card" style="margin-top:10px"><b style="font-size:13px">ADD PRODUCT (form)</b><div style="margin-top:10px">' +
-        ['Product name', 'Price', 'Old price', 'Stock', 'Size / Colour (S, M, L)', 'SEO title'].map(function (f) { return '<div class="field"><span>' + f + '</span><input placeholder="' + f + '"></div>'; }).join('') +
-        '<div class="field"><span>Photos (from phone gallery or camera)</span><input type="file" accept="image/*" multiple></div><div class="field"><span>Description</span><textarea rows="3"></textarea></div>' + demoBtn('SAVE') + '</div></div>';
-    }],
-    ['CATEGORIES', S.categories.length, function () {
-      return '<div class="card">' + S.categories.map(function (c) { return row('<span style="font-size:28px;width:46px;text-align:center">' + c[1] + '</span>', esc(c[0]), P.filter(function (p) { return p.cat === c[0]; }).length + ' products', demoBtn('Edit', true)); }).join('') + '</div><div style="margin-top:10px">' + demoBtn('+ ADD CATEGORY') + '</div>';
-    }],
-    ['HOMEPAGE & DESIGN', 'BANNERS', function () {
-      return '<div class="card"><b style="font-size:13px">LOGO & NAME</b><div class="field" style="margin-top:8px"><span>Logo (upload separately)</span><input type="file" accept="image/*"></div><div class="field"><span>Store name</span><input value="' + esc(S.name) + '"></div><div class="field"><span>Tagline</span><input value="' + esc(S.tagline) + '"></div>' +
-        '<div class="field"><span>Main colour</span><input type="color" value="' + S.color + '" style="height:42px"></div></div>' +
-        '<div class="card" style="margin-top:10px"><b style="font-size:13px">BANNER SLIDER</b>' + S.banners.map(function (b) { return row(b.img ? '<img src="' + IMG(b.img, 300) + '" alt="" style="width:80px">' : '', esc(b.title), esc(b.badge), demoBtn('Edit', true)); }).join('') + '<div style="margin-top:8px">' + demoBtn('+ ADD BANNER') + '</div></div>' +
-        '<div class="card" style="margin-top:10px"><b style="font-size:13px">SECTIONS ORDER</b><p class="note">Banner slider · Trust row · Categories · ' + esc(S.sectionTitle) + ' · Offer banners · New arrivals (drag to reorder)</p><p class="note">Flash Sale timer: ends in 05:42:10</p></div>';
-    }],
-    ['CUSTOMERS', '312', function () {
-      return '<div class="card">' + names.map(function (n, i) { return row('<span style="font-size:26px;width:46px;text-align:center">👤</span>', esc(n), (3 + i) + ' orders · ' + tk(2400 + i * 1350) + ' spent · ' + (120 + i * 40) + ' points', i === 5 ? '<span class="st s-cancelled">2 RETURNS</span>' : ''); }).join('') + '</div>';
-    }],
-    ['OFFERS & COUPONS', '3 ACTIVE', function () {
-      return '<div class="card">' + [['ROSE10', '10% off, min 1,000 Tk'], ['FREESHIP', 'Free delivery over 1,500 Tk'], ['EID500', '500 Tk off, min 5,000 Tk']].map(function (c) { return row('<span style="font-size:26px;width:46px;text-align:center">🏷️</span>', c[0], c[1], '<span class="pill live">ON</span>'); }).join('') + '</div><div style="margin-top:10px">' + demoBtn('+ NEW COUPON') + '</div>';
-    }],
-    ['REVIEWS', '4.6 ★', function () {
-      return '<div class="card">' + P.slice(0, 4).map(function (p, i) { return row(thumb(p), '★★★★' + (i % 2 ? '☆' : '★') + ' · ' + esc(names[i]) + ' <span class="pill" style="background:#14532d">Verified Buyer</span>', '"Good quality, fast delivery." · ' + esc(p.name), demoBtn('Reply', true)); }).join('') + '</div><p class="note">Only real buyers can review. You can reply or hide bad words.</p>';
-    }],
-    ['LIVE CHAT', '2 NEW', function () {
-      return '<div class="card"><b style="font-size:13px">Nusrat J. · now typing…</b><div class="chat" style="margin-top:10px"><div class="c">Is the ' + esc(P[0].name) + ' available?</div><div class="r">🤖 ROSE: Yes! ' + esc(P[0].name) + ' is ' + tk(P[0].price) + ' and in stock. Delivery 60 Tk inside Dhaka.</div><div class="c">Can I get it tomorrow?</div><div class="r">🤖 ROSE: Order before 6 PM and it reaches you tomorrow in Dhaka.</div></div><div style="display:flex;gap:8px;margin-top:12px">' + demoBtn('TAKE OVER') + demoBtn('Send order link', 1) + '</div></div><p class="note">Every chat also reaches the owner’s ROSE app, and ROSE tells you by voice.</p>';
-    }],
-    ['PAYMENTS', 'COD · bKash', function () {
-      return '<div class="card">' + [['Cash on Delivery', 'ON'], ['bKash (Send Money + TrxID)', 'ON'], ['Nagad', 'ON'], ['Rocket', 'OFF'], ['Card: SSLCommerz / aamarPay', 'NEEDS TRADE LICENCE'], ['Bank transfer', 'OFF']].map(function (m) { return row('<span style="font-size:24px;width:46px;text-align:center">💳</span>', m[0], '', '<span class="pill" style="background:' + (m[1] === 'ON' ? '#059669' : '#334155') + '">' + m[1] + '</span>'); }).join('') + '</div><div class="field" style="margin-top:10px"><span>bKash number</span><input value="017XXXXXXXX"></div>';
-    }],
-    ['DELIVERY', '60 / 120 TK', function () {
-      return '<div class="card"><div class="field"><span>Inside Dhaka</span><input value="60"></div><div class="field"><span>Outside Dhaka</span><input value="120"></div><div class="field"><span>Free delivery over</span><input value="1500"></div></div><div class="card" style="margin-top:10px">' + ['Steadfast', 'Pathao', 'RedX'].map(function (c, i) { return row('<span style="font-size:24px;width:46px;text-align:center">🚚</span>', c, i ? 'Not connected' : 'Connected · auto booking', demoBtn(i ? 'Connect' : 'Test', true)); }).join('') + '</div>';
-    }],
-    ['TRACKING & PIXELS', 'ADS', function () {
-      return '<div class="card">' + [['Facebook Pixel ID', '1234567890'], ['Facebook Conversions API token', '••••••••'], ['TikTok Pixel ID', 'C0ABCDEF'], ['Google Analytics 4 (G-…)', 'G-XXXXXXX'], ['Google Tag Manager (GTM-…)', ''], ['Search Console verification', '']].map(function (f) { return '<div class="field"><span>' + f[0] + '</span><input value="' + f[1] + '" placeholder="paste here"></div>'; }).join('') + demoBtn('SAVE') + '<p class="note">Sent automatically: PageView, ViewContent, AddToCart, InitiateCheckout, Purchase. How-to videos show where to copy each ID.</p></div>';
-    }],
-    ['SEO', '82 / 100', function () {
-      return '<div class="card">' + P.slice(0, 5).map(function (p, i) { var sc = [92, 78, 64, 88, 71][i]; return row(thumb(p), esc(p.name), sc > 80 ? 'Good' : 'Add a longer description and 2 more photos', '<span class="pill" style="background:' + (sc > 80 ? '#059669' : '#d97706') + '">' + sc + '</span>'); }).join('') + '</div><p class="note">Automatic: fast WebP photos, Product schema, sitemap, clean links. ROSE can write titles and descriptions.</p>';
-    }],
-    ['STAFF', '2 / 3', function () {
-      return '<div class="card">' + [['rahim.staff@gmail.com', 'ORDER STAFF'], ['mitu.design@gmail.com', 'PRODUCT STAFF']].map(function (s) { return row('<span style="font-size:24px;width:46px;text-align:center">👤</span>', s[0], s[1], demoBtn('Remove', true)); }).join('') + '</div><div class="card" style="margin-top:10px"><div class="field"><span>Staff Gmail</span><input placeholder="staff@gmail.com"></div><div class="field"><span>Role</span><select><option>MANAGER</option><option>ORDER STAFF</option><option>PRODUCT STAFF</option><option>CHAT SUPPORT</option><option>MARKETING</option><option>ACCOUNTS</option><option>CUSTOM</option></select></div>' + demoBtn('SEND INVITE') + '</div><p class="note">Staff sign in with that Gmail and see only their bars. Activity log shows who changed what.</p>';
-    }],
-    ['DOMAIN', 'myrosebd.com', function () {
-      return '<div class="card"><b style="font-size:13px">Store link</b><p class="note">myrosebd.com/shop/' + k + '</p></div><div class="card" style="margin-top:10px"><b style="font-size:13px">Own domain</b><div class="field" style="margin-top:8px"><span>Your domain</span><input placeholder="yourshop.com"></div><p class="note">Add these 2 records where you bought the domain:<br>A · @ · 216.198.79.1<br>CNAME · www · cname.vercel-dns.com</p>' + demoBtn('CHECK DOMAIN') + '</div><div class="card" style="margin-top:10px"><b style="font-size:13px">Hostinger</b><p class="note">Business plan: DOWNLOAD FOR HOSTINGER (ZIP) with a step-by-step guide.</p>' + demoBtn('DOWNLOAD ZIP', 1) + '</div>';
-    }],
-    ['REPORTS', 'THIS MONTH', function () {
-      return '<div class="grid4">' + [['412', 'ORDERS'], [tk(568400), 'SALES'], [tk(96300), 'PROFIT (EST.)'], ['4.1%', 'RETURNS']].map(function (x) { return '<div class="card stat"><b>' + x[0] + '</b><small>' + x[1] + '</small></div>'; }).join('') + '</div><div class="card" style="margin-top:10px"><b style="font-size:13px">TOP PRODUCTS</b>' + P.slice(0, 4).map(function (p, i) { return row(thumb(p), esc(p.name), (90 - i * 17) + ' sold', ''); }).join('') + '</div><div style="margin-top:10px">' + demoBtn('Export Excel', 1) + '</div>';
-    }],
+  // ---------------- bars ----------------
+  var BARS = [
+    ['dashboard', 'DASHBOARD', '📊', '#1d4ed8', function () { return 'TODAY'; }],
+    ['orders', 'ORDERS', '🧾', '#7c3aed', function () { return st.orders.filter(function (o) { return o.st === 'new'; }).length + ' NEW'; }],
+    ['products', 'PRODUCTS', '📦', '#0d9488', function () { return st.products.length + ' ITEMS'; }],
+    ['categories', 'CATEGORIES', '🗂️', '#ca8a04', function () { return st.cats.length; }],
+    ['design', 'HOMEPAGE & DESIGN', '🎨', '#db2777', function () { return 'BANNERS'; }],
+    ['customers', 'CUSTOMERS', '👥', '#2563eb', function () { return '312'; }],
+    ['offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', function () { return st.coupons.filter(function (c) { return c.on; }).length + ' ACTIVE'; }],
+    ['reviews', 'REVIEWS', '⭐', '#eab308', function () { return '4.6 ★'; }],
+    ['chat', 'LIVE CHAT', '💬', '#059669', function () { return st.takeover ? 'YOU' : 'ROSE'; }],
+    ['payments', 'PAYMENTS', '💳', '#4f46e5', function () { return st.pay.filter(function (p) { return p[1]; }).length + ' ON'; }],
+    ['delivery', 'DELIVERY', '🚚', '#b45309', function () { return '60 / 120 TK'; }],
+    ['pixels', 'TRACKING & PIXELS', '📈', '#0284c7', function () { return 'ADS'; }],
+    ['seo', 'SEO', '🔍', '#16a34a', function () { return '82 / 100'; }],
+    ['staff', 'STAFF', '👤', '#9333ea', function () { return st.staff.length + ' / 3'; }],
+    ['domain', 'DOMAIN', '🌐', '#0891b2', function () { return 'LINK'; }],
+    ['reports', 'REPORTS', '📑', '#64748b', function () { return 'MONTH'; }],
   ];
+  var barOf = function (id) { return BARS.filter(function (b) { return b[0] === id; })[0]; };
 
+  // ---------------- views ----------------
+  var V = {};
+  V.dashboard = function () {
+    var today = st.orders.filter(function (o) { return o.st !== 'cancelled'; });
+    var days = ['Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed'];
+    var bars = [40, 65, 52, 80, 70, 95, 88].map(function (h, i) { return '<div style="height:' + h + '%" title="' + tk(h * 410) + '"><span>' + days[i] + '</span></div>'; }).join('');
+    return '<div class="grid4">' + [[today.length, 'ORDERS TODAY', 'orders'], [tk(today.reduce(function (a, o) { return a + o.total; }, 0)), 'SALES TODAY', 'reports'], ['1,240', 'VISITORS', 'pixels'], ['3.2%', 'CONVERSION', 'reports']].map(function (x) {
+      return '<div class="card stat" style="cursor:pointer" onclick="go(\'' + x[2] + '\')"><b>' + x[0] + '</b><small>' + x[1] + '</small></div>'; }).join('') + '</div>' +
+      '<div class="card" style="margin-top:10px;padding-bottom:26px"><b style="font-size:13px">SALES · LAST 7 DAYS</b><div class="chart">' + bars + '</div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">NEW ORDERS</b>' + st.orders.filter(function (o) { return o.st === 'new'; }).map(orderRow).join('') + '</div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">LOW STOCK</b>' + st.products.filter(function (p) { return p.stock < 7; }).map(function (p) {
+        return row(thumb(p), esc(p.name), p.stock ? 'Only ' + p.stock + ' left' : 'Out of stock', btn('+10', 'restock(' + p.id + ')', 'alt'));
+      }).join('') + '</div>';
+  };
+  function orderRow(o) {
+    var p = P(o.items[0].p);
+    return row(thumb(p), '#' + o.no + ' · ' + tk(o.total), esc(o.name) + ' · ' + o.area + '<br>' + esc(p.name) + ' ×' + o.items[0].q + ' · ' + o.pay + ' · ' + o.time, '<span class="st s-' + o.st + '">' + o.st.toUpperCase() + '</span>', "go('order/" + o.no + "')");
+  }
+  var orderFilter = 'all';
+  V.orders = function () {
+    var count = function (s) { return st.orders.filter(function (o) { return s === 'all' || o.st === s; }).length; };
+    var list = st.orders.filter(function (o) { return orderFilter === 'all' || o.st === orderFilter; });
+    return '<div class="tabs">' + ['all', 'new', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled'].map(function (s) {
+      return '<button class="' + (orderFilter === s ? 'on' : '') + '" onclick="setOrderFilter(\'' + s + '\')">' + s.toUpperCase() + '<i>' + count(s) + '</i></button>'; }).join('') + '</div>' +
+      '<div class="card">' + (list.length ? list.map(orderRow).join('') : '<p class="note">No orders here.</p>') + '</div><p class="note">Tap an order to open it: confirm, book courier, print invoice, call the customer.</p>';
+  };
+  V.order = function (no) {
+    var o = st.orders.filter(function (x) { return x.no === +no; })[0]; if (!o) return '<p class="note">Not found.</p>';
+    var p = P(o.items[0].p), sub = p.price * o.items[0].q;
+    var risky = /returned/.test(o.history) && !/0 returned/.test(o.history);
+    return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">#' + o.no + '</b><span class="st s-' + o.st + '">' + o.st.toUpperCase() + '</span></div>' +
+      '<p class="note" style="margin-top:4px">' + o.time + ' · paid by ' + o.pay + (o.trx ? ' · TrxID ' + o.trx : '') + '</p>' +
+      row(thumb(p), esc(p.name) + ' ×' + o.items[0].q, tk(p.price) + ' each', '<b>' + tk(sub) + '</b>') +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:8px"><span>Delivery</span><b>' + tk(o.del) + '</b></div><div style="display:flex;justify-content:space-between;font-size:15px;margin-top:4px"><span>Total</span><b style="color:#2dd4bf">' + tk(o.total) + '</b></div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">CUSTOMER</b><p style="margin:6px 0 0">' + esc(o.name) + ' · <a href="tel:' + o.phone + '" style="color:#2dd4bf">' + o.phone + '</a></p><p class="note" style="margin-top:2px">' + o.area + '</p>' +
+      '<p class="note" style="margin-top:6px">Courier history: <b style="color:' + (risky ? '#f87171' : '#34d399') + '">' + o.history + '</b>' + (risky ? ' · ask for advance payment' : ' · safe for COD') + '</p></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">CHANGE STATUS</b><div class="tabs" style="margin-top:8px">' + STATUSES.map(function (s) { return '<button class="' + (o.st === s ? 'on' : '') + '" onclick="setStatus(' + o.no + ',\'' + s + '\')">' + s.toUpperCase() + '</button>'; }).join('') + '</div>' +
+      (o.track ? '<p class="note">Courier: ' + o.track + '</p>' : '') +
+      '<div class="btns">' + btn('🚚 Book Steadfast', 'book(' + o.no + ',\'Steadfast\')') + btn('Book Pathao', 'book(' + o.no + ',\'Pathao\')', 'alt') + btn('🖨️ Invoice', 'invoice(' + o.no + ')', 'alt') + btn('📞 Call', 'toast(\'Calling ' + o.phone + '…\')', 'alt') + btn('WhatsApp', 'toast(\'WhatsApp opened with the order message\')', 'alt') + '</div></div>';
+  };
+  var prodFilter = 'all';
+  V.products = function () {
+    var list = st.products.filter(function (p) { return prodFilter === 'all' || p.cat === prodFilter; });
+    return '<div class="btns" style="margin:0 0 10px">' + btn('+ ADD PRODUCT', "go('product/new')") + btn('📥 Bulk upload (Excel)', "toast('Choose an Excel file: name, price, stock, category, photo link')", 'alt') + '</div>' +
+      '<div class="tabs"><button class="' + (prodFilter === 'all' ? 'on' : '') + '" onclick="setProdFilter(\'all\')">ALL</button>' + st.cats.map(function (c) { return '<button class="' + (prodFilter === c.name ? 'on' : '') + '" onclick="setProdFilter(\'' + esc(c.name).replace(/'/g, '') + '\')">' + c.icon + ' ' + esc(c.name) + '</button>'; }).join('') + '</div>' +
+      '<div class="card">' + list.map(function (p) {
+        return row(thumb(p), esc(p.name) + (p.rx ? ' <span class="pill" style="background:#0e7490">Rx</span>' : '') + (p.active ? '' : ' <span class="pill" style="background:#475569">HIDDEN</span>'),
+          tk(p.price) + (p.old > p.price ? ' <s>' + tk(p.old) + '</s>' : '') + ' · ' + esc(p.cat) + ' · stock ' + p.stock, '<span class="chev">›</span>', "go('product/" + p.id + "')");
+      }).join('') + '</div>';
+  };
+  V.product = function (id) {
+    var isNew = id === 'new';
+    var p = isNew ? { id: -1, name: '', cat: st.cats[0] ? st.cats[0].name : '', e: '📦', price: '', old: '', stock: 10, imgs: [], active: true, desc: '', opts: [], optLabel: '' } : P(+id);
+    if (!p) return '<p class="note">Not found.</p>';
+    var off = p.old > p.price ? Math.round((1 - p.price / p.old) * 100) : 0;
+    return '<div class="layoutp" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px">' +
+      '<div class="card"><b style="font-size:13px">' + (isNew ? 'ADD PRODUCT' : 'EDIT PRODUCT') + '</b>' +
+      '<div class="field" style="margin-top:10px"><span>Photos (first one is the main photo)</span><div class="thumbs" id="thumbs">' + p.imgs.map(function (u) { return '<img src="' + IMG(u, 160) + '" alt="">'; }).join('') + '<label style="cursor:pointer"><span>＋</span><input type="file" accept="image/*" multiple hidden onchange="addPhotos(this)"></label></div></div>' +
+      '<div class="field"><span>Product name (clear words people search)</span><input id="pName" value="' + esc(p.name) + '" placeholder="e.g. Men’s Black Cotton T-Shirt"></div>' +
+      '<div class="two"><div class="field"><span>Price</span><input id="pPrice" inputmode="numeric" value="' + p.price + '"></div><div class="field"><span>Old price (shows % OFF)</span><input id="pOld" inputmode="numeric" value="' + p.old + '"></div></div>' +
+      '<div class="two"><div class="field"><span>Stock</span><input id="pStock" inputmode="numeric" value="' + p.stock + '"></div><div class="field"><span>Category</span><select id="pCat">' + st.cats.map(function (c) { return '<option' + (c.name === p.cat ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select></div></div>' +
+      '<div class="two"><div class="field"><span>Option name</span><input id="pOptL" value="' + esc(p.optLabel) + '" placeholder="Size / Colour"></div><div class="field"><span>Options</span><input id="pOpts" value="' + esc(p.opts.join(', ')) + '" placeholder="S, M, L, XL"></div></div>' +
+      '<div class="field"><span>Description (what it is, material, size, delivery)</span><textarea id="pDesc" rows="4">' + esc(p.desc) + '</textarea></div>' +
+      '<div class="field"><span>SEO title (Google)</span><input id="pSeo" value="' + esc(p.name ? p.name + ' | ' + S.name : '') + '"></div>' +
+      '<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px"><button class="toggle' + (p.active ? ' on' : '') + '" id="pAct" onclick="this.classList.toggle(\'on\')"></button> Show in store</div>' +
+      '<div class="btns">' + btn('SAVE', 'saveProduct(' + (isNew ? -1 : p.id) + ')') + btn('🤖 ROSE write description', 'aiDesc()', 'alt') + (isNew ? '' : btn('Delete', 'delProduct(' + p.id + ')', 'red')) + '</div></div>' +
+      '<div><div class="card"><b style="font-size:13px">HOW CUSTOMERS SEE IT</b><div class="preview" style="margin-top:10px">' + (p.imgs[0] ? '<img src="' + IMG(p.imgs[0], 700) + '" alt="">' : '<div style="height:220px;display:grid;place-items:center;font-size:90px;background:#f1f5f9">' + p.e + '</div>') +
+      '<div class="b"><b style="font-size:16px">' + esc(p.name || 'Product name') + '</b><div style="margin-top:6px"><b style="color:#dc2626;font-size:20px">' + tk(p.price || 0) + '</b>' + (off ? ' <s style="color:#64748b">' + tk(p.old) + '</s> <span class="pill" style="background:#ef4444">-' + off + '%</span>' : '') + '</div>' +
+      (p.opts.length ? '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + p.opts.map(function (o, i) { return '<span style="border:1.5px solid ' + (i ? '#e5e7eb' : S.color) + ';border-radius:8px;padding:4px 10px;font-size:12px">' + esc(o) + '</span>'; }).join('') + '</div>' : '') +
+      '<p style="font-size:13px;color:#334155;line-height:1.5">' + esc(p.desc).slice(0, 220) + '</p><div style="background:' + S.color + ';color:#fff;border-radius:10px;padding:10px;text-align:center;font-weight:800">🛒 Add to Cart</div></div></div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">ON GOOGLE</b><div class="seo" style="margin-top:8px"><small>myrosebd.com/shop/' + k + '/product/' + (p.name || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '</small>' + esc((p.name || 'Product') + ' | ' + S.name) + '<p>' + tk(p.price || 0) + ' · In stock · ' + esc(p.desc).slice(0, 110) + '…</p></div></div></div></div>';
+  };
+  V.categories = function () {
+    return '<div class="card">' + st.cats.map(function (c, i) {
+      return row('<span class="ph">' + c.icon + '</span>', esc(c.name), st.products.filter(function (p) { return p.cat === c.name; }).length + ' products', btn('↑', 'moveCat(' + i + ')', 'alt') + ' ' + btn('✕', 'delCat(' + i + ')', 'alt'));
+    }).join('') + '</div><div class="card" style="margin-top:10px"><div class="two"><div class="field"><span>Icon</span><input id="cIcon" value="🏷️"></div><div class="field"><span>New category</span><input id="cName" placeholder="Category name"></div></div>' + btn('+ ADD CATEGORY', 'addCat()') + '</div>';
+  };
+  V.design = function () {
+    return '<div class="card"><b style="font-size:13px">LOGO & NAME (separate)</b><div style="display:flex;align-items:center;gap:10px;margin-top:10px"><span class="ph" id="logoBox" style="width:56px;height:56px;border-radius:12px;display:grid;place-items:center;font-size:30px;background:#fff;overflow:hidden">' + S.logo + '</span><label class="btn alt" style="cursor:pointer">UPLOAD LOGO<input type="file" accept="image/*" hidden onchange="setLogo(this)"></label></div>' +
+      '<div class="field" style="margin-top:10px"><span>Store name</span><input value="' + esc(S.name) + '"></div><div class="field"><span>Tagline</span><input value="' + esc(S.tagline) + '"></div><div class="two"><div class="field"><span>Main colour</span><input type="color" value="' + S.color + '" style="height:42px"></div><div class="field"><span>Accent</span><input type="color" value="' + S.accent + '" style="height:42px"></div></div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">BANNER SLIDER</b>' + st.banners.map(function (b, i) {
+        return '<div class="row">' + (b.img ? '<img src="' + IMG(b.img, 300) + '" alt="" style="width:90px">' : '<span class="ph">🖼️</span>') + '<div class="f"><input value="' + esc(b.title) + '" onchange="st.banners[' + i + '].title=this.value" style="width:100%;background:#0a0f1a;border:1px solid #334155;border-radius:8px;color:#fff;padding:6px"><p>' + esc(b.badge) + '</p></div>' + btn('✕', 'st.banners.splice(' + i + ',1);render()', 'alt') + '</div>';
+      }).join('') + '<div class="btns">' + btn('+ ADD BANNER', 'st.banners.push({title:\'New offer\',badge:\'Shop now\',img:\'\'});render()') + btn('SAVE', "toast('Homepage saved')", 'alt') + '</div></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">SECTIONS (tap to turn on/off)</b>' + ['Banner slider', 'Trust row', 'Categories', S.sectionTitle, 'Offer banners', 'New arrivals', 'Flash Sale timer'].map(function (t, i) {
+        return '<div class="row"><span class="ph">' + (i + 1) + '</span><div class="f"><b>' + esc(t) + '</b></div><button class="toggle' + (i < 6 ? ' on' : '') + '" onclick="this.classList.toggle(\'on\')"></button></div>'; }).join('') + '</div>';
+  };
+  V.customers = function () {
+    return '<div class="card">' + st.orders.map(function (o, i) {
+      return row('<span class="ph">👤</span>', esc(o.name), o.phone + ' · ' + o.area + ' · ' + o.history + ' · ' + (120 + i * 40) + ' points', /2 returned/.test(o.history) ? '<span class="st s-cancelled">RISK</span>' : '<span class="chev">›</span>', "toast('" + esc(o.name) + ": " + (3 + i) + " orders, " + tk(2400 + i * 1350) + " spent')");
+    }).join('') + '</div>';
+  };
+  V.offers = function () {
+    return '<div class="card">' + st.coupons.map(function (c, i) {
+      return '<div class="row"><span class="ph">🏷️</span><div class="f"><b>' + c.code + '</b><p>' + esc(c.text) + '</p></div><button class="toggle' + (c.on ? ' on' : '') + '" onclick="st.coupons[' + i + '].on=!st.coupons[' + i + '].on;render()"></button></div>';
+    }).join('') + '</div><div class="card" style="margin-top:10px"><div class="two"><div class="field"><span>Code</span><input id="cpCode" placeholder="SALE20"></div><div class="field"><span>Discount</span><input id="cpText" placeholder="20% off, min 800 Tk"></div></div>' + btn('+ NEW COUPON', 'addCoupon()') + '</div>';
+  };
+  V.reviews = function () {
+    return '<div class="card">' + st.reviews.map(function (r, i) {
+      var p = P(r.p);
+      return '<div class="row" style="align-items:flex-start">' + thumb(p) + '<div class="f"><b>' + '★★★★★'.slice(0, r.stars) + '☆☆☆☆☆'.slice(0, 5 - r.stars) + ' · ' + esc(r.who) + ' <span class="pill" style="background:#14532d">Verified Buyer</span>' + (r.hidden ? ' <span class="pill" style="background:#475569">HIDDEN</span>' : '') + '</b><p>"' + esc(r.text) + '" · ' + esc(p.name) + '</p>' +
+        (r.reply ? '<p style="color:#5eead4">↳ ' + esc(r.reply) + '</p>' : '<div style="display:flex;gap:6px;margin-top:6px"><input id="rv' + i + '" placeholder="Write a reply" style="flex:1;background:#0a0f1a;border:1px solid #334155;border-radius:8px;color:#fff;padding:6px">' + btn('Reply', 'replyRev(' + i + ')') + '</div>') + '</div>' + btn(r.hidden ? 'Show' : 'Hide', 'st.reviews[' + i + '].hidden=!st.reviews[' + i + '].hidden;render()', 'alt') + '</div>';
+    }).join('') + '</div><p class="note">Only real buyers can review. Fake reviews cannot be added.</p>';
+  };
+  V.chat = function () {
+    if (!st.chats.length) st.chats = [['c', 'Is the ' + st.products[0].name + ' available?'], ['r', '🤖 ROSE: Yes! ' + st.products[0].name + ' is ' + tk(st.products[0].price) + ' and in stock. Delivery 60 Tk inside Dhaka.'], ['c', 'Can I get it tomorrow?'], ['r', '🤖 ROSE: Order before 6 PM and it reaches you tomorrow in Dhaka.']];
+    return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">Nusrat J. · <span style="color:#34d399">online</span></b><span class="pill" style="background:' + (st.takeover ? '#7c3aed' : '#0f766e') + '">' + (st.takeover ? 'YOU ARE REPLYING' : 'ROSE IS REPLYING') + '</span></div>' +
+      '<div class="chat" id="chatBox" style="margin-top:10px">' + st.chats.map(function (m) { return '<div class="' + m[0] + '">' + esc(m[1]) + '</div>'; }).join('') + '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:10px"><input id="chatIn" placeholder="' + (st.takeover ? 'Type your reply…' : 'Type as the customer to test ROSE…') + '" style="flex:1;background:#0a0f1a;border:1px solid #334155;border-radius:10px;color:#fff;padding:10px" onkeydown="if(event.key===\'Enter\')sendChat()">' + btn('SEND', 'sendChat()') + '</div>' +
+      '<div class="btns">' + btn(st.takeover ? 'Give back to ROSE' : 'TAKE OVER', 'st.takeover=!st.takeover;render()', st.takeover ? 'alt' : '') + btn('Send order link', "st.chats.push(['o','Here is your order link: myrosebd.com/shop/" + k + "']);render()", 'alt') + '</div></div><p class="note">Every website chat also reaches the owner’s ROSE app, and ROSE tells you by voice what the customer wants.</p>';
+  };
+  V.payments = function () {
+    return '<div class="card">' + st.pay.map(function (m, i) { return '<div class="row"><span class="ph">💳</span><div class="f"><b>' + m[0] + '</b></div><button class="toggle' + (m[1] ? ' on' : '') + '" onclick="st.pay[' + i + '][1]=!st.pay[' + i + '][1];render()"></button></div>'; }).join('') +
+      '<div class="row"><span class="ph">💳</span><div class="f"><b>Card: SSLCommerz / aamarPay</b><p>Needs a trade licence and merchant account</p></div><span class="pill" style="background:#475569">SET UP</span></div></div>' +
+      '<div class="card" style="margin-top:10px"><div class="two"><div class="field"><span>bKash number</span><input value="017XXXXXXXX"></div><div class="field"><span>Nagad number</span><input value="018XXXXXXXX"></div></div>' + btn('SAVE', "toast('Payment numbers saved')") + '</div>';
+  };
+  V.delivery = function () {
+    return '<div class="card"><div class="two"><div class="field"><span>Inside Dhaka (Tk)</span><input value="60"></div><div class="field"><span>Outside Dhaka (Tk)</span><input value="120"></div></div><div class="field"><span>Free delivery over (Tk)</span><input value="1500"></div>' + btn('SAVE', "toast('Delivery charges saved')") + '</div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">COURIERS</b>' + st.couriers.map(function (c, i) { return '<div class="row"><span class="ph">🚚</span><div class="f"><b>' + c[0] + '</b><p>' + (c[1] ? 'Connected · auto booking' : 'Not connected') + '</p></div>' + btn(c[1] ? 'Test' : 'Connect', 'st.couriers[' + i + '][1]=true;toast(\'' + c[0] + ' connected (demo)\');render()', 'alt') + '</div>'; }).join('') + '</div>';
+  };
+  V.pixels = function () {
+    return '<div class="card">' + [['Facebook Pixel ID', '1234567890'], ['Facebook Conversions API token', '••••••••'], ['TikTok Pixel ID', 'C0ABCDEF'], ['Google Analytics 4 (G-…)', 'G-XXXXXXX'], ['Google Tag Manager (GTM-…)', ''], ['Search Console verification', '']].map(function (f) { return '<div class="field"><span>' + f[0] + '</span><input value="' + f[1] + '" placeholder="paste here"></div>'; }).join('') +
+      '<div class="btns">' + btn('SAVE', "toast('Saved. Events start in a few minutes')") + btn('Send test event', "toast('Test PageView sent ✓')", 'alt') + '</div><p class="note">Sent automatically: PageView, ViewContent, AddToCart, InitiateCheckout, Purchase. How-to videos show where to copy each ID.</p></div>' +
+      '<div class="grid4" style="margin-top:10px">' + [['1,240', 'VISITORS'], ['62%', 'FROM FACEBOOK'], ['21%', 'FROM GOOGLE'], ['Dhaka', 'TOP DISTRICT']].map(function (x) { return '<div class="card stat"><b>' + x[0] + '</b><small>' + x[1] + '</small></div>'; }).join('') + '</div>';
+  };
+  V.seo = function () {
+    return '<div class="card">' + st.products.slice(0, 6).map(function (p, i) { var sc = [92, 78, 64, 88, 71, 95][i]; return row(thumb(p), esc(p.name), sc > 80 ? 'Good' : 'Add a longer description and 2 more photos', '<span class="pill" style="background:' + (sc > 80 ? '#059669' : '#d97706') + '">' + sc + '</span>', "go('product/" + p.id + "')"); }).join('') + '</div><p class="note">Automatic: fast WebP photos, Product schema, sitemap, clean links. Tap a product to fix it.</p>';
+  };
+  V.staff = function () {
+    return '<div class="card">' + st.staff.map(function (s, i) { return row('<span class="ph">👤</span>', s[0], s[1], btn('Remove', 'st.staff.splice(' + i + ',1);toast(\'Access removed\');render()', 'alt')); }).join('') + (st.staff.length ? '' : '<p class="note">No staff yet.</p>') + '</div>' +
+      '<div class="card" style="margin-top:10px"><div class="field"><span>Staff Gmail</span><input id="sfMail" placeholder="staff@gmail.com"></div><div class="field"><span>Role</span><select id="sfRole"><option>MANAGER</option><option>ORDER STAFF</option><option>PRODUCT STAFF</option><option>CHAT SUPPORT</option><option>MARKETING</option><option>ACCOUNTS</option><option>CUSTOM</option></select></div>' + btn('SEND INVITE', 'addStaff()') + '<p class="note">Staff sign in with that Gmail and see only their bars. Activity log shows who changed what.</p></div>';
+  };
+  V.domain = function () {
+    return '<div class="card"><b style="font-size:13px">Store link</b><p class="note" style="margin-top:4px">myrosebd.com/shop/' + k + '</p></div><div class="card" style="margin-top:10px"><b style="font-size:13px">Own domain</b><div class="field" style="margin-top:8px"><span>Your domain</span><input id="dmIn" placeholder="yourshop.com"></div><p class="note">Add these 2 records where you bought the domain:<br>A · @ · 216.198.79.1<br>CNAME · www · cname.vercel-dns.com</p>' + btn('CHECK DOMAIN', 'checkDomain()') + '<p class="note" id="dmOut"></p></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">Hostinger</b><p class="note">Business plan: DOWNLOAD FOR HOSTINGER (ZIP) with a step-by-step guide.</p>' + btn('DOWNLOAD ZIP', "toast('Business plan: ZIP download starts')", 'alt') + '</div>';
+  };
+  V.reports = function () {
+    var del = st.orders.filter(function (o) { return o.st === 'delivered'; });
+    return '<div class="tabs"><button class="on">THIS MONTH</button><button onclick="toast(\'Last month: 386 orders\')">LAST MONTH</button><button onclick="toast(\'This year: 4,210 orders\')">THIS YEAR</button></div>' +
+      '<div class="grid4">' + [['412', 'ORDERS'], [tk(568400), 'SALES'], [tk(96300), 'PROFIT (EST.)'], ['4.1%', 'RETURNS']].map(function (x) { return '<div class="card stat"><b>' + x[0] + '</b><small>' + x[1] + '</small></div>'; }).join('') + '</div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">TOP PRODUCTS</b>' + st.products.slice(0, 4).map(function (p, i) { return row(thumb(p), esc(p.name), (90 - i * 17) + ' sold', '', "go('product/" + p.id + "')"); }).join('') + '</div><div class="btns">' + btn('📊 Export Excel', "toast('Excel report downloaded (demo)')", 'alt') + '</div><p class="note">Delivered today: ' + del.length + ' orders.</p>';
+  };
+
+  // ---------------- actions ----------------
+  window.st = st;
+  window.toast = toast;
+  window.setOrderFilter = function (s) { orderFilter = s; render(); };
+  window.setProdFilter = function (s) { prodFilter = s; render(); };
+  window.setStatus = function (no, s) { st.orders.forEach(function (o) { if (o.no === no) o.st = s; }); toast('Order #' + no + ': ' + s.toUpperCase()); render(); };
+  window.book = function (no, c) { st.orders.forEach(function (o) { if (o.no === no) { o.track = c + ' · tracking SF' + (no * 7) + 'BD'; if (o.st === 'new' || o.st === 'confirmed') o.st = 'packed'; } }); toast(c + ' booked ✓'); render(); };
+  window.invoice = function (no) { toast('Invoice #' + no + ' ready to print'); };
+  window.restock = function (id) { P(id).stock += 10; toast('Stock +10'); render(); };
+  window.addPhotos = function (inp) { var fs = [].slice.call(inp.files || [], 0, 6); window.__newImgs = (window.__newImgs || []).concat(fs.map(function (f) { return URL.createObjectURL(f); })); var t = document.getElementById('thumbs'); fs.forEach(function (f) { var im = document.createElement('img'); im.src = URL.createObjectURL(f); t.insertBefore(im, t.lastChild); }); toast(fs.length + ' photo(s) added'); };
+  window.aiDesc = function () { var n = document.getElementById('pName').value || 'This product'; document.getElementById('pDesc').value = n + ' by ' + S.name + ': premium quality, carefully checked before delivery. Cash on delivery all over Bangladesh. 7-day easy return. Order now and get it in 1-3 days.'; toast('ROSE wrote the description'); };
+  window.saveProduct = function (id) {
+    var g = function (x) { return document.getElementById(x).value.trim(); };
+    if (!g('pName') || !(+g('pPrice') > 0)) return toast('Name and price are needed');
+    var p = id >= 0 ? P(id) : { id: st.products.length, e: '📦', imgs: [], rx: false };
+    p.name = g('pName'); p.price = +g('pPrice'); p.old = +g('pOld') || p.price; p.stock = +g('pStock') || 0; p.cat = g('pCat'); p.desc = g('pDesc');
+    p.optLabel = g('pOptL'); p.opts = g('pOpts') ? g('pOpts').split(',').map(function (x) { return x.trim(); }).filter(Boolean) : []; p.active = document.getElementById('pAct').classList.contains('on');
+    if (window.__newImgs) { p.imgs = p.imgs.concat(window.__newImgs); window.__newImgs = null; }
+    if (id < 0) st.products.unshift(p);
+    st.products.forEach(function (x, i) { x.id = i; });
+    toast('Saved ✓'); go('products');
+  };
+  window.delProduct = function (id) { if (!confirm('Delete this product?')) return; st.products.splice(id, 1); st.products.forEach(function (x, i) { x.id = i; }); toast('Deleted'); go('products'); };
+  window.addCat = function () { var n = document.getElementById('cName').value.trim(); if (!n) return toast('Write a name'); st.cats.push({ name: n, icon: document.getElementById('cIcon').value || '🏷️' }); toast('Category added'); render(); };
+  window.delCat = function (i) { st.cats.splice(i, 1); render(); };
+  window.moveCat = function (i) { if (!i) return; var c = st.cats.splice(i, 1)[0]; st.cats.splice(i - 1, 0, c); render(); };
+  window.addCoupon = function () { var c = document.getElementById('cpCode').value.trim().toUpperCase(); if (!c) return toast('Write a code'); st.coupons.push({ code: c, text: document.getElementById('cpText').value || 'Discount', on: true }); render(); };
+  window.replyRev = function (i) { var v = document.getElementById('rv' + i).value.trim(); if (!v) return; st.reviews[i].reply = v; toast('Reply posted'); render(); };
+  window.addStaff = function () { var m = document.getElementById('sfMail').value.trim(); if (!/@/.test(m)) return toast('Write a Gmail'); if (st.staff.length >= 3) return toast('Your plan allows 3 staff'); st.staff.push([m, document.getElementById('sfRole').value]); toast('Invite sent to ' + m); render(); };
+  window.setLogo = function (inp) { var f = inp.files && inp.files[0]; if (!f) return; document.getElementById('logoBox').innerHTML = '<img src="' + URL.createObjectURL(f) + '" style="width:100%;height:100%;object-fit:contain">'; toast('Logo uploaded'); };
+  window.checkDomain = function () { var d = document.getElementById('dmIn').value.trim(); document.getElementById('dmOut').innerHTML = d ? '⏳ Checking ' + esc(d) + '… <br>✅ Records found. SSL is being issued (demo).' : 'Write your domain first.'; };
+  window.sendChat = function () {
+    var i = document.getElementById('chatIn'), t = i.value.trim(); if (!t) return;
+    if (st.takeover) { st.chats.push(['o', 'You: ' + t]); }
+    else {
+      st.chats.push(['c', t]);
+      var l = t.toLowerCase(), hit = st.products.filter(function (p) { return l.indexOf(p.name.toLowerCase().split(' ')[0]) >= 0 || l.indexOf(p.cat.toLowerCase()) >= 0; })[0];
+      st.chats.push(['r', '🤖 ROSE: ' + (hit ? hit.name + ' is ' + tk(hit.price) + (hit.stock ? ', ' + hit.stock + ' in stock.' : ', out of stock now.') : /deliver|charge|ডেলিভারি/.test(l) ? 'Delivery is 60 Tk inside Dhaka, 120 Tk outside.' : 'I will ask the shop owner and reply soon.')]);
+    }
+    render(); var b = document.getElementById('chatBox'); if (b) b.scrollTop = 99999;
+  };
+
+  // ---------------- routing ----------------
   var side = document.getElementById('side'), main = document.getElementById('main');
   var head = '<div class="card store">' + (S.banners[0].img ? '<img src="' + IMG(S.banners[0].img, 120) + '" alt="">' : '<span style="font-size:32px">' + S.logo + '</span>') + '<div style="flex:1"><b>' + esc(S.name) + '</b><div style="font-size:11px;color:#94a3b8">myrosebd.com/shop/' + k + '</div></div><span class="pill live">LIVE</span></div>';
-  function render(i) {
-    side.innerHTML = head + VIEWS.map(function (v, j) { return '<button class="bar' + (j === i ? ' on' : '') + '" onclick="openView(' + j + ')"><span class="n">' + String(j + 1).padStart(2, '0') + '</span><span class="t">' + v[0] + '</span><span class="v">' + v[1] + '</span></button>'; }).join('');
-    if (i >= 0) main.innerHTML = '<h2>' + VIEWS[i][0] + '</h2>' + VIEWS[i][2]();
+  var route = '';
+  window.go = function (r) { location.hash = r; };
+  function render() {
+    var parts = route.split('/'), id = parts[0], arg = parts[1];
+    var barId = id === 'order' ? 'orders' : id === 'product' ? 'products' : id;
+    side.innerHTML = head + BARS.map(function (b, j) {
+      return '<button class="bar' + (b[0] === barId ? ' on' : '') + '" onclick="go(\'' + b[0] + '\')"><span class="n">' + String(j + 1).padStart(2, '0') + '</span><span class="ic" style="background:' + b[3] + '22;border:1px solid ' + b[3] + '55">' + b[2] + '</span><span class="t">' + b[1] + '</span><span class="v">' + b[4]() + '</span><span class="chev">›</span></button>';
+    }).join('');
+    var bar = barOf(barId);
+    if (!bar) { main.innerHTML = ''; return; }
+    var t = id === 'order' ? 'ORDER #' + arg : id === 'product' ? (arg === 'new' ? 'ADD PRODUCT' : 'PRODUCT') : bar[1];
+    document.getElementById('title').textContent = t;
+    var backTo = id === 'order' ? 'orders' : id === 'product' ? 'products' : '';
+    main.innerHTML = '<h2>' + (backTo ? '<button class="btn alt" style="padding:5px 9px" onclick="go(\'' + backTo + '\')">‹</button>' : '') + '<span class="ic" style="font-size:20px">' + bar[2] + '</span>' + t + '</h2>' + (V[id] ? V[id](arg) : '');
   }
-  window.openView = function (i) {
-    document.body.classList.add('inview');
-    document.getElementById('title').textContent = VIEWS[i][0];
-    document.getElementById('back').textContent = '‹ Back';
-    document.getElementById('back').onclick = function (e) {
-      if (window.innerWidth <= 820) { e.preventDefault(); document.body.classList.remove('inview'); document.getElementById('title').textContent = 'STORE ADMIN'; this.textContent = '‹ Demos'; this.onclick = null; }
-    };
-    render(i); window.scrollTo(0, 0);
-  };
-  render(window.innerWidth > 820 ? 0 : -1);
-  if (window.innerWidth > 820) document.getElementById('title').textContent = 'STORE ADMIN';
+  window.render = render;
+  function onHash() {
+    route = decodeURIComponent(location.hash.slice(1));
+    var mobile = window.innerWidth <= 820;
+    if (!route && !mobile) route = 'dashboard';
+    document.body.classList.toggle('inview', Boolean(route));
+    var back = document.getElementById('back');
+    if (route && mobile) { back.textContent = '‹ Back'; back.href = '#'; back.onclick = function (e) { e.preventDefault(); history.back(); }; }
+    else { back.textContent = '‹ Demos'; back.href = '/demos'; back.onclick = null; if (!route) document.getElementById('title').textContent = 'STORE ADMIN'; }
+    render(); window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', onHash);
+  onHash();
+})();
 </script>
 </body>
 </html>
