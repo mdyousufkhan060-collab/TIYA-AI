@@ -97,6 +97,7 @@ export const Landing: React.FC = () => {
   const [open, setOpen] = useState<number | null>(0);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [installEvt, setInstallEvt] = useState<any>(null);
+  const [links, setLinks] = useState<{ apk?: string; windows?: string; play?: string }>({});
   const devs = useDevelopers();
   const [pick, setPick] = useState<string | null>(null);
   const signedIn = (() => {
@@ -123,6 +124,11 @@ export const Landing: React.FC = () => {
       e.preventDefault();
       setInstallEvt(e);
     };
+    void supabase.from('site_settings').select('key, value').in('key', ['apk_url', 'windows_url', 'play_url']).then(({ data }) => {
+      const m: Record<string, string> = {};
+      ((data as Array<{ key: string; value: unknown }>) || []).forEach((r) => { if (typeof r.value === 'string' && /^https:\/\//.test(r.value)) m[r.key] = r.value; });
+      setLinks({ apk: m.play_url || m.apk_url, windows: m.windows_url, play: m.play_url });
+    });
     window.addEventListener('beforeinstallprompt', onPrompt);
     return () => window.removeEventListener('beforeinstallprompt', onPrompt);
   }, []);
@@ -391,20 +397,25 @@ export const Landing: React.FC = () => {
                 <span className="block text-xs text-slate-400">Any phone or computer browser</span>
               </span>
             </button>
-            <div className="flex items-center gap-4 rounded-[4px] border border-white/[0.08] p-5 opacity-80">
+            <a href={links.apk || undefined} className={`flex items-center gap-4 rounded-[4px] border p-5 ${links.apk ? 'border-emerald-400/50 bg-emerald-500/[0.06]' : 'border-white/[0.08] opacity-80'}`}>
               <Download className="h-8 w-8 text-slate-300" />
               <span>
-                <span className="block text-sm font-bold">Android · Google Play</span>
-                <span className="block text-xs text-slate-400">Coming soon</span>
+                <span className="block text-sm font-bold">Android · APK{links.play ? ' / Google Play' : ''}</span>
+                <span className="block text-xs text-slate-400">{links.apk ? 'Tap to download, then open the file and tap Install' : 'Coming soon · use the web app now'}</span>
               </span>
-            </div>
-            <div className="flex items-center gap-4 rounded-[4px] border border-white/[0.08] p-5 opacity-80">
+            </a>
+            <a href={links.windows || undefined} className={`flex items-center gap-4 rounded-[4px] border p-5 ${links.windows ? 'border-sky-400/50 bg-sky-500/[0.06]' : 'border-white/[0.08] opacity-80'}`}>
               <Download className="h-8 w-8 text-slate-300" />
               <span>
-                <span className="block text-sm font-bold">Windows · Microsoft Store</span>
-                <span className="block text-xs text-slate-400">Coming soon</span>
+                <span className="block text-sm font-bold">Windows · PC</span>
+                <span className="block text-xs text-slate-400">{links.windows ? 'Microsoft Store' : 'Now: open in Chrome or Edge, tap Install in the address bar'}</span>
               </span>
-            </div>
+            </a>
+          </div>
+          <div className="mt-4 grid gap-2 text-xs text-slate-400 md:grid-cols-3">
+            <p><b className="text-slate-200">Phone (Android):</b> open myrosebd.com/app in Chrome → ⋮ → Add to Home screen / Install app.</p>
+            <p><b className="text-slate-200">iPhone:</b> open in Safari → Share → Add to Home Screen.</p>
+            <p><b className="text-slate-200">PC:</b> Chrome or Edge → the install icon at the right of the address bar → Install.</p>
           </div>
         </div>
       </section>

@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SettingsBar } from '../settings/SettingsShell';
-import { STORE_DURATIONS, STORE_PLANS, storePrice, tk, type StorePlanId } from '../../utils/storePlans';
-import { AdminBrandPage } from '../admin/AdminBrandPage';
+import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
+import { AdminBrandPage, RoseSupportCard } from '../admin/AdminBrandPage';
 import { INVOICE_SIZES, PRINT_CSS, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
@@ -89,7 +89,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'create'>('home');
   const [roles, setRoles] = useState<Record<string, string>>({});
   const [showRose, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
@@ -159,8 +159,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
           {access && <p className="mt-2 text-[12px] text-rose-300">Your plan ended on {new Date(access.ends_at).toLocaleDateString('en-GB')}. Your store is saved; renew to edit it.</p>}
           {msg && <p className="mt-2 text-[12px] text-teal-200">{msg}</p>}
         </div>
-        <PlanTable />
-        <p className="px-1 text-[11.5px] text-slate-400">To buy: pay with bKash / Nagad / Rocket in PREMIUM and send your Gmail. Admin turns your store on.</p>
+        <BuyPlan current={access || undefined} />
       </div>
     );
   }
@@ -247,6 +246,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'domain' && <DomainTab store={store} onSaved={() => void load()} />}
         {tab === 'staff' && <StaffTab store={store} limit={isAdmin ? 50 : access?.staff_limit || 0} />}
         {tab === 'rose' && <AdminBrandPage />}
+        {tab === 'plan' && <BuyPlan current={access || undefined} />}
       </div>
     );
   }
@@ -271,6 +271,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {can('design') && <SettingsBar badge="05" title="DELIVERY & COURIER" value="STICKER · INVOICE" onClick={() => setTab('delivery')} testId="store-delivery" />}
         {can('owner') && <SettingsBar badge="06" title="OWN DOMAIN" value={store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'CONNECT'} onClick={() => setTab('domain')} testId="store-domain" />}
         {can('owner') && <SettingsBar badge="07" title="STAFF" value="GMAIL · ROLES" onClick={() => setTab('staff')} testId="store-staff" />}
+        {can('owner') && !isAdmin && <SettingsBar badge="08" title="PLAN & RENEW" value={access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'} onClick={() => setTab('plan')} testId="store-plan" />}
         {can('owner') && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
       <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Pixels & Analytics, Live chat.</p>
@@ -278,26 +279,109 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   );
 };
 
-// ---------------------------------------------------------------- plans
-const PlanTable: React.FC = () => (
-  <div className={box + ' space-y-2'}>
-    <p className="text-[11px] font-bold tracking-wider text-teal-300">PLANS</p>
-    {(['starter', 'pro', 'business'] as StorePlanId[]).map((k) => {
-      const p = STORE_PLANS[k];
-      return (
-        <div key={k} className="rounded-lg bg-black/30 p-2">
-          <p className="text-[12px] font-bold text-white">{p.label} · {tk(p.monthly)} / month</p>
-          <p className="text-[11px] text-slate-300">
-            {p.stores} store · {p.products > 10000 ? 'unlimited' : p.products} products · {p.storageGb} GB · {p.staff} staff · {p.ownDomain ? 'own domain' : 'myrosebd.com link'}
-          </p>
-          <p className="text-[10.5px] text-slate-400">
-            {STORE_DURATIONS.map((d) => `${d.months}m ${tk(storePrice(k, d.months))}`).join(' · ')}
-          </p>
+// ---------------------------------------------------------------- buy / renew a plan (bKash · Nagad · Rocket)
+type PriceRow = { plan: StorePlanId; monthly: number; stores: number; products: number; storage_gb: number; staff: number; own_domain: boolean };
+const DISC: Record<number, number> = { 3: 0, 6: 5, 9: 10, 12: 15, 24: 25 };
+const BuyPlan: React.FC<{ current?: Access }> = ({ current }) => {
+  const [prices, setPrices] = useState<PriceRow[]>([]);
+  const [pay, setPay] = useState<{ bkash?: string; nagad?: string; rocket?: string }>({});
+  const [plan, setPlan] = useState<StorePlanId>('starter');
+  const [months, setMonths] = useState(3);
+  const [method, setMethod] = useState<'bKash' | 'Nagad' | 'Rocket'>('bKash');
+  const [sender, setSender] = useState('');
+  const [trx, setTrx] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [mine, setMine] = useState<Array<{ id: string; plan: string; months: number; amount: number; status: string; created_at: string; admin_note: string | null }>>([]);
+  const loadMine = useCallback(async () => {
+    const { data } = await supabase.from('store_payment_requests').select('id, plan, months, amount, status, created_at, admin_note').order('created_at', { ascending: false }).limit(5);
+    setMine((data as typeof mine) || []);
+  }, []);
+  useEffect(() => {
+    void supabase.from('store_plan_prices').select('*').order('sort').then(({ data }) => {
+      const rows = (data as PriceRow[]) || [];
+      setPrices(rows.length ? rows : (['starter', 'pro', 'business'] as StorePlanId[]).map((k) => ({ plan: k, monthly: STORE_PLANS[k].monthly, stores: STORE_PLANS[k].stores, products: STORE_PLANS[k].products, storage_gb: STORE_PLANS[k].storageGb, staff: STORE_PLANS[k].staff, own_domain: STORE_PLANS[k].ownDomain })));
+    });
+    void supabase.rpc('get_payment_info').then(({ data }) => setPay((data as typeof pay) || {}));
+    void loadMine();
+  }, [loadMine]);
+  const row = prices.find((p) => p.plan === plan);
+  const total = row ? Math.round((row.monthly * months * (100 - (DISC[months] || 0))) / 100) : 0;
+  const number = method === 'bKash' ? pay.bkash : method === 'Nagad' ? pay.nagad : pay.rocket;
+  const send = async () => {
+    setBusy(true);
+    setMsg('');
+    const { data, error } = await supabase.rpc('submit_store_payment', { p_plan: plan, p_months: months, p_method: method, p_sender: sender, p_trx: trx });
+    setBusy(false);
+    const r = data as { ok: boolean; message: string } | null;
+    setMsg(error ? error.message : r?.message || '');
+    if (r?.ok) { setTrx(''); void loadMine(); }
+  };
+  return (
+    <div className="space-y-2">
+      {current && current.plan !== 'trial' && (
+        <div className={box + ' text-[12px] text-slate-200'}>
+          Now: <b>{STORE_PLANS[current.plan]?.label || current.plan}</b> until {new Date(current.ends_at).toLocaleDateString('en-GB')}. Renewing the same plan adds the months after this date.
         </div>
-      );
-    })}
-  </div>
-);
+      )}
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">1 · CHOOSE A PLAN</p>
+        {prices.map((p) => (
+          <button key={p.plan} type="button" onClick={() => setPlan(p.plan)} className={`w-full border p-2 text-left ${plan === p.plan ? 'border-teal-400 bg-teal-500/10' : 'border-white/10 bg-black/30'}`}>
+            <span className="flex items-center gap-2">
+              <span className="flex-1 text-[13px] font-bold text-white">{STORE_PLANS[p.plan]?.label || p.plan.toUpperCase()}</span>
+              <span className="text-[13px] font-bold text-teal-300">{tk(p.monthly)} / month</span>
+            </span>
+            <span className="block text-[11px] text-slate-400">
+              {p.stores} store{p.stores > 1 ? 's' : ''} · {p.products > 10000 ? 'unlimited' : p.products} products · {p.storage_gb} GB photos · {p.staff} staff · {p.own_domain ? 'own domain' : 'name.myrosebd.com'}
+            </span>
+          </button>
+        ))}
+        <p className="pt-1 text-[11px] font-bold tracking-wider text-teal-300">2 · HOW LONG</p>
+        <div className="grid grid-cols-5 gap-1">
+          {STORE_DURATIONS.map((d) => (
+            <button key={d.months} type="button" onClick={() => setMonths(d.months)} className={`border py-1.5 text-center ${months === d.months ? 'border-teal-400 bg-teal-500/10' : 'border-white/10 bg-black/30'}`}>
+              <span className="block text-[12.5px] font-bold text-white">{d.months}m</span>
+              <span className="block text-[9.5px] text-amber-300">{d.off ? `-${d.off}%` : ' '}</span>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center border border-amber-400/40 bg-amber-500/10 p-2">
+          <span className="flex-1 text-[12px] text-amber-100">{STORE_PLANS[plan]?.label} · {months} months</span>
+          <span className="text-[17px] font-extrabold text-amber-300">{tk(total)}</span>
+        </div>
+      </div>
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">3 · PAY AND SEND THE TrxID</p>
+        <div className="grid grid-cols-3 gap-1">
+          {(['bKash', 'Nagad', 'Rocket'] as const).map((m) => (
+            <button key={m} type="button" onClick={() => setMethod(m)} className={`border py-2 text-[12px] font-bold ${method === m ? 'border-teal-400 bg-teal-500/10 text-white' : 'border-white/10 bg-black/30 text-slate-300'}`}>{m}</button>
+          ))}
+        </div>
+        <p className="text-[12px] text-slate-200">
+          Send Money <b className="text-amber-300">{tk(total)}</b> to {method} <b className="select-all text-white">{number || '(number not set)'}</b>, then write the number you paid from and the TrxID.
+        </p>
+        <input className={input} value={sender} onChange={(e) => setSender(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="Your number 01XXXXXXXXX" inputMode="numeric" />
+        <input className={input} value={trx} onChange={(e) => setTrx(e.target.value.trim())} placeholder="Transaction ID (TrxID)" autoCapitalize="characters" />
+        <button type="button" disabled={busy || !number} onClick={() => void send()} className={btn + ' w-full bg-amber-500 text-black'}>{busy ? 'SENDING…' : 'SEND FOR CHECKING'}</button>
+        {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+        <p className="text-[10.5px] text-slate-400">Admin checks the payment and your plan turns on by itself. See <a className="underline" href="/refund.html" target="_blank" rel="noreferrer">Refund Policy</a>.</p>
+      </div>
+      {mine.length > 0 && (
+        <div className={box + ' space-y-1'}>
+          <p className="text-[11px] font-bold tracking-wider text-teal-300">MY PAYMENTS</p>
+          {mine.map((r) => (
+            <p key={r.id} className="text-[11.5px] text-slate-300">
+              {new Date(r.created_at).toLocaleDateString('en-GB')} · {r.plan.toUpperCase()} {r.months}m · {tk(r.amount)} ·{' '}
+              <b className={r.status === 'approved' ? 'text-emerald-300' : r.status === 'rejected' ? 'text-rose-300' : 'text-amber-300'}>{r.status.toUpperCase()}</b>
+              {r.admin_note ? ` · ${r.admin_note}` : ''}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ---------------------------------------------------------------- create
 const CreateStore: React.FC<{ demos: Record<string, Demo>; canCreate: boolean; onBack?: () => void; onDone: () => void }> = ({ demos, canCreate, onBack, onDone }) => {
@@ -774,18 +858,6 @@ const StaffTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) =
   );
 };
 
-/** Big ROSE support card at the top of the store admin (admin can switch it off). */
-const RoseSupportCard: React.FC<{ onOpen: () => void }> = ({ onOpen }) => (
-  <button type="button" onClick={onOpen} className="flex min-h-[72px] w-full items-center gap-3 border border-teal-400/50 bg-gradient-to-r from-teal-500/15 to-fuchsia-500/10 p-3 text-left">
-    <img src="/tiya-home.jpg?v=3" alt="ROSE" className="h-12 w-12 shrink-0 rounded-full border-2 border-teal-400 object-cover object-[center_30%]" />
-    <span className="min-w-0 flex-1">
-      <span className="block text-[10.5px] font-bold tracking-[0.16em] text-teal-300">ROSE SUPPORT</span>
-      <span className="block text-[16px] font-extrabold text-white">MYROSEBD.COM</span>
-      <span className="block text-[11px] text-slate-300">Need help? Call or WhatsApp ROSE</span>
-    </span>
-    <span className="text-[10px] font-bold text-teal-200">OPEN ›</span>
-  </button>
-);
 
 // ---------------------------------------------------------------- categories
 const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {

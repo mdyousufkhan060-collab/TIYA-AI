@@ -44,3 +44,12 @@ createRoot(document.getElementById('root')!).render(
     </Suspense>
   ),
 );
+
+// Installable app on Android, iPhone and PC browsers (no offline cache).
+try {
+  if ('serviceWorker' in navigator && !(window as any).TiyaNative && location.protocol === 'https:') {
+    window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  }
+} catch {
+  /* ignore */
+}

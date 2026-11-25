@@ -4,6 +4,7 @@ import { SettingsPageId, TiyaSettings, UserProfile } from '../../types/tiya';
 import { isProfilePremium } from './PremiumPage';
 import { SettingsBar } from './SettingsShell';
 import { supabase } from '../../lib/supabase';
+import { AdminBrandPage, RoseSupportCard } from '../admin/AdminBrandPage';
 
 interface SettingsHubProps {
   settings: TiyaSettings;
@@ -43,6 +44,12 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
         setMyTasks({ total: list.length, done: list.filter((x) => x.done).length });
       });
   }, [isAdmin, activePage]);
+
+  const [roseOpen, setRoseOpen] = React.useState(false);
+  const [roseOn, setRoseOn] = React.useState(true);
+  React.useEffect(() => {
+    void supabase.from('site_settings').select('value').eq('key', 'app_rose_card').maybeSingle().then(({ data }) => setRoseOn((data as { value?: unknown } | null)?.value !== false));
+  }, []);
 
   const premiumValue = isAdmin ? 'ADMIN' : isProfilePremium(profile) ? 'PREMIUM' : 'FREE';
 
@@ -109,6 +116,12 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
       </header>
 
       <div className="tiya-scroll flex-1 space-y-3 overflow-y-auto px-3.5 py-3">
+        {roseOn && (
+          <div className="space-y-2">
+            <RoseSupportCard open={roseOpen} onOpen={() => setRoseOpen((v) => !v)} />
+            {roseOpen && <AdminBrandPage />}
+          </div>
+        )}
         {/* Main Numbered Bars (01 to 07) */}
         <div className="space-y-1.5">
           {mainItems.map((item) => (

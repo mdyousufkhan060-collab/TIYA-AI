@@ -69,7 +69,7 @@ export const AdminBrandPage: React.FC = () => (
     <p className="px-1 pt-1 text-[11px] font-bold tracking-wider text-slate-400">WEBSITE & ADDRESS</p>
     <Row icon={<Globe className="h-4 w-4" />} label="WEBSITE" value={C.site} href={C.url} />
     <Row icon={<MapPin className="h-4 w-4" />} label="ADDRESS" value={C.address} />
-    <p className="px-1 pt-2 text-[11px] text-slate-400">These numbers and emails also show on the website, so store owners and customers can contact ROSE.</p>
+    <p className="px-1 pt-2 text-[11px] text-slate-400">Call or WhatsApp for help with ROSE, your store, plans or payments.</p>
   </div>
 );
 
@@ -77,6 +77,12 @@ export const AdminBrandPage: React.FC = () => (
 const SWITCHES: Array<[string, string, string]> = [
   ['store_footer_made_with_rose', 'MADE WITH ROSE IN STORE FOOTER', 'Small ROSE photo + "Made with ROSE · myrosebd.com" at the bottom of every store. Tap opens ROSE contact.'],
   ['store_admin_rose_card', 'ROSE SUPPORT CARD IN STORE ADMIN', 'Big ROSE card at the top of every store owner’s admin, with your numbers and WhatsApp.'],
+  ['app_rose_card', 'ROSE SUPPORT CARD IN THE APP', 'ROSE card at the top of Settings for every Personal, Student and Business user.'],
+];
+const LINKS: Array<[string, string, string]> = [
+  ['apk_url', 'ANDROID APK LINK', 'https://www.myrosebd.com/rose.apk'],
+  ['play_url', 'GOOGLE PLAY LINK (when live)', 'https://play.google.com/store/apps/details?id=...'],
+  ['windows_url', 'MICROSOFT STORE LINK (when live)', 'https://apps.microsoft.com/...'],
 ];
 export const AdminSiteSwitchesPage: React.FC = () => {
   const [vals, setVals] = useState<Record<string, boolean>>({});
@@ -88,6 +94,22 @@ export const AdminSiteSwitchesPage: React.FC = () => {
       setVals(v);
     });
   }, []);
+  const [links, setLinks] = useState<Record<string, string>>({});
+  React.useEffect(() => {
+    void supabase.from('site_settings').select('key, value').in('key', LINKS.map((l) => l[0])).then(({ data }) => {
+      const v: Record<string, string> = {};
+      ((data as Array<{ key: string; value: unknown }>) || []).forEach((r) => { if (typeof r.value === 'string') v[r.key] = r.value; });
+      setLinks(v);
+    });
+  }, []);
+  const saveLink = async (k: string) => {
+    const v = links[k] || '';
+    if (v && !/^https:\/\/\S+$/.test(v)) return setMsg('Link must start with https://');
+    const { error } = v
+      ? await supabase.from('site_settings').upsert({ key: k, value: v, updated_at: new Date().toISOString() })
+      : await supabase.from('site_settings').delete().eq('key', k);
+    setMsg(error ? error.message : v ? 'Link saved. The website shows it now.' : 'Link removed.');
+  };
   const flip = async (k: string) => {
     const next = !(vals[k] !== false);
     setVals((v) => ({ ...v, [k]: next }));
@@ -110,7 +132,30 @@ export const AdminSiteSwitchesPage: React.FC = () => {
           </div>
         );
       })}
+      <p className="px-1 pt-2 text-[11px] font-bold tracking-wider text-slate-400">DOWNLOAD LINKS ON THE WEBSITE</p>
+      {LINKS.map(([k, t, ph]) => (
+        <div key={k} className="space-y-1 border border-white/10 bg-white/[0.03] p-3">
+          <span className="block text-[12px] font-bold text-white">{t}</span>
+          <div className="flex gap-2">
+            <input className="min-w-0 flex-1 border border-white/10 bg-black/30 px-2 py-1.5 text-[12px] text-white" value={links[k] || ''} placeholder={ph} onChange={(e) => setLinks((l) => ({ ...l, [k]: e.target.value.trim() }))} />
+            <button type="button" onClick={() => void saveLink(k)} className="bg-teal-600 px-3 text-[11px] font-bold text-white">SAVE</button>
+          </div>
+        </div>
+      ))}
       {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
     </div>
   );
 };
+
+/** ROSE SUPPORT card for users (Settings top) and store owners (store admin top). */
+export const RoseSupportCard: React.FC<{ onOpen: () => void; open?: boolean }> = ({ onOpen, open }) => (
+  <button type="button" onClick={onOpen} data-testid="rose-support-card" className="flex min-h-[72px] w-full items-center gap-3 border border-teal-400/50 bg-gradient-to-r from-teal-500/15 to-fuchsia-500/10 p-3 text-left">
+    <img src={C.photo} alt="ROSE" className="h-12 w-12 shrink-0 rounded-full border-2 border-teal-400 object-cover object-[center_30%]" />
+    <span className="min-w-0 flex-1">
+      <span className="block text-[10.5px] font-bold tracking-[0.16em] text-teal-300">ROSE SUPPORT</span>
+      <span className="block text-[16px] font-extrabold text-white">MYROSEBD.COM</span>
+      <span className="block text-[11px] text-slate-300">Help · call or WhatsApp ROSE · plans</span>
+    </span>
+    <span className="text-[10px] font-bold text-teal-200">{open ? 'CLOSE ×' : 'OPEN ›'}</span>
+  </button>
+);

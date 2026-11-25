@@ -23,6 +23,92 @@ type StoreRow = { id: string; slug: string; name: string; published: boolean; su
 const box = 'rounded-xl border border-white/[0.08] bg-[#11151E] p-3';
 const input = 'w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white';
 
+
+/** Store plan payments sent by users (bKash / Nagad / Rocket TrxID). APPROVE turns the plan on. */
+const StorePayments: React.FC<{ onDone: () => void }> = ({ onDone }) => {
+  const [list, setList] = useState<Array<{ id: string; email: string; plan: string; months: number; amount: number; method: string; sender_number: string; trx_id: string; status: string; created_at: string }>>([]);
+  const [msg, setMsg] = useState('');
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('store_payment_requests').select('*').order('created_at', { ascending: false }).limit(30);
+    setList((data as typeof list) || []);
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const review = async (id: string, ok: boolean) => {
+    const note = ok ? null : window.prompt('Reason (the user sees this):', 'TrxID did not match.') || null;
+    const { data, error } = await supabase.rpc('admin_review_store_payment', { p_id: id, p_approve: ok, p_note: note });
+    const r = data as { ok: boolean; message?: string } | null;
+    setMsg(error ? error.message : r?.ok ? (ok ? 'Approved. Plan is on.' : 'Rejected.') : r?.message || '');
+    void load();
+    onDone();
+  };
+  const pending = list.filter((r) => r.status === 'pending');
+  return (
+    <div className={box + ' space-y-2'}>
+      <p className="text-[11px] font-bold tracking-wider text-amber-300">PAYMENTS TO CHECK · {pending.length}</p>
+      {list.length === 0 && <p className="text-[12px] text-slate-400">No store payments yet.</p>}
+      {list.map((r) => (
+        <div key={r.id} className="space-y-1 rounded-lg bg-black/30 p-2">
+          <p className="truncate text-[12.5px] font-bold text-white">{r.email}</p>
+          <p className="text-[11.5px] text-slate-300">
+            {r.plan.toUpperCase()} · {r.months} months · <b className="text-amber-300">{tk(r.amount)}</b> · {r.method} from {r.sender_number}
+          </p>
+          <p className="select-all text-[11.5px] text-teal-200">TrxID {r.trx_id} · {new Date(r.created_at).toLocaleString('en-GB')}</p>
+          {r.status === 'pending' ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => void review(r.id, true)} className="h-9 rounded-lg bg-emerald-600 text-[12px] font-bold text-white">APPROVE</button>
+              <button type="button" onClick={() => void review(r.id, false)} className="h-9 rounded-lg bg-white/10 text-[12px] font-bold text-rose-200">REJECT</button>
+            </div>
+          ) : (
+            <p className={`text-[11px] font-bold ${r.status === 'approved' ? 'text-emerald-300' : 'text-rose-300'}`}>{r.status.toUpperCase()}</p>
+          )}
+        </div>
+      ))}
+      {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+      <p className="text-[10.5px] text-slate-400">Check the TrxID in your bKash / Nagad / Rocket app first. Prices are in STORE PLAN PRICES below.</p>
+    </div>
+  );
+};
+
+/** Admin edits the monthly price and limits of each store plan. */
+const PlanPrices: React.FC = () => {
+  const [rows, setRows] = useState<Array<{ plan: string; monthly: number; stores: number; products: number; storage_gb: number; staff: number; own_domain: boolean }>>([]);
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    void supabase.from('store_plan_prices').select('*').order('sort').then(({ data }) => setRows((data as typeof rows) || []));
+  }, []);
+  const set = (i: number, k: string, v: number | boolean) => setRows((r) => r.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
+  const save = async () => {
+    const { error } = await supabase.from('store_plan_prices').upsert(rows.map((r) => ({ ...r, updated_at: new Date().toISOString() })));
+    setMsg(error ? error.message : 'Saved. New buyers see these prices now.');
+  };
+  const num = (i: number, k: string, v: number) => (
+    <input className={input + ' py-1 text-[12px]'} type="number" value={v} onChange={(e) => set(i, k, Number(e.target.value))} />
+  );
+  return (
+    <div className={box + ' space-y-2'}>
+      <p className="text-[11px] font-bold tracking-wider text-teal-300">STORE PLAN PRICES</p>
+      {rows.map((r, i) => (
+        <div key={r.plan} className="space-y-1 rounded-lg bg-black/30 p-2">
+          <p className="text-[12px] font-bold text-white">{r.plan.toUpperCase()}</p>
+          <div className="grid grid-cols-3 gap-1 text-[10px] text-slate-400">
+            <label>Tk / month{num(i, 'monthly', r.monthly)}</label>
+            <label>Stores{num(i, 'stores', r.stores)}</label>
+            <label>Products{num(i, 'products', r.products)}</label>
+            <label>Photos GB{num(i, 'storage_gb', r.storage_gb)}</label>
+            <label>Staff{num(i, 'staff', r.staff)}</label>
+            <label className="flex items-end gap-1 pb-1"><input type="checkbox" checked={r.own_domain} onChange={(e) => set(i, 'own_domain', e.target.checked)} /> Own domain</label>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={() => void save()} className="h-9 w-full rounded-lg bg-teal-600 text-[12px] font-bold text-white">SAVE PRICES</button>
+      {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+      <p className="text-[10.5px] text-slate-400">Months and discounts: 3m 0% · 6m 5% · 9m 10% · 12m 15% · 24m 25%. Free trial: 5 days, once per Gmail.</p>
+    </div>
+  );
+};
+
 export const AdminWebsiteAccessPage: React.FC = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [stores, setStores] = useState<StoreRow[]>([]);
@@ -101,6 +187,7 @@ export const AdminWebsiteAccessPage: React.FC = () => {
 
   return (
     <div className="space-y-3 pb-4">
+      <StorePayments onDone={() => void load()} />
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">GIVE ACCESS BY GMAIL</p>
         <input className={input} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="customer@gmail.com" inputMode="email" />
@@ -175,6 +262,7 @@ export const AdminWebsiteAccessPage: React.FC = () => {
           </button>
         </div>
       ))}
+      <PlanPrices />
     </div>
   );
 };
