@@ -97,7 +97,7 @@
     var im = s.banners[0].img ? window.ROSE_IMG(s.banners[0].img, 800) : '';
     return '<div class="card"><div class="shot" style="background:' + (im ? 'linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,.55) 55%,rgba(255,255,255,0)),url(' + im + ') center/cover' : 'linear-gradient(120deg,' + bg[k] + ')') + '"><div><b>' + s.logo + ' ' + s.name + '</b><small>' + s.type + ' · ' + s.tagline + '</small></div></div>' +
       '<div class="body"><ul>' + feats.map(function (f) { return '<li>' + f + '</li>'; }).join('') + '</ul>' +
-      '<div class="btns"><a class="btn" href="/demos/view.html?s=' + k + '">📱💻 MOBILE + DESKTOP</a><a class="btn alt" href="/demos/store.html?s=' + k + '">OPEN DEMO</a></div><div class="btns" style="margin-top:6px"><a class="btn alt" href="/demos/admin.html?s=' + k + '">⚙️ SEE ADMIN</a><a class="btn alt" href="/app">USE THIS DESIGN</a></div></div></div>';
+      '<div class="btns"><a class="btn" href="/demos/view.html?s=' + k + '">📱💻 MOBILE + DESKTOP</a><a class="btn alt" href="/demos/store.html?s=' + k + '">OPEN DEMO</a></div><div class="btns" style="margin-top:6px"><a class="btn alt" href="/demos/admin.html?s=' + k + '">⚙️ SEE ADMIN</a><a class="btn" style="background:#facc15;color:#111" href="/start?d=' + k + '">USE THIS DESIGN · 5 DAYS FREE</a></div></div></div>';
   }).join('');
 </script>
 </body>

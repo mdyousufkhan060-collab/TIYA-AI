@@ -386,12 +386,12 @@ if (liveSlug || ownDomain) {
       var cats = x[0], prods = x[1], byId = {};
       cats.forEach(function (c) { byId[c.id] = c.name; });
       var banners = (r.banners && r.banners.length ? r.banners : [{ title: r.name, badge: r.tagline || 'Shop now', icon: r.logo }]).map(function (b) {
-        return { title: b.title, badge: b.badge, icon: b.icon || r.logo, bg: b.bg || 'linear-gradient(120deg,#ffffff,' + r.color + ')' };
+        return { title: b.title, badge: b.badge, icon: b.icon || r.logo, img: b.img || '', bg: b.bg || 'linear-gradient(120deg,#ffffff,' + r.color + ')' };
       });
       if (banners.length < 2) banners.push({ title: 'Best Quality, Best Price', badge: 'Order now', icon: r.logo, bg: 'linear-gradient(120deg,#fef3c7,' + r.accent + ')' });
       var S = {
         live: true, slug: r.slug, template: r.template, logoUrl: r.logo_url || '', name: r.name, tagline: r.tagline || '', logo: r.logo || '🛍️', type: 'Store', color: r.color, accent: r.accent,
-        city: r.city || 'Dhaka', phone: r.phone, email: r.email, address: r.address, licence: r.licence,
+        city: r.city || 'Dhaka', phone: r.phone, email: r.email, address: r.address, licence: r.licence, nameBn: r.name_bn || '', email2: r.email2 || '', whatsapp: r.whatsapp || '', phone2: r.phone2 || '',
         pharmacy: prods.some(function (p) { return p.rx; }), banners: banners,
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
         categories: cats.map(function (c) { return [c.name, c.icon || '🏷️']; }), sectionTitle: 'Popular Products',
@@ -473,8 +473,8 @@ function start(S, P, liveId) {
   document.getElementById('camBtn').innerHTML = IC.cam;
   document.getElementById('sBtn').innerHTML = IC.search;
   document.getElementById('foot').innerHTML =
-    '<div><h4>' + S.logo + ' ' + esc(S.name) + '</h4><p>' + esc(S.tagline) + '</p>' +
-    (S.live ? (S.address ? '<p>📍 ' + esc(S.address) + '</p>' : '') + (S.phone ? '<p>📞 ' + esc(S.phone) + '</p>' : '') + (S.email ? '<p>✉️ ' + esc(S.email) + '</p>' : '')
+    '<div><h4>' + S.logo + ' ' + esc(S.name) + '</h4>' + (S.nameBn ? '<p style="font-weight:600;color:#e2e8f0">' + esc(S.nameBn) + '</p>' : '') + '<p>' + esc(S.tagline) + '</p>' +
+    (S.live ? (S.address ? '<p>📍 ' + esc(S.address) + '</p>' : '') + (S.whatsapp ? '<p>💬 <a href="https://wa.me/88' + esc(S.whatsapp) + '" target="_blank" rel="noopener">WhatsApp ' + esc(S.whatsapp) + '</a></p>' : '') + (S.phone && S.phone !== S.whatsapp ? '<p>📞 ' + esc(S.phone) + '</p>' : '') + (S.phone2 ? '<p>📞 ' + esc(S.phone2) + '</p>' : '') + (S.email ? '<p>✉️ ' + esc(S.email) + '</p>' : '') + (S.email2 ? '<p>✉️ ' + esc(S.email2) + '</p>' : '')
       : '<p>📍 House 12, Road 5, ' + S.city + ' (demo address)</p><p>📞 +880 1XXX-XXXXXX</p><p>✉️ hello@' + id + '.myrosebd.com</p>') +
     (S.licence ? '<p><b>Licence:</b> ' + esc(S.licence) + '</p>' : '') +
     '<p>Facebook · YouTube · TikTok · Instagram</p></div>' +

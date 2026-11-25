@@ -18,7 +18,7 @@ type Row = {
   amount: number | null;
   note: string | null;
 };
-type StoreRow = { id: string; slug: string; name: string; published: boolean; suspended: boolean; owner_id: string; created_at: string };
+type StoreRow = { id: string; slug: string; name: string; name_bn?: string; published: boolean; suspended: boolean; created_at: string; owner_email?: string; email?: string; email2?: string; phone?: string; phone2?: string; whatsapp?: string; address?: string; custom_domain?: string | null; plan?: string | null; ends_at?: string | null; products?: number; orders?: number };
 
 const box = 'rounded-xl border border-white/[0.08] bg-[#11151E] p-3';
 const input = 'w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white';
@@ -67,6 +67,26 @@ const StorePayments: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       ))}
       {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
       <p className="text-[10.5px] text-slate-400">Check the TrxID in your bKash / Nagad / Rocket app first. Prices are in STORE PLAN PRICES below.</p>
+    </div>
+  );
+};
+
+/** Money-received SMS forwarded from the admin's phone. Matching TrxID + amount turns the plan on by itself. */
+const PaymentSms: React.FC = () => {
+  const [rows, setRows] = useState<Array<{ id: string; method: string; trx_id: string; amount: number; sender: string; received_at: string; used_for: string | null }>>([]);
+  useEffect(() => {
+    void supabase.from('payment_sms').select('*').order('received_at', { ascending: false }).limit(10).then(({ data }) => setRows((data as typeof rows) || []));
+  }, []);
+  return (
+    <div className={box + ' space-y-1'}>
+      <p className="text-[11px] font-bold tracking-wider text-teal-300">AUTO PAYMENT · SMS ({rows.length})</p>
+      {rows.length === 0 && <p className="text-[11.5px] text-slate-400">No payment SMS yet. Set up the SMS forwarder on the bKash phone (see the guide) and payments turn plans on by themselves.</p>}
+      {rows.map((r) => (
+        <p key={r.id} className="text-[11.5px] text-slate-300">
+          {new Date(r.received_at).toLocaleString('en-GB')} · {r.method} {tk(r.amount)} · {r.sender || '-'} · <span className="select-all">{r.trx_id}</span> ·{' '}
+          <b className={r.used_for ? 'text-emerald-300' : 'text-amber-300'}>{r.used_for ? 'MATCHED' : 'WAITING'}</b>
+        </p>
+      ))}
     </div>
   );
 };
@@ -125,7 +145,7 @@ export const AdminWebsiteAccessPage: React.FC = () => {
     setLoading(true);
     const [a, s] = await Promise.all([
       supabase.from('website_access').select('*').order('created_at', { ascending: false }),
-      supabase.from('stores').select('id,slug,name,published,suspended,owner_id,created_at').order('created_at', { ascending: false }),
+      supabase.rpc('admin_store_list'),
     ]);
     setRows((a.data as Row[]) || []);
     setStores((s.data as StoreRow[]) || []);
@@ -188,6 +208,7 @@ export const AdminWebsiteAccessPage: React.FC = () => {
   return (
     <div className="space-y-3 pb-4">
       <StorePayments onDone={() => void load()} />
+      <PaymentSms />
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">GIVE ACCESS BY GMAIL</p>
         <input className={input} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="customer@gmail.com" inputMode="email" />
@@ -249,17 +270,34 @@ export const AdminWebsiteAccessPage: React.FC = () => {
 
       <p className="px-1 pt-2 text-[10px] font-semibold tracking-wider text-slate-400">ALL STORES ({stores.length})</p>
       {stores.map((s) => (
-        <div key={s.id} className={box + ' flex items-center gap-2'}>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-semibold text-white">{s.name}</p>
-            <a href={`/shop/${s.slug}`} target="_blank" rel="noreferrer" className="text-[10.5px] text-teal-300 underline">
-              myrosebd.com/shop/{s.slug}
-            </a>
-            <span className="ml-2 text-[10px] text-slate-400">{s.suspended ? 'SUSPENDED' : s.published ? 'LIVE' : 'DRAFT'}</span>
+        <div key={s.id} className={box + ' space-y-1'}>
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12.5px] font-bold text-white">{s.name}{s.name_bn ? ` · ${s.name_bn}` : ''}</p>
+              <a href={s.custom_domain ? `https://${s.custom_domain}` : `/shop/${s.slug}`} target="_blank" rel="noreferrer" className="text-[10.5px] text-teal-300 underline">
+                {s.custom_domain || `${s.slug}.myrosebd.com`}
+              </a>
+              <span className="ml-2 text-[10px] text-slate-400">{s.suspended ? 'SUSPENDED' : s.published ? 'LIVE' : 'DRAFT'}</span>
+            </div>
+            <button type="button" onClick={() => void toggleSuspend(s)} className={`h-8 rounded-lg px-2 text-[10px] font-bold ${s.suspended ? 'bg-teal-600 text-white' : 'border border-rose-400/50 text-rose-300'}`}>
+              {s.suspended ? 'RESTORE' : 'SUSPEND'}
+            </button>
           </div>
-          <button type="button" onClick={() => void toggleSuspend(s)} className={`h-8 rounded-lg px-2 text-[10px] font-bold ${s.suspended ? 'bg-teal-600 text-white' : 'border border-rose-400/50 text-rose-300'}`}>
-            {s.suspended ? 'RESTORE' : 'SUSPEND'}
-          </button>
+          <p className="text-[11px] text-slate-300">
+            {(s.plan || 'no plan').toUpperCase()}
+            {s.ends_at ? ` until ${new Date(s.ends_at).toLocaleDateString('en-GB')}` : ''} · {s.products ?? 0} products · {s.orders ?? 0} orders · joined {new Date(s.created_at).toLocaleDateString('en-GB')}
+          </p>
+          <p className="break-all text-[11px] text-slate-400">
+            Login: {s.owner_email || '-'}
+            {s.email && s.email !== s.owner_email ? ` · ${s.email}` : ''}
+            {s.email2 ? ` · ${s.email2}` : ''}
+          </p>
+          <p className="text-[11px] text-slate-400">
+            {s.whatsapp && <a className="text-emerald-300 underline" href={`https://wa.me/88${s.whatsapp}`} target="_blank" rel="noreferrer">WhatsApp {s.whatsapp}</a>}
+            {s.phone && s.phone !== s.whatsapp ? <> · <a className="underline" href={`tel:${s.phone}`}>{s.phone}</a></> : null}
+            {s.phone2 ? <> · <a className="underline" href={`tel:${s.phone2}`}>{s.phone2}</a></> : null}
+          </p>
+          {s.address && <p className="text-[11px] text-slate-400">📍 {s.address}</p>}
         </div>
       ))}
       <PlanPrices />

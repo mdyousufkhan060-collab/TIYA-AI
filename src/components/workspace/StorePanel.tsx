@@ -15,10 +15,11 @@ type Access = { plan: StorePlanId; ends_at: string; stores_limit: number; produc
 type Store = {
   id: string; owner_id?: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
+  name_bn?: string; email2?: string; whatsapp?: string; phone2?: string;
   delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[];
   pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean;
 };
-type Banner = { title: string; badge: string; icon: string; bg?: string };
+type Banner = { title: string; badge: string; icon: string; bg?: string; img?: string };
 type Cat = { id: string; name: string; icon: string; sort: number };
 type Prod = {
   id: string; name: string; category_id: string | null; price: number; old_price: number | null; stock: number; emoji: string;
@@ -30,7 +31,7 @@ type Order = {
   items: Array<{ name: string; q: number; price: number; opt?: string }>; total: number; payment_method: string; trx_id: string; status: string; created_at: string;
   email: string; division: string; district: string; upazila: string; courier: string; tracking: string; note: string; subtotal: number; delivery: number;
 };
-type Demo = {
+export type Demo = {
   name: string; tagline: string; logo: string; type: string; color: string; accent: string; banners: Banner[]; trust: string[];
   categories: [string, string][]; products: Array<[string, string, string, number, number, string?, string?]>;
   options?: { label: string; values: string[] }; note: string; pharmacy?: boolean;
@@ -45,7 +46,7 @@ const QUICK: Record<string, string[]> = { Size: ['XS', 'S', 'M', 'L', 'XL', 'XXL
 type Kind = { tabs: Array<[string, string, string]>; specs: Array<[string, string, string, string]> };
 const kindOf = (template: string): Kind | null => { const w = window as any; return (w.ROSE_KINDS && w.ROSE_KINDS[(w.ROSE_KIND_OF || {})[template] || 'fashion']) || null; };
 
-function loadDemos(): Promise<Record<string, Demo>> {
+export function loadDemos(): Promise<Record<string, Demo>> {
   const w = window as any;
   if (w.ROSE_STORES) return Promise.resolve(w.ROSE_STORES);
   return new Promise((resolve) => {
@@ -57,7 +58,7 @@ function loadDemos(): Promise<Record<string, Demo>> {
   });
 }
 /** Phone photo -> small WebP in the store's own folder; returns the public link. */
-async function uploadImage(storeId: string, file: File, max = 1200): Promise<string> {
+export async function uploadImage(storeId: string, file: File, max = 1200): Promise<string> {
   const url = URL.createObjectURL(file);
   const img = await new Promise<HTMLImageElement>((res, rej) => {
     const i = new Image();
@@ -78,9 +79,9 @@ async function uploadImage(storeId: string, file: File, max = 1200): Promise<str
   return supabase.storage.from('store-media').getPublicUrl(path).data.publicUrl;
 }
 
-const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+export const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
 /** Names that cannot become yourshop.myrosebd.com (site pages, mail, demo stores). */
-const RESERVED_SLUGS = ['www', 'app', 'api', 'admin', 'mail', 'webmail', 'shop', 'demos', 'demo', 'autodiscover', 'autoconfig', 'ftp', 'cpanel', 'ns1', 'ns2', 'rose', 'help', 'support', 'blog', 'foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare'];
+export const RESERVED_SLUGS = ['www', 'app', 'api', 'admin', 'mail', 'webmail', 'shop', 'demos', 'demo', 'autodiscover', 'autoconfig', 'ftp', 'cpanel', 'ns1', 'ns2', 'rose', 'help', 'support', 'blog', 'foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare'];
 
 export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [loading, setLoading] = useState(true);
@@ -89,7 +90,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'create'>('home');
   const [roles, setRoles] = useState<Record<string, string>>({});
   const [showRose, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
@@ -159,7 +160,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
           {access && <p className="mt-2 text-[12px] text-rose-300">Your plan ended on {new Date(access.ends_at).toLocaleDateString('en-GB')}. Your store is saved; renew to edit it.</p>}
           {msg && <p className="mt-2 text-[12px] text-teal-200">{msg}</p>}
         </div>
-        <BuyPlan current={access || undefined} />
+        <BuyPlan current={access || undefined} onPaid={() => void load()} />
       </div>
     );
   }
@@ -246,7 +247,8 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'domain' && <DomainTab store={store} onSaved={() => void load()} />}
         {tab === 'staff' && <StaffTab store={store} limit={isAdmin ? 50 : access?.staff_limit || 0} />}
         {tab === 'rose' && <AdminBrandPage />}
-        {tab === 'plan' && <BuyPlan current={access || undefined} />}
+        {tab === 'plan' && <BuyPlan current={access || undefined} onPaid={() => void load()} />}
+        {tab === 'company' && <CompanyTab store={store} onSaved={() => void load()} />}
       </div>
     );
   }
@@ -272,6 +274,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {can('owner') && <SettingsBar badge="06" title="OWN DOMAIN" value={store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'CONNECT'} onClick={() => setTab('domain')} testId="store-domain" />}
         {can('owner') && <SettingsBar badge="07" title="STAFF" value="GMAIL · ROLES" onClick={() => setTab('staff')} testId="store-staff" />}
         {can('owner') && !isAdmin && <SettingsBar badge="08" title="PLAN & RENEW" value={access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'} onClick={() => setTab('plan')} testId="store-plan" />}
+        {can('design') && <SettingsBar badge="09" title="COMPANY INFO" value="NAME · EMAIL · PHONE · ADDRESS" onClick={() => setTab('company')} testId="store-company" />}
         {can('owner') && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
       <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Pixels & Analytics, Live chat.</p>
@@ -282,7 +285,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
 // ---------------------------------------------------------------- buy / renew a plan (bKash · Nagad · Rocket)
 type PriceRow = { plan: StorePlanId; monthly: number; stores: number; products: number; storage_gb: number; staff: number; own_domain: boolean };
 const DISC: Record<number, number> = { 3: 0, 6: 5, 9: 10, 12: 15, 24: 25 };
-const BuyPlan: React.FC<{ current?: Access }> = ({ current }) => {
+const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void }> = ({ current, onPaid }) => {
   const [prices, setPrices] = useState<PriceRow[]>([]);
   const [pay, setPay] = useState<{ bkash?: string; nagad?: string; rocket?: string }>({});
   const [plan, setPlan] = useState<StorePlanId>('starter');
@@ -313,9 +316,9 @@ const BuyPlan: React.FC<{ current?: Access }> = ({ current }) => {
     setMsg('');
     const { data, error } = await supabase.rpc('submit_store_payment', { p_plan: plan, p_months: months, p_method: method, p_sender: sender, p_trx: trx });
     setBusy(false);
-    const r = data as { ok: boolean; message: string } | null;
+    const r = data as { ok: boolean; message: string; auto?: boolean } | null;
     setMsg(error ? error.message : r?.message || '');
-    if (r?.ok) { setTrx(''); void loadMine(); }
+    if (r?.ok) { setTrx(''); void loadMine(); if (r.auto && onPaid) setTimeout(onPaid, 1500); }
   };
   return (
     <div className="space-y-2">
@@ -365,7 +368,7 @@ const BuyPlan: React.FC<{ current?: Access }> = ({ current }) => {
         <input className={input} value={trx} onChange={(e) => setTrx(e.target.value.trim())} placeholder="Transaction ID (TrxID)" autoCapitalize="characters" />
         <button type="button" disabled={busy || !number} onClick={() => void send()} className={btn + ' w-full bg-amber-500 text-black'}>{busy ? 'SENDING…' : 'SEND FOR CHECKING'}</button>
         {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
-        <p className="text-[10.5px] text-slate-400">Admin checks the payment and your plan turns on by itself. See <a className="underline" href="/refund.html" target="_blank" rel="noreferrer">Refund Policy</a>.</p>
+        <p className="text-[10.5px] text-slate-400">The plan turns on by itself as soon as the payment is matched. See <a className="underline" href="/refund.html" target="_blank" rel="noreferrer">Refund Policy</a>.</p>
       </div>
       {mine.length > 0 && (
         <div className={box + ' space-y-1'}>
@@ -379,6 +382,69 @@ const BuyPlan: React.FC<{ current?: Access }> = ({ current }) => {
           ))}
         </div>
       )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- company info (owner changes it any time; admin gets a notice)
+const CompanyTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
+  const [s, setS] = useState({
+    name: store.name || '', name_bn: store.name_bn || '', email: store.email || '', email2: store.email2 || '',
+    whatsapp: store.whatsapp || store.phone || '', phone2: store.phone2 || '', address: store.address || '', city: store.city || '',
+  });
+  const [msg, setMsg] = useState('');
+  const set = (k: keyof typeof s, v: string) => setS((x) => ({ ...x, [k]: v }));
+  const save = async () => {
+    const ph = (p: string) => !p || /^01[3-9]\d{8}$/.test(p);
+    if (s.name.trim().length < 3) return setMsg('Write the company name.');
+    if (!ph(s.whatsapp) || !ph(s.phone2)) return setMsg('Phone numbers must be 11 digits (01XXXXXXXXX).');
+    const { error } = await supabase
+      .from('stores')
+      .update({ ...s, name: s.name.trim(), phone: s.whatsapp || store.phone, updated_at: new Date().toISOString() })
+      .eq('id', store.id);
+    setMsg(error ? error.message : 'Saved. Your store shows the new details now.');
+    if (!error) onSaved();
+  };
+  const row = (k: keyof typeof s, label: string, ph = '', mode?: 'email' | 'numeric') => (
+    <label className="block text-[11px] font-bold text-slate-300">
+      {label}
+      <input
+        className={input + ' mt-1'}
+        value={s[k]}
+        placeholder={ph}
+        inputMode={mode}
+        onChange={(e) => set(k, mode === 'numeric' ? e.target.value.replace(/\D/g, '').slice(0, 11) : e.target.value)}
+      />
+    </label>
+  );
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">COMPANY</p>
+        {row('name', 'Company name (English)', 'Rahim Fashion')}
+        {row('name_bn', 'Company name (Bangla)', 'রহিম ফ্যাশন')}
+      </div>
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">EMAIL</p>
+        {row('email', 'Company Gmail 1', '', 'email')}
+        {row('email2', 'Email 2 (optional)', '', 'email')}
+      </div>
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">PHONE</p>
+        {row('whatsapp', 'WhatsApp number', '01XXXXXXXXX', 'numeric')}
+        {row('phone2', 'Other phone (optional)', '01XXXXXXXXX', 'numeric')}
+      </div>
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">ADDRESS</p>
+        <label className="block text-[11px] font-bold text-slate-300">
+          Full address (where customers find you)
+          <textarea className={input + ' mt-1'} rows={2} value={s.address} onChange={(e) => set('address', e.target.value)} />
+        </label>
+        {row('city', 'City / District')}
+      </div>
+      <button type="button" onClick={() => void save()} className={btn + ' w-full'}>SAVE</button>
+      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
+      <p className="px-1 text-[11px] text-slate-400">Logo, banners and colours: 04 HOMEPAGE & DESIGN. The login Gmail stays the same; to move the store to another Gmail, contact ROSE.</p>
     </div>
   );
 };
@@ -1137,6 +1203,24 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
               <input className={input} value={b.title} onChange={(e) => setBanner(i, 'title', e.target.value)} placeholder="Banner title" />
             </div>
             <input className={input} value={b.badge} onChange={(e) => setBanner(i, 'badge', e.target.value)} placeholder="Offer text (Up to 50% OFF)" />
+            <div className="flex items-center gap-2">
+              {b.img && <img src={b.img} alt="" className="h-10 w-16 rounded object-cover" />}
+              <label className="cursor-pointer text-[11px] font-bold text-teal-300">
+                {b.img ? 'CHANGE PHOTO' : '+ BANNER PHOTO'}
+                <input type="file" accept="image/*" hidden onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!f) return;
+                  try {
+                    setBanner(i, 'img', await uploadImage(store.id, f, 1400));
+                  } catch (err: any) {
+                    setMsg(String(err?.message || err));
+                  }
+                }} />
+              </label>
+              {b.img && <button type="button" onClick={() => setBanner(i, 'img', '')} className="text-[11px] font-bold text-rose-300">REMOVE</button>}
+              <button type="button" onClick={() => set('banners', s.banners.filter((_, j) => j !== i))} className="ml-auto text-[11px] font-bold text-slate-400">DELETE</button>
+            </div>
           </div>
         ))}
         {s.banners.length < 4 && (
