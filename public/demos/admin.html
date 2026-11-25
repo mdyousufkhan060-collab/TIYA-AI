@@ -128,6 +128,7 @@
 <div class="wrap"><div class="layout"><aside class="side" id="side"></aside><main class="main" id="main"></main></div></div>
 <div class="toast" id="toast"></div>
 <script src="/demos/stores.js"></script>
+<script src="/demos/print.js"></script>
 <script>
 (function () {
   var k = new URLSearchParams(location.search).get('s') || 'fashionhub';
@@ -476,39 +477,27 @@
   window.courierSave = function (i) { st.couriers[i][1] = true; courierOpen = -1; toast(st.couriers[i][0] + ' connected (demo)'); render(); };
 
   // ---------- invoice & sticker printing ----------
-  var STK = [['4x6', '4 × 6 in · 100 × 150 mm (Steadfast, Pathao, RedX)', 100, 150], ['4x4', '4 × 4 in · 100 × 100 mm', 100, 100], ['3x4', '3 × 4 in · 75 × 100 mm', 75, 100], ['3x2', '3 × 2 in · 75 × 50 mm (small)', 75, 50], ['a6', 'A6 · 105 × 148 mm', 105, 148], ['custom', 'Custom size', 0, 0]];
-  var INV = [['a4', 'A4 · 210 × 297 mm'], ['a5', 'A5 · 148 × 210 mm'], ['pos80', 'POS roll 80 mm'], ['pos58', 'POS roll 58 mm']];
-  st.print = { inv: 'a4', stk: '4x6', cw: 100, ch: 150, sender: S.name, phone: '01XXXXXXXXX', logo: true, cod: true, items: true, bar: true, note: 'Handle with care · Do not fold' };
-  function stkSize() { var s = STK.filter(function (x) { return x[0] === st.print.stk; })[0]; return s[0] === 'custom' ? [st.print.cw || 100, st.print.ch || 150] : [s[2], s[3]]; }
-  function barcode(no) { var s = String(no) + '7', x = 0, out = ''; for (var i = 0; i < 46; i++) { var w = 1 + ((s.charCodeAt(i % s.length) + i * 7) % 3); if (i % 2 === 0) out += '<rect x="' + x + '" y="0" width="' + w + '" height="30"/>'; x += w; } return '<svg viewBox="0 0 ' + x + ' 30" preserveAspectRatio="none" style="width:100%;height:9mm">' + out + '</svg>'; }
-  function stickerHTML(o) {
-    var p = P(o.items[0].p), sz = stkSize(), small = sz[1] < 80, c = st.print;
-    return '<div class="stk" style="width:' + sz[0] + 'mm;height:' + sz[1] + 'mm;font-size:' + (small ? 7.5 : sz[0] >= 100 && sz[1] >= 140 ? 12.5 : 10) + 'pt">' +
-      '<div class="sh">' + (c.logo ? '<span class="lg">' + S.logo + '</span>' : '') + '<div><b>' + esc(c.sender) + '</b><div>' + esc(c.phone) + '</div></div><b class="sno">#' + o.no + '</b></div>' +
-      '<div class="sto"><small>TO</small><b style="font-size:1.25em">' + esc(o.name) + '</b><div>📞 ' + o.phone + '</div><div>' + esc(o.area) + (small ? '' : ', ' + esc(o.upazila) + ', ' + esc(o.district)) + '</div></div>' +
-      (c.items && !small ? '<div class="sit">' + esc(p.name) + ' × ' + o.items[0].q + '</div>' : '') +
-      '<div class="sf">' + (c.cod ? '<div class="cod"><small>' + (o.pay === 'COD' ? 'COD · COLLECT' : 'PAID · COLLECT') + '</small><b>' + tk(o.pay === 'COD' ? o.total : 0) + '</b></div>' : '') + (c.bar ? '<div style="flex:1;text-align:center">' + barcode(o.no) + '<small>' + (o.track || 'ORDER ' + o.no) + '</small></div>' : '') + '</div>' +
-      (c.note && !small ? '<div class="snote">' + esc(c.note) + '</div>' : '') + '</div>';
+  var RP = window.ROSE_PRINT;
+  var STK = RP.STICKER_SIZES;
+  var INV = RP.INVOICE_SIZES;
+  st.print = { inv: 'a4', stk: '100x70', cw: 100, ch: 70, sender: S.name, phone: '01XXXXXXXXX', logo: true, cod: true, items: true, bar: true, photos: true, note: 'Handle with care · Do not fold' };
+  function stkSize() { return RP.stickerSize(st.print); }
+  function pStore() { return { name: st.print.sender || S.name, logo: S.logo, slug: k, whatsapp: st.print.phone, phone: st.print.phone, email: 'hello@' + k + '.myrosebd.com', address: 'House 12, Road 5, Dhaka (demo address)', pay_numbers: { bkash: '01XXXXXXXXX' } }; }
+  function pOrder(o) {
+    return { order_no: o.no, customer_name: o.name, phone: o.phone, address: o.area, upazila: o.upazila, district: o.district, division: o.division,
+      items: o.items.map(function (it) { var p = P(it.p); return { name: p.name, q: it.q, price: p.price, opt: o.opt, img: (p.imgs && p.imgs[0]) || p.img || '' }; }),
+      delivery: o.del, total: o.total, payment_method: o.pay, trx_id: o.trx, tracking: o.track, courier: o.track ? 'steadfast' : '', status: o.st, area: /dhaka/i.test(o.district || '') ? 'inside' : 'outside', created_at: new Date().toISOString() };
   }
-  function invoiceHTML(o, size) {
-    var p = P(o.items[0].p), pos = /pos/.test(size), w = size === 'pos58' ? 58 : size === 'pos80' ? 80 : size === 'a5' ? 148 : 210;
-    return '<div class="ivc" style="width:' + w + 'mm;font-size:' + (pos ? 8 : size === 'a5' ? 9 : 10.5) + 'pt;padding:' + (pos ? '3mm' : '12mm') + '">' +
-      '<div style="display:flex;justify-content:space-between;' + (pos ? 'flex-direction:column;text-align:center' : '') + ';border-bottom:2px solid #111;padding-bottom:3mm"><div><b style="font-size:1.6em">' + S.logo + ' ' + esc(st.print.sender) + '</b><div>' + esc(st.print.phone) + ' · ' + k + '.myrosebd.com</div></div><div style="' + (pos ? '' : 'text-align:right') + '"><b style="font-size:1.4em">INVOICE</b><div>#' + o.no + ' · ' + new Date().toLocaleDateString('en-GB') + '</div></div></div>' +
-      '<div style="margin:3mm 0"><b>Bill to:</b> ' + esc(o.name) + ' · ' + o.phone + '<br>' + esc(o.area) + ', ' + esc(o.upazila) + ', ' + esc(o.district) + ', ' + esc(o.division) + '</div>' +
-      '<table style="width:100%;border-collapse:collapse"><tr style="border-bottom:1px solid #999"><th align="left">Item</th><th>Qty</th><th align="right">Amount</th></tr><tr><td>' + esc(p.name) + (o.opt ? ' (' + esc(o.opt) + ')' : '') + '</td><td align="center">' + o.items[0].q + '</td><td align="right">' + tk(p.price * o.items[0].q) + '</td></tr>' +
-      '<tr><td colspan="2" align="right">Delivery</td><td align="right">' + tk(o.del) + '</td></tr><tr style="border-top:1px solid #111;font-weight:800"><td colspan="2" align="right">Total</td><td align="right">' + tk(o.total) + '</td></tr></table>' +
-      '<p>Payment: <b>' + o.pay + (o.trx ? ' · ' + o.trx : '') + '</b>' + (o.pay === 'COD' ? ' · collect ' + tk(o.total) : '') + '</p><p style="text-align:center;color:#555">Thank you for shopping with ' + esc(st.print.sender) + '!</p></div>';
-  }
+  function stickerHTML(o) { return RP.stickerHTML(pOrder(o), st.print, pStore()); }
+  function invoiceHTML(o, size) { return RP.invoiceHTML(pOrder(o), Object.assign({}, st.print, { inv: size }), pStore()); }
   window.printDoc = function (kind, nos) {
     var list = st.orders.filter(function (o) { return nos.indexOf(o.no) >= 0; });
     if (!list.length) return toast('No orders to print');
-    var sz = stkSize(), inv = st.print.inv, page = kind === 'sticker' ? sz[0] + 'mm ' + sz[1] + 'mm' : inv === 'a4' ? 'A4' : inv === 'a5' ? 'A5' : (inv === 'pos58' ? '58mm' : '80mm') + ' auto';
-    var body = list.map(function (o) { return '<div class="pg">' + (kind === 'sticker' ? stickerHTML(o) : invoiceHTML(o, inv)) + '</div>'; }).join('');
     var w = window.open('', '_blank'); if (!w) return toast('Allow pop-ups to print');
-    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + (kind === 'sticker' ? 'Stickers' : 'Invoices') + '</title><style>@page{size:' + page + ';margin:0}body{margin:0;font-family:system-ui,Arial,sans-serif;color:#111}.pg{page-break-after:always}' + PRINTCSS + '</style></head><body>' + body + '<script>setTimeout(function(){print()},300)<\/script></body></html>');
+    w.document.write(RP.printPage(kind, list.map(pOrder), st.print, pStore()));
     w.document.close();
   };
-  var PRINTCSS = '.stk{box-sizing:border-box;border:1px dashed #999;padding:3mm;display:flex;flex-direction:column;gap:1.5mm;overflow:hidden;background:#fff;color:#111}.sh{display:flex;align-items:center;gap:2mm;border-bottom:1.5px solid #111;padding-bottom:1.5mm}.sh>div{flex:1;line-height:1.2}.lg{font-size:1.8em}.sno{font-size:1.15em}.sto{line-height:1.35;flex:1}.sto small,.cod small{display:block;font-size:.75em;letter-spacing:.1em;color:#555}.sit{border-top:1px dashed #999;padding-top:1mm;font-size:.9em}.sf{display:flex;gap:2mm;align-items:center;border-top:1.5px solid #111;padding-top:1.5mm}.cod{border:2px solid #111;border-radius:2mm;padding:1mm 2mm;text-align:center}.cod b{font-size:1.3em}.sf small{font-size:.7em}.snote{text-align:center;font-size:.8em;font-weight:700;background:#111;color:#fff;border-radius:1mm;padding:.8mm}.ivc{box-sizing:border-box;background:#fff;color:#111;line-height:1.45}.ivc td,.ivc th{padding:1.2mm 0}';
+  var PRINTCSS = RP.PRINT_CSS;
   V.print = function () {
     var c = st.print, sz = stkSize(), o = st.orders[0], scale = Math.min(1, 300 / (sz[0] * 3.78));
     var newNos = st.orders.filter(function (x) { return x.st === 'new' || x.st === 'confirmed' || x.st === 'packed'; }).map(function (x) { return x.no; });
@@ -516,7 +505,7 @@
       '<div class="card"><b style="font-size:13px">COURIER STICKER (LABEL) SIZE</b><div style="margin-top:8px">' + STK.map(function (s) { return '<label class="radio"><input type="radio" name="stk" ' + (c.stk === s[0] ? 'checked' : '') + ' onchange="st.print.stk=\'' + s[0] + '\';render()"> ' + s[1] + '</label>'; }).join('') + '</div>' +
       (c.stk === 'custom' ? '<div class="two"><div class="field"><span>Width (mm)</span><input inputmode="numeric" value="' + c.cw + '" onchange="st.print.cw=+this.value;render()"></div><div class="field"><span>Height (mm)</span><input inputmode="numeric" value="' + c.ch + '" onchange="st.print.ch=+this.value;render()"></div></div>' : '') + '</div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">YOUR COMPANY ON THE STICKER</b><div class="field" style="margin-top:8px"><span>Company / sender name</span><input value="' + esc(c.sender) + '" onchange="st.print.sender=this.value;render()"></div><div class="field"><span>Sender phone</span><input value="' + esc(c.phone) + '" onchange="st.print.phone=this.value;render()"></div><div class="field"><span>Bottom note</span><input value="' + esc(c.note) + '" onchange="st.print.note=this.value;render()"></div>' +
-      [['logo', 'Show logo'], ['cod', 'Show COD amount'], ['items', 'Show product name'], ['bar', 'Show barcode']].map(function (x) { return '<div class="row"><div class="f"><b>' + x[1] + '</b></div><button class="toggle' + (c[x[0]] ? ' on' : '') + '" onclick="st.print.' + x[0] + '=!st.print.' + x[0] + ';render()"></button></div>'; }).join('') + '</div>' +
+      [['logo', 'Show logo'], ['cod', 'Show COD amount'], ['items', 'Show product name'], ['bar', 'Show barcode'], ['photos', 'Product photos on invoice']].map(function (x) { return '<div class="row"><div class="f"><b>' + x[1] + '</b></div><button class="toggle' + (c[x[0]] ? ' on' : '') + '" onclick="st.print.' + x[0] + '=!st.print.' + x[0] + ';render()"></button></div>'; }).join('') + '</div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">INVOICE SIZE</b><div style="margin-top:8px">' + INV.map(function (s) { return '<label class="radio"><input type="radio" name="inv" ' + (c.inv === s[0] ? 'checked' : '') + ' onchange="st.print.inv=\'' + s[0] + '\';render()"> ' + s[1] + '</label>'; }).join('') + '</div></div></div>' +
       '<div><div class="card"><b style="font-size:13px">STICKER PREVIEW · ' + sz[0] + ' × ' + sz[1] + ' mm</b><div style="margin-top:10px;background:#e5e7eb;border-radius:10px;padding:10px;overflow:hidden;height:' + Math.round(sz[1] * 3.78 * scale + 20) + 'px"><div style="transform:scale(' + scale + ');transform-origin:0 0">' + stickerHTML(o) + '</div></div></div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">PRINT</b><div class="btns">' + btn('🏷️ Stickers for ' + newNos.length + ' open orders', 'printDoc(\'sticker\',[' + newNos.join(',') + '])') + btn('🧾 Invoices for ' + newNos.length + ' open orders', 'printDoc(\'invoice\',[' + newNos.join(',') + '])', 'alt') + btn('Test print 1 sticker', 'printDoc(\'sticker\',[' + o.no + '])', 'alt') + '</div><p class="note">Works with any label printer (Xprinter, TSC, Zebra) or a normal printer. In the print window choose your printer and "Actual size".</p></div></div></div>';

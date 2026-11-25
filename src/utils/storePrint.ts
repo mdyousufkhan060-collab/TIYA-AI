@@ -1,96 +1,200 @@
 /**
- * Store Builder printing: courier stickers (labels) and invoices in the size the owner picks.
- * Opens a print window with @page set to that size, so label printers print 1:1.
+ * Store Builder printing: customer invoices and courier stickers with the store's own logo, name,
+ * phones, bKash number and emails. One source for the live store admin, the demo admin and the
+ * customer's invoice page (built to /demos/print.js as window.ROSE_PRINT).
+ * Real Code 128 barcodes (scan with any barcode reader).
  */
 export type PrintSettings = {
   stk?: string; cw?: number; ch?: number; inv?: string;
   sender?: string; phone?: string; note?: string;
-  logo?: boolean; cod?: boolean; items?: boolean; bar?: boolean;
+  logo?: boolean; cod?: boolean; items?: boolean; bar?: boolean; photos?: boolean; terms?: string;
 };
+export type PrintItem = { name: string; q: number; price: number; opt?: string; img?: string; id?: string };
 export type PrintOrder = {
-  order_no: number; customer_name: string; phone: string; address: string; upazila?: string; district?: string; division?: string;
-  items: Array<{ name: string; q: number; price: number; opt?: string }>; subtotal?: number; delivery?: number; total: number;
-  payment_method: string; trx_id?: string; tracking?: string; created_at?: string;
+  order_no: number | string; customer_name: string; phone: string; address: string; upazila?: string; district?: string; division?: string; email?: string;
+  items: PrintItem[]; subtotal?: number; delivery?: number; total: number; area?: string; status?: string; courier?: string;
+  payment_method: string; trx_id?: string; tracking?: string; created_at?: string; note?: string;
+};
+export type PrintStore = {
+  name: string; logo?: string; logo_url?: string; slug?: string; name_bn?: string;
+  phone?: string; whatsapp?: string; phone2?: string; email?: string; email2?: string; address?: string; city?: string;
+  pay_numbers?: Record<string, string>; custom_domain?: string | null;
 };
 
 export const STICKER_SIZES: Array<[string, string, number, number]> = [
-  ['4x6', '4 × 6 in · 100 × 150 mm (Steadfast, Pathao, RedX)', 100, 150],
-  ['4x4', '4 × 4 in · 100 × 100 mm', 100, 100],
-  ['3x4', '3 × 4 in · 75 × 100 mm', 75, 100],
-  ['3x2', '3 × 2 in · 75 × 50 mm (small)', 75, 50],
+  ['100x70', '100 × 70 mm (recommended)', 100, 70],
+  ['4x6', '100 × 150 mm (4 × 6 in · Steadfast, Pathao, RedX)', 100, 150],
+  ['4x4', '100 × 100 mm (4 × 4 in)', 100, 100],
+  ['3x4', '75 × 100 mm (3 × 4 in)', 75, 100],
+  ['3x2', '75 × 50 mm (small)', 75, 50],
   ['a6', 'A6 · 105 × 148 mm', 105, 148],
   ['custom', 'Custom size', 0, 0],
 ];
-export const INVOICE_SIZES: Array<[string, string]> = [['a4', 'A4'], ['a5', 'A5'], ['pos80', 'POS roll 80 mm'], ['pos58', 'POS roll 58 mm']];
+export const INVOICE_SIZES: Array<[string, string]> = [['a4', 'A4 · 210 × 297 mm'], ['a5', 'A5 · 148 × 210 mm'], ['a6', 'A6 · 105 × 148 mm'], ['pos80', 'POS roll 80 mm'], ['pos58', 'POS roll 58 mm']];
 
 const esc = (t: unknown) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
-const tk = (n: number) => '৳ ' + Math.round(Number(n) || 0).toLocaleString('en-IN');
+const tk = (n: number) => '৳' + Math.round(Number(n) || 0).toLocaleString('en-IN');
+const isCod = (o: PrintOrder) => /cod/i.test(o.payment_method || '');
+const STATUS: Record<string, string> = { new: 'Pending', confirmed: 'Confirmed', packed: 'Ready to ship', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', returned: 'Returned' };
+const PAY: Record<string, string> = { cod: 'Cash on Delivery', bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket', upay: 'Upay', card: 'Card', bank: 'Bank' };
 
 export function stickerSize(s: PrintSettings): [number, number] {
-  const f = STICKER_SIZES.find((x) => x[0] === (s.stk || '4x6')) || STICKER_SIZES[0];
-  return f[0] === 'custom' ? [Number(s.cw) || 100, Number(s.ch) || 150] : [f[2], f[3]];
+  const f = STICKER_SIZES.find((x) => x[0] === (s.stk || '100x70')) || STICKER_SIZES[0];
+  return f[0] === 'custom' ? [Number(s.cw) || 100, Number(s.ch) || 70] : [f[2], f[3]];
 }
 
-function barcode(no: number) {
-  const s = String(no) + '7';
+// ---------------------------------------------------------------- Code 128 (set B) barcode as SVG
+const C128 = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213', '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+  '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211', '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+  '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331', '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+  '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214', '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+  '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141', '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+  '114131', '311141', '411131', '211412', '211214', '211232', '2331112',
+];
+export function barcodeSVG(text: string, heightMm = 9): string {
+  const s = String(text).replace(/[^\x20-\x7e]/g, '').slice(0, 40) || '0';
+  const codes = [104];
+  for (const ch of s) codes.push(ch.charCodeAt(0) - 32);
+  let sum = 104;
+  for (let i = 1; i < codes.length; i++) sum += codes[i] * i;
+  codes.push(sum % 103, 106);
   let x = 0;
-  let out = '';
-  for (let i = 0; i < 46; i++) {
-    const w = 1 + ((s.charCodeAt(i % s.length) + i * 7) % 3);
-    if (i % 2 === 0) out += `<rect x="${x}" y="0" width="${w}" height="30"/>`;
-    x += w;
+  let rects = '';
+  for (const c of codes) {
+    const p = C128[c];
+    for (let i = 0; i < p.length; i++) {
+      const w = Number(p[i]);
+      if (i % 2 === 0) rects += `<rect x="${x}" y="0" width="${w}" height="40"/>`;
+      x += w;
+    }
   }
-  return `<svg viewBox="0 0 ${x} 30" preserveAspectRatio="none" style="width:100%;height:9mm">${out}</svg>`;
+  return `<svg class="bc" viewBox="-6 0 ${x + 12} 40" preserveAspectRatio="none" style="width:100%;height:${heightMm}mm;display:block" fill="#000">${rects}</svg>`;
 }
 
-const isCod = (o: PrintOrder) => /cod/i.test(o.payment_method || '');
+const logoBox = (st: PrintStore, size: string) =>
+  st.logo_url ? `<img src="${esc(st.logo_url)}" alt="" style="height:${size};max-width:${size === '14mm' ? '30mm' : '22mm'};object-fit:contain">` : `<span style="font-size:${size === '14mm' ? '10mm' : '6mm'};line-height:1">${esc(st.logo || '🛍️')}</span>`;
+const orderCode = (st: PrintStore, o: PrintOrder) => (st.slug || st.name || 'ROSE').replace(/[^a-z0-9]/gi, '').slice(0, 8).toUpperCase() + String(o.order_no);
+const place = (o: PrintOrder) => [o.address, o.upazila, o.district].filter((x) => x && x !== '—').join(', ');
 
-export function stickerHTML(o: PrintOrder, s: PrintSettings, store: { name: string; logo: string }) {
+// ---------------------------------------------------------------- courier sticker
+export function stickerHTML(o: PrintOrder, s: PrintSettings, st: PrintStore) {
   const [w, h] = stickerSize(s);
-  const small = h < 80;
-  const fs = small ? 7.5 : w >= 100 && h >= 140 ? 12.5 : 10;
-  const place = [o.address, small ? '' : o.upazila, small ? '' : o.district].filter(Boolean).join(', ');
+  const tall = h >= 100;
+  const tiny = h < 60;
+  const fs = tiny ? 6.6 : w >= 100 && h >= 140 ? 10.5 : 8.4;
+  const cod = isCod(o);
+  const code = orderCode(st, o);
+  const qty = o.items.reduce((a, i) => a + (Number(i.q) || 1), 0);
   return `<div class="stk" style="width:${w}mm;height:${h}mm;font-size:${fs}pt">
-    <div class="sh">${s.logo !== false ? `<span class="lg">${esc(store.logo)}</span>` : ''}<div><b>${esc(s.sender || store.name)}</b><div>${esc(s.phone || '')}</div></div><b class="sno">#${o.order_no}</b></div>
-    <div class="sto"><small>TO</small><b style="font-size:1.25em">${esc(o.customer_name)}</b><div>📞 ${esc(o.phone)}</div><div>${esc(place)}</div></div>
-    ${s.items !== false && !small ? `<div class="sit">${o.items.map((i) => `${esc(i.name)}${i.opt ? ` (${esc(i.opt)})` : ''} × ${i.q}`).join(', ')}</div>` : ''}
-    <div class="sf">${s.cod !== false ? `<div class="cod"><small>${isCod(o) ? 'COD · COLLECT' : 'PAID · COLLECT'}</small><b>${tk(isCod(o) ? o.total : 0)}</b></div>` : ''}${s.bar !== false ? `<div style="flex:1;text-align:center">${barcode(o.order_no)}<small>${esc(o.tracking || 'ORDER ' + o.order_no)}</small></div>` : ''}</div>
-    ${s.note && !small ? `<div class="snote">${esc(s.note)}</div>` : ''}
+    <div class="s1">
+      <div class="sbrand">${s.logo !== false ? logoBox(st, tall ? '12mm' : '8mm') : ''}<div><b>${esc(s.sender || st.name)}</b><small>${esc(s.phone || st.whatsapp || st.phone || '')}</small></div></div>
+      ${s.bar !== false ? `<div class="sbar">${barcodeSVG(code, tall ? 10 : 7)}<small>${esc(code)}</small></div>` : `<b class="sno">#${esc(o.order_no)}</b>`}
+    </div>
+    <div class="s2">
+      <div class="sto"><small>CONSIGNEE</small><b class="nm">${esc(o.customer_name)}</b><div>📞 <b>${esc(o.phone)}</b></div><div class="ad">${esc(place(o))}</div></div>
+      ${s.cod !== false ? `<div class="scod"><small>${cod ? 'COD' : 'PAID'}</small><b>${tk(cod ? o.total : 0)}</b></div>` : ''}
+    </div>
+    ${s.items !== false && !tiny ? `<div class="sit">${o.items.map((i) => `${esc(i.name)}${i.opt ? ` (${esc(i.opt)})` : ''} ×${i.q}`).join(' · ')}</div>` : ''}
+    <div class="s3"><div><small>COURIER PARTNER</small><b>${esc(o.courier ? o.courier.replace(/^\w/, (c) => c.toUpperCase()) : '—')}</b></div><div><small>TRACKING NO</small><b>${esc(o.tracking || '—')}</b></div></div>
+    ${tall && o.tracking && s.bar !== false ? `<div class="sbar2">${barcodeSVG(o.tracking, 12)}<b>${esc(o.tracking)}</b></div>` : ''}
+    <div class="s4"><div><small>WEIGHT</small><b>____ kg</b></div><div><small>PACKAGE</small><b>1/1 · ${qty} pcs</b></div><div><small>ORDER TYPE</small><b>${cod ? 'COD' : 'PREPAID'}</b></div></div>
+    ${s.note && !tiny ? `<div class="snote">${esc(s.note)}</div>` : ''}
   </div>`;
 }
 
-export function invoiceHTML(o: PrintOrder, s: PrintSettings, store: { name: string; logo: string; slug: string }) {
+// ---------------------------------------------------------------- customer invoice
+export function invoiceHTML(o: PrintOrder, s: PrintSettings, st: PrintStore) {
   const size = s.inv || 'a4';
   const pos = /pos/.test(size);
-  const w = size === 'pos58' ? 58 : size === 'pos80' ? 80 : size === 'a5' ? 148 : 210;
-  const rows = o.items.map((i) => `<tr><td>${esc(i.name)}${i.opt ? ` (${esc(i.opt)})` : ''}</td><td align="center">${i.q}</td><td align="right">${tk(i.price * i.q)}</td></tr>`).join('');
-  const del = o.delivery ?? o.total - o.items.reduce((a, i) => a + i.price * i.q, 0);
-  return `<div class="ivc" style="width:${w}mm;font-size:${pos ? 8 : size === 'a5' ? 9 : 10.5}pt;padding:${pos ? '3mm' : '12mm'}">
-    <div style="display:flex;justify-content:space-between;${pos ? 'flex-direction:column;text-align:center;' : ''}border-bottom:2px solid #111;padding-bottom:3mm">
-      <div><b style="font-size:1.6em">${esc(store.logo)} ${esc(s.sender || store.name)}</b><div>${esc(s.phone || '')} · myrosebd.com/shop/${esc(store.slug)}</div></div>
-      <div style="${pos ? '' : 'text-align:right'}"><b style="font-size:1.4em">INVOICE</b><div>#${o.order_no} · ${new Date(o.created_at || Date.now()).toLocaleDateString('en-GB')}</div></div>
+  const w = size === 'pos58' ? 58 : size === 'pos80' ? 80 : size === 'a6' ? 105 : size === 'a5' ? 148 : 210;
+  const fs = pos ? 7.5 : size === 'a6' ? 6.8 : size === 'a5' ? 8.2 : 9.6;
+  const pad = pos ? '3mm' : size === 'a6' ? '5mm' : size === 'a5' ? '8mm' : '11mm';
+  const sub = o.subtotal ?? o.items.reduce((a, i) => a + i.price * i.q, 0);
+  const del = o.delivery ?? o.total - sub;
+  const pn = st.pay_numbers || {};
+  const contacts: Array<[string, string, string]> = [
+    ['💬', 'WHATSAPP', st.whatsapp || st.phone || s.phone || ''],
+    ['📱', pn.bkash ? 'BKASH' : pn.nagad ? 'NAGAD' : 'PHONE', pn.bkash || pn.nagad || st.phone2 || ''],
+    ['✉️', 'EMAIL', st.email || ''],
+    ['✉️', 'EMAIL 2', st.email2 || ''],
+  ].filter((c) => c[2]) as Array<[string, string, string]>;
+  const dt = new Date(o.created_at || Date.now());
+  const site = st.custom_domain || (st.slug ? `${st.slug}.myrosebd.com` : '');
+  const photos = s.photos !== false && !pos;
+  const cell = (ic: string, k: string, v: string, span = 1) => `<div class="ci" style="grid-column:span ${span}"><span>${ic}</span><b>${k}:</b> ${esc(v || '—')}</div>`;
+  return `<div class="ivc${pos ? ' pos' : ''}" style="width:${w}mm;font-size:${fs}pt;padding:${pad}">
+    <div class="ih">
+      <div class="ilogo">${logoBox(st, pos ? '8mm' : '14mm')}<div><b class="inm">${esc(s.sender || st.name)}</b>${st.name_bn ? `<div class="ibn">${esc(st.name_bn)}</div>` : ''}${site ? `<small>${esc(site)}</small>` : ''}</div></div>
+      ${pos ? '' : `<div class="icards">${contacts.map((c) => `<div><span>${c[0]}</span><small>${c[1]}</small><b>${esc(c[2])}</b></div>`).join('')}</div>`}
     </div>
-    <div style="margin:3mm 0"><b>Bill to:</b> ${esc(o.customer_name)} · ${esc(o.phone)}<br>${esc([o.address, o.upazila, o.district, o.division].filter(Boolean).join(', '))}</div>
-    <table style="width:100%;border-collapse:collapse"><tr style="border-bottom:1px solid #999"><th align="left">Item</th><th>Qty</th><th align="right">Amount</th></tr>${rows}
-      <tr><td colspan="2" align="right">Delivery</td><td align="right">${tk(del)}</td></tr>
-      <tr style="border-top:1px solid #111;font-weight:800"><td colspan="2" align="right">Total</td><td align="right">${tk(o.total)}</td></tr></table>
-    <p>Payment: <b>${esc((o.payment_method || '').toUpperCase())}${o.trx_id ? ' · ' + esc(o.trx_id) : ''}</b>${isCod(o) ? ' · collect ' + tk(o.total) : ''}</p>
-    <p style="text-align:center;color:#555">Thank you for shopping with ${esc(s.sender || store.name)}!</p>
+    ${pos ? `<div style="text-align:center">${contacts.map((c) => esc(c[2])).join(' · ')}</div>` : ''}
+    ${st.address ? `<div class="iaddr">📍 ${esc(st.address)}</div>` : ''}
+    <div class="ititle"><b>INVOICE</b><span>#${esc(o.order_no)} · ${dt.toLocaleDateString('en-GB')}</span></div>
+    <div class="isec">👤 CUSTOMER INFORMATION</div>
+    <div class="igrid">
+      ${cell('👤', 'Name', o.customer_name, 2)}${cell('📞', 'Phone', o.phone, pos ? 2 : 1)}
+      ${cell('📍', 'Address', o.address, pos ? 2 : 3)}
+      ${cell('🧭', 'Division', o.division || '')}${cell('🗺️', 'District', o.district || '')}${cell('🏘️', 'Upazila', o.upazila || '', pos ? 2 : 1)}
+      ${cell('✉️', 'Email', o.email || '', pos ? 2 : 1)}${cell('#', 'Order ID', String(o.order_no))}${cell('📅', 'Date', dt.toLocaleDateString('en-GB'), pos ? 2 : 1)}
+      ${cell('💳', 'Payment', (PAY[(o.payment_method || '').toLowerCase()] || o.payment_method || '').toUpperCase() + (o.trx_id ? ' · ' + o.trx_id : ''), pos ? 2 : 1)}${cell('⏱️', 'Status', STATUS[o.status || 'new'] || o.status || 'Pending', 2)}
+    </div>
+    <table class="itbl"><thead><tr><th style="text-align:left">PRODUCT</th>${pos ? '' : '<th>VARIANT / SIZE</th>'}<th>QTY</th>${pos ? '' : '<th>UNIT PRICE</th>'}<th style="text-align:right">TOTAL</th></tr></thead><tbody>
+      ${o.items.map((i) => `<tr><td><div class="ip">${photos && i.img ? `<img src="${esc(i.img)}" alt="">` : ''}<b>${esc(i.name)}</b>${pos && i.opt ? ` (${esc(i.opt)})` : ''}</div></td>${pos ? '' : `<td align="center">${esc(i.opt || '—')}</td>`}<td align="center">${i.q}</td>${pos ? '' : `<td align="center">${tk(i.price)}</td>`}<td align="right">${tk(i.price * i.q)}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="ibot">
+      ${pos ? '' : `<div class="ibox"><div class="ibh">🚚 COURIER INFORMATION</div><p><span>Courier:</span><b>${esc(o.courier ? o.courier.replace(/^\w/, (c) => c.toUpperCase()) : '—')}</b></p><p><span>Status:</span><b>${esc(STATUS[o.status || 'new'] || 'Pending')}</b></p><p><span>Tracking ID:</span><b>${esc(o.tracking || '—')}</b></p><p><span>Delivery area:</span><b>${o.area === 'outside' ? 'Outside Dhaka' : o.area === 'inside' ? 'Inside Dhaka' : esc(o.district || '—')}</b></p></div>`}
+      <div class="ibox"><div class="ibh">🧾 BILLING SUMMARY</div><p><span>Subtotal:</span><b>${tk(sub)}</b></p><p><span>Delivery:</span><b>${tk(del)}</b></p><p class="gt"><span>GRAND TOTAL:</span><b>${tk(o.total)}</b></p>${isCod(o) ? `<p><span>Collect (COD):</span><b>${tk(o.total)}</b></p>` : ''}</div>
+    </div>
+    ${pos ? '' : `<div class="ibot"><div class="ibox"><div class="ibh">📝 NOTES</div><div class="small">${esc(o.note || 'পণ্য বুঝে নিয়ে চেক করে পেমেন্ট করবেন।')}</div></div><div class="ibox"><div class="ibh">📄 TERMS & CONDITIONS</div><div class="small">${esc(s.terms || 'This is a computer generated invoice. No physical signature required.')}</div></div></div>`}
+    ${barcodeSVG(orderCode(st, o), pos ? 7 : 8)}
+    <div class="ithanks">THANK YOU FOR YOUR ORDER!</div>
   </div>`;
 }
 
-export const PRINT_CSS =
-  '.stk{box-sizing:border-box;border:1px dashed #999;padding:3mm;display:flex;flex-direction:column;gap:1.5mm;overflow:hidden;background:#fff;color:#111;font-family:system-ui,Arial,sans-serif}.sh{display:flex;align-items:center;gap:2mm;border-bottom:1.5px solid #111;padding-bottom:1.5mm}.sh>div{flex:1;line-height:1.2}.lg{font-size:1.8em}.sno{font-size:1.15em}.sto{line-height:1.35;flex:1}.sto small,.cod small{display:block;font-size:.75em;letter-spacing:.1em;color:#555}.sit{border-top:1px dashed #999;padding-top:1mm;font-size:.9em}.sf{display:flex;gap:2mm;align-items:center;border-top:1.5px solid #111;padding-top:1.5mm}.cod{border:2px solid #111;border-radius:2mm;padding:1mm 2mm;text-align:center}.cod b{font-size:1.3em}.sf small{font-size:.7em}.snote{text-align:center;font-size:.8em;font-weight:700;background:#111;color:#fff;border-radius:1mm;padding:.8mm}.ivc{box-sizing:border-box;background:#fff;color:#111;line-height:1.45;font-family:system-ui,Arial,sans-serif}.ivc td,.ivc th{padding:1.2mm 0}';
+export const PRINT_CSS = `
+.stk,.ivc{box-sizing:border-box;background:#fff;color:#111;font-family:system-ui,'Noto Sans Bengali',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.stk{border:1px solid #111;padding:2.2mm;display:flex;flex-direction:column;justify-content:space-between;gap:1.2mm;overflow:hidden;line-height:1.2}
+.stk small{display:block;font-size:.68em;letter-spacing:.06em;color:#444;font-weight:600}
+.s1{display:flex;gap:2mm;align-items:center;border-bottom:1.4px solid #111;padding-bottom:1.2mm}
+.sbrand{display:flex;gap:1.5mm;align-items:center;flex:1;min-width:0}.sbrand b{font-size:1.25em;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sbar{width:44%;text-align:center}.sbar small,.sbar2 b{text-align:center;font-size:.75em;letter-spacing:.08em;color:#111}.sno{font-size:1.2em}
+.s2{display:flex;gap:2mm;min-height:0}.sto{flex:1;min-width:0}.sto .nm{font-size:1.3em;display:block}.sto .ad{font-size:.95em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.scod{border:1.6px solid #111;border-radius:1.5mm;padding:1mm 2mm;text-align:center;align-self:center;min-width:22mm}.scod small{font-size:.9em;color:#111}.scod b{font-size:1.55em;display:block}
+.sit{font-size:.8em;border-top:1px dashed #888;padding-top:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s3,.s4{display:grid;grid-template-columns:1fr 1fr;border-top:1.2px solid #111}.s4{grid-template-columns:1fr 1fr 1fr}
+.s3>div,.s4>div{padding:.8mm 1mm}.s3>div+div,.s4>div+div{border-left:1px solid #111}.s3 b,.s4 b{font-size:.98em}
+.sbar2{border-top:1px solid #111;padding-top:1mm;text-align:center}
+.snote{text-align:center;font-size:.8em;font-weight:700;background:#111;color:#fff;border-radius:1mm;padding:.6mm}
+.ivc{line-height:1.4;border:1px solid #e5e7eb}.ivc .small{font-size:.9em;color:#444}
+.ih{display:flex;gap:4mm;align-items:center;justify-content:space-between}.ilogo{display:flex;gap:2.5mm;align-items:center;min-width:0}.inm{font-size:1.9em;letter-spacing:.02em;display:block;line-height:1.1}.ibn{font-weight:600;color:#334155}.ilogo small{color:#64748b}
+.icards{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm;flex:1;max-width:62%}.icards>div{border:1px solid #e5e7eb;border-radius:1.5mm;padding:1.2mm 2mm;display:grid;grid-template-columns:auto 1fr;column-gap:1.5mm}.icards span{grid-row:span 2;align-self:center}.icards small{font-size:.72em;color:#64748b;font-weight:700}.icards b{font-size:.92em;overflow-wrap:anywhere}
+.iaddr{margin-top:2.5mm;border:1px solid #e5e7eb;background:#f8fafc;border-radius:1.5mm;padding:1.2mm 2mm;text-align:center;font-size:.9em}
+.ititle{display:flex;justify-content:space-between;align-items:baseline;margin-top:2.5mm}.ititle b{font-size:1.5em;letter-spacing:.15em}
+.isec{font-weight:800;letter-spacing:.06em;border-bottom:2px solid #111;padding:1mm 0;margin-top:2mm}
+.igrid{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #e5e7eb;border-top:0}.ci{padding:1.2mm 2mm;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;font-size:.92em;overflow:hidden}.ci span{margin-right:1mm}
+.itbl{width:100%;border-collapse:collapse;margin-top:3mm}.itbl th{background:#111;color:#fff;font-size:.8em;letter-spacing:.05em;padding:1.6mm 1.5mm}.itbl td{border-bottom:1px solid #e5e7eb;padding:1.4mm 1.5mm}
+.ip{display:flex;align-items:center;gap:2mm}.ip img{width:10mm;height:10mm;object-fit:cover;border-radius:1mm;border:1px solid #e5e7eb}
+.ibot{display:grid;grid-template-columns:1fr 1fr;gap:2.5mm;margin-top:3mm}.ibox{border:1px solid #e5e7eb;border-radius:2mm;padding:2mm 2.5mm}.ibh{font-weight:800;font-size:.85em;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:1mm;margin-bottom:1mm}
+.ibox p{display:flex;justify-content:space-between;margin:.6mm 0}.ibox p span{color:#475569}.ibox .gt{border-top:1px solid #111;padding-top:1mm;font-size:1.15em}
+.ivc .bc{margin:3mm auto 0;height:8mm;width:55%!important}.ithanks{margin-top:2mm;background:#111;color:#fff;text-align:center;font-weight:800;letter-spacing:.12em;padding:2mm;border-radius:1.5mm}
+.ivc.pos{border:0}.ivc.pos .ih{flex-direction:column;text-align:center}.ivc.pos .igrid{grid-template-columns:1fr 1fr}.ivc.pos .ibot{grid-template-columns:1fr}
+@media (max-width:640px){.ivc:not(.pos) .ih{flex-direction:column;align-items:stretch}.ivc:not(.pos) .icards{max-width:none}.ivc:not(.pos) .igrid{grid-template-columns:1fr 1fr}.ivc:not(.pos) .ci{grid-column:span 1!important}.ivc:not(.pos) .ibot{grid-template-columns:1fr}}
+`;
 
-export function printOrders(kind: 'sticker' | 'invoice', orders: PrintOrder[], s: PrintSettings, store: { name: string; logo: string; slug: string }): string | null {
-  if (!orders.length) return 'No orders to print';
+export function printPage(kind: 'sticker' | 'invoice', orders: PrintOrder[], s: PrintSettings, store: PrintStore): string {
   const [w, h] = stickerSize(s);
   const inv = s.inv || 'a4';
-  const page = kind === 'sticker' ? `${w}mm ${h}mm` : inv === 'a4' ? 'A4' : inv === 'a5' ? 'A5' : `${inv === 'pos58' ? '58mm' : '80mm'} auto`;
+  const page = kind === 'sticker' ? `${w}mm ${h}mm` : inv === 'a4' ? 'A4' : inv === 'a5' ? 'A5' : inv === 'a6' ? 'A6' : `${inv === 'pos58' ? '58mm' : '80mm'} auto`;
   const body = orders.map((o) => `<div class="pg">${kind === 'sticker' ? stickerHTML(o, s, store) : invoiceHTML(o, s, store)}</div>`).join('');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${kind === 'sticker' ? 'Stickers' : 'Invoices'} · ${esc(store.name)}</title><style>@page{size:${page};margin:0}body{margin:0}.pg{page-break-after:always}.ivc{border:0}${PRINT_CSS}</style></head><body>${body}<script>window.onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`;
+}
+
+export function printOrders(kind: 'sticker' | 'invoice', orders: PrintOrder[], s: PrintSettings, store: PrintStore): string | null {
+  if (!orders.length) return 'No orders to print';
   const win = window.open('', '_blank');
   if (!win) return 'Allow pop-ups to print';
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${kind === 'sticker' ? 'Stickers' : 'Invoices'}</title><style>@page{size:${page};margin:0}body{margin:0}.pg{page-break-after:always}${PRINT_CSS}</style></head><body>${body}<script>setTimeout(function(){print()},300)<\/script></body></html>`);
+  win.document.write(printPage(kind, orders, s, store));
   win.document.close();
   return null;
 }

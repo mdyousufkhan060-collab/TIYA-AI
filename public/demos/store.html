@@ -166,7 +166,29 @@
     footer .cols { grid-template-columns: 1fr 1fr; }
     .city { font-size: 14px; } .hideM { display: none !important; }
   }
-  .lang { border: 1.5px solid var(--c); color: var(--c); background: #fff; border-radius: 999px; padding: 4px 10px; font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .lang { position: relative; border: 1.5px solid #e5e7eb; color: var(--c); background: #fff; border-radius: 999px; width: 38px; height: 38px; padding: 0; display: grid; place-items: center; flex: none; }
+  .lang svg { width: 22px; height: 22px; } .lang em { position: absolute; right: -4px; bottom: -3px; font-style: normal; font-size: 9px; font-weight: 800; background: var(--c); color: #fff; border-radius: 99px; padding: 1px 4px; line-height: 1.2; }
+  nav.bottom a.mid .mi { width: 50px; height: 50px; margin-top: -24px; border-radius: 99px; background: var(--c); color: #fff; display: grid; place-items: center; box-shadow: 0 6px 16px rgba(0,0,0,.18); border: 4px solid #fff; }
+  nav.bottom a.mid .mi svg { width: 26px; height: 26px; } nav.bottom a.mid.on { color: var(--c); }
+  .ofb { border-radius: 18px; padding: 18px; color: #fff; background: linear-gradient(120deg, var(--c), #7c3aed); display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .ofb b { font-size: 26px; line-height: 1.1; display: block; } .ofb .tag { background: #facc15; color: #111; font-weight: 900; border-radius: 10px; padding: 8px 10px; transform: rotate(-6deg); font-size: 18px; line-height: 1; text-align: center; }
+  .ofchips { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 12px; } .ofchips::-webkit-scrollbar { display: none; }
+  .ofchips button { flex: none; border: 1.5px solid #e5e7eb; background: #fff; border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 13px; color: #334155; } .ofchips button.on { background: var(--c); border-color: var(--c); color: #fff; }
+  .ofg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; } @media (min-width: 760px) { .ofg { grid-template-columns: repeat(4, 1fr); } }
+  .ofc { background: #fff; border-radius: 14px; padding: 10px; position: relative; box-shadow: 0 1px 4px rgba(0,0,0,.06); display: flex; flex-direction: column; gap: 4px; }
+  .ofc .im { aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: #f8fafc; display: grid; place-items: center; font-size: 44px; } .ofc .bd { position: absolute; top: 14px; left: 14px; background: #ef4444; color: #fff; font-weight: 800; font-size: 11.5px; border-radius: 99px; padding: 3px 8px; }
+  .ofc s { color: #94a3b8; font-size: 12px; } .ofc b.p { font-size: 17px; } .ofc .sn { margin-top: auto; background: var(--c); color: #fff; border-radius: 99px; text-align: center; font-weight: 700; font-size: 12.5px; padding: 7px; }
+  .wl { display: flex; gap: 10px; background: #fff; border-radius: 14px; padding: 10px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); align-items: center; }
+  .wl .im { width: 92px; height: 92px; flex: none; border-radius: 10px; overflow: hidden; background: #f8fafc; display: grid; place-items: center; font-size: 40px; } .wl .bd { background: #fee2e2; color: #dc2626; font-weight: 800; font-size: 11px; border-radius: 99px; padding: 2px 8px; display: inline-block; }
+  .wl .x { border: 0; background: none; color: #ef4444; width: 34px; height: 34px; display: grid; place-items: center; } .wl .x svg { width: 22px; height: 22px; } .wl .x svg path { fill: currentColor; }
+  .note1 { background: color-mix(in srgb, var(--c) 10%, #fff); border-radius: 14px; padding: 10px 14px; text-align: center; font-size: 13px; margin-bottom: 12px; color: #334155; }
+  .acc1 { background: color-mix(in srgb, var(--c) 10%, #fff); border-radius: 18px; padding: 14px; display: flex; align-items: center; gap: 12px; }
+  .acc1 .av { width: 62px; height: 62px; border-radius: 99px; background: var(--c); color: #fff; display: grid; place-items: center; font-size: 26px; font-weight: 800; flex: none; border: 3px solid #fff; }
+  .acc1 .ep { margin-left: auto; background: var(--c); color: #fff; border: 0; border-radius: 99px; padding: 7px 12px; font-weight: 700; font-size: 12px; white-space: nowrap; }
+  .ord4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; } .ord4 a { background: #fff; border-radius: 12px; padding: 10px 4px; text-align: center; font-size: 12px; font-weight: 600; color: #334155; box-shadow: 0 1px 4px rgba(0,0,0,.06); } .ord4 a span { display: block; font-size: 22px; margin-bottom: 4px; }
+  .mlist a, .mlist button { display: flex; align-items: center; gap: 12px; width: 100%; background: #fff; border: 0; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; font-size: 14.5px; font-weight: 600; color: #1f2937; box-shadow: 0 1px 4px rgba(0,0,0,.05); text-align: left; }
+  .mlist span.i { width: 26px; text-align: center; font-size: 19px; } .mlist em { margin-left: auto; font-style: normal; color: #94a3b8; font-size: 18px; } .mlist .lo { color: #dc2626; }
+  .stp2 { display: flex; justify-content: space-between; margin: 14px 0 6px; } .stp2 div { flex: 1; text-align: center; font-size: 11px; color: #94a3b8; position: relative; } .stp2 div b { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 99px; background: #e5e7eb; color: #fff; margin: 0 auto 4px; font-size: 12px; } .stp2 div.on { color: #111; font-weight: 700; } .stp2 div.on b { background: var(--c); }
   .small { font-size: 12.5px; color: #64748b; }
   .gal .gmain { position: relative; aspect-ratio: 1 / 1; background: #fff; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: grid; place-items: center; font-size: 120px; }
   .gal .gmain img { width: 100%; height: 100%; object-fit: cover; }
@@ -282,8 +304,8 @@
   <div class="bar">
     <a class="logo" href="#/"><span class="ic" id="logoIc"></span><span><b id="logoName"></b><small id="logoTag"></small></span></a>
     <span class="grow"></span>
-    <button class="city" id="city" type="button"></button>
-    <a class="icon hideM" href="#/wishlist" title="Wishlist" id="hWish"><i id="wCount" hidden></i></a>
+    <button class="city" id="city" type="button" style="display:none"></button>
+    <a class="icon" href="#/wishlist" title="Wishlist" id="hWish"><i id="wCount" hidden></i></a>
     <a class="icon hideM" href="#/cart" title="Cart" id="hCart"><i id="cCount" hidden></i></a>
     <button class="gacc" id="gAcc" type="button" title="Log in with Google"></button>
     <button class="lang" id="langBtn" type="button"></button>
@@ -309,6 +331,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="/demos/stores.js"></script>
+<script src="/demos/print.js"></script>
 <script>
 var SB_URL = 'https://ukgwipazzjstjkdfaozg.supabase.co', SB_KEY = 'sb_publishable_CRMgURG899vqIqUIsADWgw_p90ZliES';
 function sb(path, body) {
@@ -339,6 +362,9 @@ var IC = {
   ret: SV('<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/>'),
   check: SV('<circle cx="12" cy="12" r="9"/><path d="m8 12 2.8 2.8L16.5 9"/>'),
   arrow: SV('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+  globe: SV('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z"/>'),
+  tag: SV('<path class="f" d="M3 12.5V4a1 1 0 0 1 1-1h8.5l8.2 8.2a1.4 1.4 0 0 1 0 2l-7.5 7.5a1.4 1.4 0 0 1-2 0z"/><circle cx="7.6" cy="7.6" r="1.5" fill="#fff"/>'),
+  trash: SV('<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>'),
 };
 function trustIcon(t) { t = t.toLowerCase(); return /deliver|ship|same day|fitting/.test(t) ? IC.truck : /return/.test(t) ? IC.ret : /support|chat|pharmacist|showroom/.test(t) ? IC.headset : /pay|emi|secure/.test(t) ? IC.shield : IC.check; }
 // ---- Bangladesh places: 8 divisions, 64 districts (built in); upazilas load from a public dataset ----
@@ -527,9 +553,10 @@ function start(S, P, liveId) {
   function renderNav() {
     var h = location.hash || '#/';
     var c = st.cart.reduce(function (a, x) { return a + x.q; }, 0);
-    var items = [['#/', IC.home, t('home')], ['#/categories', IC.grid, t('categories')], ['#/cart', IC.cart, t('cart')], ['#/wishlist', IC.heart, t('wishlist')], ['#/account', IC.user, t('account')]];
+    var items = [['#/', IC.home, t('home')], ['#/categories', IC.grid, t('categories')], ['#/offers', IC.tag, t('offers')], ['#/cart', IC.cart, t('cart')], ['#/account', IC.user, t('account')]];
     document.getElementById('nav').innerHTML = '<div class="in">' + items.map(function (it) {
       var on = it[0] === '#/' ? (h === '#/' || h === '#' || h === '') : h.indexOf(it[0]) === 0;
+      if (it[0] === '#/offers') return '<a href="#/offers" class="mid' + (on ? ' on' : '') + '"><span class="mi">' + it[1] + '</span>' + it[2] + '</a>';
       return '<a href="' + it[0] + '" class="' + (on ? 'on' : '') + '">' + it[1] + it[2] + (it[0] === '#/cart' && c ? '<i>' + c + '</i>' : '') + '</a>';
     }).join('') + '</div>';
   }
@@ -582,6 +609,12 @@ function start(S, P, liveId) {
   }
   // ---------------- language (customer can switch English / বাংলা) ----------------
   var T = {
+    offers: ['Offers', 'অফার'], allOffers: ['All Offers', 'সব অফার'], flash: ['Flash Sale', 'ফ্ল্যাশ সেল'], discount: ['Discount', 'ছাড়'], combo: ['Combo', 'কম্বো'], shopNow: ['Shop Now', 'এখনই কিনুন'],
+    upTo: ['Up to', 'সর্বোচ্চ'], bigSale: ['BIG SALE', 'বিগ সেল'], noOffer: ['No offers right now. Check again soon.', 'এখন কোনো অফার নেই। পরে আবার দেখুন।'],
+    wishNote: ['Your saved products are here. Buy them any time!', 'আপনার পছন্দের পণ্যগুলো এখানে সেভ আছে। যখন খুশি কিনে নিন!'], wishEmpty: ['No saved items yet. Tap ♡ on any product.', 'এখনও কিছু সেভ নেই। যেকোনো পণ্যে ♡ চাপুন।'], clearAll: ['Clear all', 'সব মুছুন'],
+    editProfile: ['Edit Profile', 'প্রোফাইল এডিট'], allOrders: ['All Orders', 'সব অর্ডার'], trackOrder: ['Track Order', 'অর্ডার ট্র্যাক'], myReturns: ['My Returns', 'রিটার্ন'], myReviews: ['My Reviews', 'আমার রিভিউ'], viewAll: ['View All', 'সব দেখুন'],
+    myWish: ['My Wishlist', 'আমার পছন্দ'], myCoupons: ['My Coupons', 'আমার কুপন'], addresses: ['Delivery Addresses', 'ডেলিভারি ঠিকানা'], help: ['Help & Support', 'সাহায্য ও সাপোর্ট'], aboutUs: ['About Us', 'আমাদের সম্পর্কে'], shareApp: ['Share Store', 'দোকান শেয়ার করুন'],
+    guestName: ['Guest', 'অতিথি'], loginTip: ['Log in to keep your orders on every phone.', 'সব ফোনে অর্ডার দেখতে লগইন করুন।'], orderNo: ['Order number', 'অর্ডার নম্বর'], check: ['Check', 'দেখুন'], notFound: ['Not found. Check the number and the mobile.', 'পাওয়া যায়নি। নম্বর আর মোবাইল মিলিয়ে দেখুন।'],
     home: ['Home', 'হোম'], categories: ['Categories', 'ক্যাটাগরি'], cart: ['Cart', 'কার্ট'], wishlist: ['Wishlist', 'পছন্দ'], account: ['Account', 'অ্যাকাউন্ট'],
     addCart: ['Add to Cart', 'কার্টে যোগ করুন'], orderNow: ['Order Now', 'এখনই অর্ডার'], inStock: ['In stock', 'স্টকে আছে'], outStock: ['Out of stock', 'স্টকে নেই'],
     desc: ['Description', 'বিবরণ'], sizeGuide: ['Size guide', 'সাইজ গাইড'], delRet: ['Delivery & Return', 'ডেলিভারি ও রিটার্ন'],
@@ -604,7 +637,7 @@ function start(S, P, liveId) {
   var LANG = 'en'; try { LANG = localStorage.getItem('rose_lang') || 'en'; } catch (e) {}
   var t = function (k) { return (T[k] || [k, k])[LANG === 'bn' ? 1 : 0]; };
   var lb = document.getElementById('langBtn');
-  function paintLang() { lb.textContent = LANG === 'bn' ? 'EN' : 'বাংলা'; lb.title = LANG === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন'; document.documentElement.lang = LANG === 'bn' ? 'bn' : 'en'; }
+  function paintLang() { lb.innerHTML = IC.globe + '<em>' + (LANG === 'bn' ? 'বাং' : 'EN') + '</em>'; lb.title = LANG === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন'; lb.setAttribute('aria-label', lb.title); document.documentElement.lang = LANG === 'bn' ? 'bn' : 'en'; }
   lb.onclick = function () { LANG = LANG === 'bn' ? 'en' : 'bn'; try { localStorage.setItem('rose_lang', LANG); } catch (e) {} paintLang(); route(); };
   paintLang();
   var GSVG = '<svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
@@ -838,28 +871,112 @@ function start(S, P, liveId) {
   };
 
   // ---------------- invoice ----------------
+  function printStore() {
+    return { name: S.name, name_bn: S.nameBn, logo: S.logo, logo_url: S.logoUrl, slug: S.live ? S.slug : id,
+      whatsapp: S.live ? (S.whatsapp || S.phone) : '01XXXXXXXXX', phone: S.live ? S.phone : '01XXXXXXXXX', phone2: S.phone2, email: S.live ? S.email : 'hello@' + id + '.myrosebd.com', email2: S.email2,
+      address: S.live ? S.address : 'House 12, Road 5, Dhaka (demo address)', pay_numbers: S.live ? S.payNumbers : { bkash: '01XXXXXXXXX' }, custom_domain: S.live ? '' : '' };
+  }
+  function printOrder(O) {
+    return { order_no: O.no, customer_name: O.name, phone: O.phone, email: O.email, address: O.address, upazila: O.upazila, district: O.district, division: O.division,
+      items: O.items, subtotal: O.sub, delivery: O.del, total: O.total, area: O.zone, status: O.status || 'new', courier: O.courier, tracking: O.tracking,
+      payment_method: O.pay, trx_id: O.trx, created_at: O.date };
+  }
   function invoice(no) {
     var O = myOrders().filter(function (o) { return String(o.no) === String(no); })[0];
     if (!O) return '<div class="panel" style="text-align:center;padding:36px">🧾<h3>Invoice not found on this phone</h3><a class="btn" style="width:auto;display:inline-flex;padding:10px 18px" href="#/">' + t('keepShop') + '</a></div>';
-    var dt = new Date(O.date), payName = (PAYLIST.filter(function (m) { return m[0] === O.pay; })[0] || [0, 0, O.pay])[2];
+    if (!document.getElementById('printCss')) { var pc = document.createElement('style'); pc.id = 'printCss'; pc.textContent = window.ROSE_PRINT.PRINT_CSS + '@media print{.ivc{width:auto!important;border:0}}'; document.head.appendChild(pc); }
     return '<div class="okmsg noprint"><span>✓</span><div><b>' + t('thanks') + '</b><small>' + t('willCall') + '</small></div></div>' +
-      '<div class="inv" id="invoice"><div class="ih"><div class="logo">' + (S.logoUrl ? '<img src="' + esc(S.logoUrl) + '" alt="" style="height:44px">' : '<span style="font-size:36px">' + S.logo + '</span>') + '<span><b style="font-size:20px">' + esc(S.name) + '</b><small style="display:block;color:#64748b">' + esc(S.live ? (S.phone || '') : '+880 1XXX-XXXXXX') + '</small></span></div>' +
-      '<div style="text-align:right"><h2 style="margin:0;letter-spacing:.08em">' + t('invoice').toUpperCase() + '</h2><b>#' + O.no + '</b><div class="small">' + t('date') + ': ' + dt.toLocaleDateString('en-GB') + ' ' + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + '</div></div></div>' +
-      '<div class="ib"><div><small>' + t('billTo') + '</small><b>' + esc(O.name) + '</b><div>📞 ' + esc(O.phone) + '</div>' + (O.email ? '<div>✉️ ' + esc(O.email) + '</div>' : '') + '<div>📍 ' + esc(O.address) + ', ' + esc(O.upazila) + ', ' + esc(O.district) + ', ' + esc(O.division) + '</div></div>' +
-      '<div><small>' + t('status') + '</small><span class="stp">' + t('pending') + '</span><small style="margin-top:8px">' + t('payBy') + '</small><b>' + esc(payName) + (O.trx ? ' · ' + esc(O.trx) : '') + '</b></div></div>' +
-      '<table class="tbl"><tr><th>' + t('item') + '</th><th>' + t('qty') + '</th><th>' + t('price') + '</th><th style="text-align:right">' + t('amount') + '</th></tr>' + O.items.map(function (i) { return '<tr><td><b>' + esc(i.name) + '</b>' + (i.opt ? '<br><small>' + esc(i.opt) + '</small>' : '') + '</td><td>' + i.q + '</td><td>' + tk(i.price) + '</td><td style="text-align:right">' + tk(i.price * i.q) + '</td></tr>'; }).join('') + '</table>' +
-      '<div class="tot" style="max-width:320px;margin-left:auto"><div><span>' + t('subtotal') + '</span><b>' + tk(O.sub) + '</b></div><div><span>' + t('delCharge') + ' (' + (O.zone === 'inside' ? t('inside') : t('outside')) + ')</span><b>' + tk(O.del) + '</b></div><div class="big"><span>' + t('total') + '</span><b>' + tk(O.total) + '</b></div>' + (O.pay === 'cod' ? '<div><span>' + t('toCollect') + '</span><b style="color:#dc2626">' + tk(O.total) + '</b></div>' : '') + '</div>' +
-      '<p class="small" style="text-align:center;margin-top:16px">7-day easy return or exchange with this invoice · Made with ROSE Store Builder</p></div>' +
+      '<div id="invoice" style="overflow-x:auto"><div style="margin:0 auto;width:max-content;max-width:100%">' + window.ROSE_PRINT.invoiceHTML(printOrder(O), { inv: 'a4', photos: true }, printStore()).replace('style="width:210mm;', 'style="width:min(210mm,100%);') + '</div></div>' +
       '<div class="invb noprint"><button class="btn" onclick="window.print()">⬇️ ' + t('download') + '</button><a class="btn alt" href="#/account">📦 ' + t('myOrders') + '</a><a class="btn alt" href="#/">🏠 ' + t('keepShop') + '</a></div>';
   }
 
   // ---------------- account + login ----------------
+  // ---------------- offers ----------------
+  var ofTab = 'all';
+  window.ofTab = function (k) { ofTab = k; route(); };
+  function offersPage() {
+    var all = P.filter(function (p) { return off(p) > 0; }).sort(function (a, b) { return off(b) - off(a); });
+    var isCombo = function (p) { return /combo|bundle|pack|set\b|কম্বো|প্যাক/i.test(p.name); };
+    var pick = ofTab === 'flash' ? all.filter(function (p) { return off(p) >= 30; }) : ofTab === 'discount' ? all.filter(function (p) { return off(p) < 30; }) : ofTab === 'combo' ? P.filter(isCombo) : all;
+    var max = all.length ? off(all[0]) : 0;
+    var tabs = [['all', t('allOffers')], ['flash', '⚡ ' + t('flash')], ['discount', t('discount')], ['combo', t('combo')]];
+    return '<div class="ofb"><span class="tag">' + t('bigSale').replace(' ', '<br>') + '</span><div style="flex:1"><small style="opacity:.9">' + t('upTo') + '</small><b>' + (max ? max + '% OFF' : t('offers')) + '</b><small style="opacity:.9">' + esc(S.name) + '</small></div><span style="font-size:42px">📣</span></div>' +
+      '<div class="ofchips">' + tabs.map(function (x) { return '<button class="' + (ofTab === x[0] ? 'on' : '') + '" onclick="ofTab(\'' + x[0] + '\')">' + x[1] + '</button>'; }).join('') + '</div>' +
+      (pick.length ? '<div class="ofg">' + pick.map(function (p) {
+        return '<a class="ofc" href="#/p/' + p.id + '"><div class="im">' + pic(p) + '</div>' + (off(p) ? '<span class="bd">' + (off(p) >= 30 ? '🔥 ' : '') + off(p) + '% OFF</span>' : '') +
+          '<span style="font-size:13px;font-weight:600;line-height:1.25;height:2.5em;overflow:hidden">' + esc(p.name) + '</span>' + (off(p) ? '<s>' + tk(p.old) + '</s>' : '') + '<b class="p">' + tk(p.price) + '</b><span class="sn">' + t('shopNow') + ' →</span></a>';
+      }).join('') + '</div>' : '<div class="panel" style="text-align:center;padding:30px">🏷️<p>' + t('noOffer') + '</p></div>');
+  }
+  // ---------------- wishlist ----------------
+  window.wishClear = function () { st.wish = []; save(); route(); };
+  function wishPage() {
+    var w = P.filter(function (p) { return st.wish.indexOf(p.id) >= 0; });
+    var head = '<div class="head"><h3>❤️ ' + t('myWish') + '</h3>' + (w.length ? '<button class="btn alt" style="width:auto;padding:6px 12px" onclick="wishClear()">' + IC.trash + ' ' + t('clearAll') + '</button>' : '') + '</div>';
+    if (!w.length) return head + '<div class="panel" style="text-align:center;padding:40px">🤍<p>' + t('wishEmpty') + '</p><a class="btn" style="width:auto;display:inline-flex;padding:10px 18px" href="#/offers">' + t('offers') + '</a></div>';
+    return head + '<div class="note1">❤️ ' + t('wishNote') + '</div>' + w.map(function (p) {
+      return '<div class="wl"><a class="im" href="#/p/' + p.id + '">' + pic(p) + '</a><div style="flex:1;min-width:0"><a href="#/p/' + p.id + '" style="font-weight:700;display:block">' + esc(p.name) + '</a>' +
+        '<div><b style="color:#dc2626;font-size:17px">' + tk(p.price) + '</b> ' + (off(p) ? '<s style="color:#94a3b8;font-size:12px">' + tk(p.old) + '</s> <span class="bd">' + off(p) + '% OFF</span>' : '') + '</div>' +
+        '<button class="btn" style="width:auto;padding:7px 14px;margin-top:6px" onclick="__rose.add(' + p.id + ')">' + IC.cart + t('addCart') + '</button></div>' +
+        '<button class="x" aria-label="Remove" onclick="__rose.wish(' + p.id + ');route()">' + IC.heart + '</button></div>';
+    }).join('');
+  }
+  // ---------------- account ----------------
+  var STN = { new: ['Pending', 'অপেক্ষায়'], confirmed: ['Confirmed', 'কনফার্মড'], packed: ['Ready to ship', 'প্যাক হয়েছে'], shipped: ['Shipped', 'পাঠানো হয়েছে'], delivered: ['Delivered', 'ডেলিভারি হয়েছে'], cancelled: ['Cancelled', 'বাতিল'], returned: ['Returned', 'ফেরত'] };
+  var stn = function (k) { return (STN[k || 'new'] || STN.new)[LANG === 'bn' ? 1 : 0]; };
+  function orderRows(list) {
+    return list.length ? list.map(function (o) { return '<a class="row" href="#/invoice/' + o.no + '"><span class="e">' + (o.items[0] && o.items[0].img ? '<img src="' + esc(o.items[0].img) + '" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:8px">' : '📦') + '</span><div style="flex:1"><b>#' + o.no + ' · ' + tk(o.total) + '</b><div style="font-size:12px;color:#64748b">' + new Date(o.date).toLocaleDateString('en-GB') + ' · ' + stn(o.status) + '</div></div><span style="color:var(--c);font-weight:700">' + t('invoice') + ' ›</span></a>'; }).join('') : '<p class="small">No orders yet.</p>';
+  }
+  window.editProfile = function () {
+    var m = document.getElementById('authM');
+    m.innerHTML = '<div class="mbox"><button class="mx" onclick="closeAuth()">✕</button><h3 style="margin-top:0">' + t('editProfile') + '</h3>' +
+      '<div class="field"><span>' + t('fullName') + '</span><input id="pName" value="' + esc(cust.name || '') + '"></div><div class="field"><span>' + t('mobile') + '</span><input id="pPhone" inputmode="numeric" maxlength="11" value="' + esc(cust.phone || '') + '"></div>' +
+      '<div class="field"><span>' + t('address') + '</span><textarea id="pAddr" rows="2">' + esc(cust.address || '') + '</textarea></div><button class="btn" onclick="saveProfile()">Save</button></div>';
+    m.hidden = false;
+  };
+  window.saveProfile = function () {
+    var v = function (x) { return document.getElementById(x).value.trim(); };
+    if (v('pPhone') && !/^01[3-9]\d{8}$/.test(v('pPhone'))) return toast(t('ePhone'));
+    cust.name = v('pName'); cust.phone = v('pPhone'); cust.address = v('pAddr'); saveCust(); closeAuth(); toast('Saved'); route();
+  };
+  window.shareStore = function () {
+    var u = location.origin + location.pathname + (S.live ? '' : location.search);
+    if (navigator.share) navigator.share({ title: S.name, text: S.tagline, url: u }).catch(function () {});
+    else { try { navigator.clipboard.writeText(u); toast('Link copied'); } catch (e) { toast(u); } }
+  };
+  window.trackNow = function () {
+    var no = document.getElementById('tNo').value.replace(/\D/g, ''), ph = document.getElementById('tPh').value.replace(/\D/g, ''), out = document.getElementById('tOut');
+    var show = function (r) {
+      if (!r || !r.ok) { out.innerHTML = '<p style="color:#dc2626">' + t('notFound') + '</p>'; return; }
+      var steps = ['new', 'confirmed', 'packed', 'shipped', 'delivered'], at = steps.indexOf(r.status);
+      out.innerHTML = (r.status === 'cancelled' || r.status === 'returned' ? '<p><b>' + stn(r.status) + '</b></p>' : '<div class="stp2">' + steps.map(function (k, i) { return '<div class="' + (i <= at ? 'on' : '') + '"><b>' + (i + 1) + '</b>' + stn(k) + '</div>'; }).join('') + '</div>') +
+        (r.tracking ? '<p>🚚 ' + esc(r.courier || '') + ' · <b>' + esc(r.tracking) + '</b></p>' : '') + (r.total ? '<p>' + t('total') + ': <b>' + tk(+r.total) + '</b></p>' : '');
+    };
+    if (!no || !/^01\d{9}$/.test(ph)) { out.innerHTML = '<p style="color:#dc2626">' + t('notFound') + '</p>'; return; }
+    if (!S.live) { var lo = myOrders().filter(function (o) { return String(o.no) === no && o.phone === ph; })[0]; return show(lo ? { ok: true, status: lo.status || 'new', total: lo.total } : null); }
+    sb('rpc/track_store_order', { p_slug: S.slug, p_no: +no, p_phone: ph }).then(show).catch(function () { show(null); });
+  };
+  function accSub(k) {
+    var list = myOrders(), back = '<a class="crumb" href="#/account" style="display:block">‹ ' + t('account') + '</a>';
+    if (k === 'orders') return back + '<div class="panel"><h3 style="margin-top:0">📦 ' + t('allOrders') + '</h3>' + orderRows(list) + '</div>';
+    if (k === 'track') return back + '<div class="panel" style="max-width:520px;margin:0 auto"><h3 style="margin-top:0">🚚 ' + t('trackOrder') + '</h3><div class="field"><span>' + t('orderNo') + '</span><input id="tNo" inputmode="numeric" value="' + (list[0] ? list[0].no : '') + '"></div><div class="field"><span>' + t('mobile') + '</span><input id="tPh" inputmode="numeric" maxlength="11" value="' + esc(cust.phone || (list[0] && list[0].phone) || '') + '"></div><button class="btn" onclick="trackNow()">' + t('check') + '</button><div id="tOut" style="margin-top:10px"></div></div>';
+    if (k === 'returns') { var r = list.filter(function (o) { return o.status === 'returned'; }); return back + '<div class="panel"><h3 style="margin-top:0">↩️ ' + t('myReturns') + '</h3>' + orderRows(r) + '<p class="small">' + esc(PAGES.return[1]) + '</p>' + (S.whatsapp || S.phone ? '<a class="btn" href="https://wa.me/88' + esc(S.whatsapp || S.phone) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') + '</div>'; }
+    if (k === 'reviews') { var mine = []; Object.keys(st.rev || {}).forEach(function (pid) { (st.rev[pid] || []).forEach(function (x) { if (P[+pid]) mine.push('<a class="row" href="#/p/' + pid + '"><span class="e">⭐</span><div style="flex:1"><b>' + esc(P[+pid].name) + '</b><div style="font-size:12px;color:#64748b">' + '★'.repeat(x.s) + ' · ' + esc(x.t) + '</div></div></a>'); }); }); return back + '<div class="panel"><h3 style="margin-top:0">⭐ ' + t('myReviews') + '</h3>' + (mine.join('') || '<p class="small">No reviews yet.</p>') + '</div>'; }
+    if (k === 'coupons') return back + '<div class="panel" style="text-align:center"><h3 style="margin-top:0">🎟️ ' + t('myCoupons') + '</h3><p class="small">No coupons yet. See today\'s offers.</p><a class="btn" style="width:auto;display:inline-flex;padding:10px 18px" href="#/offers">' + t('offers') + '</a></div>';
+    if (k === 'address') return back + '<div class="panel"><h3 style="margin-top:0">📍 ' + t('addresses') + '</h3><p>' + (cust.address ? esc([cust.address, cust.upazila, cust.district, cust.division].filter(Boolean).join(', ')) + '<br>📞 ' + esc(cust.phone || '') : 'Your address is saved after your first order.') + '</p><button class="btn alt" onclick="editProfile()">' + t('editProfile') + '</button></div>';
+    var ph = S.live ? (S.whatsapp || S.phone || '') : '';
+    return back + '<div class="panel"><h3 style="margin-top:0">🎧 ' + t('help') + '</h3>' + (ph ? '<a class="row" href="https://wa.me/88' + esc(ph) + '" target="_blank" rel="noopener"><span class="e">💬</span><b>WhatsApp ' + esc(ph) + '</b></a><a class="row" href="tel:' + esc(ph) + '"><span class="e">📞</span><b>' + esc(ph) + '</b></a>' : '') + (S.live && S.email ? '<a class="row" href="mailto:' + esc(S.email) + '"><span class="e">✉️</span><b>' + esc(S.email) + '</b></a>' : '') + '<p class="small">Or use the live chat at the bottom right.</p></div>';
+  }
   function account() {
-    var list = myOrders();
-    var orders = '<h4 style="margin:16px 0 4px">' + t('myOrders') + '</h4>' + (list.length ? list.map(function (o) { return '<a class="row" href="#/invoice/' + o.no + '"><span class="e">📦</span><div style="flex:1"><b>#' + o.no + ' · ' + tk(o.total) + '</b><div style="font-size:12px;color:#64748b">' + new Date(o.date).toLocaleDateString('en-GB') + ' · ' + t('pending') + '</div></div><span style="color:var(--c);font-weight:700">' + t('invoice') + ' ›</span></a>'; }).join('') : '<p class="small">No orders yet.</p>');
-    if (!cust.email) return '<div class="panel" style="max-width:520px;margin:0 auto"><h3 style="margin-top:0">👤 ' + t('account') + '</h3><div class="authb" style="grid-template-columns:1fr">' + '<button class="btn gbtn" onclick="openAuth(\'google\')">G ' + t('google') + '</button><button class="btn alt" onclick="openAuth(\'login\')">✉️ ' + t('emailLogin') + '</button><button class="btn alt" onclick="openAuth(\'signup\')">➕ Create account</button></div><p class="small">✓ ' + t('guest') + '</p>' + orders + '</div>';
-    return '<div class="panel" style="max-width:620px;margin:0 auto"><div class="acct"><div class="ravatar" style="width:52px;height:52px;font-size:22px">' + esc((cust.name || cust.email).charAt(0).toUpperCase()) + '</div><div style="flex:1"><b style="font-size:17px">' + esc(cust.name || 'Customer') + '</b><div class="small">' + esc(cust.email) + '</div></div><button class="btn alt" style="width:auto" onclick="logoutCust()">' + t('logout') + '</button></div>' +
-      '<h4 style="margin:16px 0 4px">📍 ' + t('address') + '</h4><p class="small" style="margin:0">' + (cust.address ? esc(cust.address + ', ' + cust.upazila + ', ' + cust.district + ', ' + cust.division) + '<br>📞 ' + esc(cust.phone || '') : 'Your address is saved after your first order.') + '</p>' + orders + '</div>';
+    var list = myOrders(), logged = !!cust.email;
+    var nm = cust.name || (logged ? cust.email.split('@')[0] : t('guestName'));
+    var top = '<div class="acc1"><div class="av">' + esc(nm.charAt(0).toUpperCase()) + '</div><div style="min-width:0"><b style="font-size:17px;display:block">' + esc(nm) + '</b><span class="small">' + (cust.phone ? '📞 ' + esc(cust.phone) : logged ? esc(cust.email) : t('loginTip')) + '</span></div><button class="ep" onclick="editProfile()">' + t('editProfile') + ' ›</button></div>';
+    var login = logged ? '' : '<div class="authb" style="grid-template-columns:1fr 1fr;margin-top:10px"><button class="btn gbtn" onclick="openAuth(\'google\')">' + GSVG + t('google') + '</button><button class="btn alt" onclick="openAuth(\'login\')">✉️ ' + t('emailLogin') + '</button></div>';
+    var ord = '<div class="head" style="margin-top:16px"><h3 style="font-size:16px">📦 ' + t('myOrders') + '</h3><a href="#/account/orders" style="color:var(--c);font-weight:700;font-size:13px">' + t('viewAll') + ' ›</a></div>' +
+      '<div class="ord4"><a href="#/account/orders"><span>📦</span>' + t('allOrders') + '</a><a href="#/account/track"><span>🚚</span>' + t('trackOrder') + '</a><a href="#/account/returns"><span>↩️</span>' + t('myReturns') + '</a><a href="#/account/reviews"><span>⭐</span>' + t('myReviews') + '</a></div>';
+    var menu = [['#/wishlist', '❤️', t('myWish'), st.wish.length ? st.wish.length : ''], ['#/account/coupons', '🎟️', t('myCoupons'), ''], ['#/account/address', '📍', t('addresses'), ''], ['#/account/help', '🎧', t('help'), ''], ['#/page/about', 'ℹ️', t('aboutUs'), '']];
+    var ml = '<div class="mlist" style="margin-top:14px">' + menu.map(function (m) { return '<a href="' + m[0] + '"><span class="i">' + m[1] + '</span>' + m[2] + '<em>' + (m[3] ? '<small style="font-size:12px;margin-right:6px;color:var(--c)">' + m[3] + '</small>' : '') + '›</em></a>'; }).join('') +
+      '<button onclick="shareStore()"><span class="i">🔗</span>' + t('shareApp') + '<em>›</em></button>' + (logged ? '<button class="lo" onclick="logoutCust()"><span class="i">🚪</span>' + t('logout') + '<em>›</em></button>' : '') + '</div>';
+    return '<div style="max-width:620px;margin:0 auto">' + top + login + ord + (list.length ? '<div style="margin-top:10px">' + orderRows(list.slice(0, 2)) + '</div>' : '') + ml + '</div>';
   }
   window.openAuth = function (mode) {
     var m = document.getElementById('authM');
@@ -917,8 +1034,10 @@ function start(S, P, liveId) {
     else if (h === '/checkout') html = checkout();
     else if (h === '/done') { var lo = myOrders()[0]; html = lo ? invoice(lo.no) : home(); }
     else if (h.indexOf('/invoice/') === 0) html = invoice(h.slice(9));
-    else if (h === '/wishlist') { var w = P.filter(function (p) { return st.wish.indexOf(p.id) >= 0; }); html = w.length ? list('Wishlist', w) : '<div class="panel" style="text-align:center;padding:40px">🤍<h3>No saved items yet</h3></div>'; }
+    else if (h === '/wishlist') html = wishPage();
+    else if (h === '/offers') html = offersPage();
     else if (h === '/account') html = account();
+    else if (h.indexOf('/account/') === 0) html = accSub(h.slice(9));
     else if (h.indexOf('/page/') === 0) { var pg = PAGES[h.slice(6)] || PAGES.about; html = '<div class="panel"><h2 style="margin-top:0">' + pg[0] + '</h2><p>' + esc(pg[1]) + '</p></div>'; }
     else html = home();
     document.body.classList.remove('onp'); document.getElementById('buybar').innerHTML = ''; document.getElementById('authM').hidden = true; paintAcc();

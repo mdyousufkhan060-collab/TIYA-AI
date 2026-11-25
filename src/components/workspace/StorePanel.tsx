@@ -958,7 +958,7 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
   const [secret, setSecret] = useState('');
   const [inside, setInside] = useState(String(store.delivery_inside));
   const [outside, setOutside] = useState(String(store.delivery_outside));
-  const [ps, setPs] = useState<PrintSettings>({ stk: '4x6', inv: 'a4', sender: store.name, phone: store.phone, logo: true, cod: true, items: true, bar: true, note: 'Handle with care', ...(store.print_settings || {}) });
+  const [ps, setPs] = useState<PrintSettings>({ stk: '100x70', inv: 'a4', photos: true, sender: store.name, phone: store.phone, logo: true, cod: true, items: true, bar: true, note: 'Handle with care', ...(store.print_settings || {}) });
   const [msg, setMsg] = useState('');
   const loadConn = useCallback(async () => {
     const { data } = await supabase.rpc('courier_status', { p_store: store.id });
@@ -1036,10 +1036,13 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
         <input className={input} value={ps.phone || ''} onChange={(e) => setPs({ ...ps, phone: e.target.value })} placeholder="Sender phone" />
         <input className={input} value={ps.note || ''} onChange={(e) => setPs({ ...ps, note: e.target.value })} placeholder="Bottom note" />
         <div className="grid grid-cols-2 gap-1 text-[12px] text-slate-300">
-          {([['logo', 'Logo'], ['cod', 'COD amount'], ['items', 'Product name'], ['bar', 'Barcode']] as Array<[keyof PrintSettings, string]>).map(([k, l]) => (
+          {([['logo', 'Logo'], ['cod', 'COD amount'], ['items', 'Product name'], ['bar', 'Barcode'], ['photos', 'Product photos on invoice']] as Array<[keyof PrintSettings, string]>).map(([k, l]) => (
             <label key={k} className="flex items-center gap-2"><input type="checkbox" checked={ps[k] !== false} onChange={(e) => setPs({ ...ps, [k]: e.target.checked })} /> {l}</label>
           ))}
         </div>
+        <input className={input} value={ps.terms || ''} onChange={(e) => setPs({ ...ps, terms: e.target.value })} placeholder="Invoice terms (e.g. 7-day return with this invoice)" />
+        <p className="text-[10.5px] text-slate-400">Your logo, name, WhatsApp, bKash number, emails and address come on the invoice and sticker by themselves (04 HOMEPAGE & DESIGN, 09 COMPANY INFO). Best sticker: 100 × 70 mm.</p>
+        <button type="button" className={btn + ' w-full bg-white/10'} onClick={() => { const e = printOrders('invoice', [sample], ps, store); if (e) setMsg(e); }}>TEST PRINT 1 INVOICE</button>
         <style>{PRINT_CSS}</style>
         <div className="overflow-hidden rounded-lg bg-slate-200 p-2" style={{ height: Math.round(h * 3.78 * scale + 16) }}>
           <div style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }} dangerouslySetInnerHTML={{ __html: stickerHTML(sample, ps, store) }} />
