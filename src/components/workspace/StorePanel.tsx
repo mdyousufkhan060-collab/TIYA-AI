@@ -126,6 +126,11 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
     return (
       <div className="space-y-3">
         <div className={box}>
+          {stores.length > 0 && (
+            <p className="mb-2 border border-amber-400/50 bg-amber-500/10 p-2 text-[12px] font-bold text-amber-200">
+              ⏸ Your store {stores[0].name} is paused because the {access?.plan === 'trial' ? '5-day free trial' : 'plan'} ended. Choose a plan below and it opens again at once. Nothing is deleted.
+            </p>
+          )}
           <p className="text-sm font-bold text-white">Make your own online store</p>
           <p className="mt-1 text-[12px] text-slate-300">Food, fashion, grocery, furniture, pharmacy and more. ROSE sets it up; you add products and get orders.</p>
           <a href="/demos" target="_blank" rel="noreferrer" className={btn + ' mt-2 w-full'}>

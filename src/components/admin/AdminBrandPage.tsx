@@ -8,14 +8,15 @@ export const AdminBrandCard: React.FC<{ onOpen: () => void }> = ({ onOpen }) => 
     type="button"
     onClick={onOpen}
     data-testid="admin-brand-card"
-    className="mb-3 flex w-full items-center gap-3 border border-teal-500/40 bg-gradient-to-r from-teal-500/15 via-sky-500/10 to-fuchsia-500/10 p-3 text-left"
+    className="mb-3 flex min-h-[84px] w-full items-center gap-3 border-2 border-teal-400/60 bg-gradient-to-r from-teal-500/20 via-sky-500/10 to-fuchsia-500/15 px-3 py-3 text-left shadow-[0_0_24px_rgba(45,212,191,0.15)]"
   >
-    <img src={C.photo} alt="ROSE" className="h-12 w-12 shrink-0 rounded-full border-2 border-teal-400 object-cover object-[center_30%]" />
+    <img src={C.photo} alt="ROSE" className="h-14 w-14 shrink-0 rounded-full border-2 border-teal-400 object-cover object-[center_30%]" />
     <span className="min-w-0 flex-1">
-      <span className="block text-[15px] font-bold tracking-wide text-white">{C.brand} · {C.site}</span>
-      <span className="block truncate text-[11px] text-slate-300">{C.admin} · {C.phones.join(' · ')}</span>
+      <span className="block text-[11px] font-bold tracking-[0.18em] text-teal-300">ADMIN · ROSE</span>
+      <span className="block text-[20px] font-extrabold tracking-wide text-white">MYROSEBD.COM</span>
+      <span className="block truncate text-[11.5px] text-slate-300">{C.admin} · {C.phones.join(' · ')}</span>
     </span>
-    <span className="text-[10px] font-bold tracking-wider text-teal-300">CONTACT ›</span>
+    <span className="shrink-0 border border-teal-400/60 px-2 py-1 text-[10px] font-bold tracking-wider text-teal-200">OPEN ›</span>
   </button>
 );
 

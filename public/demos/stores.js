@@ -188,9 +188,17 @@ window.ROSE_BRAND = {
   steadfast: ['Steadfast', '#0f766e'], pathao: ['Pathao', '#e11d48'], redx: ['RedX', '#dc2626'], paperfly: ['Paperfly', '#2563eb'],
   ecourier: ['eCourier', '#7c3aed'], sundarban: ['Sundarban', '#16a34a'], sa_paribahan: ['SA Paribahan', '#ea580c'],
 };
-window.ROSE_LOGO = function (key, h) {
+window.ROSE_LOGO = function (key, h, bare) {
   var b = window.ROSE_BRAND[key] || [key, '#334155'];
   h = h || 28;
-  var fb = '<b style=&quot;color:' + b[1] + ';font:800 ' + Math.round(h * 0.42) + 'px system-ui,sans-serif;white-space:nowrap&quot;>' + b[0] + '</b>';
-  return '<span class="rlogo" style="height:' + h + 'px;display:inline-flex;align-items:center;justify-content:center"><img src="/brand/' + key + '.png" alt="' + b[0] + '" style="max-height:' + h + 'px;max-width:' + Math.round(h * 3.2) + 'px;object-fit:contain" onerror="this.outerHTML=\'' + fb.replace(/'/g, '') + '\'"></span>';
+  // icon-only logos get their name beside them so people recognise them at once
+  var label = { bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket', mastercard: 'Mastercard', cod: 'COD', upay: 'Upay' }[key];
+  var fs = Math.max(10, Math.round(h * 0.42));
+  var txt = '<b style=&quot;color:' + b[1] + ';font:800 ' + fs + 'px system-ui,sans-serif;white-space:nowrap&quot;>' + b[0] + '</b>';
+  return '<span class="rlogo" style="height:' + h + 'px;display:inline-flex;align-items:center;justify-content:center;gap:4px">' +
+    '<img src="/brand/' + key + '.png" alt="' + b[0] + '" style="height:' + h + 'px;max-width:' + Math.round(h * 3.4) + 'px;object-fit:contain" onerror="this.outerHTML=\'' + txt.replace(/'/g, '') + '\';">' +
+    (label && !bare ? '<b style="color:' + b[1] + ';font:800 ' + fs + 'px system-ui,sans-serif;white-space:nowrap">' + label + '</b>' : '') + '</span>';
 };
+
+// ROSE / myrosebd.com contact (shown in every store and on the demos page)
+window.ROSE_CONTACT = { phones: ['01719188777', '01777885978'], emails: ['md.yousuf.khan060@gmail.com', 'info@myrosebd.com'], admin: 'MD Yousuf Khan', site: 'myrosebd.com' };
