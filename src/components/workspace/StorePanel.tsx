@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
@@ -1612,16 +1612,39 @@ const OfferRow: React.FC<{ p: Prod; pct: number; onPrice: (p: Prod, price: strin
 };
 
 // ---------------------------------------------------------------- payments (bKash / Nagad / Rocket / bank / card)
-const PAY_TYPES: Array<[string, string, string]> = [
-  ['personal', 'Personal', 'Customer uses SEND MONEY. Free to open; for small shops.'],
-  ['agent', 'Agent', 'Customer uses CASH OUT (they pay the cash-out charge). Agent SIM from bKash / Nagad / Rocket.'],
-  ['merchant', 'Merchant', 'Customer uses PAYMENT. Needs trade licence, NID, shop photo, bank account; apply at the bKash / Nagad / Rocket merchant office or website.'],
-];
-const PAY_LABEL: Record<string, string> = { bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket' };
+// List of methods: COD has an ON/OFF switch; every other method opens its own page (account type,
+// number, what you need, ON/OFF, SAVE). A method that is OFF never shows to customers (server checks too).
+const PAY_LABEL: Record<string, string> = { cod: 'Cash on Delivery', bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket', bank: 'Bank transfer', card: 'Card (Visa · Mastercard)' };
+const PAY_SUB: Record<string, string> = { cod: 'Customer pays the delivery man', bkash: 'Send Money or Payment + TrxID', nagad: 'Send Money or Payment + TrxID', rocket: 'Send Money or Payment + TrxID', bank: 'Customer sends to your bank account', card: 'SSLCommerz / aamarPay' };
+const PAY_NEED: Record<string, string[]> = {
+  personal: ['Your own bKash / Nagad / Rocket number (NID registered)', 'Nothing else: free to open', 'Customer uses SEND MONEY to this number', 'Daily and monthly limits are lower'],
+  merchant: ['Trade licence', 'NID of the owner', 'Shop photo (signboard)', 'Bank account in the shop name', 'TIN (some companies ask)', 'Apply at the bKash / Nagad / Rocket merchant office or website', 'Customer uses PAYMENT: higher limits, the shop name shows to the customer'],
+};
+const payOn = (v: Record<string, string>, k: string) => {
+  if (v[`off_${k}`] === '1') return false;
+  if (k === 'cod') return true;
+  if (k === 'bank') return Boolean(v.bank_acc_no);
+  if (k === 'card') return Boolean(v.card_gateway);
+  return /^01\d{9}$/.test(v[k] || '');
+};
+const PayLogo: React.FC<{ k: string; big?: boolean }> = ({ k, big }) => (
+  <span className={`flex shrink-0 items-center justify-center gap-1 overflow-hidden rounded-lg bg-white px-1 ${big ? 'h-12 w-28' : 'h-10 w-20'}`}>
+    {(k === 'card' ? ['visa', 'mastercard'] : [k]).map((id) => (
+      <img key={id} src={`/brand/${id}.png`} alt={id} className="max-h-8 max-w-full object-contain" onError={(e) => { const el = e.currentTarget; el.replaceWith(Object.assign(document.createElement('b'), { textContent: PAY_LABEL[id] || id.toUpperCase(), className: 'text-[11px] text-slate-900' })); }} />
+    ))}
+  </span>
+);
+const Switch: React.FC<{ on: boolean; onClick: () => void; label: string }> = ({ on, onClick, label }) => (
+  <button type="button" aria-label={label} onClick={onClick} className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? 'bg-teal-500' : 'bg-slate-600'}`}>
+    <span className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-all ${on ? 'left-[23px]' : 'left-[3px]'}`} />
+  </button>
+);
 
 const PaySetup: React.FC<{ value: Record<string, string>; onChange: (v: Record<string, string>) => void; storeId: string }> = ({ value, onChange, storeId }) => {
   const v = value || {};
-  const set = (k: string, x: string) => onChange({ ...v, [k]: x });
+  const [open, setOpen] = useState('');
+  const [d, setD] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState('');
   const [link, setLink] = useState('');
   const [sms, setSms] = useState<Array<{ id: string; method: string; trx_id: string; amount: number; order_id: string | null; received_at: string }>>([]);
   const [copied, setCopied] = useState(false);
@@ -1635,55 +1658,135 @@ const PaySetup: React.FC<{ value: Record<string, string>; onChange: (v: Record<s
     const { data, error } = await supabase.rpc('store_new_sms_key', { p_store: storeId });
     if (!error && data) setLink(base + String(data));
   };
-  return (
-    <div className="space-y-2">
-      <p className="pt-1 text-[11px] font-bold tracking-wider text-teal-300">MOBILE BANKING · where customers pay</p>
-      {(['bkash', 'nagad', 'rocket'] as const).map((m) => {
-        const t = v[`${m}_type`] || 'personal';
-        return (
-          <div key={m} className="space-y-1.5 rounded-lg bg-black/30 p-2">
-            <div className="grid grid-cols-[1fr_120px] gap-2">
-              <input className={input} value={v[m] || ''} onChange={(e) => set(m, e.target.value.replace(/[^\d]/g, '').slice(0, 12))} placeholder={`${PAY_LABEL[m]} number`} inputMode="tel" />
-              <select className={input} value={t} onChange={(e) => set(`${m}_type`, e.target.value)}>
-                {PAY_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-              </select>
-            </div>
-            <p className="text-[10.5px] text-slate-400">{PAY_TYPES.find((x) => x[0] === t)?.[2]}</p>
+  // save straight to the store (no need to press the big SAVE of this page)
+  const write = async (nv: Record<string, string>, note: string) => {
+    const { error } = await supabase.from('stores').update({ pay_numbers: nv, updated_at: new Date().toISOString() }).eq('id', storeId);
+    if (error) { setMsg(error.message); return false; }
+    onChange(nv); setMsg(note); return true;
+  };
+  const toggleCod = () => void write({ ...v, off_cod: v.off_cod === '1' ? '' : '1' }, v.off_cod === '1' ? 'Cash on Delivery is ON.' : 'Cash on Delivery is OFF.');
+  const openPage = (k: string) => { setMsg(''); setOpen(k); setD({ ...v, [`off_${k}`]: v[`off_${k}`] || '', [`${k}_type`]: v[`${k}_type`] === 'merchant' ? 'merchant' : 'personal' }); };
+  const setF = (k: string, x: string) => setD((o) => ({ ...o, [k]: x }));
+  const savePage = async () => {
+    const k = open;
+    if (['bkash', 'nagad', 'rocket'].includes(k) && !/^01\d{9}$/.test(d[k] || '')) return setMsg('Write the 11-digit number.');
+    if (k === 'bank' && !(d.bank_acc_no || '').trim()) return setMsg('Write the account number.');
+    const keep = ['bkash', 'nagad', 'rocket'].includes(k) ? [k, `${k}_type`, `${k}_acc`, `off_${k}`] : k === 'bank' ? ['bank_name', 'bank_acc_name', 'bank_acc_no', 'bank_branch', 'bank_routing', 'off_bank'] : ['off_card', 'card_request'];
+    const nv = { ...v };
+    keep.forEach((x) => { nv[x] = d[x] ?? ''; });
+    if (await write(nv, `${PAY_LABEL[k]} saved · ${payOn(nv, k) ? 'ON' : 'OFF'}`)) setOpen('');
+  };
+  const state = (k: string): [string, string] => {
+    if (k === 'card' && !v.card_gateway) return [v.card_request ? 'REQUESTED' : 'SET UP', 'bg-amber-900/70 text-amber-200'];
+    if (['bkash', 'nagad', 'rocket'].includes(k) && !v[k]) return ['SET UP', 'bg-amber-900/70 text-amber-200'];
+    if (k === 'bank' && !v.bank_acc_no) return ['SET UP', 'bg-amber-900/70 text-amber-200'];
+    if (!payOn(v, k)) return ['OFF', 'bg-slate-700 text-slate-300'];
+    return [`ON${v[`${k}_type`] && ['bkash', 'nagad', 'rocket'].includes(k) ? ` · ${(v[`${k}_type`] === 'merchant' ? 'merchant' : v[`${k}_type`]).toUpperCase()}` : ''}`, 'bg-emerald-900/70 text-emerald-200'];
+  };
+
+  if (open) {
+    const k = open;
+    const mobile = ['bkash', 'nagad', 'rocket'].includes(k);
+    const t = d[`${k}_type`] === 'merchant' ? 'merchant' : 'personal';
+    const on = d[`off_${k}`] !== '1';
+    const fld = (key: string, ph: string, mode?: 'tel' | 'numeric') => (
+      <label className="block text-[11px] text-slate-400">{ph}
+        <input className={input + ' mt-1'} value={d[key] || ''} inputMode={mode} onChange={(e) => setF(key, mode === 'tel' ? e.target.value.replace(/\D/g, '').slice(0, 11) : mode === 'numeric' ? e.target.value.replace(/[^\d-]/g, '') : e.target.value)} placeholder={mode === 'tel' ? '01XXXXXXXXX' : ''} />
+      </label>
+    );
+    return (
+      <div className="space-y-2">
+        <button type="button" onClick={() => setOpen('')} className="text-[12px] font-bold text-teal-300">‹ ALL PAYMENTS</button>
+        <div className="flex items-center gap-3 rounded-lg bg-black/30 p-3">
+          <PayLogo k={k} big />
+          <div className="min-w-0 flex-1"><p className="text-[14px] font-bold text-white">{PAY_LABEL[k]}</p><p className="text-[11px] text-slate-400">{on ? 'ON: shows at checkout' : 'OFF: hidden from customers'}</p></div>
+          <Switch on={on} label={`${PAY_LABEL[k]} on or off`} onClick={() => setF(`off_${k}`, on ? '1' : '')} />
+        </div>
+        <div className="grid gap-2 md:grid-cols-[1.15fr_.85fr]">
+          <div className="space-y-2 rounded-lg bg-black/30 p-3">
+            {mobile && (<>
+              <p className="text-[11px] font-bold tracking-wider text-teal-300">ACCOUNT TYPE</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([['personal', 'PERSONAL', 'Send Money · free'], ['merchant', 'MERCHANT', 'Payment · shop account']] as const).map(([id, l, sub]) => (
+                  <button key={id} type="button" onClick={() => setF(`${k}_type`, id)} className={`rounded-xl border-2 p-3 text-left ${t === id ? 'border-teal-400 bg-teal-500/10 text-teal-200' : 'border-slate-600 text-slate-200'}`}>
+                    <b className="block text-[13px]">{l}</b><span className="text-[10.5px] text-slate-400">{sub}</span>
+                  </button>
+                ))}
+              </div>
+              {fld(k, `${PAY_LABEL[k]} ${t} number`, 'tel')}
+              {t === 'merchant' && fld(`${k}_acc`, 'Shop name on the merchant account')}
+            </>)}
+            {k === 'bank' && (<>
+              {fld('bank_name', 'Bank name, e.g. Dutch-Bangla Bank')}
+              {fld('bank_acc_name', 'Account name (as in the bank)')}
+              {fld('bank_acc_no', 'Account number', 'numeric')}
+              {fld('bank_branch', 'Branch')}
+              {fld('bank_routing', 'Routing number', 'numeric')}
+            </>)}
+            {k === 'card' && (<>
+              <p className="text-[11px] font-bold tracking-wider text-teal-300">CARD TYPES CUSTOMERS CAN PICK</p>
+              <p className="text-[12px] text-slate-300">Visa · Mastercard (debit / credit) · American Express · DBBL Nexus · UnionPay</p>
+              <p className="text-[11px] text-slate-400">{v.card_gateway ? `Connected: ${v.card_gateway}` : 'Not connected yet. Tap ASK ROSE TO CONNECT; until it is connected the Card button stays hidden.'}</p>
+              {!v.card_gateway && <button type="button" className={btn + ' w-full bg-white/10'} onClick={() => setF('card_request', new Date().toISOString().slice(0, 10))}>{d.card_request ? 'REQUEST READY · PRESS SAVE' : 'ASK ROSE TO CONNECT'}</button>}
+            </>)}
+            <button type="button" onClick={() => void savePage()} className={btn + ' w-full'}>SAVE</button>
+            {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
           </div>
-        );
-      })}
-      <p className="text-[10.5px] text-slate-400">Leave a number empty to hide that method. The customer writes the TrxID and adds a screenshot; ROSE checks the payment.</p>
-
-      <div className="space-y-1.5 rounded-lg border border-emerald-500/30 p-2">
-        <p className="text-[10.5px] font-bold tracking-wider text-emerald-300">AUTO CHECK · ROSE confirms the order when the money SMS arrives</p>
-        <p className="text-[10.5px] text-slate-300">On the phone that gets your bKash / Nagad / Rocket SMS, install "SMS to URL Forwarder" (Play Store). URL = this link, method POST, senders: bKash, NAGAD, 16216. Keep this link private.</p>
-        {link ? <p className="break-all text-[10px] text-slate-500">{link.slice(0, base.length + 6)}…</p> : <p className="text-[11px] text-amber-300">No link yet. Tap MAKE LINK (save the store first).</p>}
-        <div className="grid grid-cols-2 gap-2">
-          {link && <button type="button" onClick={() => { void navigator.clipboard?.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className={btn}>{copied ? 'COPIED ✓' : 'COPY LINK'}</button>}
-          <button type="button" onClick={() => void newLink()} className={btn + ' bg-white/10'}>{link ? 'NEW LINK' : 'MAKE LINK'}</button>
+          <div className="space-y-2">
+            <div className="rounded-lg bg-black/30 p-3">
+              <p className="text-[11px] font-bold tracking-wider text-teal-300">{mobile ? `WHAT YOU NEED · ${t.toUpperCase()}` : k === 'bank' ? 'GOOD TO KNOW' : 'WHAT YOU NEED'}</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[11.5px] text-slate-300">
+                {(mobile ? PAY_NEED[t] : k === 'bank'
+                  ? ['A current (business) account in the shop name looks most trusted', 'A personal savings account also works', 'Customers see these details at checkout and write the transfer reference', 'You check your bank app and confirm the order in 01 ORDERS']
+                  : ['Trade licence', 'NID of the owner', 'Bank account in the shop name', 'Your website (this store)', 'Card numbers are typed only on the gateway page, never in your store']).map((x) => <li key={x}>{x}</li>)}
+              </ul>
+            </div>
+            {mobile && (
+              <div className="space-y-1.5 rounded-lg border border-emerald-500/30 p-3">
+                <p className="text-[10.5px] font-bold tracking-wider text-emerald-300">AUTO CHECK · ROSE confirms the order when the money SMS arrives</p>
+                <p className="text-[10.5px] text-slate-300">On the phone that gets your bKash / Nagad / Rocket SMS, install "SMS to URL Forwarder" (Play Store). URL = this link, method POST, senders: bKash, NAGAD, 16216. Keep this link private. One link works for all three.</p>
+                {link ? <p className="break-all text-[10px] text-slate-500">{link.slice(0, base.length + 6)}…</p> : <p className="text-[11px] text-amber-300">No link yet. Tap MAKE LINK.</p>}
+                <div className="grid grid-cols-2 gap-2">
+                  {link && <button type="button" onClick={() => { void navigator.clipboard?.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className={btn}>{copied ? 'COPIED ✓' : 'COPY LINK'}</button>}
+                  <button type="button" onClick={() => void newLink()} className={btn + ' bg-white/10'}>{link ? 'NEW LINK' : 'MAKE LINK'}</button>
+                </div>
+                {sms.map((x) => (
+                  <p key={x.id} className="text-[10.5px] text-slate-300">{new Date(x.received_at).toLocaleString('en-GB')} · {x.method} ৳{x.amount} · <span className="select-all">{x.trx_id}</span> · <b className={x.order_id ? 'text-emerald-300' : 'text-amber-300'}>{x.order_id ? 'MATCHED' : 'NO ORDER YET'}</b></p>
+                ))}
+                <p className="text-[10px] text-slate-500">Without the SMS forwarder: check the TrxID in your app and confirm the order by hand in 01 ORDERS.</p>
+              </div>
+            )}
+          </div>
         </div>
-        {sms.map((x) => (
-          <p key={x.id} className="text-[10.5px] text-slate-300">{new Date(x.received_at).toLocaleString('en-GB')} · {x.method} ৳{x.amount} · <span className="select-all">{x.trx_id}</span> · <b className={x.order_id ? 'text-emerald-300' : 'text-amber-300'}>{x.order_id ? 'MATCHED' : 'NO ORDER YET'}</b></p>
-        ))}
-        <p className="text-[10px] text-slate-500">Without the SMS forwarder: check the TrxID in your bKash app and confirm the order by hand in 01 ORDERS.</p>
       </div>
+    );
+  }
 
-      <div className="space-y-1.5 rounded-lg bg-black/30 p-2">
-        <p className="text-[10.5px] font-bold tracking-wider text-teal-300">BANK TRANSFER (optional)</p>
-        <input className={input} value={v.bank_name || ''} onChange={(e) => set('bank_name', e.target.value)} placeholder="Bank name, e.g. Dutch-Bangla Bank" />
-        <input className={input} value={v.bank_acc_name || ''} onChange={(e) => set('bank_acc_name', e.target.value)} placeholder="Account name (as in the bank)" />
-        <div className="grid grid-cols-2 gap-2">
-          <input className={input} value={v.bank_acc_no || ''} onChange={(e) => set('bank_acc_no', e.target.value.replace(/[^\d-]/g, ''))} placeholder="Account number" inputMode="numeric" />
-          <input className={input} value={v.bank_routing || ''} onChange={(e) => set('bank_routing', e.target.value.replace(/\D/g, '').slice(0, 9))} placeholder="Routing number" inputMode="numeric" />
-        </div>
-        <input className={input} value={v.bank_branch || ''} onChange={(e) => set('bank_branch', e.target.value)} placeholder="Branch" />
-        <p className="text-[10.5px] text-slate-400">A current (business) account in the shop's name looks most trusted. A personal savings account also works. Customers see these details and write the transfer reference; you confirm the order by hand.</p>
+  return (
+    <div className="space-y-1">
+      <p className="pt-1 text-[11px] font-bold tracking-wider text-teal-300">PAYMENTS · tap a method to set it up</p>
+      <div className="divide-y divide-slate-800 rounded-lg bg-black/30 px-2">
+        {['cod', 'bkash', 'nagad', 'rocket', 'bank', 'card'].map((k) => {
+          if (k === 'cod') return (
+            <div key={k} className="flex items-center gap-3 py-2.5">
+              <PayLogo k={k} />
+              <div className="min-w-0 flex-1"><p className="text-[13px] font-bold text-white">{PAY_LABEL[k]}</p><p className="text-[10.5px] text-slate-400">{PAY_SUB[k]}</p></div>
+              <Switch on={v.off_cod !== '1'} label="Cash on Delivery on or off" onClick={toggleCod} />
+            </div>
+          );
+          const [st, cls] = state(k);
+          return (
+            <button key={k} type="button" onClick={() => openPage(k)} className="flex w-full items-center gap-3 py-2.5 text-left">
+              <PayLogo k={k} />
+              <div className="min-w-0 flex-1"><p className="text-[13px] font-bold text-white">{PAY_LABEL[k]}</p><p className="text-[10.5px] text-slate-400">{PAY_SUB[k]}</p></div>
+              <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-extrabold ${cls}`}>{st}</span>
+              <ChevronRight className="h-4 w-4 text-slate-500" />
+            </button>
+          );
+        })}
       </div>
-
-      <div className="space-y-1 rounded-lg bg-black/30 p-2">
-        <p className="text-[10.5px] font-bold tracking-wider text-teal-300">CARD (Visa · Mastercard · Amex · Nexus)</p>
-        <p className="text-[10.5px] text-slate-400">Cards need a payment gateway: SSLCommerz or aamarPay. They ask for a trade licence, NID, bank account and website. Card numbers are typed only on the gateway's own secure page, never in your store, and the gateway offers "save card". Contact ROSE to connect your gateway; until then the Card button stays hidden.</p>
-      </div>
+      <p className="text-[10.5px] text-slate-400">A method that is OFF does not show to customers. Each method saves by itself.</p>
+      {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
     </div>
   );
 };

@@ -777,11 +777,14 @@ function start(S, P, liveId) {
   // ---------------- checkout ----------------
   var PAYLIST = (function () {
     var pn = S.payNumbers || {};
-    var en = S.payEnabled || (S.live ? ['cod'].concat(['bkash', 'nagad', 'rocket'].filter(function (k) { return pn[k]; })).concat(pn.bank_acc_no ? ['bank'] : []).concat(pn.card_gateway ? ['card'] : []) : ['cod', 'bkash', 'nagad', 'rocket', 'bank', 'card']);
+    // the owner switches each method on / off in PAYMENTS (off_<method> = '1'); same rule as the server
+    var payOk = function (k) { if (pn['off_' + k] === '1') return false; return k === 'cod' ? true : /bkash|nagad|rocket/.test(k) ? /^01\d{9}$/.test(pn[k] || '') : k === 'bank' ? !!pn.bank_acc_no : k === 'card' ? !!pn.card_gateway : false; };
+    var en = S.payEnabled || (S.live ? ['cod', 'bkash', 'nagad', 'rocket', 'bank', 'card'].filter(payOk) : ['cod', 'bkash', 'nagad', 'rocket', 'bank', 'card']);
+    if (!en.length) en = ['cod'];
     var info = { cod: ['💵', t('cod'), t('codSub'), '#16a34a'], bkash: ['b', 'bKash', '', '#e2136e'], nagad: ['N', 'Nagad', '', '#f6921e'], rocket: ['R', 'Rocket', '', '#8c3494'], card: ['💳', t('card'), 'SSLCommerz', '#1d4ed8'], bank: ['🏦', t('bankT'), '', '#334155'] };
     return en.filter(function (k) { return info[k]; }).map(function (k) { return [k].concat(info[k]); });
   })();
-  var coState = { pay: 'cod', zone: '' };
+  var coState = { pay: PAYLIST[0] ? PAYLIST[0][0] : 'cod', zone: '' };
   function sec(n, title, body) { return '<div class="panel cosec"><h3><span class="num">' + n + '</span>' + title + '</h3>' + body + '</div>'; }
   function fld(idn, label, input, req) { return '<div class="field" id="w_' + idn + '"><span>' + label + (req ? ' <b style="color:#dc2626">*</b>' : '') + '</span>' + input + '<em class="err" id="e_' + idn + '"></em></div>'; }
   function checkout() {

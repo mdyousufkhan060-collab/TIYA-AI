@@ -122,6 +122,17 @@
   .row .lg2 { overflow: hidden; gap: 8px; } .row .lg2 img { height: 18px !important; max-width: 46px; }
   .row .f { min-width: 0; } .row .f b, .row .f p { overflow-wrap: anywhere; }
   .row .lg { width: 112px; min-width: 112px; height: 46px; background: #fff; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 6px; flex-shrink: 0; }
+  /* PAYMENTS: list of methods, tap one to set it up */
+  .pyrow { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: 0; border-bottom: 1px solid #1e293b; color: inherit; padding: 12px 4px; text-align: left; cursor: pointer; }
+  .pyrow:last-child { border-bottom: 0; } .pyrow:hover { background: #151b27; border-radius: 10px; }
+  .pyrow .lgb { width: 96px; height: 44px; flex: none; background: #f8fafc; border-radius: 10px; display: grid; place-items: center; overflow: hidden; }
+  .pyrow .nm { flex: 1; min-width: 0; } .pyrow .nm b { display: block; font-size: 14px; } .pyrow .nm small { color: #94a3b8; font-size: 11.5px; }
+  .pyst { font-size: 10.5px; font-weight: 800; border-radius: 99px; padding: 4px 9px; white-space: nowrap; } .pyst.on { background: #064e3b; color: #6ee7b7; } .pyst.off { background: #1e293b; color: #94a3b8; } .pyst.set { background: #78350f; color: #fde68a; }
+  .pyrow .chev { color: #64748b; font-size: 20px; }
+  .pyhd { display: flex; align-items: center; gap: 12px; } .pyhd .lgb { width: 120px; height: 54px; background: #f8fafc; border-radius: 12px; display: grid; place-items: center; flex: none; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; } .seg button { border: 2px solid #334155; background: #0a0f1a; color: #e2e8f0; border-radius: 12px; padding: 12px 8px; font-weight: 800; font-size: 13px; text-align: left; } .seg button small { display: block; font-weight: 500; color: #94a3b8; font-size: 11px; margin-top: 3px; } .seg button.on { border-color: #14b8a6; background: #0f2a2c; color: #5eead4; }
+  .need { margin: 0; padding-left: 18px; font-size: 12.5px; color: #cbd5e1; line-height: 1.7; }
+  .pygrid { display: grid; gap: 10px; margin-top: 10px; } .pygrid .card + .card { margin-top: 10px; } @media (min-width: 900px) { .pygrid { grid-template-columns: 1.15fr .85fr; align-items: start; } }
 </style>
 </head>
 <body>
@@ -150,7 +161,7 @@
     }),
     cats: S.categories.map(function (c) { return { name: c[0], icon: c[1] }; }),
     coupons: [{ code: 'ROSE10', text: '10% off, min 1,000 Tk', on: true }, { code: 'FREESHIP', text: 'Free delivery over 1,500 Tk', on: true }, { code: 'EID500', text: '500 Tk off, min 5,000 Tk', on: false }],
-    pay: [['Cash on Delivery', true, 'cod'], ['bKash (Send Money + TrxID)', true, 'bkash'], ['Nagad', true, 'nagad'], ['Rocket', false, 'rocket'], ['Bank transfer', false, 'bank']],
+    pm: { cod: { on: true }, bkash: { on: true, type: 'personal', num: '01712345678' }, nagad: { on: true, type: 'merchant', num: '01812345678' }, rocket: { on: false, type: 'personal', num: '' }, bank: { on: false, bank_name: 'Dutch-Bangla Bank', bank_acc_name: S.name, bank_acc_no: '1234567890123', bank_branch: 'Motijheel', bank_routing: '090275725' }, card: { on: false } },
     couriers: [['Steadfast', true, '#0f766e', 'Most used · 60/110 Tk'], ['Pathao', false, '#e11d48', 'Fast in Dhaka'], ['RedX', false, '#dc2626', 'All 64 districts'], ['Paperfly', false, '#2563eb', 'Good for outside Dhaka'], ['eCourier', false, '#7c3aed', 'Same day in Dhaka'], ['Sundarban Courier', false, '#16a34a', 'Office pickup, all districts'], ['SA Paribahan', false, '#ea580c', 'Heavy parcels, furniture']],
     staff: [['rahim.staff@gmail.com', 'ORDER STAFF'], ['mitu.design@gmail.com', 'PRODUCT STAFF']],
     banners: S.banners.map(function (b) { return { title: b.title, badge: b.badge, img: b.img }; }),
@@ -185,7 +196,7 @@
     ['offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', function () { return st.products.filter(function (p) { return p.onOffer || p.old > p.price; }).length + ' OFFERS · ' + st.coupons.filter(function (c) { return c.on; }).length + ' COUPONS'; }],
     ['reviews', 'REVIEWS', '⭐', '#eab308', function () { return '4.6 ★'; }],
     ['chat', 'LIVE CHAT', '💬', '#059669', function () { return st.takeover ? 'YOU' : 'ROSE'; }],
-    ['payments', 'PAYMENTS', '💳', '#4f46e5', function () { return st.pay.filter(function (p) { return p[1]; }).length + ' ON'; }],
+    ['payments', 'PAYMENTS', '💳', '#4f46e5', function () { return Object.keys(st.pm).filter(function (x) { return st.pm[x].on; }).length + ' ON'; }],
     ['delivery', 'DELIVERY & COURIER', '🚚', '#b45309', function () { return st.couriers.filter(function (c) { return c[1]; }).length + ' ON'; }],
     ['print', 'INVOICE & STICKER', '🏷️', '#e11d48', function () { return 'PRINT'; }],
     ['pixels', 'TRACKING & PIXELS', '📈', '#0284c7', function () { return 'ADS'; }],
@@ -334,18 +345,61 @@
       '<div style="display:flex;gap:6px;margin-top:10px"><input id="chatIn" placeholder="' + (st.takeover ? 'Type your reply…' : 'Type as the customer to test ROSE…') + '" style="flex:1;background:#0a0f1a;border:1px solid #334155;border-radius:10px;color:#fff;padding:10px" onkeydown="if(event.key===\'Enter\')sendChat()">' + btn('SEND', 'sendChat()') + '</div>' +
       '<div class="btns">' + btn(st.takeover ? 'Give back to ROSE' : 'TAKE OVER', 'st.takeover=!st.takeover;render()', st.takeover ? 'alt' : '') + btn('Send order link', "st.chats.push(['o','Here is your order link: " + k + ".myrosebd.com']);render()", 'alt') + '</div></div><p class="note">Every website chat also reaches the owner’s ROSE app, and ROSE tells you by voice what the customer wants.</p>';
   };
-  var PAYTYPE = { personal: 'Personal: customer uses SEND MONEY. Free to open, for small shops.', agent: 'Agent: customer uses CASH OUT and pays the cash-out charge. Agent SIM from the company.', merchant: 'Merchant: customer uses PAYMENT. Needs trade licence, NID, shop photo and bank account (apply at the bKash / Nagad / Rocket merchant office).' };
+  var PAYTYPE = { personal: 'Personal: customer uses SEND MONEY. Free to open, for small shops.', agent: 'Agent: customer uses CASH OUT and pays the cash-out charge.', merchant: 'Merchant: customer uses PAYMENT. Needs trade licence, NID, shop photo and bank account (apply at the bKash / Nagad / Rocket merchant office).' };
   window.PAYTYPE = PAYTYPE;
+  var PM = [['cod', 'Cash on Delivery', 'Customer pays the delivery man'], ['bkash', 'bKash', 'Send Money or Payment + TrxID'], ['nagad', 'Nagad', 'Send Money or Payment + TrxID'], ['rocket', 'Rocket', 'Send Money or Payment + TrxID'], ['bank', 'Bank transfer', 'Customer sends to your bank account'], ['card', 'Card (Visa · Mastercard)', 'SSLCommerz / aamarPay']];
+  var NEED = {
+    personal: ['Your own bKash / Nagad / Rocket number (NID registered)', 'Nothing else: free to open', 'Customer uses SEND MONEY to this number', 'Daily and monthly limits are lower'],
+    merchant: ['Trade licence', 'NID of the owner', 'Shop photo (signboard)', 'Bank account in the shop name', 'TIN (some companies ask)', 'Apply at the bKash / Nagad / Rocket merchant office or website', 'Customer uses PAYMENT: higher limits, the shop name shows to the customer'],
+  };
+  function lgBox(k) { return k === 'card' ? window.ROSE_LOGO('visa', 18, true) + window.ROSE_LOGO('mastercard', 18, true) : window.ROSE_LOGO(k, 30); }
+  function payState(k) {
+    var m = st.pm[k];
+    if (k === 'card') return m.on ? ['ON', 'on'] : ['SET UP', 'set'];
+    if (k !== 'cod' && k !== 'bank' && !m.num) return ['SET UP', 'set'];
+    if (!m.on) return ['OFF', 'off'];
+    return ['ON' + (m.type ? ' · ' + m.type.toUpperCase() : ''), 'on'];
+  }
   V.payments = function () {
-    return '<div class="card">' + st.pay.map(function (m, i) { return '<div class="row"><span class="lg">' + window.ROSE_LOGO(m[2], 30) + '</span><div class="f"><b>' + m[0] + '</b></div><button class="toggle' + (m[1] ? ' on' : '') + '" onclick="st.pay[' + i + '][1]=!st.pay[' + i + '][1];render()"></button></div>'; }).join('') +
-      '<div class="row"><span class="lg lg2">' + window.ROSE_LOGO('visa', 18, true) + window.ROSE_LOGO('mastercard', 18, true) + '</span><div class="f"><b>Card (Visa · Mastercard)</b><p>SSLCommerz / aamarPay · needs trade licence</p></div><span class="pill" style="background:#475569">SET UP</span></div></div>' +
-      '<div class="card" style="margin-top:10px"><b style="font-size:13px">MOBILE BANKING · where customers pay</b>' + [['bKash', 'personal'], ['Nagad', 'merchant'], ['Rocket', 'agent']].map(function (m) {
-        return '<div class="two" style="margin-top:8px"><div class="field"><span>' + m[0] + ' number</span><input value="01XXXXXXXXX" inputmode="tel"></div><div class="field"><span>Account type</span><select onchange="this.closest(\'.card\').querySelector(\'.pt_' + m[0] + '\').textContent=PAYTYPE[this.value]">' + ['personal', 'agent', 'merchant'].map(function (t) { return '<option value="' + t + '"' + (t === m[1] ? ' selected' : '') + '>' + t.charAt(0).toUpperCase() + t.slice(1) + '</option>'; }).join('') + '</select></div></div><p class="note pt_' + m[0] + '" style="margin-top:-4px">' + PAYTYPE[m[1]] + '</p>';
-      }).join('') + '<p class="note">The customer writes the TrxID and adds a screenshot. ROSE checks the money SMS and confirms the order by itself.</p></div>' +
-      '<div class="card" style="margin-top:10px;border-color:#065f46"><b style="font-size:13px;color:#6ee7b7">AUTO CHECK · ROSE confirms paid orders</b><p class="note">On the phone that gets your bKash / Nagad / Rocket SMS, install "SMS to URL Forwarder". Paste your private link, method POST, senders bKash, NAGAD, 16216. When the TrxID and amount match an order, ROSE marks it PAID and confirms it.</p><div class="btns">' + btn('MAKE LINK', "toast('Demo: in your real store this makes your private SMS link')") + '</div></div>' +
-      '<div class="card" style="margin-top:10px"><b style="font-size:13px">BANK TRANSFER (optional)</b>' + [['Bank name', 'Dutch-Bangla Bank'], ['Account name', S.name], ['Account number', '1234567890123'], ['Branch', 'Motijheel'], ['Routing number', '090275725']].map(function (f) { return '<div class="field" style="margin-top:6px"><span>' + f[0] + '</span><input value="' + esc(f[1]) + '"></div>'; }).join('') + '<p class="note">A current (business) account in the shop name looks most trusted; a personal savings account also works. Customers see these details at checkout and write the transfer reference.</p></div>' +
-      '<div class="card" style="margin-top:10px"><b style="font-size:13px">CARD (Visa · Mastercard · Amex · Nexus)</b><p class="note">Cards work through a payment gateway (SSLCommerz or aamarPay): trade licence, NID, bank account and website needed. At checkout the customer picks the card type and types the card number only on the gateway\'s secure page, where they can also save the card. Your store never sees or keeps card numbers.</p></div>' +
-      '<div class="btns">' + btn('SAVE', "toast('Payment settings saved')") + '</div>';
+    return '<div class="card">' + PM.map(function (m) {
+      var ps = payState(m[0]);
+      if (m[0] === 'cod') return '<div class="pyrow" style="cursor:default"><span class="lgb">' + lgBox('cod') + '</span><span class="nm"><b>' + m[1] + '</b><small>' + m[2] + '</small></span><button class="toggle' + (st.pm.cod.on ? ' on' : '') + '" onclick="st.pm.cod.on=!st.pm.cod.on;toast(st.pm.cod.on?\'Cash on Delivery is ON\':\'Cash on Delivery is OFF\');render()" aria-label="Cash on Delivery on or off"></button></div>';
+      return '<button class="pyrow" onclick="go(\'pay/' + m[0] + '\')"><span class="lgb">' + lgBox(m[0]) + '</span><span class="nm"><b>' + m[1] + '</b><small>' + m[2] + '</small></span><span class="pyst ' + ps[1] + '">' + ps[0] + '</span><span class="chev">›</span></button>';
+    }).join('') + '</div><p class="note">Tap a method to set it up. A method that is OFF does not show to customers.</p>';
+  };
+  window.payDraft = null;
+  V.pay = function (k) {
+    var m = st.pm[k], meta = PM.filter(function (x) { return x[0] === k; })[0];
+    if (!m || k === 'cod') return V.payments();
+    if (!payDraft || payDraft.k !== k) payDraft = Object.assign({ k: k }, m);
+    var d = payDraft;
+    var sw = '<div class="row" style="border:0;padding:4px 0"><div class="f"><b>Customers can pay with ' + meta[1] + '</b><p>' + (d.on ? 'ON: shows at checkout' : 'OFF: hidden from customers') + '</p></div><button class="toggle' + (d.on ? ' on' : '') + '" onclick="payDraft.on=!payDraft.on;render()" aria-label="On or off"></button></div>';
+    var head = '<div class="card"><div class="pyhd"><span class="lgb">' + lgBox(k) + '</span><div><b style="font-size:16px">' + meta[1] + '</b><div style="font-size:12px;color:#94a3b8">' + meta[2] + '</div></div></div>' + sw + '</div>';
+    var body = '', side = '';
+    if (/bkash|nagad|rocket/.test(k)) {
+      var t = d.type === 'merchant' ? 'merchant' : 'personal';
+      body = '<div class="card"><b style="font-size:13px">ACCOUNT TYPE</b><div class="seg">' +
+        [['personal', 'PERSONAL', 'Send Money · free'], ['merchant', 'MERCHANT', 'Payment · shop account']].map(function (x) { return '<button class="' + (t === x[0] ? 'on' : '') + '" onclick="payDraft.type=\'' + x[0] + '\';render()">' + x[1] + '<small>' + x[2] + '</small></button>'; }).join('') + '</div>' +
+        '<div class="field"><span>' + meta[1] + ' ' + (t === 'merchant' ? 'merchant' : 'personal') + ' number</span><input id="pyNum" value="' + esc(d.num || '') + '" inputmode="tel" maxlength="11" placeholder="01XXXXXXXXX" oninput="this.value=this.value.replace(/\\D/g,\'\').slice(0,11);payDraft.num=this.value"></div>' +
+        (t === 'merchant' ? '<div class="field"><span>Shop name on the merchant account</span><input value="' + esc(d.acc || S.name) + '" oninput="payDraft.acc=this.value"></div>' : '') +
+        '<p class="note">' + PAYTYPE[t] + '</p><div class="btns">' + btn('SAVE', 'savePay()') + '</div></div>';
+      side = '<div class="card"><b style="font-size:13px">WHAT YOU NEED · ' + t.toUpperCase() + '</b><ul class="need">' + NEED[t].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul></div>' +
+        '<div class="card" style="border-color:#065f46"><b style="font-size:13px;color:#6ee7b7">AUTO CHECK · ROSE confirms paid orders</b><p class="note">The customer writes the TrxID and adds a screenshot. On the phone that gets your ' + meta[1] + ' SMS, install "SMS to URL Forwarder", paste your private link (method POST). When the TrxID and amount match, ROSE marks the order PAID.</p><div class="btns">' + btn('MAKE LINK', "toast('Demo: in your real store this makes your private SMS link')", 'alt') + '</div></div>';
+    } else if (k === 'bank') {
+      body = '<div class="card"><b style="font-size:13px">BANK ACCOUNT</b>' + [['bank_name', 'Bank name'], ['bank_acc_name', 'Account name (as in the bank)'], ['bank_acc_no', 'Account number'], ['bank_branch', 'Branch'], ['bank_routing', 'Routing number']].map(function (f) { return '<div class="field" style="margin-top:6px"><span>' + f[1] + '</span><input value="' + esc(d[f[0]] || '') + '" oninput="payDraft.' + f[0] + '=this.value"></div>'; }).join('') + '<div class="btns">' + btn('SAVE', 'savePay()') + '</div></div>';
+      side = '<div class="card"><b style="font-size:13px">GOOD TO KNOW</b><ul class="need"><li>A current (business) account in the shop name looks most trusted</li><li>A personal savings account also works</li><li>Customers see these details at checkout and write the transfer reference</li><li>You check your bank app and confirm the order in Orders</li></ul></div>';
+    } else if (k === 'card') {
+      body = '<div class="card"><b style="font-size:13px">CARD TYPES CUSTOMERS CAN PICK</b><ul class="need"><li>Visa (debit / credit)</li><li>Mastercard (debit / credit)</li><li>American Express</li><li>DBBL Nexus</li><li>UnionPay</li></ul><div class="field" style="margin-top:8px"><span>Gateway</span><select onchange="payDraft.gw=this.value"><option>SSLCommerz</option><option>aamarPay</option></select></div><div class="btns">' + btn('ASK ROSE TO CONNECT', "toast('Demo: ROSE team gets your request')") + btn('SAVE', 'savePay()', 'alt') + '</div></div>';
+      side = '<div class="card"><b style="font-size:13px">WHAT YOU NEED</b><ul class="need"><li>Trade licence</li><li>NID of the owner</li><li>Bank account in the shop name</li><li>Your website (this store)</li></ul><p class="note">The customer types the card number only on the gateway’s secure page, and can save the card there. Your store never sees or keeps card numbers.</p></div>';
+    }
+    return head + '<div class="pygrid"><div>' + body + '</div><div>' + side + '</div></div>';
+  };
+  window.savePay = function () {
+    var d = payDraft, k = d.k;
+    if (/bkash|nagad|rocket/.test(k) && !/^01\d{9}$/.test(d.num || '')) { toast('Write the 11-digit number'); var i = document.getElementById('pyNum'); if (i) i.focus(); return; }
+    if (k === 'bank' && !(d.bank_acc_no || '').trim()) return toast('Write the account number');
+    var m = st.pm[k]; Object.keys(d).forEach(function (x) { if (x !== 'k') m[x] = d[x]; });
+    payDraft = null; toast(PM.filter(function (x) { return x[0] === k; })[0][1] + ' saved · ' + (m.on ? 'ON' : 'OFF')); go('payments');
   };
   V.pixels = function () {
     return '<div class="card">' + [['Facebook Pixel ID', '1234567890'], ['Facebook Conversions API token', '••••••••'], ['TikTok Pixel ID', 'C0ABCDEF'], ['Google Analytics 4 (G-…)', 'G-XXXXXXX'], ['Google Tag Manager (GTM-…)', ''], ['Search Console verification', '']].map(function (f) { return '<div class="field"><span>' + f[0] + '</span><input value="' + f[1] + '" placeholder="paste here"></div>'; }).join('') +
@@ -592,7 +646,8 @@
   window.go = function (r) { location.hash = r; };
   function render() {
     var parts = route.split('/'), id = parts[0], arg = parts[1];
-    var barId = id === 'order' ? 'orders' : id === 'product' ? 'products' : id;
+    var barId = id === 'order' ? 'orders' : id === 'product' ? 'products' : id === 'pay' ? 'payments' : id;
+    if (id !== 'pay') payDraft = null;
     if (id !== 'product') draft = null;
     var GROUPS = [['MAIN', ['dashboard', 'orders', 'products', 'categories', 'customers']], ['SELL', ['offers', 'reviews', 'chat', 'reports']], ['STORE', ['plan', 'design', 'payments', 'delivery', 'print', 'pixels', 'seo', 'domain', 'staff']]];
     var pc = '<nav class="pcnav">' + GROUPS.map(function (g) { return '<div class="gh">' + g[0] + '</div>' + g[1].map(function (bid) { var b = barOf(bid); var title = bid === 'seo' ? 'SEO' : b[1].charAt(0) + b[1].slice(1).toLowerCase().replace(/&/g, '&amp;'); return '<button class="ni' + (bid === barId ? ' on' : '') + '" onclick="go(\'' + bid + '\')"><span class="ni-ic" style="background:' + b[3] + '22">' + b[2] + '</span><span class="ni-t">' + title + '</span><span class="ni-v">' + b[4]() + '</span></button>'; }).join(''); }).join('') + '</nav>';
@@ -617,9 +672,9 @@
     }
     var bar = barOf(barId);
     if (!bar) { main.innerHTML = ''; return; }
-    var t = id === 'order' ? 'ORDER #' + arg : id === 'product' ? (arg === 'new' ? 'ADD PRODUCT' : 'PRODUCT') : bar[1];
+    var t = id === 'order' ? 'ORDER #' + arg : id === 'product' ? (arg === 'new' ? 'ADD PRODUCT' : 'PRODUCT') : id === 'pay' ? 'PAYMENTS · ' + ((PM.filter(function (x) { return x[0] === arg; })[0] || ['', ''])[1]).toUpperCase() : bar[1];
     document.getElementById('title').textContent = t;
-    var backTo = id === 'order' ? 'orders' : id === 'product' ? 'products' : '';
+    var backTo = id === 'order' ? 'orders' : id === 'product' ? 'products' : id === 'pay' ? 'payments' : '';
     main.innerHTML = '<h2>' + (backTo ? '<button class="btn alt" style="padding:5px 9px" onclick="go(\'' + backTo + '\')">‹</button>' : '') + '<span class="ic" style="font-size:20px">' + bar[2] + '</span>' + t + '</h2>' + (V[id] ? V[id](arg) : '');
     if (id === 'product') afterProduct();
   }
