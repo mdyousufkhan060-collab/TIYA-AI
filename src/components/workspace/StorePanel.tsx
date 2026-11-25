@@ -15,7 +15,7 @@ type Store = {
   id: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
   delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[];
-  pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean;
+  pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean;
 };
 type Banner = { title: string; badge: string; icon: string; bg?: string };
 type Cat = { id: string; name: string; icon: string; sort: number };
@@ -88,7 +88,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'create'>('home');
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
@@ -152,7 +152,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   }
   if (!store) return null;
 
-  const url = store.subdomain_ready ? `https://${store.slug}.myrosebd.com` : `${window.location.origin}/shop/${store.slug}`;
+  const url = store.custom_domain && store.domain_ready ? `https://${store.custom_domain}` : store.subdomain_ready ? `https://${store.slug}.myrosebd.com` : `${window.location.origin}/shop/${store.slug}`;
   const makeSubdomain = async () => {
     setMsg('Setting up your address…');
     const { data, error } = await supabase.functions.invoke('store-subdomain', { body: { store_id: store.id } });
@@ -218,6 +218,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'categories' && <CategoriesTab store={store} />}
         {tab === 'design' && <DesignTab store={store} onSaved={() => void load()} />}
         {tab === 'delivery' && <DeliveryTab store={store} onSaved={() => void load()} />}
+        {tab === 'domain' && <DomainTab store={store} onSaved={() => void load()} />}
       </div>
     );
   }
@@ -238,9 +239,10 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         <SettingsBar badge="03" title="CATEGORIES" onClick={() => setTab('categories')} testId="store-categories" />
         <SettingsBar badge="04" title="HOMEPAGE & DESIGN" value="BANNERS · COLOURS" onClick={() => setTab('design')} testId="store-design" />
         <SettingsBar badge="05" title="DELIVERY & COURIER" value="STICKER · INVOICE" onClick={() => setTab('delivery')} testId="store-delivery" />
+        <SettingsBar badge="06" title="OWN DOMAIN" value={store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'CONNECT'} onClick={() => setTab('domain')} testId="store-domain" />
         {stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
-      <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Pixels & Analytics, Live chat, Staff, Own domain.</p>
+      <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Pixels & Analytics, Live chat, Staff.</p>
     </div>
   );
 };
@@ -604,6 +606,73 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
       </div>
       <button type="button" className={btn + ' w-full'} onClick={() => void saveStore()}>SAVE</button>
       {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- own domain
+const DomainTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
+  const [domain, setDomain] = useState(store.custom_domain || '');
+  const [records, setRecords] = useState<Array<{ type: string; name: string; value: string }>>([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const call = async (action: 'add' | 'check' | 'remove') => {
+    setBusy(true);
+    setMsg('');
+    const { data, error } = await supabase.functions.invoke('store-domain', { body: { store_id: store.id, domain, action } });
+    setBusy(false);
+    const err = (data as any)?.error || (error ? await (error as any).context?.json?.().then((j: any) => j.error).catch(() => error.message) : '');
+    if (err) return setMsg(String(err));
+    setRecords((data as any)?.records || []);
+    setMsg((data as any)?.message || (action === 'remove' ? 'Domain removed.' : 'Done.'));
+    if (action === 'remove') setDomain('');
+    onSaved();
+  };
+  const sub = `${store.slug}.myrosebd.com`;
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-1'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">YOUR FREE ADDRESS</p>
+        <p className="text-[12.5px] text-white">{store.subdomain_ready ? sub : `myrosebd.com/shop/${store.slug}`}</p>
+      </div>
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">OWN DOMAIN</p>
+        <p className="text-[11.5px] text-slate-300">Bought a domain like yourshop.com (Hostinger, Namecheap, GoDaddy or a BD seller)? Connect it here. Your store opens on your own name, and Google shows your own domain.</p>
+        <input className={input} value={domain} onChange={(e) => setDomain(e.target.value.trim().toLowerCase())} placeholder="yourshop.com" autoCapitalize="off" />
+        {store.custom_domain && (
+          <p className={`text-[12px] font-bold ${store.domain_ready ? 'text-emerald-400' : 'text-amber-300'}`}>
+            {store.domain_ready ? `✅ LIVE: https://${store.custom_domain}` : `⏳ WAITING FOR DNS: ${store.custom_domain}`}
+          </p>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" disabled={busy || !domain} onClick={() => void call('add')} className={btn}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} CONNECT</button>
+          <button type="button" disabled={busy || !store.custom_domain} onClick={() => void call('check')} className={btn + ' bg-white/10'}>CHECK</button>
+        </div>
+        {records.length > 0 && (
+          <div className="space-y-1.5 rounded-lg bg-black/30 p-2">
+            <p className="text-[11px] text-slate-300">Add these records in your domain's DNS page:</p>
+            {records.map((r, i) => (
+              <div key={i} className="grid grid-cols-[48px_56px_1fr_auto] items-center gap-1.5 text-[11.5px]">
+                <b className="text-teal-300">{r.type}</b>
+                <span className="text-slate-300">{r.name}</span>
+                <span className="truncate font-mono text-white">{r.value}</span>
+                <button type="button" className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white" onClick={() => { void navigator.clipboard?.writeText(r.value); setMsg('Copied'); }}>COPY</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {store.custom_domain && (
+          <button type="button" disabled={busy} onClick={() => void call('remove')} className={btn + ' w-full bg-rose-600/80'}>REMOVE DOMAIN</button>
+        )}
+        {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+      </div>
+      <div className={box + ' space-y-1 text-[11.5px] text-slate-300'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">HOW IT WORKS</p>
+        <p>1. Write your domain and press CONNECT.</p>
+        <p>2. Open the DNS page where you bought it and add the records shown (A for @, CNAME for www).</p>
+        <p>3. Wait 10 minutes to a few hours, then press CHECK. When it says LIVE, the free SSL lock is on.</p>
+        <p>4. Ask ROSE: "আমার ডোমেইন বসাও" and she guides you step by step.</p>
+      </div>
     </div>
   );
 };

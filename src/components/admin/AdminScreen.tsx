@@ -35,6 +35,7 @@ import { TeamChecklist } from '../settings/TeamChecklist';
 import { AdminVideosPage, AdminGuidePage } from './AdminGuideVideos';
 import { AdminWebsiteBuilderDemo } from './AdminWebsiteBuilderDemo';
 import { AdminWebsiteAccessPage } from './AdminWebsiteAccessPage';
+import { AdminBrandCard, AdminBrandPage } from './AdminBrandPage';
 import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
 
 type AdminView =
@@ -62,7 +63,8 @@ type AdminView =
   | 'income'
   | 'developer_tools'
   | 'website_builder'
-  | 'website_access';
+  | 'website_access'
+  | 'brand';
 
 interface AdminScreenProps {
   settings: TiyaSettings;
@@ -449,6 +451,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               videos: '21 Tutorial Videos',
               website_builder: '22 Website Builder',
               website_access: '23 Website Access',
+              brand: 'myrosebd.com',
               guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
@@ -461,6 +464,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   };
   const hubBars = (
           <div className="space-y-1.5">
+            <AdminBrandCard onOpen={() => go('brand')} />
             <SettingsBar badge="00" title="ADMIN GUIDE" value="WHAT IS WHERE" tone={activeView === 'guide' ? 'accent' : 'default'} onClick={() => go('guide')} testId="admin-bar-guide" />
             <SettingsBar badge="01" title="DASHBOARD" tone={activeView === 'dashboard' ? 'accent' : 'default'} onClick={() => go('dashboard')} testId="admin-bar-dashboard" />
             <SettingsBar badge="02" title="USERS" tone={activeView === 'users' ? 'accent' : 'default'} onClick={() => go('users')} testId="admin-bar-users" />
@@ -609,6 +613,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'videos' && <AdminVideosPage />}
         {view === 'website_builder' && <AdminWebsiteBuilderDemo />}
         {view === 'website_access' && <AdminWebsiteAccessPage />}
+        {view === 'brand' && <AdminBrandPage />}
         {view === 'guide' && <AdminGuidePage onOpen={(v) => setView(v as AdminView)} />}
 
         {view === 'dashboard' && (

@@ -369,9 +369,11 @@ var hostSub = ((location.hostname.match(/^([a-z0-9-]+)\.myrosebd\.com$/) || [])[
 if (hostSub === 'www') hostSub = '';
 if (hostSub && window.ROSE_STORES[hostSub] && !qs.get('s')) qs.set('s', hostSub);
 var liveSlug = qs.get('store') || ((location.pathname.match(/^\/shop\/([a-z0-9-]+)/) || [])[1]) || (hostSub && !window.ROSE_STORES[hostSub] ? hostSub : '');
-if (liveSlug) {
+// Own domain (e.g. tajumar.com): find the store by its domain
+var ownDomain = !liveSlug && !/(^|\.)myrosebd\.com$|\.vercel\.app$|^localhost$|^127\.0\.0\.1$/.test(location.hostname) ? location.hostname.replace(/^www\./, '') : '';
+if (liveSlug || ownDomain) {
   document.getElementById('view').innerHTML = '<div class="panel" style="text-align:center;padding:40px">Loading…</div>';
-  sb('stores?select=*&slug=eq.' + encodeURIComponent(liveSlug)).then(function (st) {
+  sb(ownDomain ? 'stores?select=*&custom_domain=eq.' + encodeURIComponent(ownDomain) : 'stores?select=*&slug=eq.' + encodeURIComponent(liveSlug)).then(function (st) {
     var r = st[0];
     if (!r) throw new Error('This store is not open yet.');
     return Promise.all([sb('store_categories?select=*&store_id=eq.' + r.id + '&order=sort'), sb('store_products?select=*&store_id=eq.' + r.id + '&active=eq.true&order=sort')]).then(function (x) {
@@ -472,7 +474,7 @@ function start(S, P, liveId) {
     '<p>Facebook · YouTube · TikTok · Instagram</p></div>' +
     '<div><h4>Shop</h4><p><a href="#/categories">All categories</a></p><p><a href="#/wishlist">Wishlist</a></p><p><a href="#/cart">Cart</a></p><p><a href="#/account">My orders</a></p></div>' +
     '<div><h4>Help</h4><p><a href="#/page/about">About us</a></p><p><a href="#/page/contact">Contact</a></p><p><a href="#/page/return">Return policy</a></p><p><a href="#/page/privacy">Privacy</a></p><p><a href="#/page/terms">Terms</a></p></div>' +
-    '<div><p style="font-size:11px;color:#94a3b8">Made with ROSE Store Builder</p><h4>We accept</h4><div class="paylogos">' + ['bkash', 'nagad', 'rocket', 'visa', 'mastercard', 'cod'].map(function (k) { return '<span>' + window.ROSE_LOGO(k, 24) + '</span>'; }).join('') + '</div><h4 style="margin-top:12px">Get the app</h4><span class="store-btn">▶ Google Play</span></div>';
+    '<div><a href="https://www.myrosebd.com/demos#contact" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8"><img src="/tiya-home.jpg?v=3" alt="" style="width:20px;height:20px;border-radius:99px;object-fit:cover;object-position:center 30%">Made with ROSE · myrosebd.com</a><h4>We accept</h4><div class="paylogos">' + ['bkash', 'nagad', 'rocket', 'visa', 'mastercard', 'cod'].map(function (k) { return '<span>' + window.ROSE_LOGO(k, 24) + '</span>'; }).join('') + '</div><h4 style="margin-top:12px">Get the app</h4><span class="store-btn">▶ Google Play</span></div>';
 
   function renderNav() {
     var h = location.hash || '#/';

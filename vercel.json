@@ -34,6 +34,24 @@
     },
     {
       "source": "/((?!.*\\.).*)",
+      "missing": [
+        {
+          "type": "host",
+          "value": "(.*\\.)?myrosebd\\.com"
+        },
+        {
+          "type": "host",
+          "value": ".*\\.vercel\\.app"
+        },
+        {
+          "type": "host",
+          "value": "localhost"
+        }
+      ],
+      "destination": "/demos/store.html"
+    },
+    {
+      "source": "/((?!.*\\.).*)",
       "destination": "/index.html"
     }
   ]

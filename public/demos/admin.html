@@ -282,10 +282,21 @@
     return '<div class="card">' + st.staff.map(function (s, i) { return row('<span class="ph">👤</span>', s[0], s[1], btn('Remove', 'st.staff.splice(' + i + ',1);toast(\'Access removed\');render()', 'alt')); }).join('') + (st.staff.length ? '' : '<p class="note">No staff yet.</p>') + '</div>' +
       '<div class="card" style="margin-top:10px"><div class="field"><span>Staff Gmail</span><input id="sfMail" placeholder="staff@gmail.com"></div><div class="field"><span>Role</span><select id="sfRole"><option>MANAGER</option><option>ORDER STAFF</option><option>PRODUCT STAFF</option><option>CHAT SUPPORT</option><option>MARKETING</option><option>ACCOUNTS</option><option>CUSTOM</option></select></div>' + btn('SEND INVITE', 'addStaff()') + '<p class="note">Staff sign in with that Gmail and see only their bars. Activity log shows who changed what.</p></div>';
   };
+  var dmState = { d: '', step: 0 };
   V.domain = function () {
-    return '<div class="card"><b style="font-size:13px">Store link</b><p class="note" style="margin-top:4px">' + k + '.myrosebd.com</p></div><div class="card" style="margin-top:10px"><b style="font-size:13px">Own domain</b><div class="field" style="margin-top:8px"><span>Your domain</span><input id="dmIn" placeholder="yourshop.com"></div><p class="note">Add these 2 records where you bought the domain:<br>A · @ · 216.198.79.1<br>CNAME · www · cname.vercel-dns.com</p>' + btn('CHECK DOMAIN', 'checkDomain()') + '<p class="note" id="dmOut"></p></div>' +
+    var recs = [['A', '@', '216.198.79.1'], ['CNAME', 'www', 'cname.vercel-dns.com']];
+    return '<div class="card"><b style="font-size:13px">YOUR FREE ADDRESS</b><p class="note" style="margin-top:4px;font-size:14px;color:#fff">' + k + '.myrosebd.com</p></div>' +
+      '<div class="card" style="margin-top:10px"><b style="font-size:13px">OWN DOMAIN</b><p class="note">Bought a domain like yourshop.com? Connect it here. Your store opens on your own name and Google shows your own domain.</p>' +
+      '<div class="field" style="margin-top:8px"><span>Your domain</span><input id="dmIn" placeholder="yourshop.com" value="' + esc(dmState.d) + '"></div>' +
+      (dmState.step === 2 ? '<p style="color:#34d399;font-weight:800">✅ LIVE: https://' + esc(dmState.d) + ' · SSL lock on</p>' : dmState.step === 1 ? '<p style="color:#fbbf24;font-weight:800">⏳ WAITING FOR DNS: ' + esc(dmState.d) + '</p>' : '') +
+      '<div class="btns">' + btn('CONNECT', 'connectDomain()') + btn('CHECK', 'checkDomain()', 'alt') + (dmState.step ? btn('REMOVE', 'dmState.step=0;dmState.d=\'\';render()', 'red') : '') + '</div>' +
+      (dmState.step ? '<div class="card" style="margin-top:10px;background:#0a0f1a"><p class="note" style="margin-top:0">Add these records in your domain’s DNS page:</p>' + recs.map(function (r) { return '<div class="row"><b style="width:60px;color:#2dd4bf">' + r[0] + '</b><span style="width:50px">' + r[1] + '</span><span class="f" style="font-family:ui-monospace,monospace">' + r[2] + '</span>' + btn('COPY', "navigator.clipboard&&navigator.clipboard.writeText('" + r[2] + "');toast('Copied')", 'alt') + '</div>'; }).join('') + '</div>' : '') +
+      '</div><div class="card" style="margin-top:10px"><b style="font-size:13px">HOW IT WORKS</b><p class="note">1. Write your domain and press CONNECT.<br>2. Open the DNS page where you bought it (Hostinger, Namecheap, GoDaddy or a BD seller) and add the 2 records.<br>3. Wait 10 minutes to a few hours, then press CHECK. When it says LIVE, the free SSL lock is on.<br>4. Or just tell ROSE: “আমার ডোমেইন বসাও”, and she guides you step by step.</p></div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">Hostinger</b><p class="note">Business plan: DOWNLOAD FOR HOSTINGER (ZIP) with a step-by-step guide.</p>' + btn('DOWNLOAD ZIP', "toast('Business plan: ZIP download starts')", 'alt') + '</div>';
   };
+  window.dmState = dmState;
+  window.connectDomain = function () { var d = (document.getElementById('dmIn').value || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, ''); if (!/^([a-z0-9-]+\.)+[a-z]{2,}$/.test(d)) return toast('Write the domain like yourshop.com'); dmState.d = d; dmState.step = 1; toast('Domain added. Now add the 2 records.'); render(); };
+  window.checkDomain = function () { if (!dmState.step) return toast('Press CONNECT first'); dmState.step = 2; toast('Records found. SSL issued (demo).'); render(); };
   V.reports = function () {
     var del = st.orders.filter(function (o) { return o.st === 'delivered'; });
     return '<div class="tabs"><button class="on">THIS MONTH</button><button onclick="toast(\'Last month: 386 orders\')">LAST MONTH</button><button onclick="toast(\'This year: 4,210 orders\')">THIS YEAR</button></div>' +
@@ -490,7 +501,6 @@
   window.replyRev = function (i) { var v = document.getElementById('rv' + i).value.trim(); if (!v) return; st.reviews[i].reply = v; toast('Reply posted'); render(); };
   window.addStaff = function () { var m = document.getElementById('sfMail').value.trim(); if (!/@/.test(m)) return toast('Write a Gmail'); if (st.staff.length >= 3) return toast('Your plan allows 3 staff'); st.staff.push([m, document.getElementById('sfRole').value]); toast('Invite sent to ' + m); render(); };
   window.setLogo = function (inp) { var f = inp.files && inp.files[0]; if (!f) return; document.getElementById('logoBox').innerHTML = '<img src="' + URL.createObjectURL(f) + '" style="width:100%;height:100%;object-fit:contain">'; toast('Logo uploaded'); };
-  window.checkDomain = function () { var d = document.getElementById('dmIn').value.trim(); document.getElementById('dmOut').innerHTML = d ? '⏳ Checking ' + esc(d) + '… <br>✅ Records found. SSL is being issued (demo).' : 'Write your domain first.'; };
   window.sendChat = function () {
     var i = document.getElementById('chatIn'), t = i.value.trim(); if (!t) return;
     if (st.takeover) { st.chats.push(['o', 'You: ' + t]); }
