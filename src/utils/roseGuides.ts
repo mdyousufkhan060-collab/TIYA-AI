@@ -91,7 +91,18 @@ const ADMIN = `ADMIN GUIDE (only for the owner / admin). On a PC tap the small A
 20 WEBSITE BUILDER (full website history: ALL STORES, ALL ORDERS, SIGN-UPS & PLANS, PAYMENTS, LIVE CHATS, STORE ALERTS, DEMO STORES). 21 WEBSITE ACCESS: PAYMENTS TO CHECK (APPROVE / REJECT), ALL GMAIL (every signed-in Gmail; tap one to see plan, days left, give or extend a plan with months and extra days, MADE WITH ROSE switch for that Gmail, its stores with open / closed switch, its payments, REMOVE ACCESS; type a new Gmail in search to give access before they sign in), AUTO PAYMENT · SMS, STORE PLAN PRICES. 22 SITE SWITCHES: MADE WITH ROSE in store footers, ROSE SUPPORT CARD in store admins, ROSE SUPPORT CARD in the app (ON / OFF for everyone), and the download links (Android APK, Google Play, Microsoft Store) shown on the website. The big MYROSEBD.COM card at the top of the admin panel opens his contact page.
 The admin has no credit limit and can use every mode's tools.`;
 
-const WHATS_NEW_ADMIN = `WHAT IS NEW (added 25 November 2026, newest first; tell him this when he asks what was added):
+const WHATS_NEW_ADMIN = `WHAT IS NEW (newest first; when he asks what was added, start with 26 November):
+26 November 2026:
+N1 Product WEIGHT: every product in the store has a weight (kg) box; the delivery charge is counted from the cart weight (Inside / Outside Dhaka price up to 1 kg + a price for each extra kg, set in 05 DELIVERY); customers see the weight on the product, cart and checkout; it prints on the invoice and the courier sticker.
+N2 New PAYMENTS page in every store: a neat list with logos; Cash on Delivery has an ON/OFF switch; bKash, Nagad, Rocket, Bank and Card each open their own page with PERSONAL / MERCHANT, the number, what papers are needed, ON/OFF and SAVE; a method that is OFF never shows to customers.
+N3 Store orders by bKash / Nagad / Rocket need the TrxID and a payment screenshot; with the shop owner's SMS forwarder ROSE matches the money SMS and marks the order PAID and CONFIRMED by itself; the owner sees PAID / CHECKING and the screenshot.
+N4 Bank transfer details and a card-type picker (Visa, Mastercard, Amex, Nexus) at checkout; real card payment needs SSLCommerz / aamarPay.
+N5 Product options fit the shop: food has Portion, medicine has Pack / Strength, grocery has Weight, furniture has Size / Material, clothes have Size / Colour.
+N6 Workspace: the 4 empty glance tiles are gone; new MY DOMAIN bar where users give ROSE access to their own domain (Hostinger, Cloudflare and others) and connect it to their store.
+N7 ROSE talks with him in a new, more natural way; "মোবাইলের হোমে যাও" (go_home) and "ROSE-এ ফিরে এসো" are separate; "তোমার ওয়েবসাইটে যাও" opens myrosebd.com.
+25 November 2026:
+M1 Admin 21 WEBSITE ACCESS: every Gmail as one row; tap to open plan, give / extend days, payments, stores and the MADE WITH ROSE switch for that Gmail. 20 WEBSITE BUILDER shows live stores, orders, sign-ups, payments, chats and alerts. Unneeded admin bars (API providers, system logs) removed.
+M2 14 OFFERS in every store (offer banners, offer products, coupons) and a live INVOICE PREVIEW at the chosen paper size.
 0a Store sign-up page myrosebd.com/start: from any demo, USE THIS DESIGN → Google → company details → store live with 5 days free; every new store and every info change comes to him as a notification; 21 WEBSITE ACCESS shows each store's login Gmail, emails, WhatsApp, phones, address, plan, products and orders.
 0b Auto payment: when the bKash / Nagad / Rocket money-received SMS on his phone is forwarded to ROSE (SMS forwarder app), a matching TrxID and amount turns the plan on by itself; 21 WEBSITE ACCESS > AUTO PAYMENT · SMS shows them. Manual APPROVE still works.
 0c 09 COMPANY INFO in every store; banner photos upload in 04 HOMEPAGE & DESIGN.
