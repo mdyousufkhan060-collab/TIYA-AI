@@ -37,6 +37,7 @@ import { AdminWebsiteBuilderDemo } from './AdminWebsiteBuilderDemo';
 import { AdminWebsiteAccessPage } from './AdminWebsiteAccessPage';
 import { AdminBrandCard, AdminBrandPage, AdminSiteSwitchesPage } from './AdminBrandPage';
 import { AdminDeletionRequestsPage, AdminOverviewTiles } from './AdminSystemPages';
+import { AdminAiKeyPage } from './AdminAiKeyPage';
 
 type AdminView =
   | 'hub'
@@ -65,7 +66,8 @@ type AdminView =
   | 'website_builder'
   | 'website_access'
   | 'brand'
-  | 'site_switches';
+  | 'site_switches'
+  | 'ai_key';
 
 interface AdminScreenProps {
   settings: TiyaSettings;
@@ -452,6 +454,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               website_access: '21 Website Access',
               brand: 'myrosebd.com',
               site_switches: '22 Site Switches',
+              ai_key: '23 AI Key & Billing',
               guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
@@ -505,6 +508,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="20" title="WEBSITE BUILDER" value="STORES · LIVE" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
             <SettingsBar badge="21" title="WEBSITE ACCESS" value="GMAIL" tone={activeView === 'website_access' ? 'accent' : 'default'} onClick={() => go('website_access')} testId="admin-bar-website-access" />
             <SettingsBar badge="22" title="SITE SWITCHES" value="ROSE BRANDING" tone={activeView === 'site_switches' ? 'accent' : 'default'} onClick={() => go('site_switches')} testId="admin-bar-site-switches" />
+            <SettingsBar badge="23" title="AI KEY & BILLING" value="GEMINI PAID" tone={activeView === 'ai_key' ? 'accent' : 'default'} onClick={() => go('ai_key')} testId="admin-bar-ai-key" />
           </div>
   );
 
@@ -612,6 +616,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'website_access' && <AdminWebsiteAccessPage />}
         {view === 'brand' && <AdminBrandPage />}
         {view === 'site_switches' && <AdminSiteSwitchesPage />}
+        {view === 'ai_key' && <AdminAiKeyPage />}
         {view === 'guide' && <AdminGuidePage onOpen={(v) => setView(v as AdminView)} />}
 
         {view === 'dashboard' && (

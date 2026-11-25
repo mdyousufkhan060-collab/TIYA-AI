@@ -99,6 +99,8 @@ N3 Store orders by bKash / Nagad / Rocket need the TrxID and a payment screensho
 N4 Bank transfer details and a card-type picker (Visa, Mastercard, Amex, Nexus) at checkout; real card payment needs SSLCommerz / aamarPay.
 N5 Product options fit the shop: food has Portion, medicine has Pack / Strength, grocery has Weight, furniture has Size / Material, clothes have Size / Colour.
 N6 Workspace: the 4 empty glance tiles are gone; new MY DOMAIN bar where users give ROSE access to their own domain (Hostinger, Cloudflare and others) and connect it to their store.
+N0 Admin 23 AI KEY & BILLING: TEST NOW shows if the server Gemini key (used by every ROSE PREMIUM customer) works; buttons open Google AI Studio to buy the Gemini paid plan (Set up billing), Google billing, and the Supabase Secrets page to paste the key.
+N8 ROSE BRAIN: ROSE remembers his plans and facts on the server and can find what he said days or weeks ago.
 N7 ROSE talks with him in a new, more natural way; "মোবাইলের হোমে যাও" (go_home) and "ROSE-এ ফিরে এসো" are separate; "তোমার ওয়েবসাইটে যাও" opens myrosebd.com.
 25 November 2026:
 M1 Admin 21 WEBSITE ACCESS: every Gmail as one row; tap to open plan, give / extend days, payments, stores and the MADE WITH ROSE switch for that Gmail. 20 WEBSITE BUILDER shows live stores, orders, sign-ups, payments, chats and alerts. Unneeded admin bars (API providers, system logs) removed.
