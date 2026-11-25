@@ -140,6 +140,7 @@ export const Landing: React.FC = () => {
     ['Features', '#features'],
     ['Modes', '#modes'],
     ['Pricing', '#pricing'],
+    ['Online Store', '/demos'],
     ['Download', '#download'],
     ['FAQ', '#faq'],
   ];
@@ -207,6 +208,9 @@ export const Landing: React.FC = () => {
               </a>
               <a href="#pricing" className={btnGhost}>
                 See plans
+              </a>
+              <a href="/demos" className={btnGhost}>
+                Online store demos
               </a>
             </div>
             <p className="mt-4 text-xs text-slate-500">Sign in with Google · No credit card · Works on any phone</p>

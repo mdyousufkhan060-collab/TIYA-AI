@@ -32,10 +32,12 @@
   .search input { flex: 1; border: 0; padding: 11px 16px; font-size: 14px; outline: none; min-width: 0; }
   .search button { background: var(--c); color: #fff; border: 0; padding: 0 20px; font-weight: 700; }
   main { padding: 12px 0 90px; }
-  .slider { position: relative; border-radius: 18px; overflow: hidden; height: 190px; }
+  .slider { position: relative; border-radius: 18px; overflow: hidden; height: 210px; }
+  @media (min-width: 761px) { .slider { height: 320px; } }
   .slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; opacity: 0; transition: opacity .6s; }
   .slide.on { opacity: 1; }
-  .slide h2 { margin: 0 0 10px; font-size: clamp(19px, 4.6vw, 30px); line-height: 1.12; max-width: 62%; color: #0f172a; }
+  .slide .bpic { width: 46%; height: 100%; object-fit: cover; border-radius: 14px; margin-left: 12px; box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+  .slide h2 { margin: 0 0 10px; font-size: clamp(18px, 4.4vw, 32px); line-height: 1.12; color: #0f172a; }
   .slide .badge { display: inline-block; background: #ef4444; color: #fff; font-weight: 800; padding: 6px 12px; border-radius: 10px; transform: rotate(-2deg); }
   .slide .big { font-size: clamp(70px, 16vw, 120px); filter: drop-shadow(0 8px 14px rgba(0,0,0,.18)); }
   .dots { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
@@ -50,7 +52,7 @@
   .head a { color: var(--c); font-weight: 700; font-size: 14px; }
   .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; position: relative; }
-  .card .img { height: 130px; display: grid; place-items: center; font-size: 64px; background: linear-gradient(160deg, #fff, #f1f5f9); }
+  .card .img { height: 150px; overflow: hidden; display: grid; place-items: center; font-size: 64px; background: linear-gradient(160deg, #fff, #f1f5f9); }
   .off { position: absolute; top: 8px; left: 8px; background: #ef4444; color: #fff; font-size: 11.5px; font-weight: 800; border-radius: 7px; padding: 3px 7px; }
   .rx { position: absolute; top: 8px; right: 8px; background: #0e7490; color: #fff; font-size: 11px; font-weight: 800; border-radius: 7px; padding: 3px 7px; }
   .heart { position: absolute; top: 6px; right: 6px; background: #fff; border: 0; border-radius: 99px; width: 30px; height: 30px; font-size: 16px; }
@@ -198,7 +200,7 @@ if (liveSlug) {
   var demoId = qs.get('s') || 'foodbazaar';
   var DS = window.ROSE_STORES[demoId] || window.ROSE_STORES.foodbazaar;
   start(DS, DS.products.map(function (p, i) {
-    return { id: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 40 + ((i * 37) % 300) };
+    return { id: i, name: p[0], cat: p[1], e: p[2], price: p[3], old: p[4], rx: p[5] === 'rx', img: p[6] ? window.ROSE_IMG(p[6]) : '', imgs: p[6] ? [window.ROSE_IMG(p[6], 900)] : [], rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 40 + ((i * 37) % 300) };
   }), '');
 }
 
@@ -212,7 +214,8 @@ function start(S, P, liveId) {
 
   var tk = function (n) { return '৳ ' + n.toLocaleString('en-IN'); };
   var off = function (p) { return p.old > p.price ? Math.round((1 - p.price / p.old) * 100) : 0; };
-  var pic = function (p, big) { return p.img ? '<img src="' + esc(p.img) + '" alt="' + esc(p.name) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover">' : p.e; };
+  var bimg = function (u) { return /^https?:/.test(u) ? u : window.ROSE_IMG(u, 900); };
+  var pic = function (p, big) { return p.img ? '<img src="' + esc(p.img) + '" alt="' + esc(p.name) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;font-size:12px" onerror="this.parentNode.textContent=\'' + p.e + '\'">' : p.e; };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
 
   var DIN = S.delIn != null ? +S.delIn : 60, DOUT = S.delOut != null ? +S.delOut : 120;
@@ -281,12 +284,12 @@ function start(S, P, liveId) {
   function home() {
     var b = S.banners;
     var html = '<div class="slider" id="slider">' + b.map(function (x, i) {
-      return '<div class="slide ' + (i ? '' : 'on') + '" style="background:' + x.bg + '"><div><h2>' + esc(x.title) + '</h2><span class="badge">' + esc(x.badge) + '</span><div style="margin-top:12px"><a class="btn" style="display:inline-block;width:auto;padding:9px 16px" href="#/categories">Shop Now →</a></div></div><div class="big">' + x.icon + '</div></div>';
+      return '<div class="slide ' + (i ? '' : 'on') + '" style="background:' + x.bg + '"><div style="flex:1;min-width:0"><h2>' + esc(x.title) + '</h2><span class="badge">' + esc(x.badge) + '</span><div style="margin-top:12px"><a class="btn" style="display:inline-block;width:auto;padding:9px 16px" href="#/categories">Shop Now →</a></div></div>' + (x.img ? '<img class="bpic" src="' + bimg(x.img) + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="big">' + x.icon + '</div>') + '</div>';
     }).join('') + '<div class="dots">' + b.map(function (x, i) { return '<b class="' + (i ? '' : 'on') + '"></b>'; }).join('') + '</div></div>';
     html += '<div class="trust">' + S.trust.map(function (t) { return '<div>' + t + '</div>'; }).join('') + '</div>';
     html += '<div class="cats">' + S.categories.map(function (c) { return '<a class="cat" href="#/c/' + encodeURIComponent(c[0]) + '"><span class="e">' + c[1] + '</span>' + esc(c[0]) + '</a>'; }).join('') + '</div>';
     html += '<div class="head"><h3>🔥 ' + esc(S.sectionTitle) + '</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(0, 8).map(card).join('') + '</div>';
-    html += '<div class="promos"><div class="promo" style="background:linear-gradient(120deg,' + S.color + ',#0f172a)"><div>' + esc(S.banners[1].title) + '<br><small style="font-weight:600">' + esc(S.banners[1].badge) + '</small></div><span>' + S.banners[1].icon + '</span></div>' +
+    html += '<div class="promos"><div class="promo" style="background:linear-gradient(120deg,' + S.color + ',#0f172a)"><div>' + esc(S.banners[1].title) + '<br><small style="font-weight:600">' + esc(S.banners[1].badge) + '</small></div>' + (S.banners[1].img ? '<img src="' + bimg(S.banners[1].img) + '" alt="" style="width:42%;height:100px;object-fit:cover;border-radius:12px">' : '<span>' + S.banners[1].icon + '</span>') + '</div>' +
       '<div class="promo" style="background:linear-gradient(120deg,#f59e0b,#ef4444)"><div>Best Quality<br>Best Price</div><span>' + S.logo + '</span></div></div>';
     html += '<div class="head"><h3>✨ New Arrivals</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(-4).map(card).join('') + '</div>';
     return html;
@@ -332,7 +335,7 @@ function start(S, P, liveId) {
     var sub = 0;
     var rows = st.cart.map(function (c, i) {
       var p = P[c.id]; sub += p.price * c.q;
-      return '<div class="row"><span class="e">' + p.e + '</span><div style="flex:1"><b style="font-size:14px">' + esc(p.name) + '</b><div style="font-size:12px;color:#64748b">' + esc(c.opt) + (p.rx ? ' · Rx' : '') + '</div><b style="color:#dc2626">' + tk(p.price) + '</b></div>' +
+      return '<div class="row"><span class="e" style="height:52px;overflow:hidden;border-radius:10px">' + (p.img ? '<img src="' + p.img + '" alt="" style="width:52px;height:52px;object-fit:cover">' : p.e) + '</span><div style="flex:1"><b style="font-size:14px">' + esc(p.name) + '</b><div style="font-size:12px;color:#64748b">' + esc(c.opt) + (p.rx ? ' · Rx' : '') + '</div><b style="color:#dc2626">' + tk(p.price) + '</b></div>' +
         '<div class="qty"><button onclick="cq(' + i + ',-1)">−</button><span>' + c.q + '</span><button onclick="cq(' + i + ',1)">+</button></div></div>';
     }).join('');
     return '<div class="head"><h3>🛒 Cart</h3></div><div class="panel">' + rows +

@@ -17,7 +17,7 @@
   .cta { display: inline-block; margin-top: 16px; background: linear-gradient(90deg,#2dd4bf,#38bdf8); color: #021014; font-weight: 800; border-radius: 12px; padding: 12px 20px; }
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 24px 0; }
   .card { background: #0b1222; border: 1px solid #1e293b; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
-  .shot { height: 170px; display: flex; align-items: center; justify-content: space-between; padding: 18px; color: #0f172a; }
+  .shot { height: 190px; display: flex; align-items: center; justify-content: space-between; padding: 18px; color: #0f172a; }
   .shot b { font-size: 24px; display: block; }
   .shot small { font-size: 13px; opacity: .8; }
   .shot span { font-size: 78px; }
@@ -37,7 +37,7 @@
   <header>
     <span class="k">ROSE STORE BUILDER · DEMO</span>
     <h1>Your online store, ready in minutes</h1>
-    <p>Open any demo below and shop like a real customer: categories, product page, cart, checkout, wishlist and live chat. Tell ROSE about your business and get a store like this with your name and products.</p>
+    <p>See every demo on a phone and a computer side by side, or open it and shop like a real customer: categories, product page, cart, checkout, wishlist and live chat. Tell ROSE about your business and get a store like this with your name and products.</p>
     <a class="cta" href="/app">Make my store with ROSE</a>
   </header>
   <div class="grid" id="g"></div>
@@ -55,9 +55,10 @@
     var feats = [s.categories.slice(0, 4).map(function (c) { return c[0]; }).join(', '), s.trust.slice(0, 2).join(' · ')];
     if (s.pharmacy) feats.push('Prescription upload + pharmacist check');
     if (k === 'homenest') feats.push('Wood / colour options, EMI, free fitting');
-    return '<div class="card"><div class="shot" style="background:linear-gradient(120deg,' + bg[k] + ')"><div><b>' + s.name + '</b><small>' + s.type + ' · ' + s.tagline + '</small></div><span>' + s.logo + '</span></div>' +
+    var im = s.banners[0].img ? window.ROSE_IMG(s.banners[0].img, 800) : '';
+    return '<div class="card"><div class="shot" style="background:' + (im ? 'linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,.55) 55%,rgba(255,255,255,0)),url(' + im + ') center/cover' : 'linear-gradient(120deg,' + bg[k] + ')') + '"><div><b>' + s.logo + ' ' + s.name + '</b><small>' + s.type + ' · ' + s.tagline + '</small></div></div>' +
       '<div class="body"><ul>' + feats.map(function (f) { return '<li>' + f + '</li>'; }).join('') + '</ul>' +
-      '<div class="btns"><a class="btn" href="/demos/store.html?s=' + k + '">OPEN DEMO</a><a class="btn alt" href="/app">USE THIS DESIGN</a></div></div></div>';
+      '<div class="btns"><a class="btn" href="/demos/view.html?s=' + k + '">📱💻 MOBILE + DESKTOP</a><a class="btn alt" href="/demos/store.html?s=' + k + '">OPEN DEMO</a></div><a class="btn alt" style="margin-top:6px" href="/app">USE THIS DESIGN</a></div></div>';
   }).join('');
 </script>
 </body>
