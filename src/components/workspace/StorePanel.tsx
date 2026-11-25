@@ -30,7 +30,7 @@ type Prod = {
 };
 type Order = {
   id: string; order_no: number; customer_name: string; phone: string; address: string; area: string;
-  items: Array<{ name: string; q: number; price: number; opt?: string }>; total: number; payment_method: string; trx_id: string; status: string; created_at: string;
+  items: Array<{ name: string; q: number; price: number; opt?: string }>; total: number; payment_method: string; trx_id: string; status: string; created_at: string; payment_status?: string; pay_proof?: string | null; paid_amount?: number | null;
   email: string; division: string; district: string; upazila: string; courier: string; tracking: string; note: string; subtotal: number; delivery: number; courier_cost?: number;
 };
 export type Demo = {
@@ -46,6 +46,10 @@ const STATUSES = ['new', 'confirmed', 'packed', 'shipped', 'delivered', 'cancell
 const SIZE_SETS: Array<[string, string[]]> = [['Shirt / T-shirt: S-XXL', ['S', 'M', 'L', 'XL', 'XXL']], ['Pant / waist: 28-38', ['28', '30', '32', '34', '36', '38']], ['Shoe: 39-44', ['39', '40', '41', '42', '43', '44']], ['Kids: 1-8 years', ['1-2Y', '3-4Y', '5-6Y', '7-8Y']], ['Free size', ['Free size']]];
 const QUICK: Record<string, string[]> = { Size: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free size'], Colour: ['Black', 'White', 'Red', 'Blue', 'Green', 'Navy', 'Grey'], Weight: ['250g', '500g', '1kg', '2kg', '5kg'], Pack: ['1 pc', '2 pcs', '3 pcs'], Model: [] };
 type Kind = { tabs: Array<[string, string, string]>; specs: Array<[string, string, string, string]> };
+type KindOpt = { labels: string[]; sets: Array<[string, string[]]>; quick: Record<string, string[]> };
+/** Option names and quick picks that fit the shop (food: portion, medicine: pack, grocery: weight...). */
+const optOf = (k: Kind | null): KindOpt =>
+  ((k as any)?.opt as KindOpt) || { labels: ['Size', 'Colour', 'Weight', 'Pack', 'Model'], sets: SIZE_SETS, quick: QUICK };
 const kindOf = (template: string): Kind | null => { const w = window as any; return (w.ROSE_KINDS && w.ROSE_KINDS[(w.ROSE_KIND_OF || {})[template] || 'fashion']) || null; };
 
 export function loadDemos(): Promise<Record<string, Demo>> {
@@ -929,6 +933,14 @@ const OrdersTab: React.FC<{ store: Store }> = ({ store }) => {
           <p className="text-[11px] text-slate-400">{[o.address, o.upazila, o.district, o.division].filter(Boolean).join(', ')} ({o.area})</p>
           <p className="text-[11px] text-slate-300">{o.items.map((i) => `${i.name}${i.opt ? ` (${i.opt})` : ''} ×${i.q}`).join(', ')}</p>
           <p className="text-[10.5px] text-slate-500">{o.payment_method.toUpperCase()}{o.trx_id ? ` · TrxID ${o.trx_id}` : ''}{o.email ? ` · ${o.email}` : ''} · {new Date(o.created_at).toLocaleString('en-GB')}</p>
+          {o.trx_id && (
+            <p className="text-[10.5px]">
+              <b className={o.payment_status === 'paid' ? 'text-emerald-300' : o.payment_status === 'partial' ? 'text-amber-300' : 'text-sky-300'}>
+                {o.payment_status === 'paid' ? `✅ PAID ৳${o.paid_amount ?? ''} · checked by ROSE` : o.payment_status === 'partial' ? `⚠️ PART PAID ৳${o.paid_amount ?? ''}` : '⏳ PAYMENT CHECKING · no SMS yet'}
+              </b>
+              {o.pay_proof && <button type="button" className="ml-2 font-bold text-teal-300 underline" onClick={async () => { const { data } = await supabase.storage.from('pay-proofs').createSignedUrl(o.pay_proof as string, 600); if (data?.signedUrl) window.open(data.signedUrl, '_blank'); }}>SCREENSHOT</button>}
+            </p>
+          )}
           {o.tracking && <p className="text-[11px] text-emerald-300">🚚 {o.courier} · {o.tracking}</p>}
           {open === o.id && (
             <div className="space-y-2 pt-2">
@@ -1338,13 +1350,14 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
         </div>
         <p className="px-1 text-[10.5px] text-slate-400">{IMG_HINT.product}</p>
         <div className="space-y-2 rounded-lg border border-teal-900 bg-teal-950/30 p-2">
+          <p className="text-[10.5px] font-bold tracking-wider text-teal-300">OPTIONS (optional) · e.g. {optOf(kind).labels.join(', ')}</p>
           <div className="grid grid-cols-2 gap-2">
-            <select className={input} value={edit.options_label || 'Size'} onChange={(e) => set('options_label', e.target.value)}>
-              {['Size', 'Colour', 'Weight', 'Pack', 'Model'].map((x) => <option key={x}>{x}</option>)}
+            <select className={input} value={edit.options_label || optOf(kind).labels[0]} onChange={(e) => set('options_label', e.target.value)}>
+              {[...optOf(kind).labels, ...(edit.options_label && !optOf(kind).labels.includes(edit.options_label) ? [edit.options_label] : [])].map((x) => <option key={x}>{x}</option>)}
             </select>
-            <select className={input} value="" onChange={(e) => { const s = SIZE_SETS[Number(e.target.value)]; if (s) { set('options_label', 'Size'); set('options', s[1]); } }}>
+            <select className={input} value="" onChange={(e) => { const s = optOf(kind).sets[Number(e.target.value)]; if (s) set('options', s[1]); }}>
               <option value="">Quick pick…</option>
-              {SIZE_SETS.map((s, i) => <option key={s[0]} value={i}>{s[0]}</option>)}
+              {optOf(kind).sets.map((s, i) => <option key={s[0]} value={i}>{s[0]}</option>)}
             </select>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-white/10 bg-black/30 p-1.5">
@@ -1362,7 +1375,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
             }} />
           </div>
           <div className="flex flex-wrap gap-1">
-            {(QUICK[edit.options_label || 'Size'] || []).filter((x) => !(edit.options || []).includes(x)).map((x) => (
+            {(optOf(kind).quick[edit.options_label || optOf(kind).labels[0]] || QUICK[edit.options_label || ''] || []).filter((x) => !(edit.options || []).includes(x)).map((x) => (
               <button key={x} type="button" onClick={() => set('options', [...(edit.options || []).filter(Boolean), x])} className="rounded-md border border-dashed border-white/20 px-2 py-0.5 text-[11px] text-slate-300">+ {x}</button>
             ))}
           </div>
@@ -1397,7 +1410,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
 
   return (
     <div className="space-y-2">
-      <button type="button" onClick={() => { setMsg(''); setEdit(emptyProd()); }} className={btn + ' w-full'}>
+      <button type="button" onClick={() => { setMsg(''); setEdit({ ...emptyProd(), options_label: optOf(kind).labels[0] }); }} className={btn + ' w-full'}>
         <Plus className="h-4 w-4" /> ADD PRODUCT
       </button>
       <p className="px-1 text-[11px] text-slate-400">{prods.length} / {limit > 10000 ? 'unlimited' : limit} products. Tip: tell ROSE "add a product" by voice (coming next).</p>
@@ -1577,6 +1590,83 @@ const OfferRow: React.FC<{ p: Prod; pct: number; onPrice: (p: Prod, price: strin
   );
 };
 
+// ---------------------------------------------------------------- payments (bKash / Nagad / Rocket / bank / card)
+const PAY_TYPES: Array<[string, string, string]> = [
+  ['personal', 'Personal', 'Customer uses SEND MONEY. Free to open; for small shops.'],
+  ['agent', 'Agent', 'Customer uses CASH OUT (they pay the cash-out charge). Agent SIM from bKash / Nagad / Rocket.'],
+  ['merchant', 'Merchant', 'Customer uses PAYMENT. Needs trade licence, NID, shop photo, bank account; apply at the bKash / Nagad / Rocket merchant office or website.'],
+];
+const PAY_LABEL: Record<string, string> = { bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket' };
+
+const PaySetup: React.FC<{ value: Record<string, string>; onChange: (v: Record<string, string>) => void; storeId: string }> = ({ value, onChange, storeId }) => {
+  const v = value || {};
+  const set = (k: string, x: string) => onChange({ ...v, [k]: x });
+  const [link, setLink] = useState('');
+  const [sms, setSms] = useState<Array<{ id: string; method: string; trx_id: string; amount: number; order_id: string | null; received_at: string }>>([]);
+  const [copied, setCopied] = useState(false);
+  const base = 'https://ukgwipazzjstjkdfaozg.supabase.co/functions/v1/store-payment-sms?key=';
+  useEffect(() => {
+    void supabase.from('store_sms_keys').select('key').eq('store_id', storeId).maybeSingle().then(({ data }) => setLink(data ? base + (data as { key: string }).key : ''));
+    void supabase.from('store_payment_sms').select('id,method,trx_id,amount,order_id,received_at').eq('store_id', storeId).order('received_at', { ascending: false }).limit(8).then(({ data }) => setSms((data as typeof sms) || []));
+  }, [storeId]);
+  const newLink = async () => {
+    if (link && !window.confirm('Make a new link? The old link in the SMS forwarder app stops working.')) return;
+    const { data, error } = await supabase.rpc('store_new_sms_key', { p_store: storeId });
+    if (!error && data) setLink(base + String(data));
+  };
+  return (
+    <div className="space-y-2">
+      <p className="pt-1 text-[11px] font-bold tracking-wider text-teal-300">MOBILE BANKING · where customers pay</p>
+      {(['bkash', 'nagad', 'rocket'] as const).map((m) => {
+        const t = v[`${m}_type`] || 'personal';
+        return (
+          <div key={m} className="space-y-1.5 rounded-lg bg-black/30 p-2">
+            <div className="grid grid-cols-[1fr_120px] gap-2">
+              <input className={input} value={v[m] || ''} onChange={(e) => set(m, e.target.value.replace(/[^\d]/g, '').slice(0, 12))} placeholder={`${PAY_LABEL[m]} number`} inputMode="tel" />
+              <select className={input} value={t} onChange={(e) => set(`${m}_type`, e.target.value)}>
+                {PAY_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </div>
+            <p className="text-[10.5px] text-slate-400">{PAY_TYPES.find((x) => x[0] === t)?.[2]}</p>
+          </div>
+        );
+      })}
+      <p className="text-[10.5px] text-slate-400">Leave a number empty to hide that method. The customer writes the TrxID and adds a screenshot; ROSE checks the payment.</p>
+
+      <div className="space-y-1.5 rounded-lg border border-emerald-500/30 p-2">
+        <p className="text-[10.5px] font-bold tracking-wider text-emerald-300">AUTO CHECK · ROSE confirms the order when the money SMS arrives</p>
+        <p className="text-[10.5px] text-slate-300">On the phone that gets your bKash / Nagad / Rocket SMS, install "SMS to URL Forwarder" (Play Store). URL = this link, method POST, senders: bKash, NAGAD, 16216. Keep this link private.</p>
+        {link ? <p className="break-all text-[10px] text-slate-500">{link.slice(0, base.length + 6)}…</p> : <p className="text-[11px] text-amber-300">No link yet. Tap MAKE LINK (save the store first).</p>}
+        <div className="grid grid-cols-2 gap-2">
+          {link && <button type="button" onClick={() => { void navigator.clipboard?.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className={btn}>{copied ? 'COPIED ✓' : 'COPY LINK'}</button>}
+          <button type="button" onClick={() => void newLink()} className={btn + ' bg-white/10'}>{link ? 'NEW LINK' : 'MAKE LINK'}</button>
+        </div>
+        {sms.map((x) => (
+          <p key={x.id} className="text-[10.5px] text-slate-300">{new Date(x.received_at).toLocaleString('en-GB')} · {x.method} ৳{x.amount} · <span className="select-all">{x.trx_id}</span> · <b className={x.order_id ? 'text-emerald-300' : 'text-amber-300'}>{x.order_id ? 'MATCHED' : 'NO ORDER YET'}</b></p>
+        ))}
+        <p className="text-[10px] text-slate-500">Without the SMS forwarder: check the TrxID in your bKash app and confirm the order by hand in 01 ORDERS.</p>
+      </div>
+
+      <div className="space-y-1.5 rounded-lg bg-black/30 p-2">
+        <p className="text-[10.5px] font-bold tracking-wider text-teal-300">BANK TRANSFER (optional)</p>
+        <input className={input} value={v.bank_name || ''} onChange={(e) => set('bank_name', e.target.value)} placeholder="Bank name, e.g. Dutch-Bangla Bank" />
+        <input className={input} value={v.bank_acc_name || ''} onChange={(e) => set('bank_acc_name', e.target.value)} placeholder="Account name (as in the bank)" />
+        <div className="grid grid-cols-2 gap-2">
+          <input className={input} value={v.bank_acc_no || ''} onChange={(e) => set('bank_acc_no', e.target.value.replace(/[^\d-]/g, ''))} placeholder="Account number" inputMode="numeric" />
+          <input className={input} value={v.bank_routing || ''} onChange={(e) => set('bank_routing', e.target.value.replace(/\D/g, '').slice(0, 9))} placeholder="Routing number" inputMode="numeric" />
+        </div>
+        <input className={input} value={v.bank_branch || ''} onChange={(e) => set('bank_branch', e.target.value)} placeholder="Branch" />
+        <p className="text-[10.5px] text-slate-400">A current (business) account in the shop's name looks most trusted. A personal savings account also works. Customers see these details and write the transfer reference; you confirm the order by hand.</p>
+      </div>
+
+      <div className="space-y-1 rounded-lg bg-black/30 p-2">
+        <p className="text-[10.5px] font-bold tracking-wider text-teal-300">CARD (Visa · Mastercard · Amex · Nexus)</p>
+        <p className="text-[10.5px] text-slate-400">Cards need a payment gateway: SSLCommerz or aamarPay. They ask for a trade licence, NID, bank account and website. Card numbers are typed only on the gateway's own secure page, never in your store, and the gateway offers "save card". Contact ROSE to connect your gateway; until then the Card button stays hidden.</p>
+      </div>
+    </div>
+  );
+};
+
 // ---------------------------------------------------------------- homepage & design
 const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
   const [s, setS] = useState<Store>(store);
@@ -1686,9 +1776,7 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
           <input className={input} value={s.delivery_inside} onChange={(e) => set('delivery_inside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Inside Dhaka Tk" inputMode="numeric" />
           <input className={input} value={s.delivery_outside} onChange={(e) => set('delivery_outside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Outside Dhaka Tk" inputMode="numeric" />
         </div>
-        {(['bkash', 'nagad', 'rocket'] as const).map((m) => (
-          <input key={m} className={input} value={s.pay_numbers?.[m] || ''} onChange={(e) => set('pay_numbers', { ...(s.pay_numbers || {}), [m]: e.target.value })} placeholder={`${m} number (customers send money here)`} inputMode="tel" />
-        ))}
+        <PaySetup value={s.pay_numbers || {}} onChange={(v) => set('pay_numbers', v)} storeId={store.id} />
         <textarea className={input} rows={2} value={s.note} onChange={(e) => set('note', e.target.value)} placeholder="Delivery note shown on product pages" />
       </div>
       <button type="button" onClick={() => void save()} className={btn + ' w-full'}>SAVE</button>

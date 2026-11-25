@@ -25,7 +25,7 @@ window.ROSE_STORES = {
       ['Cold Coffee', 'Drinks', '🧋', 150, 190, '', 'photo-1562447457-579fc34967fb'],
       ['Chocolate Cake (1 lb)', 'Desserts', '🍰', 650, 750, '', 'photo-1606983340126-99ab4feaa64a'],
     ],
-    options: { label: 'Size', values: ['Regular', 'Large'] },
+    options: { label: 'Portion', values: ['Regular', 'Large'] },
     note: 'Delivery inside Dhaka in 30-45 minutes. Choose a time slot at checkout.',
   },
   fashionhub: {
@@ -127,7 +127,7 @@ window.ROSE_STORES = {
       ['Pendant Lamp Set', 'Decor', '💡', 2990, 3990, '', 'photo-1540932239986-30128078f3c5'],
       ['Indoor Plant & Pot', 'Decor', '🪴', 850, 1200, '', 'photo-1618220179428-22790b461013'],
     ],
-    options: { label: 'Wood / Colour', values: ['Segun (Teak)', 'Mehogani', 'Walnut', 'White'] },
+    options: { label: 'Material', values: ['Segun (teak)', 'Mahogany', 'Walnut', 'White'] },
     note: 'Size and wood type can be changed. EMI with selected bank cards. Showroom: Gulshan-1, Dhaka (demo).',
   },
   medicare: {
@@ -178,6 +178,24 @@ window.ROSE_KINDS = {
     specs: [['generic', 'Generic name', 'জেনেরিক নাম', 'See the pack'], ['strength', 'Strength', 'মাত্রা', 'As on the pack'], ['company', 'Company', 'কোম্পানি', 'Licensed manufacturer'], ['form', 'Form', 'ধরন', 'Tablet'], ['pack', 'Pack', 'প্যাক', '1 strip']],
     ship: ['👩‍⚕️ Take it only as your doctor or pharmacist says', '📄 Rx medicine needs a prescription', '🌡️ Keep below 30°C, away from children', '✅ Genuine medicine from licensed sources'] },
 };
+// Product options that fit each kind of shop (food has portions, medicine has packs, not clothing sizes)
+(function () {
+  var O = {
+    fashion: { labels: ['Size', 'Colour'], sets: [['Shirt / T-shirt', ['S', 'M', 'L', 'XL', 'XXL']], ['Pant / Waist', ['28', '30', '32', '34', '36', '38']], ['Shoe', ['39', '40', '41', '42', '43', '44']], ['Kids', ['1-2Y', '3-4Y', '5-6Y', '7-8Y']], ['Free size', ['Free size']]],
+      quick: { Size: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '28', '30', '32', '34', '36', 'Free size'], Colour: ['Black', 'White', 'Red', 'Blue', 'Green', 'Navy', 'Grey', 'Maroon'] } },
+    food: { labels: ['Portion', 'Add-on', 'Flavour'], sets: [['Half / Full', ['Half', 'Full']], ['Regular / Large', ['Regular', 'Large']], ['Pieces', ['1 pc', '2 pcs', '4 pcs']], ['Single / Family', ['Single', 'Family pack']]],
+      quick: { Portion: ['Half', 'Full', 'Regular', 'Large', '1 pc', '2 pcs', '4 pcs', '6 pcs', 'Family pack'], 'Add-on': ['Extra cheese', 'Extra sauce', 'Fries', 'Cold drink'], Flavour: ['Mild', 'Medium', 'Spicy', 'Chocolate', 'Vanilla', 'Strawberry'] } },
+    pharmacy: { labels: ['Pack', 'Strength'], sets: [['Strip / Box', ['1 strip (10)', '1 box']], ['Tablets', ['10 tablets', '30 tablets', '100 tablets']], ['Syrup bottle', ['60 ml', '100 ml', '200 ml']]],
+      quick: { Pack: ['1 strip (10)', '2 strips', '1 box', '10 tablets', '30 tablets', '60 ml', '100 ml', '200 ml', '1 tube', '1 piece'], Strength: ['10 mg', '20 mg', '250 mg', '500 mg', '650 mg', '1 g'] } },
+    grocery: { labels: ['Weight', 'Pack'], sets: [['Weight', ['500g', '1kg', '2kg', '5kg']], ['Liquid', ['500 ml', '1 L', '2 L', '5 L']], ['Pieces', ['1 pc', '6 pcs', '12 pcs (1 dozen)']]],
+      quick: { Weight: ['250g', '500g', '1kg', '2kg', '5kg', '10kg', '25kg'], Pack: ['500 ml', '1 L', '2 L', '5 L', '1 pc', '6 pcs', '1 dozen'] } },
+    furniture: { labels: ['Colour', 'Size', 'Material'], sets: [['Bed size', ['Single', 'Semi-double', 'Double', 'King']], ['Sofa seats', ['2 seater', '3 seater', '5 seater']], ['Colour', ['Natural', 'Brown', 'Black', 'White']]],
+      quick: { Colour: ['Natural', 'Brown', 'Walnut', 'Black', 'White', 'Grey'], Size: ['Single', 'Semi-double', 'Double', 'King', '2 seater', '3 seater', '5 seater'], Material: ['Segun (teak)', 'Mahogany', 'Oak', 'Board', 'Metal'] } },
+    market: { labels: ['Model', 'Colour', 'Storage', 'Size'], sets: [['Phone storage', ['64GB', '128GB', '256GB']], ['Colour', ['Black', 'White', 'Blue']], ['Size', ['S', 'M', 'L', 'XL']]],
+      quick: { Model: [], Colour: ['Black', 'White', 'Blue', 'Red', 'Silver', 'Gold'], Storage: ['32GB', '64GB', '128GB', '256GB', '512GB'], Size: ['S', 'M', 'L', 'XL', 'Free size'] } },
+  };
+  Object.keys(O).forEach(function (k) { if (window.ROSE_KINDS[k]) window.ROSE_KINDS[k].opt = O[k]; });
+})();
 window.ROSE_KIND_OF = { foodbazaar: 'food', fashionhub: 'fashion', sotadari: 'grocery', shopshotoi: 'market', homenest: 'furniture', medicare: 'pharmacy' };
 
 // Brand logos for payment methods and couriers. Put the official logo files in /public/brand/ with these names

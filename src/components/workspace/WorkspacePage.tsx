@@ -673,7 +673,6 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     );
     const business = [
       <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
-      ...(businessId ? [<div key="glance" className="pt-1.5"><BusinessGlance onOpen={setView} /></div>] : []),
       label('SETUP'),
       bar('01', 'biz_profile', businessId ? 'READY' : 'SET UP'),
       ...(true

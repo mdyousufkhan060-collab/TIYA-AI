@@ -182,6 +182,7 @@
   .ob img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .ob span { position: absolute; left: 10px; bottom: 10px; background: rgba(0,0,0,.6); color: #fff; font-weight: 800; font-size: 14px; padding: 5px 10px; border-radius: 8px; max-width: 85%; }
   @media (min-width: 900px) { .ob { flex-basis: calc(50% - 5px); } }
+  .cardpick { display: grid; gap: 6px; margin: 8px 0; } .cardpick label { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 10px; background: #fff; font-weight: 600; } .cardpick small { color: #64748b; font-weight: 400; margin-left: auto; }
   .ofchips { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 12px; } .ofchips::-webkit-scrollbar { display: none; }
   .ofchips button { flex: none; border: 1.5px solid #e5e7eb; background: #fff; border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 13px; color: #334155; } .ofchips button.on { background: var(--c); border-color: var(--c); color: #fff; }
   .ofg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; } @media (min-width: 760px) { .ofg { grid-template-columns: repeat(4, 1fr); } }
@@ -637,7 +638,7 @@ function start(S, P, liveId) {
     subtotal: ['Subtotal', 'মোট পণ্য'], delCharge: ['Delivery charge', 'ডেলিভারি চার্জ'], total: ['Total', 'সর্বমোট'], confirm: ['Confirm Order', 'অর্ডার কনফার্ম করুন'], coupon: ['Coupon code', 'কুপন কোড'], apply: ['Apply', 'প্রয়োগ'],
     guest: ['No account needed. You can order as a guest.', 'অ্যাকাউন্ট ছাড়াও অর্ডার করা যায়।'], google: ['Continue with Google', 'Google দিয়ে চালিয়ে যান'], emailLogin: ['Log in with email', 'ইমেইল দিয়ে লগইন'], signedIn: ['Signed in as', 'লগইন করা আছে:'], useSaved: ['Use my saved address', 'সেভ করা ঠিকানা বসান'], logout: ['Log out', 'লগআউট'],
     inside: ['Inside Dhaka', 'ঢাকার ভিতরে'], outside: ['Outside Dhaka', 'ঢাকার বাইরে'], days1: ['1-2 days', '১-২ দিন'], days3: ['2-4 days', '২-৪ দিন'], pickDist: ['Choose your district to see the delivery charge.', 'ডেলিভারি চার্জ দেখতে জেলা বাছাই করুন।'],
-    cod: ['Cash on Delivery', 'ক্যাশ অন ডেলিভারি'], codSub: ['Pay when you get the product', 'পণ্য হাতে পেয়ে টাকা দিন'], sendTo: ['Send Money to', 'সেন্ড মানি করুন:'], trx: ['Transaction ID (TrxID)', 'ট্রানজেকশন আইডি (TrxID)'], card: ['Card (VISA / Mastercard)', 'কার্ড (VISA / Mastercard)'],
+    cod: ['Cash on Delivery', 'ক্যাশ অন ডেলিভারি'], codSub: ['Pay when you get the product', 'পণ্য হাতে পেয়ে টাকা দিন'], sendTo: ['Send Money to', 'সেন্ড মানি করুন:'], cashOutTo: ['Cash Out to', 'ক্যাশ আউট করুন:'], payTo: ['Make Payment to', 'পেমেন্ট করুন:'], proof: ['Payment screenshot', 'পেমেন্টের স্ক্রিনশট'], eProof: ['Add the screenshot of your payment.', 'পেমেন্টের স্ক্রিনশট দিন।'], bankT: ['Bank transfer', 'ব্যাংক ট্রান্সফার'], bankRef: ['Transfer reference', 'ট্রান্সফারের রেফারেন্স'], payCheck: ['ROSE is checking your payment…', 'ROSE আপনার পেমেন্ট মিলিয়ে দেখছে…'], payOk: ['Payment received. Your order is confirmed.', 'পেমেন্ট পাওয়া গেছে। অর্ডার কনফার্ম।'], payWait: ['Payment not found yet. If you paid, it shows here in a few minutes; otherwise the shop will call you.', 'পেমেন্ট এখনো পাওয়া যায়নি। টাকা পাঠিয়ে থাকলে কয়েক মিনিটে এখানে দেখাবে; না হলে দোকান থেকে কল করা হবে।'], payPart: ['Part payment received', 'আংশিক পেমেন্ট পাওয়া গেছে'], trx: ['Transaction ID (TrxID)', 'ট্রানজেকশন আইডি (TrxID)'], card: ['Card (VISA / Mastercard)', 'কার্ড (VISA / Mastercard)'],
     eName: ['Write your full name (first and last name), not a short form.', 'পুরো নাম লিখুন (নামের প্রথম ও শেষ অংশ), সংক্ষেপে নয়।'],
     ePhone: ['Write a correct 11-digit mobile number (01XXXXXXXXX).', 'সঠিক ১১ সংখ্যার মোবাইল নম্বর লিখুন (01XXXXXXXXX)।'],
     eAddr: ['Write the full address: house/road or village, area and a landmark.', 'পুরো ঠিকানা লিখুন: বাসা/রোড বা গ্রাম, এলাকা ও কাছের জায়গা।'],
@@ -765,8 +766,9 @@ function start(S, P, liveId) {
 
   // ---------------- checkout ----------------
   var PAYLIST = (function () {
-    var en = S.payEnabled || (S.live ? ['cod'].concat(Object.keys(S.payNumbers || {}).filter(function (k) { return S.payNumbers[k]; })) : ['cod', 'bkash', 'nagad', 'rocket', 'card']);
-    var info = { cod: ['💵', t('cod'), t('codSub'), '#16a34a'], bkash: ['b', 'bKash', '', '#e2136e'], nagad: ['N', 'Nagad', '', '#f6921e'], rocket: ['R', 'Rocket', '', '#8c3494'], card: ['💳', t('card'), 'SSLCommerz', '#1d4ed8'] };
+    var pn = S.payNumbers || {};
+    var en = S.payEnabled || (S.live ? ['cod'].concat(['bkash', 'nagad', 'rocket'].filter(function (k) { return pn[k]; })).concat(pn.bank_acc_no ? ['bank'] : []).concat(pn.card_gateway ? ['card'] : []) : ['cod', 'bkash', 'nagad', 'rocket', 'bank', 'card']);
+    var info = { cod: ['💵', t('cod'), t('codSub'), '#16a34a'], bkash: ['b', 'bKash', '', '#e2136e'], nagad: ['N', 'Nagad', '', '#f6921e'], rocket: ['R', 'Rocket', '', '#8c3494'], card: ['💳', t('card'), 'SSLCommerz', '#1d4ed8'], bank: ['🏦', t('bankT'), '', '#334155'] };
     return en.filter(function (k) { return info[k]; }).map(function (k) { return [k].concat(info[k]); });
   })();
   var coState = { pay: 'cod', zone: '' };
@@ -795,7 +797,7 @@ function start(S, P, liveId) {
         '<label class="chk"><input type="checkbox" id="fSave" checked> ' + t('saveInfo') + '</label>' +
         (needRx ? '<div class="note warn" style="margin-top:10px">📄 <b>Prescription required</b> for Rx medicine.<br><input type="file" accept="image/*,.pdf" style="margin-top:8px"></div>' : '')) +
       sec(2, t('delivery'), '<div id="zoneBox" class="zone"><span class="small">' + t('pickDist') + '</span></div>') +
-      sec(3, t('payment'), '<div class="pays" id="pays">' + pays + '</div><div id="payNote"></div>' + fld('trx', t('trx'), '<input id="fTrx" placeholder="8N7A6XXXXX" autocomplete="off">', 1).replace('class="field"', 'class="field" hidden')) +
+      sec(3, t('payment'), '<div class="pays" id="pays">' + pays + '</div><div id="payNote"></div>' + fld('trx', t('trx'), '<input id="fTrx" placeholder="8N7A6XXXXX" autocomplete="off">', 1).replace('class="field"', 'class="field" hidden') + fld('proof', t('proof'), '<input id="fProof" type="file" accept="image/*">', 1).replace('class="field"', 'class="field" hidden')) +
       '</div><div><div class="panel cosum"><h3 style="margin-top:0">' + t('summary') + '</h3>' +
       st.cart.map(function (c) { var p = P[c.id]; return '<div class="row"><span class="e" style="width:48px;height:48px;overflow:hidden;border-radius:10px;font-size:26px">' + (p.img ? '<img src="' + p.img + '" alt="" style="width:48px;height:48px;object-fit:cover">' : p.e) + '</span><div style="flex:1;font-size:13px"><b>' + esc(p.name) + '</b><div style="color:#64748b">' + esc(c.opt) + ' × ' + c.q + '</div></div><b style="font-size:14px">' + tk(p.price * c.q) + '</b></div>'; }).join('') +
       '<div style="display:flex;gap:6px;margin:12px 0"><input id="fCoupon" placeholder="' + t('coupon') + '" style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:10px"><button class="btn alt" style="width:auto" onclick="toast(\'' + (S.live ? 'Coupon not valid' : 'Demo: coupon applied') + '\')">' + t('apply') + '</button></div>' +
@@ -841,9 +843,17 @@ function start(S, P, liveId) {
       [].forEach.call(paysEl.querySelectorAll('.paycard'), function (l) { l.classList.toggle('on', l.querySelector('input').checked); });
       var mob = /bkash|nagad|rocket/.test(v);
       $('w_trx').hidden = !mob;
-      $('payNote').innerHTML = mob ? '<div class="note" style="margin:10px 0">📲 ' + t('sendTo') + ' <b>' + esc(nums()[v] || 'the shop number') + '</b> (' + v + ' Personal). ' + t('total') + ': <b>' + $('tot').textContent + '</b></div>' : v === 'card' ? '<div class="note" style="margin:10px 0">💳 You go to a secure card page after you confirm.</div>' : '';
+      var pn = nums(), ty = pn[v + '_type'] || 'personal', bank = v === 'bank';
+      $('w_proof').hidden = !mob;
+      if (bank) $('w_trx').hidden = false;
+      $('fTrx').placeholder = bank ? (LANG === 'bn' ? 'যেমন: ব্যাংক স্লিপ / রেফারেন্স নম্বর' : 'e.g. bank slip / reference no.') : '8N7A6XXXXX';
+      var lab = $('w_trx').querySelector('span'); if (lab) lab.innerHTML = (bank ? t('bankRef') : t('trx')) + ' <b style="color:#dc2626">*</b>';
+      var card = '<div class="note" style="margin:10px 0">💳 <b>' + (LANG === 'bn' ? 'কোন কার্ড দিয়ে দেবেন?' : 'Which card?') + '</b><div class="cardpick">' + [['visa', 'Visa'], ['mastercard', 'Mastercard'], ['amex', 'American Express'], ['nexus', 'DBBL Nexus'], ['unionpay', 'UnionPay']].map(function (c, i) { return '<label><input type="radio" name="cardt" value="' + c[0] + '"' + (i ? '' : ' checked') + '> ' + c[1] + ' <small>debit / credit</small></label>'; }).join('') + '</div><small>' + (LANG === 'bn' ? 'Confirm চাপলে ব্যাংকের নিরাপদ কার্ড পাতা খুলবে। কার্ড নম্বর শুধু সেখানেই লিখবেন, দোকান কখনো দেখে না। চাইলে সেখানে কার্ড সেভ করে রাখতে পারবেন।' : 'After Confirm the secure card page (SSLCommerz) opens. Type the card number only there; the shop never sees it. You can choose to save the card there.') + '</small></div>';
+      $('payNote').innerHTML = mob ? '<div class="note" style="margin:10px 0">📲 ' + (ty === 'agent' ? t('cashOutTo') : ty === 'merchant' ? t('payTo') : t('sendTo')) + ' <b>' + esc(pn[v] || 'the shop number') + '</b> (' + esc(v) + ' ' + (ty === 'agent' ? 'Agent' : ty === 'merchant' ? 'Merchant' : 'Personal') + '). ' + t('total') + ': <b>' + $('tot').textContent + '</b><br><small>' + (LANG === 'bn' ? 'টাকা পাঠিয়ে SMS-এর TrxID লিখুন আর স্ক্রিনশট দিন। ROSE পেমেন্ট মিলিয়ে অর্ডার কনফার্ম করবে।' : 'Pay, then write the TrxID from the SMS and add the screenshot. ROSE checks the payment and confirms the order.') + '</small></div>'
+        : bank ? '<div class="note" style="margin:10px 0">🏦 <b>' + esc(pn.bank_name || 'Bank') + '</b><br>' + (LANG === 'bn' ? 'অ্যাকাউন্টের নাম' : 'Account name') + ': <b>' + esc(pn.bank_acc_name || '') + '</b><br>' + (LANG === 'bn' ? 'অ্যাকাউন্ট নম্বর' : 'Account no.') + ': <b class="sel">' + esc(pn.bank_acc_no || '') + '</b>' + (pn.bank_branch ? '<br>Branch: ' + esc(pn.bank_branch) : '') + (pn.bank_routing ? ' · Routing: ' + esc(pn.bank_routing) : '') + '<br>' + t('total') + ': <b>' + $('tot').textContent + '</b></div>'
+        : v === 'card' ? card : '';
     }
-    function nums() { return S.live ? S.payNumbers || {} : { bkash: '01XXXXXXXXX', nagad: '01XXXXXXXXX', rocket: '01XXXXXXXXX' }; }
+    function nums() { return S.live ? S.payNumbers || {} : { bkash: '01XXXXXXXXX', bkash_type: 'personal', nagad: '01XXXXXXXXX', nagad_type: 'merchant', rocket: '01XXXXXXXXX', rocket_type: 'agent', bank_name: 'Dutch-Bangla Bank', bank_acc_name: S.name, bank_acc_no: '1234567890123', bank_branch: 'Motijheel', bank_routing: '090275725' }; }
     paysEl.onchange = payChange; payChange();
     if (cust.division) { var di = BD.map(function (d) { return d[0]; }).indexOf(cust.division); if (di >= 0) { dv.value = di; dv.onchange(); var dsi = BD[di][2].map(function (d) { return d[0]; }).indexOf(cust.district); if (dsi >= 0) { ds.value = dsi; ds.onchange(); } } }
   }
@@ -856,29 +866,63 @@ function start(S, P, liveId) {
     if (k === 'dist') return $('fDist') !== '' ? '' : t('eSel');
     if (k === 'upz') { var u = $('fUpz'); return u && u !== '__other' ? '' : u === '__other' && $('fUpzT').length >= 3 ? '' : t('eSel'); }
     if (k === 'addr') { var a = $('fAddr'); return a.length >= 15 && a.split(/[\s,]+/).filter(Boolean).length >= 3 ? '' : t('eAddr'); }
-    if (k === 'trx') { var tw = document.getElementById('w_trx'); return !tw || tw.hidden || /^[A-Za-z0-9]{8,12}$/.test($('fTrx')) ? '' : t('eTrx'); }
+    if (k === 'trx') { var tw = document.getElementById('w_trx'); if (!tw || tw.hidden) return ''; if (coState.pay === 'bank') return $('fTrx').length >= 4 ? '' : t('eTrx'); return /^[A-Za-z0-9]{8,12}$/.test($('fTrx')) ? '' : t('eTrx'); }
+    if (k === 'proof') { var pw = document.getElementById('w_proof'), pf = document.getElementById('fProof'); return !pw || pw.hidden || (pf && pf.files && pf.files[0]) ? '' : t('eProof'); }
     return '';
   }
   function check(k, quiet) { var m = valid(k), e = document.getElementById('e_' + k), w = document.getElementById('w_' + k); if (e) e.textContent = m; if (w) w.classList.toggle('bad', !!m); return !m; }
   window.fillSaved = function () { route(); toast('Saved address added'); };
   window.logoutCust = function () { cust = {}; saveCust(); toast('Logged out'); route(); };
+  // payment screenshot -> small JPEG in the private pay-proofs bucket (only the shop owner can open it)
+  function uploadProof(file) {
+    if (!file || !S.live) return Promise.resolve('');
+    return new Promise(function (res) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var k = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(function (b) {
+          var path = S.slug + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.jpg';
+          fetch(SB_URL + '/storage/v1/object/pay-proofs/' + path, { method: 'POST', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'image/jpeg' }, body: b })
+            .then(function (r) { res(r.ok ? path : ''); }, function () { res(''); });
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = function () { res(''); };
+      img.src = url;
+    });
+  }
   window.placeOrder = function () {
-    var keys = ['name', 'phone', 'addr', 'div', 'dist', 'upz', 'email', 'trx'], bad = keys.filter(function (k) { return !check(k); });
+    var keys = ['name', 'phone', 'addr', 'div', 'dist', 'upz', 'email', 'trx', 'proof'], bad = keys.filter(function (k) { return !check(k); });
     if (bad.length) { var w = document.getElementById('w_' + bad[0]); if (w) { w.scrollIntoView({ behavior: 'smooth', block: 'center' }); var i = w.querySelector('input,select,textarea'); if (i) setTimeout(function () { i.focus(); }, 300); } toast(LANG === 'bn' ? 'লাল দাগ দেওয়া ঘরগুলো ঠিক করুন' : 'Please fix the fields in red'); return; }
     var v = function (x) { return document.getElementById(x).value.trim(); };
     var di = BD[+v('fDiv')], d = di[2][+v('fDist')], u = v('fUpz') === '__other' ? v('fUpzT') : v('fUpz');
     var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0), del = coState.zone === 'inside' ? DIN : DOUT;
-    var O = { no: 0, date: new Date().toISOString(), name: v('fName').replace(/\s+/g, ' '), phone: v('fPhone'), email: v('fEmail'), division: di[0], district: d[0], upazila: u, address: v('fAddr'), zone: coState.zone, pay: coState.pay, trx: /bkash|nagad|rocket/.test(coState.pay) ? v('fTrx') : '',
+    var O = { no: 0, date: new Date().toISOString(), name: v('fName').replace(/\s+/g, ' '), phone: v('fPhone'), email: v('fEmail'), division: di[0], district: d[0], upazila: u, address: v('fAddr'), zone: coState.zone, pay: coState.pay, trx: /bkash|nagad|rocket|bank/.test(coState.pay) ? v('fTrx') : '',
       items: st.cart.map(function (c) { var p = P[c.id]; return { name: p.name, opt: c.opt, q: c.q, price: p.price, img: p.img }; }), sub: sub, del: del, total: sub + del, status: 'new' };
     if (document.getElementById('fSave').checked) { cust.name = O.name; cust.phone = O.phone; cust.division = O.division; cust.district = O.district; cust.upazila = O.upazila; cust.address = O.address; if (O.email && !cust.email) cust.emailTyped = O.email; saveCust(); }
     var finish = function () { var all = myOrders(); all.unshift(O); try { localStorage.setItem(OKEY, JSON.stringify(all.slice(0, 30))); } catch (e) {} st.cart = []; save(); location.hash = '#/invoice/' + O.no; };
     if (!S.live) { O.no = 1025 + myOrders().length; return finish(); }
     var b = document.getElementById('placeBtn'); if (b) { b.disabled = true; b.textContent = 'Placing…'; }
-    sb('rpc/place_store_order_v2', {
+    var pf = document.getElementById('fProof'), file = /bkash|nagad|rocket/.test(O.pay) && pf && pf.files ? pf.files[0] : null;
+    uploadProof(file).then(function (path) { return sb('rpc/place_store_order_v3', {
       p_slug: S.slug, p_name: O.name, p_phone: O.phone, p_email: O.email, p_division: O.division, p_district: O.district, p_upazila: O.upazila, p_address: O.address,
-      p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: O.pay, p_trx: O.trx, p_note: '',
-    }).then(function (r) { O.no = r.order_no; if (r.total) { O.total = +r.total; O.del = O.total - O.sub; } track('Purchase', { value: O.total, order: String(O.no), items: st.cart.map(function (c) { return { id: c.id, name: P[c.id].name, price: P[c.id].price, q: c.q }; }) }); finish(); })
+      p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: O.pay, p_trx: O.trx, p_note: O.pay === 'bank' ? 'Bank ref: ' + O.trx : '', p_proof: path || '',
+    }); }).then(function (r) { O.no = r.order_no; O.payState = r.payment_status || ''; if (r.total) { O.total = +r.total; O.del = O.total - O.sub; } track('Purchase', { value: O.total, order: String(O.no), items: st.cart.map(function (c) { return { id: c.id, name: P[c.id].name, price: P[c.id].price, q: c.q }; }) }); finish(); })
       .catch(function (e) { if (b) { b.disabled = false; b.textContent = t('confirm'); } toast(e.message); });
+  };
+
+  // ---------------- payment check after the order (ROSE matches the money SMS) ----------------
+  window.pollPay = function (O, n) {
+    var el = document.getElementById('paySt'); if (!el) return;
+    sb('rpc/track_store_order', { p_slug: S.slug, p_no: O.no, p_phone: O.phone }).then(function (r) {
+      var e = document.getElementById('paySt'); if (!e || !r || !r.ok) return;
+      if (r.payment_status === 'paid' || r.payment_status === 'partial') {
+        O.payState = r.payment_status; var all = myOrders(); all.forEach(function (x) { if (x.no === O.no) { x.payState = r.payment_status; x.status = r.status; } }); try { localStorage.setItem(OKEY, JSON.stringify(all)); } catch (er) {}
+        e.innerHTML = r.payment_status === 'paid' ? '✅ ' + t('payOk') : '⚠️ ' + t('payPart') + ': ' + tk(r.paid_amount);
+        return;
+      }
+      if (n < 18) setTimeout(function () { pollPay(O, n + 1); }, 10000); else e.innerHTML = '⏳ ' + t('payWait');
+    }, function () {});
   };
 
   // ---------------- invoice ----------------
@@ -896,7 +940,9 @@ function start(S, P, liveId) {
     var O = myOrders().filter(function (o) { return String(o.no) === String(no); })[0];
     if (!O) return '<div class="panel" style="text-align:center;padding:36px">🧾<h3>Invoice not found on this phone</h3><a class="btn" style="width:auto;display:inline-flex;padding:10px 18px" href="#/">' + t('keepShop') + '</a></div>';
     if (!document.getElementById('printCss')) { var pc = document.createElement('style'); pc.id = 'printCss'; pc.textContent = window.ROSE_PRINT.PRINT_CSS + '@media print{.ivc{width:auto!important;border:0}}'; document.head.appendChild(pc); }
-    return '<div class="okmsg noprint"><span>✓</span><div><b>' + t('thanks') + '</b><small>' + t('willCall') + '</small></div></div>' +
+    var payBox = O.trx && /bkash|nagad|rocket/.test(O.pay) ? '<div class="note noprint" id="paySt" style="margin:0 0 10px">' + (O.payState === 'paid' ? '✅ ' + t('payOk') : '⏳ ' + t('payCheck')) + '</div>' : '';
+    if (payBox && S.live && O.payState !== 'paid') setTimeout(function () { pollPay(O, 0); }, 4000);
+    return '<div class="okmsg noprint"><span>✓</span><div><b>' + t('thanks') + '</b><small>' + t('willCall') + '</small></div></div>' + payBox +
       '<div id="invoice" style="overflow-x:auto"><div style="margin:0 auto;width:max-content;max-width:100%">' + window.ROSE_PRINT.invoiceHTML(printOrder(O), { inv: 'a4', photos: true }, printStore()).replace('style="width:210mm;', 'style="width:min(210mm,100%);').replace('class="ivc', 'class="ivc fluid') + '</div></div>' +
       '<div class="invb noprint"><button class="btn" onclick="window.print()">⬇️ ' + t('download') + '</button><a class="btn alt" href="#/account">📦 ' + t('myOrders') + '</a><a class="btn alt" href="#/">🏠 ' + t('keepShop') + '</a></div>';
   }
