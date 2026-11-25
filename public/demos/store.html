@@ -401,7 +401,7 @@ if (liveSlug || ownDomain) {
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
         categories: cats.map(function (c) { return [c.name, c.icon || '🏷️']; }), sectionTitle: 'Popular Products',
         note: r.note || ('Delivery: ' + r.delivery_inside + ' Tk inside Dhaka, ' + r.delivery_outside + ' Tk outside.'),
-        delIn: r.delivery_inside, delOut: r.delivery_outside, payNumbers: r.pay_numbers || {},
+        delIn: r.delivery_inside, delOut: r.delivery_outside, payNumbers: r.pay_numbers || {}, pixels: r.pixels || {},
       };
       var P = prods.map(function (p, i) {
         return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', e: p.emoji || '📦', img: fullImg((p.images || [])[0], 600), imgs: (p.images || []).map(function (u) { return fullImg(u, 900); }),
@@ -452,10 +452,47 @@ function start(S, P, liveId) {
     renderNav();
   }
   function toast(t) { var el = document.getElementById('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(function () { el.style.display = 'none'; }, 1800); }
+  // ---- Facebook Pixel / Google Analytics 4 / TikTok Pixel (IDs set by the owner in 12 PIXELS & ANALYTICS)
+  var TRK = { on: false };
+  function loadPixels(px) {
+    if (!px) return;
+    var fb = /^\d{10,20}$/.test(px.fb || '') ? px.fb : '', ga = /^G-[A-Z0-9]{4,15}$/.test(px.ga4 || '') ? px.ga4 : '', tt = /^[A-Z0-9]{10,30}$/.test(px.tiktok || '') ? px.tiktok : '';
+    var add = function (src) { var e = document.createElement('script'); e.async = true; e.src = src; document.head.appendChild(e); };
+    if (fb) {
+      var f = window.fbq = function () { f.callMethod ? f.callMethod.apply(f, arguments) : f.queue.push(arguments); };
+      if (!window._fbq) window._fbq = f; f.push = f; f.loaded = true; f.version = '2.0'; f.queue = [];
+      add('https://connect.facebook.net/en_US/fbevents.js'); window.fbq('init', fb); window.fbq('track', 'PageView'); TRK.fb = true;
+    }
+    if (ga) {
+      window.dataLayer = window.dataLayer || []; window.gtag = function () { window.dataLayer.push(arguments); };
+      add('https://www.googletagmanager.com/gtag/js?id=' + ga); window.gtag('js', new Date()); window.gtag('config', ga, { currency: 'BDT' }); TRK.ga = true;
+    }
+    if (tt) {
+      var w = window, q = w.ttq = w.ttq || [];
+      q.methods = ['page', 'track', 'identify', 'instances', 'debug', 'on', 'off', 'once', 'ready', 'alias', 'group', 'enableCookie', 'disableCookie'];
+      q.setAndDefer = function (t, e) { t[e] = function () { t.push([e].concat(Array.prototype.slice.call(arguments, 0))); }; };
+      for (var i = 0; i < q.methods.length; i++) q.setAndDefer(q, q.methods[i]);
+      add('https://analytics.tiktok.com/i18n/pixel/events.js?sdkid=' + tt + '&lib=ttq'); q._i = q._i || {}; q._i[tt] = []; q._t = q._t || {}; q._t[tt] = +new Date(); q._o = q._o || {}; q._o[tt] = {};
+      w.ttq.page(); TRK.tt = true;
+    }
+    TRK.on = Boolean(fb || ga || tt);
+  }
+  var GA_NAME = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', Purchase: 'purchase' };
+  function track(ev, d) {
+    if (!TRK.on) return;
+    d = d || {};
+    var data = { currency: 'BDT', value: Number(d.value) || 0, content_ids: d.ids || [], content_type: 'product', contents: (d.items || []).map(function (x) { return { id: String(x.id), quantity: x.q, price: x.price }; }) };
+    try { if (TRK.fb) window.fbq('track', ev, data); } catch (e) {}
+    try { if (TRK.ga) window.gtag('event', GA_NAME[ev] || ev, { currency: 'BDT', value: data.value, transaction_id: d.order || undefined, items: (d.items || []).map(function (x) { return { item_id: String(x.id), item_name: x.name, price: x.price, quantity: x.q }; }) }); } catch (e) {}
+    try { if (TRK.tt) window.ttq.track(ev === 'Purchase' ? 'CompletePayment' : ev, { currency: 'BDT', value: data.value, contents: data.contents.map(function (c) { return { content_id: c.id, quantity: c.quantity, price: c.price }; }) }); } catch (e) {}
+  }
+  window.roseTrack = track;
+  if (S.live) loadPixels(S.pixels);
   function addCart(pid, opt, q) {
     var ex = st.cart.find(function (x) { return x.id === pid && x.opt === (opt || ''); });
     if (ex) ex.q += q || 1; else st.cart.push({ id: pid, opt: opt || '', q: q || 1 });
     save(); toast('Added to cart');
+    var tp = P[pid]; if (tp) track('AddToCart', { value: tp.price * (q || 1), ids: [String(pid)], items: [{ id: pid, name: tp.name, price: tp.price, q: q || 1 }] });
   }
   function toggleWish(pid) {
     var i = st.wish.indexOf(pid);
@@ -608,6 +645,7 @@ function start(S, P, liveId) {
       R.map(function (r) { return '<div class="review"><div class="ravatar">' + esc(r.n.charAt(0)) + '</div><div style="flex:1"><b>' + esc(r.n) + '</b><span class="vb">✓ Verified Buyer</span><div>' + stars(r.s) + ' <small style="color:#94a3b8">' + esc(r.d || 'today') + '</small></div><p style="margin:4px 0 0">' + esc(r.t) + '</p>' + (r.pic ? '<img src="' + r.pic + '" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:10px;margin-top:6px">' : '') + '</div></div>'; }).join('') + '</div>';
   }
   function product(p) {
+    track('ViewContent', { value: p.price, ids: [String(p.id)], items: [{ id: p.id, name: p.name, price: p.price, q: 1 }] });
     var O = p.opts && p.opts.length ? { label: p.optLabel || 'Option', values: p.opts } : S.options;
     var isSize = O && /size|সাইজ/i.test(O.label) && KIND.tabs.some(function (x) { return x[0] === 'size'; });
     var opt = O ? '<div><div style="display:flex;justify-content:space-between"><b style="font-size:14px">' + esc(O.label) + '</b>' + (isSize ? '<a href="#" onclick="var z=document.querySelector(\'[data-tab=size]\');if(z)z.click();document.getElementById(\'ptabs\').scrollIntoView({behavior:\'smooth\'});return false" style="color:var(--c);font-size:13px;font-weight:600">📏 ' + t('sizeGuide') + '</a>' : '') + '</div><div class="opts" id="opts">' + O.values.map(function (v, i) { return '<button class="' + (i ? '' : 'on') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div></div>' : '';
@@ -691,6 +729,7 @@ function start(S, P, liveId) {
   function sec(n, title, body) { return '<div class="panel cosec"><h3><span class="num">' + n + '</span>' + title + '</h3>' + body + '</div>'; }
   function fld(idn, label, input, req) { return '<div class="field" id="w_' + idn + '"><span>' + label + (req ? ' <b style="color:#dc2626">*</b>' : '') + '</span>' + input + '<em class="err" id="e_' + idn + '"></em></div>'; }
   function checkout() {
+    if (st.cart.length) track('InitiateCheckout', { value: st.cart.reduce(function (a, c) { return a + (P[c.id] ? P[c.id].price * c.q : 0); }, 0), items: st.cart.map(function (c) { return { id: c.id, name: P[c.id] && P[c.id].name, price: P[c.id] && P[c.id].price, q: c.q }; }) });
     if (!st.cart.length) return cartPage();
     var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0);
     var needRx = st.cart.some(function (c) { return P[c.id].rx; });
@@ -794,7 +833,7 @@ function start(S, P, liveId) {
     sb('rpc/place_store_order_v2', {
       p_slug: S.slug, p_name: O.name, p_phone: O.phone, p_email: O.email, p_division: O.division, p_district: O.district, p_upazila: O.upazila, p_address: O.address,
       p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: O.pay, p_trx: O.trx, p_note: '',
-    }).then(function (r) { O.no = r.order_no; if (r.total) { O.total = +r.total; O.del = O.total - O.sub; } finish(); })
+    }).then(function (r) { O.no = r.order_no; if (r.total) { O.total = +r.total; O.del = O.total - O.sub; } track('Purchase', { value: O.total, order: String(O.no), items: st.cart.map(function (c) { return { id: c.id, name: P[c.id].name, price: P[c.id].price, q: c.q }; }) }); finish(); })
       .catch(function (e) { if (b) { b.disabled = false; b.textContent = t('confirm'); } toast(e.message); });
   };
 

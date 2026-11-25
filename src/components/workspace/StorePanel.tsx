@@ -15,7 +15,7 @@ type Access = { plan: StorePlanId; ends_at: string; stores_limit: number; produc
 type Store = {
   id: string; owner_id?: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
-  name_bn?: string; email2?: string; whatsapp?: string; phone2?: string;
+  name_bn?: string; email2?: string; whatsapp?: string; phone2?: string; pixels?: Record<string, string>;
   delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[];
   pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean;
 };
@@ -24,12 +24,12 @@ type Cat = { id: string; name: string; icon: string; sort: number };
 type Prod = {
   id: string; name: string; category_id: string | null; price: number; old_price: number | null; stock: number; emoji: string;
   description: string; images: string[]; options_label: string; options: string[]; rx: boolean; active: boolean;
-  short_description: string; specs: Record<string, string>;
+  short_description: string; specs: Record<string, string>; cost_price?: number;
 };
 type Order = {
   id: string; order_no: number; customer_name: string; phone: string; address: string; area: string;
   items: Array<{ name: string; q: number; price: number; opt?: string }>; total: number; payment_method: string; trx_id: string; status: string; created_at: string;
-  email: string; division: string; district: string; upazila: string; courier: string; tracking: string; note: string; subtotal: number; delivery: number;
+  email: string; division: string; district: string; upazila: string; courier: string; tracking: string; note: string; subtotal: number; delivery: number; courier_cost?: number;
 };
 export type Demo = {
   name: string; tagline: string; logo: string; type: string; color: string; accent: string; banners: Banner[]; trust: string[];
@@ -120,7 +120,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'create'>('home');
   const [roles, setRoles] = useState<Record<string, string>>({});
   const [showRose, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
@@ -202,8 +202,9 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   }
   if (!store) return null;
   const myRole = roles[store.id] && store.owner_id !== userId && !isAdmin ? roles[store.id] : 'owner';
-  const can = (area: 'orders' | 'products' | 'design' | 'owner') =>
+  const can = (area: 'orders' | 'products' | 'design' | 'owner' | 'money') =>
     myRole === 'owner' ||
+    (area === 'money' && ['manager', 'accounts'].includes(myRole)) ||
     (myRole === 'manager' && area !== 'owner') ||
     (area === 'orders' && ['orders', 'support', 'accounts'].includes(myRole)) ||
     (area === 'products' && ['products', 'marketing'].includes(myRole));
@@ -279,6 +280,9 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'rose' && <AdminBrandPage />}
         {tab === 'plan' && <BuyPlan current={access || undefined} onPaid={() => void load()} />}
         {tab === 'company' && <CompanyTab store={store} onSaved={() => void load()} />}
+        {tab === 'reports' && <ReportsTab store={store} />}
+        {tab === 'expenses' && <ExpensesTab store={store} />}
+        {tab === 'pixels' && <PixelsTab store={store} onSaved={() => void load()} />}
       </div>
     );
   }
@@ -305,6 +309,9 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {can('owner') && <SettingsBar badge="07" title="STAFF" value="GMAIL · ROLES" onClick={() => setTab('staff')} testId="store-staff" />}
         {can('owner') && !isAdmin && <SettingsBar badge="08" title="PLAN & RENEW" value={access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'} onClick={() => setTab('plan')} testId="store-plan" />}
         {can('design') && <SettingsBar badge="09" title="COMPANY INFO" value="NAME · EMAIL · PHONE · ADDRESS" onClick={() => setTab('company')} testId="store-company" />}
+        {can('money') && <SettingsBar badge="10" title="REPORTS & PROFIT" value="DAY · MONTH · YEAR" onClick={() => setTab('reports')} testId="store-reports" />}
+        {can('money') && <SettingsBar badge="11" title="EXPENSES & PURCHASES" value="ADS · STOCK · RENT" onClick={() => setTab('expenses')} testId="store-expenses" />}
+        {can('design') && <SettingsBar badge="12" title="PIXELS & ANALYTICS" value="FACEBOOK · GOOGLE · TIKTOK" onClick={() => setTab('pixels')} testId="store-pixels" />}
         {can('owner') && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
       <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Pixels & Analytics, Live chat.</p>
@@ -412,6 +419,226 @@ const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void }> = ({ current,
           ))}
         </div>
       )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- reports & profit (date range)
+type Report = {
+  orders: number; by_status: Record<string, number>; sales: number; delivery_collected: number; cod_collected: number; cod_waiting: number; pipeline: number;
+  cogs: number; courier_cost: number; return_loss: number; expenses: Record<string, number>; expenses_total: number; products: number; stock: number; stock_value: number;
+  missing_cost: number; months: Array<{ mon: string; orders: number; sales: number; gross: number }>;
+};
+const EXP_KINDS: Array<[string, string]> = [
+  ['purchase', 'Product purchase'], ['packaging', 'Packaging'], ['courier', 'Courier bill'], ['facebook_ads', 'Facebook ads'], ['tiktok_ads', 'TikTok ads'],
+  ['google_ads', 'Google ads'], ['other_ads', 'Other ads'], ['office', 'Office'], ['salary', 'Salary / staff'], ['rent', 'Rent'], ['other', 'Other'],
+];
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const RANGES: Array<[string, string]> = [['today', 'Today'], ['yesterday', 'Yesterday'], ['7', '7 days'], ['30', '30 days'], ['180', '6 months'], ['365', '1 year'], ['custom', 'Custom']];
+const rangeOf = (k: string): [string, string] => {
+  const t = new Date();
+  if (k === 'today') return [ymd(t), ymd(t)];
+  if (k === 'yesterday') { const y = new Date(t.getTime() - 864e5); return [ymd(y), ymd(y)]; }
+  return [ymd(new Date(t.getTime() - (Number(k) - 1) * 864e5)), ymd(t)];
+};
+const ReportsTab: React.FC<{ store: Store }> = ({ store }) => {
+  const [range, setRange] = useState('30');
+  const [from, setFrom] = useState(rangeOf('30')[0]);
+  const [to, setTo] = useState(rangeOf('30')[1]);
+  const [r, setR] = useState<Report | null>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    if (range !== 'custom') { const [a, b] = rangeOf(range); setFrom(a); setTo(b); }
+  }, [range]);
+  useEffect(() => {
+    setErr('');
+    void supabase.rpc('store_report', { p_store: store.id, p_from: from, p_to: to }).then(({ data, error }) => {
+      if (error) setErr(error.message); else setR(data as Report);
+    });
+  }, [store.id, from, to]);
+  const gross = r ? r.sales - r.cogs : 0;
+  const net = r ? gross + r.delivery_collected - r.courier_cost - r.expenses_total : 0;
+  const card = (label: string, v: string | number, tone = 'text-white', sub = '') => (
+    <div className="rounded-lg bg-black/30 p-2">
+      <p className="text-[10px] font-bold tracking-wider text-slate-400">{label}</p>
+      <p className={`text-[16px] font-extrabold ${tone}`}>{v}</p>
+      {sub && <p className="text-[10px] text-slate-500">{sub}</p>}
+    </div>
+  );
+  const st = r?.by_status || {};
+  const done = (st.delivered || 0) + (st.returned || 0);
+  const maxSale = Math.max(1, ...(r?.months || []).map((m) => m.sales));
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-2'}>
+        <div className="flex flex-wrap gap-1">
+          {RANGES.map(([k, l]) => (
+            <button key={k} type="button" onClick={() => setRange(k)} className={`rounded-md px-2 py-1 text-[11px] font-bold ${range === k ? 'bg-teal-600 text-white' : 'bg-white/10 text-slate-300'}`}>{l}</button>
+          ))}
+        </div>
+        {range === 'custom' && (
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-[10.5px] text-slate-400">From<input type="date" className={input} value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+            <label className="text-[10.5px] text-slate-400">To<input type="date" className={input} value={to} onChange={(e) => setTo(e.target.value)} /></label>
+          </div>
+        )}
+        <p className="text-[10.5px] text-slate-400">{from} → {to}</p>
+      </div>
+      {err && <p className="text-[12px] text-rose-300">{err}</p>}
+      {r && (
+        <>
+          <div className={box + ' space-y-2'}>
+            <p className="text-[11px] font-bold tracking-wider text-teal-300">PROFIT & LOSS</p>
+            <div className="grid grid-cols-2 gap-2">
+              {card('SALES (DELIVERED)', tk(r.sales))}
+              {card('PRODUCT COST', tk(r.cogs), 'text-slate-200', r.missing_cost ? `${r.missing_cost} products have no purchase price` : '')}
+              {card('GROSS PROFIT', tk(gross), gross >= 0 ? 'text-emerald-300' : 'text-rose-300')}
+              {card('DELIVERY CHARGE TAKEN', tk(r.delivery_collected))}
+              {card('COURIER COST', tk(r.courier_cost), 'text-slate-200', r.return_loss ? `returns cost ${tk(r.return_loss)}` : '')}
+              {card('OTHER EXPENSES', tk(r.expenses_total))}
+            </div>
+            <div className={`rounded-lg p-3 ${net >= 0 ? 'bg-emerald-500/15' : 'bg-rose-500/15'}`}>
+              <p className="text-[10.5px] font-bold tracking-wider text-slate-300">{net >= 0 ? 'NET PROFIT' : 'NET LOSS'}</p>
+              <p className={`text-[22px] font-extrabold ${net >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{tk(Math.abs(net))}</p>
+              <p className="text-[10px] text-slate-400">Sales − product cost + delivery charge − courier cost − expenses. Only DELIVERED orders count as sales.</p>
+            </div>
+          </div>
+          <div className={box + ' space-y-2'}>
+            <p className="text-[11px] font-bold tracking-wider text-teal-300">ORDERS · {r.orders}</p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {STATUSES.map((s) => card(s.toUpperCase(), st[s] || 0))}
+              {card('SUCCESS', done ? `${Math.round(((st.delivered || 0) / done) * 100)}%` : '-', 'text-emerald-300')}
+            </div>
+          </div>
+          <div className={box + ' space-y-2'}>
+            <p className="text-[11px] font-bold tracking-wider text-teal-300">MONEY</p>
+            <div className="grid grid-cols-2 gap-2">
+              {card('COD COLLECTED', tk(r.cod_collected))}
+              {card('COD WITH COURIER', tk(r.cod_waiting), 'text-amber-300', 'shipped, not delivered yet')}
+              {card('ORDERS IN PROGRESS', tk(r.pipeline))}
+              {card('STOCK VALUE', tk(r.stock_value), 'text-white', `${r.stock} pcs · ${r.products} products`)}
+            </div>
+          </div>
+          {Object.keys(r.expenses).length > 0 && (
+            <div className={box + ' space-y-1'}>
+              <p className="text-[11px] font-bold tracking-wider text-teal-300">EXPENSES</p>
+              {Object.entries(r.expenses).map(([k, v]) => (
+                <p key={k} className="flex text-[12px] text-slate-300"><span className="flex-1">{EXP_KINDS.find((x) => x[0] === k)?.[1] || k}</span><b>{tk(v)}</b></p>
+              ))}
+            </div>
+          )}
+          {r.months.length > 1 && (
+            <div className={box + ' space-y-2'}>
+              <p className="text-[11px] font-bold tracking-wider text-teal-300">MONTH BY MONTH</p>
+              {r.months.map((m) => (
+                <div key={m.mon} className="space-y-0.5">
+                  <p className="flex text-[11px] text-slate-300"><span className="flex-1">{m.mon} · {m.orders} orders</span><span>{tk(m.sales)} · profit {tk(m.gross)}</span></p>
+                  <div className="h-2 rounded bg-white/10"><div className="h-2 rounded bg-teal-500" style={{ width: `${(m.sales / maxSale) * 100}%` }} /></div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- expenses & purchases
+const ExpensesTab: React.FC<{ store: Store }> = ({ store }) => {
+  const [list, setList] = useState<Array<{ id: string; kind: string; amount: number; spent_on: string; supplier: string; note: string }>>([]);
+  const [f, setF] = useState({ kind: 'purchase', amount: '', spent_on: ymd(new Date()), supplier: '', note: '' });
+  const [msg, setMsg] = useState('');
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('store_expenses').select('*').eq('store_id', store.id).order('spent_on', { ascending: false }).limit(100);
+    setList((data as typeof list) || []);
+  }, [store.id]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const add = async () => {
+    const amount = Number(f.amount);
+    if (!(amount > 0)) return setMsg('Write the amount.');
+    const { error } = await supabase.from('store_expenses').insert({ store_id: store.id, kind: f.kind, amount, spent_on: f.spent_on, supplier: f.supplier.trim(), note: f.note.trim() });
+    if (error) return setMsg(error.message);
+    setF((x) => ({ ...x, amount: '', supplier: '', note: '' }));
+    setMsg('Added.');
+    void load();
+  };
+  const del = async (id: string) => {
+    await supabase.from('store_expenses').delete().eq('id', id);
+    void load();
+  };
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">ADD EXPENSE OR PURCHASE</p>
+        <div className="grid grid-cols-2 gap-2">
+          <select className={input} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}>
+            {EXP_KINDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+          <input className={input} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/[^\d.]/g, '') })} placeholder="Amount Tk" inputMode="decimal" />
+          <input className={input} type="date" value={f.spent_on} onChange={(e) => setF({ ...f, spent_on: e.target.value })} />
+          <input className={input} value={f.supplier} onChange={(e) => setF({ ...f, supplier: e.target.value })} placeholder={f.kind === 'purchase' ? 'Supplier name' : 'Paid to (optional)'} />
+        </div>
+        <input className={input} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder="Note (e.g. 50 T-shirts, invoice no.)" />
+        <button type="button" onClick={() => void add()} className={btn + ' w-full'}>ADD</button>
+        {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+        <p className="text-[10.5px] text-slate-400">Tip: set each product's PURCHASE PRICE in 02 PRODUCTS, and the courier charge on each order, for a correct profit. Then add here only extra costs (ads, packaging, rent, salary).</p>
+      </div>
+      <div className={box + ' space-y-1'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">RECENT · {list.length}</p>
+        {list.length === 0 && <p className="text-[12px] text-slate-400">Nothing yet.</p>}
+        {list.map((x) => (
+          <div key={x.id} className="flex items-center gap-2 rounded-lg bg-black/30 p-2 text-[12px]">
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-white">{EXP_KINDS.find((k) => k[0] === x.kind)?.[1] || x.kind} · {tk(x.amount)}</p>
+              <p className="truncate text-[10.5px] text-slate-400">{x.spent_on}{x.supplier ? ` · ${x.supplier}` : ''}{x.note ? ` · ${x.note}` : ''}</p>
+            </div>
+            <button type="button" onClick={() => void del(x.id)} className="text-[11px] font-bold text-rose-300">DELETE</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- Facebook Pixel, Google Analytics 4, TikTok Pixel
+const PIXELS: Array<[string, string, RegExp, string, string]> = [
+  ['fb', 'FACEBOOK (META) PIXEL ID', /^\d{10,20}$/, '123456789012345', 'business.facebook.com → Events Manager → Data sources → your Pixel → copy the number'],
+  ['ga4', 'GOOGLE ANALYTICS 4 · MEASUREMENT ID', /^G-[A-Z0-9]{4,15}$/, 'G-XXXXXXXXXX', 'analytics.google.com → Admin → Data streams → Web → Measurement ID'],
+  ['tiktok', 'TIKTOK PIXEL ID', /^[A-Z0-9]{10,30}$/, 'CXXXXXXXXXXXXXXXXXXX', 'ads.tiktok.com → Tools → Events → Web events → your Pixel → copy the ID'],
+];
+const PixelsTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
+  const [v, setV] = useState<Record<string, string>>((store.pixels as Record<string, string>) || {});
+  const [msg, setMsg] = useState('');
+  const save = async () => {
+    const clean: Record<string, string> = {};
+    for (const [k, label, re] of PIXELS) {
+      const x = (v[k] || '').trim().toUpperCase();
+      if (!x) continue;
+      if (!re.test(x)) return setMsg(`${label}: this ID does not look right.`);
+      clean[k] = x;
+    }
+    const { error } = await supabase.from('stores').update({ pixels: clean, updated_at: new Date().toISOString() }).eq('id', store.id);
+    setMsg(error ? error.message : 'Saved. Open your store once, then check Test Events in Facebook / Realtime in Google / TikTok.');
+    if (!error) onSaved();
+  };
+  return (
+    <div className="space-y-2">
+      {PIXELS.map(([k, label, re, ph, how]) => {
+        const x = (v[k] || '').trim().toUpperCase();
+        return (
+          <div key={k} className={box + ' space-y-1'}>
+            <p className="text-[11px] font-bold tracking-wider text-teal-300">{label} {x && (re.test(x) ? <span className="text-emerald-300">· READY</span> : <span className="text-rose-300">· CHECK</span>)}</p>
+            <input className={input} value={v[k] || ''} onChange={(e) => setV({ ...v, [k]: e.target.value.trim() })} placeholder={ph} autoCapitalize="characters" />
+            <p className="text-[10.5px] text-slate-400">{how}</p>
+          </div>
+        );
+      })}
+      <button type="button" onClick={() => void save()} className={btn + ' w-full'}>SAVE</button>
+      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
+      <p className="px-1 text-[10.5px] text-slate-400">Your store sends these events by itself: PageView, ViewContent (product page), AddToCart, InitiateCheckout, Purchase (with the order total in BDT).</p>
     </div>
   );
 };
@@ -605,7 +832,7 @@ const OrdersTab: React.FC<{ store: Store }> = ({ store }) => {
     const sub = (edit.items || []).reduce((a, i) => a + Number(i.price) * Number(i.q), 0);
     const { error } = await supabase.from('store_orders').update({
       customer_name: String(edit.customer_name).trim(), phone: ph, email: edit.email || '', division: edit.division || '', district: edit.district || '', upazila: edit.upazila || '',
-      address: String(edit.address).trim(), note: edit.note || '', items: edit.items, subtotal: sub, delivery: del, total: sub + del, updated_at: new Date().toISOString(),
+      address: String(edit.address).trim(), note: edit.note || '', items: edit.items, subtotal: sub, delivery: del, total: sub + del, courier_cost: Number(edit.courier_cost) || 0, updated_at: new Date().toISOString(),
     }).eq('id', edit.id);
     if (error) return setMsg(error.message);
     setEdit(null); setMsg('Order saved.'); void load();
@@ -650,6 +877,10 @@ const OrdersTab: React.FC<{ store: Store }> = ({ store }) => {
           <input className={input} inputMode="numeric" value={edit.delivery ?? ''} onChange={(e) => set('delivery', e.target.value.replace(/\D/g, ''))} placeholder="Delivery charge" />
           <input className={input} value={edit.note || ''} onChange={(e) => set('note', e.target.value)} placeholder="Note for courier" />
         </div>
+        <label className="block text-[10.5px] text-slate-400">
+          Courier charge you pay for this parcel (for profit)
+          <input className={input + ' mt-1'} inputMode="numeric" value={edit.courier_cost ?? ''} onChange={(e) => set('courier_cost', e.target.value.replace(/\D/g, ''))} placeholder="e.g. 60 inside Dhaka, 110 outside" />
+        </label>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => setEdit(null)} className={btn + ' bg-white/10'}>CANCEL</button>
           <button type="button" onClick={() => void saveEdit()} className={btn}>SAVE</button>
@@ -1025,7 +1256,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
       old_price: edit.old_price ? Number(edit.old_price) : null, stock: Number(edit.stock) || 0, emoji: edit.emoji || '📦',
       description: edit.description || '', images: (edit.images || []).filter(Boolean),
       options_label: (edit.options || []).filter(Boolean).length ? edit.options_label || 'Size' : '', options: (edit.options || []).filter(Boolean), rx: Boolean(edit.rx), active: edit.active !== false,
-      short_description: (edit.short_description || '').slice(0, 160), specs: edit.specs || {},
+      short_description: (edit.short_description || '').slice(0, 160), specs: edit.specs || {}, cost_price: Number(edit.cost_price) || 0,
       updated_at: new Date().toISOString(),
     };
     const { error } = edit.id ? await supabase.from('store_products').update(row).eq('id', edit.id) : await supabase.from('store_products').insert({ ...row, sort: prods.length });
@@ -1053,6 +1284,10 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
           <input className={input} value={edit.old_price ?? ''} onChange={(e) => set('old_price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="Old price" inputMode="decimal" />
           <input className={input} value={edit.stock ?? ''} onChange={(e) => set('stock', e.target.value.replace(/[^\d]/g, ''))} placeholder="Stock" inputMode="numeric" />
         </div>
+        <label className="block text-[10.5px] text-slate-400">
+          Purchase price (your cost, customers never see it) · for profit reports
+          <input className={input + ' mt-1'} value={edit.cost_price ?? ''} onChange={(e) => set('cost_price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 300" inputMode="decimal" />
+        </label>
         <div className="space-y-1">
           <p className="text-[10.5px] text-slate-400">Photos · up to 8 · ★ = main photo</p>
           <div className="flex flex-wrap gap-2">
