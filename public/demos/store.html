@@ -29,11 +29,16 @@
   .icon { position: relative; font-size: 22px; padding: 6px; border-radius: 10px; background: none; border: 0; }
   .icon i[hidden] { display: none; }
   .icon i { position: absolute; top: 0; right: 0; background: #ef4444; color: #fff; font-style: normal; font-size: 10px; border-radius: 99px; min-width: 16px; height: 16px; display: grid; place-items: center; padding: 0 4px; }
-  .city { font-size: 13px; color: var(--mute); white-space: nowrap; }
-  .search { display: flex; border: 1.5px solid var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 10px; background: #fff; }
-  .search input { flex: 1; border: 0; padding: 11px 16px; font-size: 14px; outline: none; min-width: 0; }
-  .search button { background: var(--c); color: #fff; border: 0; padding: 0 20px; font-weight: 700; }
-  .search button.cam { background: transparent; color: var(--ink); padding: 0 12px; font-size: 20px; border-left: 1px solid var(--line); }
+  .city { display: inline-flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 600; color: var(--c); white-space: nowrap; background: none; border: 0; }
+  .city svg { width: 22px; height: 22px; } .city .dn { width: 16px; height: 16px; color: #334155; }
+  .icon svg { width: 26px; height: 26px; display: block; color: #1f2937; }
+  .icon i { top: -2px; right: -2px; border: 2px solid #fff; min-width: 20px; height: 20px; font-weight: 800; }
+  .search { display: flex; align-items: center; border: 1.5px solid var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 10px; background: #fff; padding: 4px 4px 4px 14px; box-shadow: 0 2px 8px rgba(15,23,42,.05); }
+  .search .si { width: 22px; height: 22px; color: #334155; flex-shrink: 0; }
+  .search input { flex: 1; border: 0; padding: 10px 10px; font-size: 15px; outline: none; min-width: 0; }
+  .search button { background: var(--c); color: #fff; border: 0; width: 64px; height: 42px; border-radius: 999px; display: grid; place-items: center; }
+  .search button svg { width: 22px; height: 22px; }
+  .search button.cam { background: transparent; color: #334155; width: 46px; margin-right: 4px; }
   main { padding: 12px 0 90px; }
   .slider { position: relative; border-radius: 18px; overflow: hidden; height: 210px; }
   @media (min-width: 761px) { .slider { height: 320px; } }
@@ -46,29 +51,46 @@
   .dots { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
   .dots b { width: 7px; height: 7px; border-radius: 9px; background: rgba(255,255,255,.6); }
   .dots b.on { width: 18px; background: #fff; }
-  .trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0; background: #fff; border-radius: 14px; padding: 10px; font-size: 12px; text-align: center; }
-  .cats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 12px 0; }
-  .cat { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 4px; text-align: center; font-size: 12.5px; }
+  .trust { display: grid; grid-template-columns: repeat(4, 1fr); margin: 14px 0; background: color-mix(in srgb, var(--c) 8%, #fff); border: 1px solid color-mix(in srgb, var(--c) 14%, #fff); border-radius: 16px; padding: 12px 6px; }
+  .trust div { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; line-height: 1.25; color: #1f2937; padding: 0 6px; }
+  .trust div + div { border-left: 1px solid color-mix(in srgb, var(--c) 18%, #fff); }
+  .trust svg { width: 30px; height: 30px; color: var(--c); flex-shrink: 0; }
+  .cats { display: flex; gap: 8px; margin: 12px 0; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+  .cats::-webkit-scrollbar { display: none; }
+  .cats.wrapall { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); overflow: visible; }
+  .cat { flex: 1 0 92px; max-width: 150px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 8px 4px 9px; text-align: center; font-size: 12.5px; font-weight: 500; line-height: 1.2; box-shadow: 0 2px 6px rgba(15,23,42,.05); display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .cats.wrapall .cat { max-width: none; }
+  .cat .ci { width: 62px; height: 62px; border-radius: 12px; overflow: hidden; display: grid; place-items: center; font-size: 36px; }
+  .cat .ci img { width: 100%; height: 100%; object-fit: cover; }
+  .cat.more .ci { background: color-mix(in srgb, var(--c) 10%, #fff); }
+  .cat.more svg { width: 34px; height: 34px; color: var(--c); }
   .cat .e { font-size: 32px; display: block; margin-bottom: 4px; }
   .head { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 10px; }
-  .head h3 { margin: 0; font-size: 20px; }
+  .head h3 { margin: 0; font-size: 21px; display: flex; align-items: center; gap: 6px; }
+  .head h3 svg { width: 26px; height: 26px; color: #f59e0b; }
   .head a { color: var(--c); font-weight: 700; font-size: 14px; }
   .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; position: relative; }
-  .card .img { height: 150px; overflow: hidden; display: grid; place-items: center; font-size: 64px; background: linear-gradient(160deg, #fff, #f1f5f9); }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 2px 8px rgba(15,23,42,.05); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .card .img { height: 160px; overflow: hidden; display: grid; place-items: center; font-size: 64px; background: #fff; }
+  @media (min-width: 761px) { .card .img { height: 200px; } .cat { max-width: none; font-size: 14px; padding: 12px 6px; } .cat .ci { width: 80px; height: 80px; } }
   .off { position: absolute; top: 8px; left: 8px; background: #ef4444; color: #fff; font-size: 11.5px; font-weight: 800; border-radius: 7px; padding: 3px 7px; }
   .rx { position: absolute; top: 8px; right: 8px; background: #0e7490; color: #fff; font-size: 11px; font-weight: 800; border-radius: 7px; padding: 3px 7px; }
-  .heart { position: absolute; top: 6px; right: 6px; background: #fff; border: 0; border-radius: 99px; width: 30px; height: 30px; font-size: 16px; }
+  .heart { position: absolute; top: 8px; right: 8px; background: #fff; border: 0; border-radius: 99px; width: 32px; height: 32px; display: grid; place-items: center; color: #334155; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+  .heart svg { width: 18px; height: 18px; } .heart.on { color: #ef4444; } .heart.on svg path { fill: currentColor; }
   .card .body { padding: 9px 10px 10px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
   .card .t { font-size: 13.5px; font-weight: 600; min-height: 36px; }
   .price b { color: #dc2626; font-size: 17px; }
   .price s { color: var(--mute); font-size: 12.5px; margin-left: 6px; }
   .stars { color: #f59e0b; font-size: 12px; }
-  .btn { background: var(--c); color: #fff; border: 0; border-radius: 10px; padding: 9px 10px; font-weight: 700; font-size: 13px; width: 100%; }
+  .btn { background: var(--c); color: #fff; border: 0; border-radius: 12px; padding: 10px; font-weight: 700; font-size: 14px; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn svg { width: 18px; height: 18px; }
   .btn.alt { background: #fff; color: var(--c); border: 1.5px solid var(--c); }
   .promos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-  .promo { border-radius: 16px; padding: 16px; min-height: 110px; color: #fff; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 18px; }
-  .promo span { font-size: 54px; }
+  .promo { border-radius: 18px; padding: 16px 0 16px 18px; min-height: 140px; display: flex; justify-content: space-between; align-items: center; gap: 10px; overflow: hidden; }
+  .promo h4 { margin: 0 0 12px; font-size: clamp(18px, 2.2vw, 26px); line-height: 1.15; }
+  .promo .pill { display: inline-flex; align-items: center; gap: 4px; background: #fff; color: #0f172a; border-radius: 999px; padding: 8px 16px; font-weight: 700; font-size: 14px; }
+  .promo img { width: 46%; height: 120px; object-fit: cover; border-radius: 14px 0 0 14px; }
+  .promo span { font-size: 64px; margin-right: 16px; }
   .panel { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
   .pd { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .pd .big { height: 300px; border-radius: 16px; display: grid; place-items: center; font-size: 140px; background: linear-gradient(160deg,#fff,#eef2f7); border: 1px solid var(--line); }
@@ -100,22 +122,28 @@
   .paylogos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   .paylogos span { background: #fff; color: #0f172a; border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 800; }
   .store-btn { display: inline-flex; align-items: center; gap: 6px; background: #000; color: #fff; border: 1px solid #475569; border-radius: 10px; padding: 7px 12px; margin-top: 6px; font-size: 12px; }
-  nav.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: rgba(255,255,255,.96); backdrop-filter: blur(10px); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(15,23,42,.06); display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; }
-  nav.bottom a { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 600; color: var(--mute); position: relative; padding: 4px 0; transition: color .2s; }
-  nav.bottom a .e { width: 44px; height: 30px; border-radius: 999px; display: grid; place-items: center; font-size: 19px; transition: background .25s, transform .25s; }
-  nav.bottom a.on { color: var(--c); }
-  nav.bottom a.on .e { background: color-mix(in srgb, var(--c) 16%, #fff); transform: translateY(-1px); }
-  nav.bottom a i { position: absolute; top: 0; left: calc(50% + 6px); background: #ef4444; color: #fff; font-style: normal; font-size: 10px; font-weight: 800; border-radius: 99px; padding: 1px 5px; border: 2px solid #fff; }
+  nav.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: #fff; border-top: 1px solid #e5e7eb; box-shadow: 0 -4px 18px rgba(15,23,42,.07); padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
+  nav.bottom .in { display: grid; grid-template-columns: repeat(5, 1fr); max-width: 760px; margin: 0 auto; }
+  nav.bottom a { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 500; color: #374151; position: relative; padding: 2px 0; }
+  nav.bottom svg { width: 27px; height: 27px; display: block; }
+  nav.bottom a.on { color: var(--c); font-weight: 700; }
+  nav.bottom a.on .f { fill: currentColor; }
+  nav.bottom a i { position: absolute; top: -6px; left: calc(50% + 4px); background: #ef4444; color: #fff; font-style: normal; font-size: 11px; font-weight: 800; border-radius: 99px; min-width: 21px; height: 21px; display: grid; place-items: center; padding: 0 5px; border: 2px solid #fff; }
+  main { padding-bottom: 96px; }
+  footer { padding-bottom: 96px !important; }
   @media (min-width: 761px) {
-    nav.bottom { left: 50%; right: auto; bottom: 16px; width: 560px; transform: translateX(-50%); border-radius: 999px; border: 1px solid var(--line); padding: 6px 10px; box-shadow: 0 12px 30px rgba(15,23,42,.18); }
-    nav.bottom a { flex-direction: row; justify-content: center; gap: 6px; font-size: 13px; }
-    nav.bottom a .e { width: 34px; }
-    nav.bottom a i { left: auto; right: 6px; }
-    .chatbtn { bottom: 22px !important; }
-    footer { padding-bottom: 100px !important; }
+    nav.bottom { padding: 10px 0 12px; }
+    nav.bottom .in { max-width: 1000px; }
+    nav.bottom a { font-size: 15px; gap: 5px; border-radius: 14px; padding: 4px 0; }
+    nav.bottom a:hover { background: #f8fafc; }
+    nav.bottom svg { width: 32px; height: 32px; }
+    main { padding-bottom: 120px; }
+    footer { padding-bottom: 120px !important; }
+    .chatbtn { bottom: 108px !important; right: 24px !important; width: 62px !important; height: 62px !important; }
+    .chat { bottom: 182px !important; right: 24px !important; }
   }
-  .chatbtn { position: fixed; right: 14px; bottom: 78px; z-index: 31; width: 56px; height: 56px; border-radius: 99px; border: 0; background: var(--c); color: #fff; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
-  .chat { position: fixed; right: 14px; bottom: 142px; z-index: 32; width: min(340px, calc(100vw - 28px)); background: #fff; border-radius: 16px; box-shadow: 0 12px 34px rgba(0,0,0,.25); overflow: hidden; display: none; }
+  .chatbtn { position: fixed; right: 14px; bottom: 88px; display: grid; place-items: center; z-index: 31; width: 56px; height: 56px; border-radius: 99px; border: 0; background: var(--c); color: #fff; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+  .chat { position: fixed; right: 14px; bottom: 154px; z-index: 32; width: min(340px, calc(100vw - 28px)); background: #fff; border-radius: 16px; box-shadow: 0 12px 34px rgba(0,0,0,.25); overflow: hidden; display: none; }
   .chat.on { display: block; }
   .chat .h { background: var(--c); color: #fff; padding: 10px 12px; font-weight: 700; display: flex; justify-content: space-between; }
   .chat .m { height: 240px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; background: #f8fafc; }
@@ -125,16 +153,18 @@
   .chat form { display: flex; border-top: 1px solid var(--line); }
   .chat input { flex: 1; border: 0; padding: 10px; outline: none; }
   .chat form button { border: 0; background: none; color: var(--c); font-weight: 800; padding: 0 12px; }
-  .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 9px 16px; border-radius: 99px; font-size: 13px; z-index: 40; display: none; }
+  .toast { position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 9px 16px; border-radius: 99px; font-size: 13px; z-index: 40; display: none; }
   @media (max-width: 760px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
-    .cats { grid-template-columns: repeat(3, 1fr); }
-    .trust { grid-template-columns: repeat(2, 1fr); }
+    .trust { grid-template-columns: repeat(4, 1fr); padding: 10px 2px; }
+    .trust div { flex-direction: column; text-align: center; gap: 4px; font-size: 11px; padding: 0 3px; }
+    .trust svg { width: 26px; height: 26px; }
+    .promo img { height: 100px; }
     .pd { grid-template-columns: 1fr; }
     .pd .big { height: 230px; font-size: 110px; }
     .promos { grid-template-columns: 1fr; }
     footer .cols { grid-template-columns: 1fr 1fr; }
-    .city { display: none; }
+    .city { font-size: 14px; } .hideM { display: none !important; }
   }
 </style>
 </head>
@@ -144,11 +174,12 @@
   <div class="bar">
     <a class="logo" href="#/"><span class="ic" id="logoIc"></span><span><b id="logoName"></b><small id="logoTag"></small></span></a>
     <span class="grow"></span>
-    <span class="city" id="city"></span>
-    <a class="icon" href="#/wishlist" title="Wishlist">🤍<i id="wCount" hidden></i></a>
-    <a class="icon" href="#/cart" title="Cart">🛒<i id="cCount" hidden></i></a>
+    <button class="city" id="city" type="button"></button>
+    <a class="icon hideM" href="#/wishlist" title="Wishlist" id="hWish"><i id="wCount" hidden></i></a>
+    <a class="icon hideM" href="#/cart" title="Cart" id="hCart"><i id="cCount" hidden></i></a>
+    <a class="icon" href="#/account" title="Notifications" id="hBell"><i id="bCount" hidden></i></a>
   </div>
-  <form class="search" id="searchForm"><input id="q" placeholder="Search products…" aria-label="Search" /><button type="button" class="cam" id="camBtn" aria-label="Search by photo" title="Search by photo">📷</button><button>Search</button></form>
+  <form class="search" id="searchForm"><span id="sIc"></span><input id="q" placeholder="Search for products…" aria-label="Search" /><button type="button" class="cam" id="camBtn" aria-label="Search by photo" title="Search by photo"></button><button id="sBtn" aria-label="Search"></button></form>
   <input type="file" id="camFile" accept="image/*" hidden />
 </div></header>
 
@@ -157,7 +188,7 @@
 <footer><div class="wrap cols" id="foot"></div></footer>
 
 <nav class="bottom" id="nav"></nav>
-<button class="chatbtn" id="chatBtn" aria-label="Live chat">💬</button>
+<button class="chatbtn" id="chatBtn" aria-label="Live chat"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01" stroke-width="3"/></svg></button>
 <div class="chat" id="chat">
   <div class="h"><span id="chatTitle">Live chat</span><button id="chatX" style="background:none;border:0;color:#fff;font-size:18px">✕</button></div>
   <div class="m" id="chatM"></div>
@@ -175,6 +206,29 @@ function sb(path, body) {
     body: body ? JSON.stringify(body) : undefined,
   }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.message || 'Error'); return j; }); });
 }
+
+var SV = function (d, extra) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"' + (extra || '') + '>' + d + '</svg>'; };
+var IC = {
+  home: SV('<path class="f" d="M3 10.6 12 3.2l9 7.4V20a1 1 0 0 1-1 1h-5.2v-6.2H9.2V21H4a1 1 0 0 1-1-1z"/>'),
+  grid: SV('<rect class="f" x="3.5" y="3.5" width="7" height="7" rx="2"/><rect class="f" x="13.5" y="3.5" width="7" height="7" rx="2"/><rect class="f" x="3.5" y="13.5" width="7" height="7" rx="2"/><rect class="f" x="13.5" y="13.5" width="7" height="7" rx="2"/>'),
+  cart: SV('<path d="M2.5 3.5h2.3l2.5 11.3a1.6 1.6 0 0 0 1.6 1.3h8.4a1.6 1.6 0 0 0 1.6-1.2L21 7.5H6"/><circle cx="9.5" cy="20" r="1.4"/><circle cx="17.5" cy="20" r="1.4"/>'),
+  heart: SV('<path class="f" d="M12 20.3s-7.6-4.6-9.3-9.5C1.5 7.4 3.7 4.2 7 4.2c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.3 0 5.5 3.2 4.3 6.6-1.7 4.9-9.3 9.5-9.3 9.5z"/>'),
+  user: SV('<circle class="f" cx="12" cy="8" r="4"/><path class="f" d="M4 21c0-4.2 3.6-7 8-7s8 2.8 8 7z"/>'),
+  search: SV('<circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-4.3-4.3"/>', ' stroke-width="2.3"'),
+  cam: SV('<path d="M4 8h3l1.6-2.5h6.8L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/>'),
+  pin: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a7.5 7.5 0 0 0-7.5 7.5C4.5 15.2 12 22 12 22s7.5-6.8 7.5-12.5A7.5 7.5 0 0 0 12 2zm0 10.3a2.8 2.8 0 1 1 0-5.6 2.8 2.8 0 0 1 0 5.6z"/></svg>',
+  down: SV('<path d="m6 9 6 6 6-6"/>', ' class="dn"'),
+  bell: SV('<path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.8 1.8H4.2z"/><path d="M10 20.5a2.1 2.1 0 0 0 4 0"/>'),
+  bolt: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.6z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><g fill="currentColor"><circle cx="7" cy="7" r="3.2"/><circle cx="17" cy="7" r="3.2"/><circle cx="7" cy="17" r="3.2"/><circle cx="17" cy="17" r="3.2"/></g></svg>',
+  truck: SV('<path d="M2 6h11v10H2z"/><path d="M13 9.5h4.5L21 13v3h-8"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>'),
+  shield: SV('<path d="M12 2.8 4.5 5.6v6c0 4.6 3.2 8.3 7.5 9.6 4.3-1.3 7.5-5 7.5-9.6v-6z"/><path d="m8.6 12 2.4 2.4 4.6-4.8"/>'),
+  headset: SV('<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13.5" width="4" height="6" rx="1.5"/><rect x="17" y="13.5" width="4" height="6" rx="1.5"/><path d="M19 19.5c0 1.2-1.6 2-4 2h-2"/>'),
+  ret: SV('<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/>'),
+  check: SV('<circle cx="12" cy="12" r="9"/><path d="m8 12 2.8 2.8L16.5 9"/>'),
+  arrow: SV('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+};
+function trustIcon(t) { t = t.toLowerCase(); return /deliver|ship|same day|fitting/.test(t) ? IC.truck : /return/.test(t) ? IC.ret : /support|chat|pharmacist|showroom/.test(t) ? IC.headset : /pay|emi|secure/.test(t) ? IC.shield : IC.check; }
 var fullImg = function (u, w) { return !u ? '' : /^https?:/.test(u) ? u : window.ROSE_IMG(u, w); };
 var qs = new URLSearchParams(location.search);
 var liveSlug = qs.get('store') || ((location.pathname.match(/^\/shop\/([a-z0-9-]+)/) || [])[1]) || '';
@@ -264,7 +318,14 @@ function start(S, P, liveId) {
   else document.getElementById('logoIc').textContent = S.logo;
   document.getElementById('logoName').textContent = S.name;
   document.getElementById('logoTag').textContent = S.tagline;
-  document.getElementById('city').textContent = '📍 ' + S.city;
+  document.getElementById('city').innerHTML = IC.pin + esc(S.city) + IC.down;
+  document.getElementById('hWish').insertAdjacentHTML('afterbegin', IC.heart);
+  document.getElementById('hCart').insertAdjacentHTML('afterbegin', IC.cart);
+  document.getElementById('hBell').insertAdjacentHTML('afterbegin', IC.bell);
+  if (!S.live) { var bc = document.getElementById('bCount'); bc.hidden = false; bc.textContent = '3'; }
+  document.getElementById('sIc').outerHTML = IC.search.replace('<svg', '<svg class="si"');
+  document.getElementById('camBtn').innerHTML = IC.cam;
+  document.getElementById('sBtn').innerHTML = IC.search;
   document.getElementById('foot').innerHTML =
     '<div><h4>' + S.logo + ' ' + esc(S.name) + '</h4><p>' + esc(S.tagline) + '</p>' +
     (S.live ? (S.address ? '<p>📍 ' + esc(S.address) + '</p>' : '') + (S.phone ? '<p>📞 ' + esc(S.phone) + '</p>' : '') + (S.email ? '<p>✉️ ' + esc(S.email) + '</p>' : '')
@@ -278,36 +339,42 @@ function start(S, P, liveId) {
   function renderNav() {
     var h = location.hash || '#/';
     var c = st.cart.reduce(function (a, x) { return a + x.q; }, 0);
-    var items = [['#/', '🏠', 'Home'], ['#/categories', '🗂️', 'Categories'], ['#/cart', '🛒', 'Cart'], ['#/wishlist', '🤍', 'Wishlist'], ['#/account', '👤', 'Account']];
-    document.getElementById('nav').innerHTML = items.map(function (it) {
-      var on = it[0] === '#/' ? (h === '#/' || h === '#') : h.indexOf(it[0]) === 0;
-      return '<a href="' + it[0] + '" class="' + (on ? 'on' : '') + '"><span class="e">' + it[1] + '</span>' + it[2] + (it[0] === '#/cart' && c ? '<i>' + c + '</i>' : '') + '</a>';
-    }).join('');
+    var items = [['#/', IC.home, 'Home'], ['#/categories', IC.grid, 'Categories'], ['#/cart', IC.cart, 'Cart'], ['#/wishlist', IC.heart, 'Wishlist'], ['#/account', IC.user, 'Account']];
+    document.getElementById('nav').innerHTML = '<div class="in">' + items.map(function (it) {
+      var on = it[0] === '#/' ? (h === '#/' || h === '#' || h === '') : h.indexOf(it[0]) === 0;
+      return '<a href="' + it[0] + '" class="' + (on ? 'on' : '') + '">' + it[1] + it[2] + (it[0] === '#/cart' && c ? '<i>' + c + '</i>' : '') + '</a>';
+    }).join('') + '</div>';
   }
 
   function card(p) {
     var w = st.wish.indexOf(p.id) >= 0;
     return '<div class="card"><a href="#/p/' + p.id + '"><div class="img">' + pic(p) + '</div></a>' +
       (off(p) ? '<span class="off">-' + off(p) + '%</span>' : '') + (p.rx ? '<span class="rx" style="top:40px">Rx</span>' : '') +
-      '<button class="heart" onclick="__rose.wish(' + p.id + ');route()">' + (w ? '❤️' : '🤍') + '</button>' +
+      '<button class="heart' + (w ? ' on' : '') + '" aria-label="Wishlist" onclick="__rose.wish(' + p.id + ');route()">' + IC.heart + '</button>' +
       '<div class="body"><a class="t" href="#/p/' + p.id + '">' + esc(p.name) + '</a>' +
-      (p.sold ? '<div class="stars">★ ' + p.rating + ' <span style="color:#94a3b8">(' + p.sold + ')</span></div>' : '') +
       '<div class="price"><b>' + tk(p.price) + '</b>' + (off(p) ? '<s>' + tk(p.old) + '</s>' : '') + '</div>' +
-      '<button class="btn" onclick="__rose.add(' + p.id + ')">🛒 Add to Cart</button></div></div>';
+      '<button class="btn" onclick="__rose.add(' + p.id + ')">' + IC.cart + 'Add to Cart</button></div></div>';
   }
 
+  function catTiles(withMore) {
+    return '<div class="cats' + (withMore ? '' : ' wrapall') + '">' + S.categories.map(function (c) {
+      var first = P.filter(function (p) { return p.cat === c[0] && p.img; })[0];
+      return '<a class="cat" href="#/c/' + encodeURIComponent(c[0]) + '"><span class="ci">' + (first ? '<img src="' + esc(first.img) + '" alt="" loading="lazy" onerror="this.parentNode.textContent=\'' + c[1] + '\'">' : c[1]) + '</span>' + esc(c[0]) + '</a>';
+    }).join('') + (withMore ? '<a class="cat more" href="#/categories"><span class="ci">' + IC.more + '</span>More</a>' : '') + '</div>';
+  }
   var slideTimer;
   function home() {
     var b = S.banners;
     var html = '<div class="slider" id="slider">' + b.map(function (x, i) {
-      return '<div class="slide ' + (i ? '' : 'on') + '" style="background:' + x.bg + '"><div style="flex:1;min-width:0"><h2>' + esc(x.title) + '</h2><span class="badge">' + esc(x.badge) + '</span><div style="margin-top:12px"><a class="btn" style="display:inline-block;width:auto;padding:9px 16px" href="#/categories">Shop Now →</a></div></div>' + (x.img ? '<img class="bpic" src="' + bimg(x.img) + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="big">' + x.icon + '</div>') + '</div>';
+      return '<div class="slide ' + (i ? '' : 'on') + '" style="background:' + x.bg + '"><div style="flex:1;min-width:0"><h2>' + esc(x.title) + '</h2><span class="badge">' + esc(x.badge) + '</span><div style="margin-top:14px"><a class="btn" style="width:auto;padding:10px 20px;border-radius:999px;background:color-mix(in srgb,var(--c) 75%,#000)" href="#/categories">Shop Now ' + IC.arrow + '</a></div></div>' + (x.img ? '<img class="bpic" src="' + bimg(x.img) + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="big">' + x.icon + '</div>') + '</div>';
     }).join('') + '<div class="dots">' + b.map(function (x, i) { return '<b class="' + (i ? '' : 'on') + '"></b>'; }).join('') + '</div></div>';
-    html += '<div class="trust">' + S.trust.map(function (t) { return '<div>' + t + '</div>'; }).join('') + '</div>';
-    html += '<div class="cats">' + S.categories.map(function (c) { return '<a class="cat" href="#/c/' + encodeURIComponent(c[0]) + '"><span class="e">' + c[1] + '</span>' + esc(c[0]) + '</a>'; }).join('') + '</div>';
-    html += '<div class="head"><h3>🔥 ' + esc(S.sectionTitle) + '</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(0, 8).map(card).join('') + '</div>';
-    html += '<div class="promos"><div class="promo" style="background:linear-gradient(120deg,' + S.color + ',#0f172a)"><div>' + esc(S.banners[1].title) + '<br><small style="font-weight:600">' + esc(S.banners[1].badge) + '</small></div>' + (S.banners[1].img ? '<img src="' + bimg(S.banners[1].img) + '" alt="" style="width:42%;height:100px;object-fit:cover;border-radius:12px">' : '<span>' + S.banners[1].icon + '</span>') + '</div>' +
-      '<div class="promo" style="background:linear-gradient(120deg,#f59e0b,#ef4444)"><div>Best Quality<br>Best Price</div><span>' + S.logo + '</span></div></div>';
-    html += '<div class="head"><h3>✨ New Arrivals</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(-4).map(card).join('') + '</div>';
+    html = catTiles(true) + html;
+    html += '<div class="trust">' + S.trust.map(function (t) { var x = t.replace(/^[^A-Za-z0-9]+/, ''), sp = x.indexOf(' '); return '<div>' + trustIcon(x) + '<span>' + esc(sp > 0 ? x.slice(0, sp) : x) + '<br>' + esc(sp > 0 ? x.slice(sp + 1) : '') + '</span></div>'; }).join('') + '</div>';
+    html += '<div class="head"><h3>' + IC.bolt + esc(S.sectionTitle) + '</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(0, 8).map(card).join('') + '</div>';
+    var b2 = S.banners[1] || S.banners[0], b3 = S.banners[2] || S.banners[0];
+    var promo = function (x, bg, ink, img) { return '<a class="promo" href="#/all" style="background:' + bg + ';color:' + ink + '"><div><h4>' + esc(x.title) + '</h4><span class="pill">Shop Now ' + IC.arrow.replace('<svg', '<svg width="16" height="16"') + '</span></div>' + (img ? '<img src="' + bimg(img) + '" alt="" onerror="this.style.display=\'none\'">' : '<span>' + (x.icon || S.logo) + '</span>') + '</a>'; };
+    html += '<div class="promos">' + promo(b2, 'linear-gradient(120deg,' + S.color + ',color-mix(in srgb,' + S.color + ' 55%,#000))', '#fff', b2.img) + promo({ title: 'Best Quality, Best Price', icon: S.logo }, 'linear-gradient(120deg,#fde047,#f59e0b)', '#0f172a', b3.img) + '</div>';
+    html += '<div class="head"><h3>New Arrivals</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(-4).map(card).join('') + '</div>';
     return html;
   }
   function startSlider() {
@@ -412,7 +479,7 @@ function start(S, P, liveId) {
     var h = decodeURIComponent((location.hash || '#/').slice(1));
     var v = document.getElementById('view'), html;
     if (h === '/' || h === '') html = home();
-    else if (h === '/categories') html = '<div class="head"><h3>All categories</h3></div><div class="cats">' + S.categories.map(function (c) { return '<a class="cat" href="#/c/' + encodeURIComponent(c[0]) + '"><span class="e">' + c[1] + '</span>' + esc(c[0]) + '</a>'; }).join('') + '</div>';
+    else if (h === '/categories') html = '<div class="head"><h3>All categories</h3></div>' + catTiles(false);
     else if (h.indexOf('/c/') === 0) { var cat = h.slice(3); html = list(cat, P.filter(function (p) { return p.cat === cat; })); }
     else if (h === '/all') html = list('All products', P);
     else if (h.indexOf('/p/') === 0) { var p = P[+h.slice(3)]; html = p ? product(p) : list('Not found', []); }
