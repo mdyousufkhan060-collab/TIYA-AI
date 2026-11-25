@@ -8,7 +8,7 @@ import { IMG_HINT, RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } 
  * Google sign-in with the company Gmail → company details → 5-day free trial starts → the store is live.
  */
 const KEY = 'rose_start_store';
-const input = 'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2.5 text-[14px] text-white placeholder:text-slate-500';
+const input = 'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-[13.5px] text-white placeholder:text-slate-500';
 const lbl = 'block text-[12px] font-bold text-slate-200';
 const bn = 'ml-1 font-normal text-slate-400';
 const phoneOk = (p: string) => /^01[3-9]\d{8}$/.test(p);
@@ -133,10 +133,10 @@ export default function StartStorePage() {
   };
 
   const shell = (body: React.ReactNode) => (
-    <div className="min-h-[100dvh] bg-[#07090D] px-4 py-5 text-white md:px-8">
-      <div className="mx-auto max-w-5xl space-y-4">
+    <div className="min-h-[100dvh] bg-[#07090D] px-4 py-4 text-white md:px-8 md:py-3">
+      <div className="mx-auto max-w-5xl space-y-3">
         <a href="/demos" className="text-[12px] font-bold text-teal-300">‹ All designs</a>
-        <h1 className="text-2xl font-extrabold md:text-3xl">Get your own store <span className="block text-base font-semibold text-slate-400">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span></h1>
+        <h1 className="text-2xl font-extrabold md:flex md:items-baseline md:gap-3">Get your own store <span className="block text-[15px] font-semibold text-slate-400">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span></h1>
         {body}
         <p className="pt-4 text-center text-[11px] text-slate-500">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a className="underline" href="/policies.html">Policies</a></p>
       </div>
@@ -207,15 +207,17 @@ export default function StartStorePage() {
         )}
         <p className="hidden text-[11.5px] text-slate-400 md:block">You get a full copy of this website: pages, categories, banners and demo products. Then change anything.</p>
       </div>
-      <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:p-4">
         <p className="text-[12px] text-slate-400">Signed in as <b className="text-white">{email}</b></p>
-        <label className={lbl}>Company name (English) *<span className={bn}>কোম্পানির নাম</span>
-          <input className={input + ' mt-1'} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Rahim Fashion" /></label>
-        <label className={lbl}>Company name (Bangla)<span className={bn}>বাংলায় নাম</span>
-          <input className={input + ' mt-1'} value={f.nameBn} onChange={(e) => set('nameBn', e.target.value)} placeholder="রহিম ফ্যাশন" /></label>
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          <label className={lbl}>Company name (English) *<span className={bn}>কোম্পানির নাম</span>
+            <input className={input + ' mt-1'} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Rahim Fashion" /></label>
+          <label className={lbl}>Company name (Bangla)<span className={bn}>বাংলায় নাম</span>
+            <input className={input + ' mt-1'} value={f.nameBn} onChange={(e) => set('nameBn', e.target.value)} placeholder="রহিম ফ্যাশন" /></label>
+        </div>
         <label className={lbl}>Web address *<span className={bn}>ওয়েবসাইটের ঠিকানা</span>
           <span className="mt-1 flex items-center gap-1"><input className={input} value={f.slug || slugify(f.name)} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="rahim-fashion" /><span className="shrink-0 text-[12px] text-slate-400">.myrosebd.com</span></span></label>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-2.5 sm:grid-cols-2">
           <label className={lbl}>Company Gmail *<span className={bn}>জিমেইল ১</span>
             <input className={input + ' mt-1'} value={f.email} onChange={(e) => set('email', e.target.value.trim())} inputMode="email" /></label>
           <label className={lbl}>Second email<span className={bn}>জিমেইল ২</span>
@@ -225,13 +227,13 @@ export default function StartStorePage() {
           <label className={lbl}>Other phone<span className={bn}>অন্য ফোন</span>
             <input className={input + ' mt-1'} value={f.phone2} onChange={(e) => set('phone2', e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" placeholder="optional" /></label>
         </div>
-        <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+        <div className="grid gap-2.5 sm:grid-cols-[1fr_180px]">
           <label className={lbl}>Full address *<span className={bn}>পুরো ঠিকানা</span>
-            <textarea className={input + ' mt-1'} rows={2} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area, thana, district" /></label>
+            <textarea className={input + ' mt-1'} rows={1} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area, thana, district" /></label>
           <label className={lbl}>City / District<span className={bn}>শহর / জেলা</span>
             <input className={input + ' mt-1'} value={f.city} onChange={(e) => set('city', e.target.value)} /></label>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-2.5 sm:grid-cols-2">
           <label className={lbl}>Logo<span className={bn}>লোগো (ঐচ্ছিক)</span>
             <input className="mt-1 block w-full text-[12px] text-slate-300" type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] || null)} />
             <span className="mt-0.5 block text-[10.5px] font-normal text-slate-500">{IMG_HINT.logo}</span></label>
@@ -243,10 +245,12 @@ export default function StartStorePage() {
           <input type="checkbox" className="mt-1" checked={f.sample} onChange={(e) => set('sample', e.target.checked)} />
           <span>Copy the full demo website: categories, products and banners (change later) <span className={bn}>পুরো ডেমো ওয়েবসাইট কপি হবে</span></span>
         </label>
-        <button type="button" disabled={busy || !d} onClick={() => void create()} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 text-[14px] font-extrabold text-black disabled:opacity-60">
-          {busy && <Loader2 className="h-4 w-4 animate-spin" />} START 5-DAY FREE STORE
-        </button>
-        {msg && <p className="text-[13px] text-rose-300">{msg}</p>}
+        <div className="sticky bottom-0 -mx-3 space-y-1 bg-[#0d1016]/95 px-3 py-2 backdrop-blur md:-mx-4 md:px-4">
+          {msg && <p className="text-[13px] text-rose-300">{msg}</p>}
+          <button type="button" disabled={busy || !d} onClick={() => void create()} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 text-[14px] font-extrabold text-black disabled:opacity-60">
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} START 5-DAY FREE STORE
+          </button>
+        </div>
         <p className="text-[11.5px] text-slate-400">You can change everything later in STORE · WEBSITE → 09 COMPANY INFO. By starting you agree to the <a className="underline" href="/terms.html">Terms</a>.</p>
       </div>
     </div>,

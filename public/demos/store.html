@@ -267,8 +267,13 @@
   .rosebox .rrow b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .rosebox .rrow a { background: #f1f5f9; border-radius: 9px; padding: 6px 10px; font-size: 12.5px; font-weight: 700; }
   .rosebox .rrow a.wa { background: #16a34a; color: #fff; }
-  .paylogos span { min-width: 0; height: 34px; padding: 4px 8px; }
-  @media (max-width: 760px) { .paylogos { gap: 5px; } .paylogos span { height: 30px; padding: 3px 6px; } }
+  .payrow { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; border-top: 1px solid #1e293b; padding-top: 12px; margin-top: 4px; }
+  .payrow .pl { font-size: 11px; color: #94a3b8; white-space: nowrap; }
+  .payrow .paylogos { flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin: 0; scrollbar-width: none; }
+  .payrow .paylogos::-webkit-scrollbar { display: none; }
+  .payrow .paylogos span { min-width: 0; height: 26px; padding: 3px 7px; border-radius: 6px; flex: none; }
+  .payrow .paylogos img { height: 18px; width: auto; display: block; }
+  @media (max-width: 760px) { .payrow { gap: 6px; } .payrow .pl { font-size: 10px; } .payrow .paylogos { gap: 3px; } .payrow .paylogos span { height: 21px; padding: 2px 4px; border-radius: 5px; } .payrow .paylogos img { height: 13px; } }
 </style>
 </head>
 <body>
@@ -480,7 +485,7 @@ function start(S, P, liveId) {
     '<p>Facebook · YouTube · TikTok · Instagram</p></div>' +
     '<div><h4>Shop</h4><p><a href="#/categories">All categories</a></p><p><a href="#/wishlist">Wishlist</a></p><p><a href="#/cart">Cart</a></p><p><a href="#/account">My orders</a></p></div>' +
     '<div><h4>Help</h4><p><a href="#/page/about">About us</a></p><p><a href="#/page/contact">Contact</a></p><p><a href="#/page/return">Return policy</a></p><p><a href="#/page/privacy">Privacy</a></p><p><a href="#/page/terms">Terms</a></p></div>' +
-    '<div><a href="#" class="made-rose" onclick="roseInfo();return false" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8"><img src="/tiya-home.jpg?v=3" alt="" style="width:20px;height:20px;border-radius:99px;object-fit:cover;object-position:center 30%">Made with ROSE · myrosebd.com</a><h4>We accept</h4><div class="paylogos">' + ['bkash', 'nagad', 'rocket', 'visa', 'mastercard', 'cod'].map(function (k) { return '<span>' + window.ROSE_LOGO(k, 24) + '</span>'; }).join('') + '</div><a href="https://www.myrosebd.com/policies.html" target="_blank" rel="noopener" style="display:block;margin-top:10px;font-size:11px;color:#94a3b8">Privacy · Terms · Refund</a><h4 style="margin-top:12px">Get the app</h4><span class="store-btn">▶ Google Play</span></div>';
+    '<div><a href="#" class="made-rose" onclick="roseInfo();return false" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8"><img src="/tiya-home.jpg?v=3" alt="" style="width:20px;height:20px;border-radius:99px;object-fit:cover;object-position:center 30%">Made with ROSE · myrosebd.com</a><a href="https://www.myrosebd.com/policies.html" target="_blank" rel="noopener" style="display:block;margin-top:10px;font-size:11px;color:#94a3b8">Privacy · Terms · Refund</a><h4 style="margin-top:12px">Get the app</h4><span class="store-btn">▶ Google Play</span></div><div class="payrow"><span class="pl">We accept</span><div class="paylogos">' + ['bkash', 'nagad', 'rocket', 'visa', 'mastercard', 'cod'].map(function (k) { return '<span title="' + k + '">' + window.ROSE_LOGO(k, 18, true) + '</span>'; }).join('') + '</div>';
 
   function renderNav() {
     var h = location.hash || '#/';

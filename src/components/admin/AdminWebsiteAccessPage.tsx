@@ -74,12 +74,33 @@ const StorePayments: React.FC<{ onDone: () => void }> = ({ onDone }) => {
 /** Money-received SMS forwarded from the admin's phone. Matching TrxID + amount turns the plan on by itself. */
 const PaymentSms: React.FC = () => {
   const [rows, setRows] = useState<Array<{ id: string; method: string; trx_id: string; amount: number; sender: string; received_at: string; used_for: string | null }>>([]);
+  const [link, setLink] = useState('');
+  const [copied, setCopied] = useState(false);
+  const base = 'https://ukgwipazzjstjkdfaozg.supabase.co/functions/v1/payment-sms?key=';
   useEffect(() => {
     void supabase.from('payment_sms').select('*').order('received_at', { ascending: false }).limit(10).then(({ data }) => setRows((data as typeof rows) || []));
+    void supabase.from('admin_secrets').select('value').eq('key', 'payment_sms_key').maybeSingle().then(({ data }) => setLink(data ? base + (data as { value: string }).value : ''));
   }, []);
+  const newKey = async () => {
+    if (link && !window.confirm('Make a new link? The old link in the SMS forwarder app stops working.')) return;
+    const { data, error } = await supabase.rpc('admin_new_sms_key');
+    if (!error && data) setLink(base + String(data));
+  };
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ }
+  };
   return (
     <div className={box + ' space-y-1'}>
       <p className="text-[11px] font-bold tracking-wider text-teal-300">AUTO PAYMENT · SMS ({rows.length})</p>
+      <div className="space-y-1 rounded-lg bg-black/30 p-2">
+        <p className="text-[11px] text-slate-300">FORWARD LINK for the SMS forwarder app on your bKash phone (keep it private):</p>
+        {link ? <p className="break-all text-[10.5px] text-slate-400">{link.slice(0, base.length + 6)}…</p> : <p className="text-[11px] text-amber-300">No link yet. Tap MAKE LINK.</p>}
+        <div className="grid grid-cols-2 gap-2">
+          {link && <button type="button" onClick={() => void copy()} className="h-8 rounded-lg bg-teal-600 text-[11px] font-bold text-white">{copied ? 'COPIED ✓' : 'COPY LINK'}</button>}
+          <button type="button" onClick={() => void newKey()} className="h-8 rounded-lg bg-white/10 text-[11px] font-bold text-slate-200">{link ? 'NEW LINK' : 'MAKE LINK'}</button>
+        </div>
+        <p className="text-[10.5px] text-slate-500">In the forwarder app: Webhook / URL = this link, method POST, only SMS from bKash, NAGAD and 16216.</p>
+      </div>
       {rows.length === 0 && <p className="text-[11.5px] text-slate-400">No payment SMS yet. Set up the SMS forwarder on the bKash phone (see the guide) and payments turn plans on by themselves.</p>}
       {rows.map((r) => (
         <p key={r.id} className="text-[11.5px] text-slate-300">
