@@ -506,7 +506,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="19" title="IMTIAZ LIST" value="PC & APP" tone={activeView === 'team_list' ? 'accent' : 'default'} onClick={() => go('team_list')} testId="admin-bar-team-list" />
             <SettingsBar badge="20" title="STORE READINESS" value="PLAY · MS" tone={activeView === 'store' ? 'accent' : 'default'} onClick={() => go('store')} testId="admin-bar-store" />
             <SettingsBar badge="21" title="TUTORIAL VIDEOS" value="YOUTUBE" tone={activeView === 'videos' ? 'accent' : 'default'} onClick={() => go('videos')} testId="admin-bar-videos" />
-            <SettingsBar badge="22" title="WEBSITE BUILDER" value="DEMO" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
+            <SettingsBar badge="22" title="WEBSITE BUILDER" value="STORES · LIVE" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
             <SettingsBar badge="23" title="WEBSITE ACCESS" value="GMAIL" tone={activeView === 'website_access' ? 'accent' : 'default'} onClick={() => go('website_access')} testId="admin-bar-website-access" />
             <SettingsBar badge="24" title="SITE SWITCHES" value="ROSE BRANDING" tone={activeView === 'site_switches' ? 'accent' : 'default'} onClick={() => go('site_switches')} testId="admin-bar-site-switches" />
           </div>

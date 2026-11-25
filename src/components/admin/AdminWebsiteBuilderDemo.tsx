@@ -1,6 +1,67 @@
-import React, { useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { SettingsBar } from '../settings/SettingsShell';
+import { supabase } from '../../lib/supabase';
+
+/** Live numbers and every real store, at the top of 22 WEBSITE BUILDER. */
+type HubStore = { id: string; slug: string; name: string; owner_email?: string; published: boolean; suspended: boolean; custom_domain?: string | null; plan?: string | null; ends_at?: string | null; products?: number; orders?: number; created_at: string };
+const LiveHub: React.FC = () => {
+  const [stores, setStores] = useState<HubStore[]>([]);
+  const [n, setN] = useState({ users: 0, access: 0, pay: 0 });
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    void Promise.all([
+      supabase.rpc('admin_store_list'),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('website_access').select('email', { count: 'exact', head: true }).gt('ends_at', new Date().toISOString()),
+      supabase.from('store_payment_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    ]).then(([s, u, a, p]) => {
+      setStores((s.data as HubStore[]) || []);
+      setN({ users: u.count || 0, access: a.count || 0, pay: p.count || 0 });
+      setLoading(false);
+    });
+  }, []);
+  const card = 'rounded-xl border border-white/[0.08] bg-[#11151E] p-3';
+  const stat = (v: number | string, l: string) => (
+    <div className="rounded-lg bg-black/30 p-2 text-center"><b className="block text-lg text-white">{v}</b><span className="text-[10px] font-bold tracking-wider text-slate-400">{l}</span></div>
+  );
+  const link = (href: string, label: string) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-white/10 text-[11px] font-bold text-white"><ExternalLink className="h-3.5 w-3.5" />{label}</a>
+  );
+  const url = (s: HubStore) => (s.custom_domain ? `https://${s.custom_domain}` : `https://${s.slug}.myrosebd.com`);
+  return (
+    <div className="space-y-2">
+      <div className={card + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">LIVE NOW</p>
+        <div className="grid grid-cols-4 gap-1.5">
+          {stat(loading ? '…' : n.users, 'SIGNED IN')}
+          {stat(loading ? '…' : n.access, 'ACCESS')}
+          {stat(loading ? '…' : stores.length, 'STORES')}
+          {stat(loading ? '…' : n.pay, 'TO CHECK')}
+        </div>
+        <p className="text-[10.5px] text-slate-400">Give access, check payments and see every Gmail in 23 WEBSITE ACCESS. ROSE branding and download links in 24 SITE SWITCHES.</p>
+        <div className="grid grid-cols-2 gap-2">
+          {link('/demos/', 'DEMO STORES')}
+          {link('/start', 'STORE SIGN-UP PAGE')}
+        </div>
+      </div>
+      <div className={card + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">ALL STORES · {stores.length}</p>
+        {!loading && !stores.length && <p className="text-[12px] text-slate-400">No real store yet. When someone opens a store (from /start or Workspace → MY STORE) it shows here.</p>}
+        {stores.map((s) => (
+          <div key={s.id} className="flex items-center gap-2 rounded-lg bg-black/30 p-2">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[12.5px] font-bold text-white">{s.name}</span>
+              <span className="block truncate text-[10.5px] text-slate-400">{s.owner_email || '—'} · {(s.plan || 'no plan').toUpperCase()}{s.ends_at ? ` until ${new Date(s.ends_at).toLocaleDateString('en-GB')}` : ''} · {s.products ?? 0} products · {s.orders ?? 0} orders{s.suspended ? ' · CLOSED' : ''}</span>
+            </span>
+            <a href={url(s)} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[11px] font-bold text-teal-300">OPEN</a>
+          </div>
+        ))}
+      </div>
+      <p className="px-1 pt-1 text-[11px] font-bold tracking-wider text-slate-400">HOW IT WORKS · tap a bar</p>
+    </div>
+  );
+};
 
 /**
  * Admin > 22 WEBSITE BUILDER (DEMO): the full plan of ROSE Store Builder as
@@ -165,9 +226,7 @@ export const AdminWebsiteBuilderDemo: React.FC = () => {
   return (
     <div className="space-y-2">
       {path.length === 0 ? (
-        <p className="px-1 pb-1 text-[11px] text-slate-400">
-          DEMO PLAN. Tap a bar to see what is inside. Nothing here is live yet.
-        </p>
+        <LiveHub />
       ) : (
         <button
           type="button"

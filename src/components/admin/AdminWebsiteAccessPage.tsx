@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { STORE_DURATIONS, STORE_PLANS, storePrice, tk, type StorePlanId } from '../../utils/storePlans';
@@ -155,6 +155,10 @@ export const AdminWebsiteAccessPage: React.FC = () => {
   const [stores, setStores] = useState<StoreRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
+  const [users, setUsers] = useState<Array<{ id: string; email: string; full_name: string | null; created_at: string; last_seen_at: string | null }>>([]);
+  const [uq, setUq] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
   const [plan, setPlan] = useState<StorePlanId>('starter');
   const [months, setMonths] = useState(3);
   const [amount, setAmount] = useState('');
@@ -176,10 +180,12 @@ export const AdminWebsiteAccessPage: React.FC = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [a, s] = await Promise.all([
+    const [a, s, u] = await Promise.all([
       supabase.from('website_access').select('*').order('created_at', { ascending: false }),
       supabase.rpc('admin_store_list'),
+      supabase.from('profiles').select('id,email,full_name,created_at,last_seen_at').order('created_at', { ascending: false }).limit(500),
     ]);
+    setUsers(((u.data as typeof users) || []).filter((x) => x.email));
     setRows((a.data as Row[]) || []);
     setStores((s.data as StoreRow[]) || []);
     setLoading(false);
@@ -260,11 +266,60 @@ export const AdminWebsiteAccessPage: React.FC = () => {
 
   const active = (r: Row) => new Date(r.ends_at) > new Date();
 
+  /** Everyone who signed in to myrosebd.com, newest first. GIVE fills the form below with that Gmail. */
+  const signedInUsers = () => {
+    const q = uq.trim().toLowerCase();
+    const list = users.filter((x) => !q || x.email.toLowerCase().includes(q) || (x.full_name || '').toLowerCase().includes(q));
+    const shown = showAll || q ? list : list.slice(0, 8);
+    const accessOf = (e: string) => rows.find((x) => x.email.toLowerCase() === e.toLowerCase());
+    return (
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">SIGNED-IN USERS · {users.length}</p>
+        <p className="text-[10.5px] text-slate-400">Everyone who logged in with Gmail, newest first. Tap GIVE to put that Gmail in the form below.</p>
+        <input className={input} value={uq} onChange={(e) => setUq(e.target.value)} placeholder="Search Gmail or name" inputMode="email" />
+        {shown.map((x) => {
+          const a = accessOf(x.email);
+          const on = a && new Date(a.ends_at) > new Date();
+          const days = a ? Math.max(0, Math.ceil((new Date(a.ends_at).getTime() - Date.now()) / 864e5)) : 0;
+          return (
+            <div key={x.id} className="flex items-center gap-2 rounded-lg bg-black/30 p-2">
+              <span className="min-w-0 flex-1">
+                <span className="block select-all truncate text-[12.5px] font-semibold text-white">{x.email}</span>
+                <span className="block text-[10.5px] text-slate-400">
+                  {x.full_name ? `${x.full_name} · ` : ''}joined {new Date(x.created_at).toLocaleDateString('en-GB')}
+                  {' · '}
+                  <b className={on ? 'text-teal-300' : a ? 'text-rose-300' : 'text-amber-300'}>{on ? `${STORE_PLANS[a!.plan]?.label || a!.plan} · ${days} days left` : a ? 'ENDED' : 'NO WEBSITE ACCESS'}</b>
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (a) { setOpenEmail(a.email); setMsg(`${a.email} already has access. Open it in PEOPLE WITH ACCESS below to extend.`); return; }
+                  setEmail(x.email);
+                  setMsg('');
+                  formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className="h-8 shrink-0 rounded-lg bg-teal-600 px-3 text-[11px] font-bold text-white"
+              >
+                {a ? 'EXTEND' : 'GIVE'}
+              </button>
+            </div>
+          );
+        })}
+        {!q && list.length > 8 && (
+          <button type="button" onClick={() => setShowAll(!showAll)} className="w-full text-[11px] font-bold text-teal-300">{showAll ? 'SHOW LESS' : `SHOW ALL ${list.length}`}</button>
+        )}
+        {!users.length && <p className="text-[12px] text-slate-400">{loading ? 'Loading…' : 'Nobody has signed in yet.'}</p>}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-3 pb-4">
       <StorePayments onDone={() => void load()} />
       <PaymentSms />
-      <div className={box + ' space-y-2'}>
+      {signedInUsers()}
+      <div ref={formRef} className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">GIVE ACCESS BY GMAIL</p>
         <input className={input} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="customer@gmail.com" inputMode="email" />
         <div className="grid grid-cols-2 gap-2">
