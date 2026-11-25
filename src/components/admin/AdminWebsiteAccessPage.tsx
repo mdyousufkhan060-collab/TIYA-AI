@@ -161,6 +161,18 @@ export const AdminWebsiteAccessPage: React.FC = () => {
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [openEmail, setOpenEmail] = useState('');
+  const [gPlan, setGPlan] = useState<StorePlanId>('starter');
+  const [gMonths, setGMonths] = useState(3);
+  const [gDays, setGDays] = useState('');
+  const sw = (label: string, on: boolean, fn: () => void) => (
+    <div className="flex items-center gap-2">
+      <span className="flex-1 text-[11px] text-slate-300">{label}</span>
+      <button type="button" role="switch" aria-checked={on} onClick={fn} className={`relative h-6 w-11 shrink-0 ${on ? 'bg-teal-500' : 'bg-slate-600'}`}>
+        <span className={`absolute top-1 h-4 w-4 bg-white transition-all ${on ? 'left-6' : 'left-1'}`} />
+      </button>
+    </div>
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -224,6 +236,23 @@ export const AdminWebsiteAccessPage: React.FC = () => {
     void load();
   };
 
+  const extend = async (r: Row) => {
+    const p = STORE_PLANS[gPlan];
+    const base = new Date(r.ends_at) > new Date() && r.plan === gPlan ? new Date(r.ends_at) : new Date();
+    const ends = new Date(base);
+    ends.setMonth(ends.getMonth() + gMonths);
+    ends.setDate(ends.getDate() + (Number(gDays) || 0));
+    if (ends <= new Date()) return setMsg('Choose months or days.');
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from('website_access').update({
+      plan: gPlan, months: gMonths, stores_limit: p.stores, products_limit: p.products, storage_gb: p.storageGb, staff_limit: p.staff,
+      ends_at: ends.toISOString(), trial_used: true, granted_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
+    }).eq('email', r.email);
+    setMsg(error ? error.message : `${r.email}: ${p.label} until ${ends.toLocaleDateString('en-GB')}.`);
+    setGDays('');
+    void load();
+  };
+
   const toggleRose = async (s: StoreRow) => {
     await supabase.from('stores').update({ hide_rose: !s.hide_rose }).eq('id', s.id);
     void load();
@@ -275,23 +304,60 @@ export const AdminWebsiteAccessPage: React.FC = () => {
       ) : rows.length === 0 ? (
         <p className="px-1 text-xs text-slate-400">Nobody yet.</p>
       ) : (
-        rows.map((r) => (
-          <div key={r.email} className={box + ' flex items-center gap-2'}>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold text-white">{r.email}</p>
-              <p className={`text-[10.5px] ${active(r) ? 'text-teal-300' : 'text-rose-300'}`}>
-                {STORE_PLANS[r.plan]?.label || r.plan} · {active(r) ? 'until' : 'ended'} {new Date(r.ends_at).toLocaleDateString('en-GB')}
-                {r.amount ? ` · ${tk(Number(r.amount))}` : ''}
-              </p>
+        rows.map((r) => {
+          const mine = stores.filter((x) => (x.owner_email || '').toLowerCase() === r.email.toLowerCase());
+          const isOpen = openEmail === r.email;
+          return (
+            <div key={r.email} className={box + ' space-y-2'}>
+              <button type="button" onClick={() => setOpenEmail(isOpen ? '' : r.email)} className="flex w-full items-center gap-2 text-left">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12.5px] font-semibold text-white">{r.email}</span>
+                  <span className={`block text-[10.5px] ${active(r) ? 'text-teal-300' : 'text-rose-300'}`}>
+                    {STORE_PLANS[r.plan]?.label || r.plan} · {active(r) ? 'until' : 'ended'} {new Date(r.ends_at).toLocaleDateString('en-GB')} · {mine.length} store{mine.length === 1 ? '' : 's'}
+                  </span>
+                </span>
+                <span className="text-[11px] font-bold text-slate-300">{isOpen ? '▲' : '▼'}</span>
+              </button>
+              {isOpen && (
+                <div className="space-y-2 border-t border-white/10 pt-2">
+                  <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-300">
+                    <span>Plan: <b className="text-white">{STORE_PLANS[r.plan]?.label || r.plan}</b></span>
+                    <span>Paid: <b className="text-white">{r.amount ? tk(Number(r.amount)) : '—'}</b></span>
+                    <span>Ends: <b className="text-white">{new Date(r.ends_at).toLocaleDateString('en-GB')}</b></span>
+                    <span>Days left: <b className="text-white">{Math.max(0, Math.ceil((new Date(r.ends_at).getTime() - Date.now()) / 864e5))}</b></span>
+                    {r.note && <span className="col-span-2">Note: {r.note}</span>}
+                  </div>
+                  <div className="space-y-1.5 rounded-lg bg-black/30 p-2">
+                    <p className="text-[10.5px] font-bold tracking-wider text-teal-300">GIVE OR EXTEND BY HAND</p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <select className={input + ' py-1.5 text-[12px]'} value={gPlan} onChange={(e) => setGPlan(e.target.value as StorePlanId)}>
+                        {(Object.keys(STORE_PLANS) as StorePlanId[]).map((k) => <option key={k} value={k}>{STORE_PLANS[k].label}</option>)}
+                      </select>
+                      <select className={input + ' py-1.5 text-[12px]'} value={gMonths} onChange={(e) => setGMonths(Number(e.target.value))}>
+                        {[0, 1, 2, 3, 6, 9, 12, 24].map((m) => <option key={m} value={m}>{m} months</option>)}
+                      </select>
+                      <input className={input + ' py-1.5 text-[12px]'} inputMode="numeric" value={gDays} onChange={(e) => setGDays(e.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="+ days" />
+                    </div>
+                    <button type="button" onClick={() => void extend(r)} className="h-9 w-full rounded-lg bg-teal-600 text-[11px] font-bold text-white">
+                      SAVE · {STORE_PLANS[gPlan].label} +{gMonths}m {Number(gDays) || 0}d
+                    </button>
+                  </div>
+                  {mine.map((st) => (
+                    <div key={st.id} className="space-y-1 rounded-lg bg-black/30 p-2">
+                      <p className="text-[12px] font-bold text-white">{st.name}{st.name_bn ? ` · ${st.name_bn}` : ''}</p>
+                      <a href={st.custom_domain ? `https://${st.custom_domain}` : `/shop/${st.slug}`} target="_blank" rel="noreferrer" className="text-[10.5px] text-teal-300 underline">{st.custom_domain || `${st.slug}.myrosebd.com`}</a>
+                      <p className="text-[10.5px] text-slate-400">{st.products ?? 0} products · {st.orders ?? 0} orders · {st.whatsapp || st.phone || ''}</p>
+                      {sw('"Made with ROSE" in footer', !st.hide_rose, () => void toggleRose(st))}
+                      {sw('Store is open', !st.suspended, () => void toggleSuspend(st))}
+                    </div>
+                  ))}
+                  {mine.length === 0 && <p className="text-[11px] text-slate-400">No store yet.</p>}
+                  <button type="button" onClick={() => void remove(r.email)} className="h-8 w-full rounded-lg border border-rose-400/40 text-[10.5px] font-bold text-rose-300">REMOVE ACCESS</button>
+                </div>
+              )}
             </div>
-            <button type="button" onClick={() => { setEmail(r.email); setPlan(r.plan === 'trial' ? 'starter' : r.plan); }} className="h-8 rounded-lg border border-white/15 px-2 text-[10px] font-bold text-slate-200">
-              EXTEND
-            </button>
-            <button type="button" onClick={() => void remove(r.email)} className="h-8 rounded-lg bg-rose-600/80 px-2 text-[10px] font-bold text-white">
-              REMOVE
-            </button>
-          </div>
-        ))
+          );
+        })
       )}
 
       <p className="px-1 pt-2 text-[10px] font-semibold tracking-wider text-slate-400">ALL STORES ({stores.length})</p>

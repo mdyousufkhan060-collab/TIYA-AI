@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { AdminBrandPage, RoseSupportCard } from '../admin/AdminBrandPage';
+import { StoreChatTab } from './RoseChatInbox';
 import { INVOICE_SIZES, PRINT_CSS, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
@@ -15,7 +16,7 @@ type Access = { plan: StorePlanId; ends_at: string; stores_limit: number; produc
 type Store = {
   id: string; owner_id?: string; slug: string; name: string; tagline: string; logo: string; logo_url: string; color: string; accent: string; template: string;
   city: string; phone: string; email: string; address: string; licence: string; note: string;
-  name_bn?: string; email2?: string; whatsapp?: string; phone2?: string; pixels?: Record<string, string>;
+  name_bn?: string; email2?: string; whatsapp?: string; phone2?: string; pixels?: Record<string, string>; chat_ai?: boolean;
   delivery_inside: number; delivery_outside: number; banners: Banner[]; trust: string[];
   pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean;
 };
@@ -120,7 +121,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'create'>('home');
   const [roles, setRoles] = useState<Record<string, string>>({});
   const [showRose, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
@@ -283,6 +284,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'reports' && <ReportsTab store={store} />}
         {tab === 'expenses' && <ExpensesTab store={store} />}
         {tab === 'pixels' && <PixelsTab store={store} onSaved={() => void load()} />}
+        {tab === 'chat' && <StoreChatTab store={store} />}
       </div>
     );
   }
@@ -311,6 +313,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {can('design') && <SettingsBar badge="09" title="COMPANY INFO" value="NAME · EMAIL · PHONE · ADDRESS" onClick={() => setTab('company')} testId="store-company" />}
         {can('money') && <SettingsBar badge="10" title="REPORTS & PROFIT" value="DAY · MONTH · YEAR" onClick={() => setTab('reports')} testId="store-reports" />}
         {can('money') && <SettingsBar badge="11" title="EXPENSES & PURCHASES" value="ADS · STOCK · RENT" onClick={() => setTab('expenses')} testId="store-expenses" />}
+        {can('orders') && <SettingsBar badge="13" title="LIVE CHAT" value="ROSE · CUSTOMERS" onClick={() => setTab('chat')} testId="store-chat" />}
         {can('design') && <SettingsBar badge="12" title="PIXELS & ANALYTICS" value="FACEBOOK · GOOGLE · TIKTOK" onClick={() => setTab('pixels')} testId="store-pixels" />}
         {can('owner') && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>

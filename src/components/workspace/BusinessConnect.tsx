@@ -1,3 +1,4 @@
+import { WebsiteChatWidget } from './RoseChatInbox';
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Loader2, Package, RefreshCw, Send } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -342,6 +343,7 @@ export const ChannelConnect: React.FC = () => {
       {META_KEYS.map((k) => (
         <KeyCard key={k.kind} k={k} st={status[k.kind]} onChanged={() => void reload()} />
       ))}
+      <WebsiteChatSection />
     </div>
   );
 };
@@ -389,4 +391,17 @@ const WebsiteOrders: React.FC = () => {
       )}
     </div>
   );
+};
+
+/** Website chat (ROSE on the owner's own website). */
+const WebsiteChatSection: React.FC = () => {
+  const [biz, setBiz] = React.useState<{ id: string; name: string } | null>(null);
+  React.useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      void supabase.from('businesses').select('id,name').eq('owner_id', data.user.id).maybeSingle().then(({ data: b }) => setBiz((b as { id: string; name: string }) || null));
+    });
+  }, []);
+  if (!biz) return null;
+  return <WebsiteChatWidget businessId={biz.id} name={biz.name} />;
 };

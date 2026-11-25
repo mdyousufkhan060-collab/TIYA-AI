@@ -431,7 +431,7 @@ const TITLES: Record<View, string> = {
   discounts: DISCOUNTS.title,
   approvals: APPROVALS.title,
   couriers: COURIERS.title,
-  channels: 'WHATSAPP & MESSENGER',
+  channels: 'WHATSAPP · MESSENGER · WEBSITE CHAT',
 };
 
 /** Quick numbers on top of the business hub. */

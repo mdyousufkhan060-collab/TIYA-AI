@@ -143,10 +143,15 @@
     .chat { bottom: 202px !important; right: 24px !important; }
   }
   .chatbtn { position: fixed; right: 14px; bottom: 118px; display: grid; place-items: center; z-index: 31; width: 52px; height: 52px; border-radius: 99px; border: 0; background: var(--c); color: #fff; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
-  .chat { position: fixed; right: 14px; bottom: 180px; z-index: 32; width: min(340px, calc(100vw - 28px)); background: #fff; border-radius: 16px; box-shadow: 0 12px 34px rgba(0,0,0,.25); overflow: hidden; display: none; }
+  .chat { position: fixed; right: 14px; bottom: 180px; z-index: 32; width: min(320px, calc(100vw - 28px)); background: #fff; border-radius: 16px; box-shadow: 0 12px 34px rgba(0,0,0,.25); overflow: hidden; display: none; }
   .chat.on { display: block; }
-  .chat .h { background: var(--c); color: #fff; padding: 10px 12px; font-weight: 700; display: flex; justify-content: space-between; }
-  .chat .m { height: 240px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; background: #f8fafc; }
+  .chat .h { background: var(--c); color: #fff; padding: 9px 10px; display: flex; align-items: center; gap: 9px; }
+  .chat .hl { width: 34px; height: 34px; border-radius: 99px; background: #fff; display: grid; place-items: center; overflow: hidden; font-size: 18px; flex: none; } .chat .hl img { width: 100%; height: 100%; object-fit: cover; }
+  .chat .ht { flex: 1; min-width: 0; line-height: 1.15; } .chat .ht b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .chat .ht small { font-size: 11px; opacity: .9; }
+  .chat .h button { background: rgba(255,255,255,.18); border: 0; color: #fff; width: 28px; height: 28px; border-radius: 99px; font-size: 14px; }
+  .chat .m .who { font-size: 10px; color: #64748b; margin: 0 0 -3px 4px; padding: 0; background: none; border: 0; }
+  .chat .m .ty { color: #94a3b8; letter-spacing: 2px; }
+  .chat .m { height: 270px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; background: #f8fafc; }
   .chat .m div { max-width: 82%; padding: 7px 10px; border-radius: 12px; }
   .chat .m .b { background: #fff; border: 1px solid var(--line); align-self: flex-start; }
   .chat .m .u { background: var(--c); color: #fff; align-self: flex-end; }
@@ -322,9 +327,9 @@
 <nav class="bottom" id="nav"></nav>
 <button class="chatbtn" id="chatBtn" aria-label="Live chat"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01" stroke-width="3"/></svg></button>
 <div class="chat" id="chat">
-  <div class="h"><span id="chatTitle">Live chat</span><button id="chatX" style="background:none;border:0;color:#fff;font-size:18px">✕</button></div>
+  <div class="h"><span class="hl" id="chatLogo"></span><span class="ht"><b id="chatTitle">Live chat</b><small id="chatSub"></small></span><button id="chatX" aria-label="Close">✕</button></div>
   <div class="m" id="chatM"></div>
-  <form id="chatF"><input id="chatI" placeholder="Type a message…" /><button>SEND</button></form>
+  <form id="chatF"><input id="chatI" placeholder="Type a message…" autocomplete="off" maxlength="1000" /><button aria-label="Send"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg></button></form>
 </div>
 <div class="buybar" id="buybar"></div>
 <div class="modal" id="authM" hidden></div>
@@ -1083,21 +1088,58 @@ function start(S, P, liveId) {
   };
 
   // live chat (demo answers)
+  // ---------------- live chat (ROSE answers for ROSE Business shops and in demos) ----------------
   var chat = document.getElementById('chat'), cm = document.getElementById('chatM');
-  document.getElementById('chatTitle').textContent = S.name + ' · Live chat';
-  function say(t, who) { var d = document.createElement('div'); d.className = who; d.textContent = t; cm.appendChild(d); cm.scrollTop = 99999; }
-  say('Hi! I am ROSE, the assistant of ' + S.name + '. Ask about price, stock or delivery.', 'b');
-  document.getElementById('chatBtn').onclick = function () { chat.classList.toggle('on'); };
+  var CHAT_URL = SB_URL + '/functions/v1/rose-chat', VKEY = 'rose_chat_v', vis;
+  try { vis = localStorage.getItem(VKEY); } catch (e) {}
+  if (!vis) { vis = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); try { localStorage.setItem(VKEY, vis); } catch (e) {} }
+  var chatAI = !S.live, lastAt = '', seen = {}, pollT = 0, typing = null;
+  var demoInfo = function () { return 'Shop type: ' + S.type + '. ' + (S.note || '') + ' Delivery ' + DIN + ' Tk inside Dhaka, ' + DOUT + ' Tk outside. Products: ' + P.slice(0, 60).map(function (p) { return p.name + ' ' + p.price + ' Tk' + (off(p) ? ' (was ' + p.old + ')' : ''); }).join('; '); };
+  var chatBody = function (extra) { var b = { visitor: vis }; if (S.live) b.slug = S.slug; else { b.demo = id; b.name = S.name; b.info = demoInfo(); } for (var k in extra) b[k] = extra[k]; return b; };
+  var chatCall = function (extra) { return fetch(CHAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }, body: JSON.stringify(chatBody(extra)) }).then(function (r) { return r.json(); }); };
+  document.getElementById('chatTitle').textContent = S.name;
+  document.getElementById('chatLogo').innerHTML = S.logoUrl ? '<img src="' + esc(S.logoUrl) + '" alt="">' : S.logo;
+  function chatSub() { document.getElementById('chatSub').textContent = chatAI ? (LANG === 'bn' ? '🌹 ROSE AI · সাথে সাথে উত্তর' : '🌹 ROSE AI · replies at once') : (LANG === 'bn' ? 'সাধারণত দ্রুত উত্তর দেয়' : 'Usually replies soon'); }
+  function say(t, who, label) {
+    if (label) { var w = document.createElement('div'); w.className = 'who'; w.textContent = label; cm.appendChild(w); }
+    var d = document.createElement('div'); d.className = who; d.textContent = t; cm.appendChild(d); cm.scrollTop = 99999; return d;
+  }
+  function showMsgs(list) {
+    (list || []).forEach(function (m) {
+      if (seen[m.id]) return; seen[m.id] = 1; lastAt = m.created_at;
+      if (m.sender === 'customer') say(m.body, 'u'); else say(m.body, 'b', m.sender === 'rose' ? '🌹 ROSE' : S.name);
+    });
+  }
+  var hello = function () { return LANG === 'bn' ? 'হ্যালো! 👋 ' + S.name + '-এ স্বাগতম। দাম, স্টক, ডেলিভারি বা অর্ডার নিয়ে যা জানতে চান লিখুন।' : 'Hi! 👋 Welcome to ' + S.name + '. Ask me about price, stock, delivery or your order.'; };
+  var opened = false;
+  function openChat() {
+    chat.classList.add('on'); chatSub();
+    if (!opened) {
+      opened = true; say(hello(), 'b', chatAI ? '🌹 ROSE' : S.name);
+      chatCall({ action: 'info' }).then(function (r) { if (r && typeof r.ai === 'boolean') { chatAI = r.ai; chatSub(); } }).catch(function () {});
+      chatCall({ action: 'poll', after: '' }).then(function (r) { showMsgs(r && r.messages); }).catch(function () {});
+    }
+    clearInterval(pollT);
+    if (S.live) pollT = setInterval(function () { if (!chat.classList.contains('on')) return clearInterval(pollT); chatCall({ action: 'poll', after: lastAt }).then(function (r) { showMsgs(r && r.messages); }).catch(function () {}); }, 7000);
+  }
+  document.getElementById('chatBtn').onclick = function () { if (chat.classList.contains('on')) chat.classList.remove('on'); else openChat(); };
   document.getElementById('chatX').onclick = function () { chat.classList.remove('on'); };
   document.getElementById('chatF').onsubmit = function (e) {
     e.preventDefault();
-    var i = document.getElementById('chatI'), t = i.value.trim(); if (!t) return; i.value = ''; say(t, 'u');
-    var l = t.toLowerCase(), hit = P.find(function (p) { return l.indexOf(p.name.toLowerCase().split(' ')[0]) >= 0; });
-    var a = hit ? hit.name + ' is ' + tk(hit.price) + ' (was ' + tk(hit.old) + ') and in stock.'
-      : /deliver|ডেলিভারি|charge/.test(l) ? 'Delivery: ৳ 60 inside Dhaka, ৳ 120 outside. ' + S.note
-      : /dose|ডোজ|খাব/.test(l) && S.pharmacy ? 'For dose, please ask your doctor or our pharmacist. I can help you order.'
-      : S.live ? 'Thanks! Please call ' + (S.phone || 'the shop') + ' or place the order, the shop will contact you.' : 'Thanks! In a real store the owner gets this message in the ROSE app at once and can reply.';
-    setTimeout(function () { say(a, 'b'); }, 600);
+    var i = document.getElementById('chatI'), t = i.value.trim(); if (!t) return; i.value = '';
+    var mine = say(t, 'u');
+    var bn = /[ঀ-৿]/.test(t);
+    if (chatAI) { typing = say('• • •', 'b ty'); }
+    chatCall({ action: 'send', text: t }).then(function (r) {
+      if (typing) { typing.remove(); typing = null; }
+      if (r && r.error) return say(r.error, 'b');
+      if (r && r.reply) { seen[r.reply.id] = 1; lastAt = r.reply.created_at; say(r.reply.body, 'b', '🌹 ROSE'); }
+      else if (r && r.ai === false) say(bn ? 'ধন্যবাদ! আপনার মেসেজ দোকানে পৌঁছেছে, খুব শিগগির উত্তর দেওয়া হবে।' + (S.whatsapp || S.phone ? ' জরুরি হলে WhatsApp: ' + (S.whatsapp || S.phone) : '') : 'Thanks! The shop got your message and will reply soon.' + (S.whatsapp || S.phone ? ' Urgent? WhatsApp ' + (S.whatsapp || S.phone) : ''), 'b', S.name);
+    }).catch(function () {
+      if (typing) { typing.remove(); typing = null; }
+      say(bn ? 'এখন পাঠানো গেল না। ইন্টারনেট দেখে আবার চেষ্টা করুন।' : 'Could not send now. Check the internet and try again.', 'b');
+    });
+    mine.title = new Date().toLocaleTimeString();
   };
 
   counts(); route();
