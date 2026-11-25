@@ -26,6 +26,7 @@ import {
   responseText,
 } from './geminiRest';
 import { classifyGeminiError } from '../utils/errorClassifier';
+import { brainRecall, buildBrainTools, RECALL_HINT, runBrainTool } from './brain';
 import { getConfirmationPromptText, validatePhoneAction } from '../utils/phoneActions';
 import { validateNavigateToolArgs } from '../utils/tiyaNavigation';
 import { BENGALI_DIALECTS, DEFAULT_LIVE_MODELS, LiveModelInfo, languageCode } from '../types/tiya';
@@ -185,12 +186,21 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         .slice(-16)
         .map((h: any) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', text: String(h.text || '') }))
         .filter((h: any) => h.text.trim());
-      const system = String(body?.systemInstruction || 'You are ROSE, a helpful Bengali-default AI assistant.');
+      let system = String(body?.systemInstruction || 'You are ROSE, a helpful Bengali-default AI assistant.');
+      // ROSE Brain: a question about an earlier talk → look it up first, then answer from the real notes
+      if (RECALL_HINT.test(message)) {
+        const r = await brainRecall(message).catch(() => null);
+        if (r?.ok) {
+          system += r.found
+            ? `\n\nROSE BRAIN (real past notes and messages of this user, found just now):\n${(r.results || []).join('\n')}\n${r.instruction}`
+            : '\n\nROSE BRAIN: nothing was found in past talks for this question. Say honestly you cannot find it and ask him to remind you; never invent.';
+        }
+      }
       let lastErr: unknown = null;
       // Camera picture (voice + camera on): only Gemini can see it, so skip Groq and search
       const image = typeof body?.image === 'string' && body.image.length > 100 ? String(body.image) : '';
       // Owner (emotional ROSE): Gemini speaks far more naturally than Groq, so Groq is only a backup
-      const ownerMode = system.includes('FINAL REMINDER (owner)');
+      const ownerMode = system.includes('FINAL REMINDER (owner)') || system.includes('FINAL REMINDER (him)');
       const groqKey = (image || ownerMode) && key ? '' : getGroqKey();
       const groqBackup = getGroqKey();
 
@@ -205,7 +215,8 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         /খবর|নিউজ|আজকের|আজ কি|সর্বশেষ|লেটেস্ট|সার্চ|খুঁজে দাও|খুঁজে বের|গুগল|দাম কত|দাম কি|রেট|আপডেট|লঞ্চ|রিলিজ|কে জিতেছে|ফলাফল|রেজাল্ট|আবহাওয়া|বাজার|ট্রেন্ডিং|ভাইরাল|সিলেবাস|ভর্তি|news|latest|search|google|price|rate|update|launch|release|today|current|weather|score|result|trending|viral|ai tool|new model|syllabus|admission/i.test(
           message,
         );
-      if (key && needsSearch && !image) {
+      const smallTalk = /^(এই |হ্যালো |হাই )?(রোজ,? )?(কী|কি) খবর( তোমার)?[?।!\s]*$|কেমন আছ/i.test(message.trim()) && message.length < 40;
+      if (key && needsSearch && !image && !smallTalk) {
         for (const model of await pickChatModels(key, body?.model)) {
           try {
             const res = await generateContent(
@@ -273,6 +284,7 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
                     buildPhoneActionTool(false),
                     buildNavigateAppTool(false),
                     buildGetLatestMotivationTool(false),
+                    ...buildBrainTools().filter((t) => t.name === 'brain_remember'),
                   ],
                 },
               ],
@@ -280,15 +292,20 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
             let action = null;
             let navigate = null;
             let needsMotivation = false;
+            let remembered = false;
             for (const call of responseCalls(res)) {
               if (call.name === 'trigger_phone_action' && !action) action = validatePhoneAction(call.args);
               else if (call.name === 'navigate_app' && !navigate) navigate = validateNavigateToolArgs(call.args);
               else if (call.name === 'get_latest_motivation') needsMotivation = true;
+              else if (call.name === 'brain_remember') {
+                remembered = true;
+                void runBrainTool('brain_remember', call.args);
+              }
             }
             let text = responseText(res);
             if (action && !text) text = getConfirmationPromptText(action);
             else if (navigate && !text) text = (navigate as any).confirmBn || '';
-            return ok({ ok: true, text: text || 'বলুন, কীভাবে সাহায্য করতে পারি?', action, navigate, needsMotivation, model });
+            return ok({ ok: true, text: text || (remembered ? 'আচ্ছা, মনে রাখলাম।' : 'হুম, বলো।'), action, navigate, needsMotivation, model });
           } catch (err) {
             lastErr = err;
             if (isBadKey(err)) break;
@@ -768,7 +785,7 @@ export class LocalLiveSocket {
 
     const candidates = await pickLiveModels(apiKey, models);
     const tools = [
-      { functionDeclarations: [buildPhoneActionTool(false), buildNavigateAppTool(false), buildGetLatestMotivationTool(false)] },
+      { functionDeclarations: [buildPhoneActionTool(false), buildNavigateAppTool(false), buildGetLatestMotivationTool(false), ...buildBrainTools()] },
     ];
 
     for (const modelId of candidates) {
@@ -783,6 +800,8 @@ export class LocalLiveSocket {
             generationConfig: {
               responseModalities: ['AUDIO'],
               speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } } },
+              // "Extended Thinking" voice model: let it think a little before it talks (same as the server path)
+              ...(/thinking/i.test(modelId) ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
             },
             systemInstruction: { parts: [{ text: systemInstruction }] },
             tools,
@@ -1038,6 +1057,10 @@ export class LocalLiveSocket {
           this.emit({ type: 'navigate', command: nav });
           this.sendTool(call.id, call.name, { status: 'navigated', message: (nav as any).confirmBn });
         }
+      } else if (call.name === 'brain_recall' || call.name === 'brain_remember') {
+        const id = call.id;
+        const name = call.name;
+        void runBrainTool(name, call.args).then((resp) => this.sendTool(id, name, resp));
       } else if (call.name === 'get_latest_motivation') {
         const token = call.id || `mot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
         const timer = setTimeout(() => {

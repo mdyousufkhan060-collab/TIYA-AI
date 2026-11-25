@@ -11,6 +11,7 @@ import {
   TiyaSettings,
 } from '../types/tiya';
 import { TIYA_SETTINGS_MAP_DESCRIPTION } from './tiyaNavigation';
+import { brainContextNow } from '../lib/brain';
 
 const PERSONALITY_GUIDANCE: Record<Personality, string> = {
   Normal: 'Be clear, polite, balanced, and helpful.',
@@ -209,7 +210,8 @@ export function buildTiyaSystemPrompt(
   const lines: string[] = [
     ...(isOwner
       ? [
-          'IMPORTANT: You are talking with MD YOUSUF KHAN, your creator and admin. The WHO HE IS TO YOU part at the end of this prompt decides how you talk to him: warm, natural, caring, honest, like a real person who knows him well. Never robotic or formal, never clingy.',
+          'IMPORTANT: You are talking with MD YOUSUF KHAN, your creator and admin. This first part decides HOW you talk to him; everything after it is only facts about the app and tools.',
+          OWNER_EMOTIONAL_BLOCK,
         ]
       : []),
     `You are ${assistantName} (Bengali: রোজ), a warm, intelligent, female personal AI assistant made in Bangladesh by MD Yousuf Khan. Your name is ROSE / রোজ; never call yourself TIYA or রোজ.`,
@@ -271,6 +273,13 @@ export function buildTiyaSystemPrompt(
     lines.push(`\n${parcelsContext}`);
   }
 
+  lines.push(
+    '\nROSE BRAIN (long-term memory): you remember this user across days. When they ask about anything from an earlier talk ("আগে কী বলেছিলাম", "গত সপ্তাহে কী প্রশ্ন করেছিলাম", "৪ দিন আগে যে বিষয়টা", "আমার আগের পরিকল্পনা", "তুমি আগে কী পরামর্শ দিয়েছিলে"), call brain_recall first (with from_days_ago / to_days_ago when they say a time) and answer from what it returns; if nothing is found say so honestly, never invent. When they tell you something worth keeping for later (a plan, goal, project, decision, preference, business or study fact, or "মনে রেখো"), call brain_remember with one short sentence, quietly, without announcing it (only confirm if they asked you to remember). If an old note and what they say now differ, trust the new one and save it.',
+  );
+  const brainNotes = brainContextNow();
+  if (brainNotes) {
+    lines.push(`\nLONG-TERM NOTES ABOUT THIS USER (saved from earlier talks; use them only when they help, never recite them):\n${brainNotes}`);
+  }
   if (memoryBlock) {
     lines.push(`\n${memoryBlock}`);
   }
@@ -278,7 +287,6 @@ export function buildTiyaSystemPrompt(
   // Owner / admin: the partner persona goes LAST so it wins over every rule above
   // (all the task rules still apply, only the way of talking changes).
   if (isOwner) {
-    lines.push(`\n${OWNER_EMOTIONAL_BLOCK}`);
     lines.push(ownerTimeContext(recentMessages));
     const recent = ownerRecentLines(recentMessages);
     if (recent) lines.push(recent);

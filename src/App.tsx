@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
+import { brainContext } from './lib/brain';
 import {
   ChatMessage,
   ErrorLogEntry,
@@ -723,6 +724,13 @@ export default function App() {
 
   // Same conversation on every device: the last 200 chat messages are kept in the cloud,
   // so ROSE has the same history (and the same "how long since he talked") on PC and phone.
+  // ROSE Brain: load this user's long-term notes for the prompt (and refresh them every few minutes)
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    void brainContext(true);
+    const t = window.setInterval(() => void brainContext(), 5 * 60 * 1000);
+    return () => window.clearInterval(t);
+  }, [session?.user?.id]);
   const chatSyncReadyRef = useRef(false);
   const chatSyncedRef = useRef<Set<string>>(new Set());
   const chatTextRef = useRef<Map<string, string>>(new Map());
@@ -1405,7 +1413,7 @@ export default function App() {
             {
               id: makeId(),
               role: 'assistant',
-              text: pClean || (pAction ? getConfirmationPromptText(pAction) : 'বলুন, কীভাবে সাহায্য করতে পারি?'),
+              text: pClean || (pAction ? getConfirmationPromptText(pAction) : (isOwner ? 'হুম, বলো।' : 'বলুন, কীভাবে সাহায্য করতে পারি?')),
               timestamp: Date.now(),
               source: 'chat',
               ...(pAction ? { pendingAction: pAction, actionStatus: 'pending' as const } : {}),
@@ -1475,7 +1483,7 @@ export default function App() {
             ? getConfirmationPromptText(pendingAction)
             : parsedNav
               ? parsedNav.confirmBn
-              : 'বলুন, কীভাবে সাহায্য করতে পারি?');
+              : (isOwner ? 'হুম, বলো।' : 'বলুন, কীভাবে সাহায্য করতে পারি?'));
 
         const assistantMsg: ChatMessage = {
           id: makeId(),
