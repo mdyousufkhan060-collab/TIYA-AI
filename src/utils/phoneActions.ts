@@ -50,6 +50,12 @@ export const SUPPORTED_PHONE_ACTIONS_META = [
     example: '{"action":"close_opened"}',
     description: 'Closes the tabs ROSE opened (YouTube, Maps...) and comes back to ROSE.',
   },
+  {
+    action: 'go_home',
+    label: 'Phone Home Screen',
+    example: '{"action":"go_home"}',
+    description: 'Goes to the phone\'s own home screen (ROSE Android app only).',
+  },
 ] as const;
 
 const SEARCH_SITES: Record<string, { label: string; url: (q: string) => string }> = {
@@ -64,7 +70,20 @@ const SEARCH_SITES: Record<string, { label: string; url: (q: string) => string }
   directions: { label: 'Google Maps directions', url: (q) => `https://www.google.com/maps/dir/?api=1&destination=${q}` },
   flights: { label: 'Google Flights', url: (q) => `https://www.google.com/travel/flights?q=${q}` },
   hotels: { label: 'Google Hotels', url: (q) => `https://www.google.com/travel/hotels?q=${q}` },
+  store: { label: 'ROSE Store Builder', url: (q) => `https://www.myrosebd.com/start?d=${storeDesign(q)}` },
+  demo: { label: 'ROSE demo store', url: (q) => `https://www.myrosebd.com/demos/store.html?s=${storeDesign(q)}` },
 };
+
+/** Words about what the user sells -> one of the 6 store designs. */
+export function storeDesign(q: string): string {
+  const t = decodeURIComponent(q || '').toLowerCase();
+  if (/medic|pharma|ঔষধ|ওষুধ|ফার্মেসি|medicare/.test(t)) return 'medicare';
+  if (/furnit|sofa|bed|table|chair|ফার্নিচার|আসবাব|homenest/.test(t)) return 'homenest';
+  if (/food|restaurant|burger|pizza|biryani|cake|খাবার|রেস্টুরেন্ট|বিরিয়ানি|কেক|foodbazaar/.test(t)) return 'foodbazaar';
+  if (/grocer|rice|oil|vegetable|fish|meat|বাজার|মুদি|চাল|তেল|সবজি|মাছ|sotadari/.test(t)) return 'sotadari';
+  if (/fashion|cloth|dress|shirt|saree|panjabi|shoe|জামা|কাপড়|শাড়ি|পাঞ্জাবি|জুতা|ফ্যাশন|fashionhub/.test(t)) return 'fashionhub';
+  return 'shopshotoi';
+}
 
 /* Tabs / windows ROSE opened, so "বন্ধ করো" can close them again. */
 const openedWindows: Window[] = [];
@@ -115,6 +134,8 @@ export function normalizeSearchSite(site: unknown): string {
   if (/wiki/.test(s)) return 'wikipedia';
   if (/image|photo|ছবি/.test(s)) return 'images';
   if (/news|খবর/.test(s)) return 'news';
+  if (/demo|ডেমো/.test(s)) return 'demo';
+  if (/store|shop|website|দোকান|ওয়েবসাইট|start/.test(s)) return 'store';
   return 'google';
 }
 
@@ -204,7 +225,9 @@ export function getConfirmationPromptText(action: PhoneAction): string {
     case 'camera':
       return action.on ? 'ক্যামেরা চালু হচ্ছে…' : 'ক্যামেরা বন্ধ হচ্ছে…';
     case 'close_opened':
-      return 'ROSE যেসব ট্যাব খুলেছিল সেগুলো বন্ধ করে ROSE-এ ফিরবো?';
+      return 'ROSE-এ ফিরে আসছি…';
+    case 'go_home':
+      return 'ফোনের হোম স্ক্রিনে যাচ্ছি…';
     case 'web_search': {
       const site = SEARCH_SITES[normalizeSearchSite(action.site)];
       return `${site.label}-এ "${action.query}" খোলা হচ্ছে…`;
@@ -270,8 +293,11 @@ export function validatePhoneAction(raw: unknown): PhoneAction | null {
       return null;
     case 'close_opened':
     case 'close_app':
-    case 'go_home':
+    case 'rose_home':
       return { action: 'close_opened' };
+    case 'go_home':
+    case 'phone_home':
+      return { action: 'go_home' };
     case 'courier_dispatch':
     case 'send_parcels': {
       const text = typeof obj.text === 'string' ? obj.text : typeof obj.query === 'string' ? obj.query : '';
@@ -404,6 +430,10 @@ export function buildWebFallback(action: PhoneAction): ActionExecutionResult {
       via: 'web_fallback',
       messageBn: n > 0 ? `${n}টা ট্যাব বন্ধ করে ROSE-এ ফিরে এসেছি।` : 'ROSE-এ ফিরে এসেছি। অন্য অ্যাপ নিজে বন্ধ করতে হলে ROSE Android অ্যাপ লাগবে।',
     };
+  }
+
+  if (action.action === 'go_home') {
+    return { success: false, via: 'unsupported', messageBn: 'ফোনের হোম স্ক্রিনে যাওয়া শুধু ROSE Android অ্যাপ থেকে হয়।' };
   }
 
   if (action.action === 'web_search') {

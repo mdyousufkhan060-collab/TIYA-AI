@@ -250,6 +250,7 @@ export type PhoneAction =
   | { action: 'messenger_call'; contact: string }
   | { action: 'web_search'; site: string; query: string }
   | { action: 'close_opened' }
+  | { action: 'go_home' }
   | { action: 'courier_dispatch'; plan: DispatchStep[] }
   | { action: 'parcels_email' }
   | { action: 'camera'; on: boolean };

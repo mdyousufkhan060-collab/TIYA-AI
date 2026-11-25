@@ -34,6 +34,7 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
       case 'web_search':
         return <Search className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
       case 'close_opened':
+      case 'go_home':
         return <X className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
       case 'camera':
         return <Smartphone className="h-4 w-4 text-teal-500 dark:text-teal-400" />;
@@ -60,7 +61,9 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
       case 'web_search':
         return `Search ${action.site.toUpperCase()} · ${action.query}`;
       case 'close_opened':
-        return 'Close & back to ROSE';
+        return 'Back to ROSE';
+      case 'go_home':
+        return 'Phone home screen';
       case 'courier_dispatch':
         return 'Send parcels to courier';
       case 'parcels_email':
