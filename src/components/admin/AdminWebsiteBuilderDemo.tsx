@@ -4,9 +4,9 @@ import { SettingsBar } from '../settings/SettingsShell';
 import { supabase } from '../../lib/supabase';
 
 /**
- * Admin > 22 WEBSITE BUILDER: the full live history of ROSE Store Builder.
+ * Admin > 20 WEBSITE BUILDER: the full live history of ROSE Store Builder.
  * Every bar opens real data from Supabase (stores, orders, sign-ups, payments, chats, alerts).
- * Giving access and plan prices live in 23 WEBSITE ACCESS. ROSE (app) history stays in its own bars.
+ * Giving access and plan prices live in 21 WEBSITE ACCESS. ROSE (app) history stays in its own bars.
  */
 type HubStore = {
   id: string; slug: string; name: string; owner_email?: string; published: boolean; suspended: boolean; custom_domain?: string | null;
@@ -32,6 +32,35 @@ const storeUrl = (s: HubStore) => (s.custom_domain ? `https://${s.custom_domain}
 const STATUS_COLOR: Record<string, string> = { new: 'text-amber-300', confirmed: 'text-sky-300', packed: 'text-sky-300', shipped: 'text-indigo-300', delivered: 'text-emerald-300', cancelled: 'text-rose-300', returned: 'text-rose-300' };
 
 type Page = 'stores' | 'orders' | 'signups' | 'payments' | 'chats' | 'alerts' | 'demos';
+
+/** What the admin sees in each bar, and one sample row shown while the list is still empty. */
+const INFO: Record<Page, { what: string[]; example?: string[] }> = {
+  stores: {
+    what: ['Every real store: name, owner Gmail, LIVE / DRAFT / CLOSED', 'Plan and days left, products and orders count', 'Phone, address, opening date', 'OPEN STORE button (opens the live site)'],
+    example: ['Tazu Mart · LIVE', 'owner@gmail.com', 'STARTER · 87 days left · 42 products · 18 orders', '01XXXXXXXXX · Mirpur, Dhaka'],
+  },
+  orders: {
+    what: ['Every order from every store, newest first', 'Order no., store name, total', 'Customer name, phone, district, items', 'Status (NEW, SHIPPED, DELIVERED…), payment, time'],
+    example: ['#1024 · Tazu Mart · ৳1,280', 'Rahim Uddin · 01712XXXXXX · Dhaka', 'Panjabi ×1, Cap ×2', 'NEW · COD · 25 Nov 2026, 21:10'],
+  },
+  signups: {
+    what: ['Every Gmail that got the Store Builder (trial, paid, or given by you)', 'Plan, months, days left, amount paid', 'Their store name, or "no store yet"', 'Start and end date'],
+    example: ['shop.owner@gmail.com', 'STARTER · 3 months · 87 days left · paid ৳2,997', 'Store: Tazu Mart', 'Started 25 Nov 2026 · ends 25/02/2027'],
+  },
+  payments: {
+    what: ['Every plan payment sent from the website (bKash, Nagad, Rocket)', 'Gmail, plan, months, amount, sender number, TrxID', 'APPROVED / PENDING / REJECTED', 'Money SMS received on your phone, MATCHED or WAITING'],
+    example: ['shop.owner@gmail.com · APPROVED', 'STARTER · 3 months · ৳2,997 · bKash from 01XXXXXXXXX', 'TrxID CKP3ABC123 · 25 Nov 2026'],
+  },
+  chats: {
+    what: ['Every customer chat: real stores, own websites (widget), demo stores', 'Where it came from and how many messages', 'Last message and who wrote it (Customer, ROSE, Owner)'],
+    example: ['Tazu Mart · 4 msg', 'ROSE: Delivery inside Dhaka is 60 Tk, 1-2 days.', '25 Nov 2026, 21:12'],
+  },
+  alerts: {
+    what: ['New store opened (Gmail, link, phone, address)', 'Store info changed by the owner', 'Payment to check'],
+    example: ['New store: Tazu Mart', 'owner@gmail.com · tazumart.myrosebd.com · 01XXXXXXXXX · Mirpur', '25 Nov 2026, 20:40'],
+  },
+  demos: { what: ['The 6 demo designs with STORE, ADMIN and PHONE+PC buttons'] },
+};
 
 export const AdminWebsiteBuilderDemo: React.FC = () => {
   const [page, setPage] = useState<Page | null>(null);
@@ -99,7 +128,17 @@ export const AdminWebsiteBuilderDemo: React.FC = () => {
       <ExternalLink className="h-3.5 w-3.5" />{label}
     </a>
   );
-  const empty = (t: string) => <p className="px-1 text-[12px] text-slate-400">{loading ? 'Loading…' : t}</p>;
+  const empty = (t: string) => (
+    <div className="space-y-1.5">
+      <p className="px-1 text-[12px] text-slate-400">{loading ? 'Loading…' : t}</p>
+      {!loading && page && INFO[page].example && (
+        <div className="rounded-lg border border-dashed border-white/15 p-2 opacity-70">
+          <p className="mb-1 text-[9.5px] font-bold tracking-wider text-amber-300">EXAMPLE · a real row will look like this</p>
+          {INFO[page].example!.map((l, i) => <p key={l} className={i ? 'text-[11px] text-slate-400' : 'text-[12.5px] font-bold text-white'}>{l}</p>)}
+        </div>
+      )}
+    </div>
+  );
 
   if (!page) {
     return (
@@ -114,7 +153,7 @@ export const AdminWebsiteBuilderDemo: React.FC = () => {
             {stat(tk(sales), 'SALES', 'orders')}
             {stat(pending.length, 'TO CHECK', 'payments')}
           </div>
-          <p className="text-[10.5px] text-slate-400">Every Gmail and GIVE ACCESS: 23 WEBSITE ACCESS. ROSE branding and download links: 24 SITE SWITCHES.</p>
+          <p className="text-[10.5px] text-slate-400">Every Gmail and GIVE ACCESS: 21 WEBSITE ACCESS. ROSE branding and download links: 22 SITE SWITCHES.</p>
           <div className="grid grid-cols-2 gap-2">
             {ext('/demos/', 'DEMO STORES')}
             {ext('/start', 'STORE SIGN-UP PAGE')}
@@ -142,6 +181,10 @@ export const AdminWebsiteBuilderDemo: React.FC = () => {
         </button>
         <button type="button" onClick={() => void load()} className="ml-auto text-[11px] font-bold text-slate-300">RELOAD</button>
       </div>
+      <div className={card + ' space-y-1'}>
+        <p className="text-[10.5px] font-bold tracking-wider text-teal-300">WHAT YOU SEE HERE</p>
+        {INFO[page].what.map((w) => <p key={w} className="flex gap-2 text-[11.5px] text-slate-300"><span className="text-teal-400">•</span>{w}</p>)}
+      </div>
       {page !== 'demos' && (
         <input className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search Gmail, name, phone, TrxID…" />
       )}
@@ -161,7 +204,7 @@ export const AdminWebsiteBuilderDemo: React.FC = () => {
               </p>
               <p className="text-[11px] text-slate-400">{[s.whatsapp || s.phone, s.address].filter(Boolean).join(' · ')}</p>
               <p className="text-[10.5px] text-slate-500">Opened {when(s.created_at)}</p>
-              <div className="grid grid-cols-2 gap-2 pt-1">{ext(storeUrl(s), 'OPEN STORE')}<span className="flex items-center justify-center text-[10.5px] text-slate-400">Plan & switches: 23</span></div>
+              <div className="grid grid-cols-2 gap-2 pt-1">{ext(storeUrl(s), 'OPEN STORE')}<span className="flex items-center justify-center text-[10.5px] text-slate-400">Plan & switches: 21</span></div>
             </div>
           ))}
         </div>
@@ -186,7 +229,7 @@ export const AdminWebsiteBuilderDemo: React.FC = () => {
 
       {page === 'signups' && (
         <div className="space-y-1.5">
-          <p className="px-1 text-[10.5px] text-slate-400">Everyone who got the Store Builder (free trial from /start, paid, or given by you). To give access to a new Gmail, use 23 WEBSITE ACCESS.</p>
+          <p className="px-1 text-[10.5px] text-slate-400">Everyone who got the Store Builder (free trial from /start, paid, or given by you). To give access to a new Gmail, use 21 WEBSITE ACCESS.</p>
           {!access.length && empty('Nobody has website access yet.')}
           {access.filter((a) => has(a.email, a.plan, a.note)).map((a) => {
             const on = new Date(a.ends_at) > new Date();
@@ -207,7 +250,7 @@ export const AdminWebsiteBuilderDemo: React.FC = () => {
 
       {page === 'payments' && (
         <div className="space-y-1.5">
-          <p className="px-1 text-[10.5px] text-slate-400">APPROVE / REJECT is in 23 WEBSITE ACCESS → PAYMENTS TO CHECK. This is the full history.</p>
+          <p className="px-1 text-[10.5px] text-slate-400">APPROVE / REJECT is in 21 WEBSITE ACCESS → PAYMENTS TO CHECK. This is the full history.</p>
           {!pays.length && empty('No store payments yet.')}
           {pays.filter((p) => has(p.email, p.trx_id, p.sender_number, p.method)).map((p) => (
             <div key={p.id} className={rowCls}>
@@ -220,7 +263,7 @@ export const AdminWebsiteBuilderDemo: React.FC = () => {
             </div>
           ))}
           <p className="px-1 pt-2 text-[11px] font-bold tracking-wider text-slate-300">MONEY SMS RECEIVED · {sms.length}</p>
-          {!sms.length && empty('No payment SMS yet.')}
+          {!sms.length && !loading && <p className="px-1 text-[12px] text-slate-400">No payment SMS yet.</p>}
           {sms.filter((m) => has(m.trx_id, m.sender, m.method)).map((m) => (
             <p key={m.id} className={rowCls + ' text-[11px] text-slate-300'}>
               {m.method} <b className="text-white">{tk(m.amount)}</b> · {m.sender || '—'} · <span className="select-all">{m.trx_id}</span> · <b className={m.used_for ? 'text-emerald-300' : 'text-amber-300'}>{m.used_for ? 'MATCHED' : 'WAITING'}</b>

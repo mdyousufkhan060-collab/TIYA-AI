@@ -36,7 +36,7 @@ import { AdminVideosPage, AdminGuidePage } from './AdminGuideVideos';
 import { AdminWebsiteBuilderDemo } from './AdminWebsiteBuilderDemo';
 import { AdminWebsiteAccessPage } from './AdminWebsiteAccessPage';
 import { AdminBrandCard, AdminBrandPage, AdminSiteSwitchesPage } from './AdminBrandPage';
-import { AdminApiProvidersPage, AdminDeletionRequestsPage, AdminOverviewTiles, AdminSystemLogsPage } from './AdminSystemPages';
+import { AdminDeletionRequestsPage, AdminOverviewTiles } from './AdminSystemPages';
 
 type AdminView =
   | 'hub'
@@ -440,20 +440,18 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               income: '07 Income',
               logins: '08 Login Activity',
               notify_all: '09 Notify All',
-              api_providers: '12 API Providers',
-              system_logs: '13 System Logs',
-              deletions: '14 Delete Requests',
-              dev_profile: '15 Developers',
-              businesses: '16 Businesses',
-              team_activity: '17 Team Activity',
-              reports: '18 Reports & Feedback',
-              team_list: '19 Imtiaz List',
-              store: '20 Store Readiness',
-              videos: '21 Tutorial Videos',
-              website_builder: '22 Website Builder',
-              website_access: '23 Website Access',
+              deletions: '12 Delete Requests',
+              dev_profile: '13 Developers',
+              businesses: '14 Businesses',
+              team_activity: '15 Team Activity',
+              reports: '16 Reports & Feedback',
+              team_list: '17 Imtiaz List',
+              store: '18 Store Readiness',
+              videos: '19 Tutorial Videos',
+              website_builder: '20 Website Builder',
+              website_access: '21 Website Access',
               brand: 'myrosebd.com',
-              site_switches: '24 Site Switches',
+              site_switches: '22 Site Switches',
               guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
@@ -496,19 +494,17 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               }}
               testId="admin-developer-tools-btn"
             />
-            <SettingsBar badge="12" title="API PROVIDERS" tone={activeView === 'api_providers' ? 'accent' : 'default'} onClick={() => go('api_providers')} testId="admin-bar-api" />
-            <SettingsBar badge="13" title="SYSTEM LOGS" tone={activeView === 'system_logs' ? 'accent' : 'default'} onClick={() => go('system_logs')} testId="admin-bar-logs" />
-            <SettingsBar badge="14" title="DELETE REQUESTS" tone={activeView === 'deletions' ? 'accent' : 'default'} onClick={() => go('deletions')} testId="admin-bar-deletions" />
-            <SettingsBar badge="15" title="DEVELOPERS" value="PUBLIC" tone={activeView === 'dev_profile' ? 'accent' : 'default'} onClick={() => go('dev_profile')} testId="admin-bar-dev-profile" />
-            <SettingsBar badge="16" title="BUSINESSES" tone={activeView === 'businesses' ? 'accent' : 'default'} onClick={() => go('businesses')} testId="admin-bar-businesses" />
-            <SettingsBar badge="17" title="TEAM ACTIVITY" tone={activeView === 'team_activity' ? 'accent' : 'default'} onClick={() => go('team_activity')} testId="admin-bar-team" />
-            <SettingsBar badge="18" title="REPORTS & FEEDBACK" value={openReports > 0 ? `${openReports} NEW` : undefined} tone={openReports > 0 || activeView === 'reports' ? 'accent' : 'default'} onClick={() => go('reports')} testId="admin-bar-reports" />
-            <SettingsBar badge="19" title="IMTIAZ LIST" value="PC & APP" tone={activeView === 'team_list' ? 'accent' : 'default'} onClick={() => go('team_list')} testId="admin-bar-team-list" />
-            <SettingsBar badge="20" title="STORE READINESS" value="PLAY · MS" tone={activeView === 'store' ? 'accent' : 'default'} onClick={() => go('store')} testId="admin-bar-store" />
-            <SettingsBar badge="21" title="TUTORIAL VIDEOS" value="YOUTUBE" tone={activeView === 'videos' ? 'accent' : 'default'} onClick={() => go('videos')} testId="admin-bar-videos" />
-            <SettingsBar badge="22" title="WEBSITE BUILDER" value="STORES · LIVE" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
-            <SettingsBar badge="23" title="WEBSITE ACCESS" value="GMAIL" tone={activeView === 'website_access' ? 'accent' : 'default'} onClick={() => go('website_access')} testId="admin-bar-website-access" />
-            <SettingsBar badge="24" title="SITE SWITCHES" value="ROSE BRANDING" tone={activeView === 'site_switches' ? 'accent' : 'default'} onClick={() => go('site_switches')} testId="admin-bar-site-switches" />
+            <SettingsBar badge="12" title="DELETE REQUESTS" tone={activeView === 'deletions' ? 'accent' : 'default'} onClick={() => go('deletions')} testId="admin-bar-deletions" />
+            <SettingsBar badge="13" title="DEVELOPERS" value="PUBLIC" tone={activeView === 'dev_profile' ? 'accent' : 'default'} onClick={() => go('dev_profile')} testId="admin-bar-dev-profile" />
+            <SettingsBar badge="14" title="BUSINESSES" tone={activeView === 'businesses' ? 'accent' : 'default'} onClick={() => go('businesses')} testId="admin-bar-businesses" />
+            <SettingsBar badge="15" title="TEAM ACTIVITY" tone={activeView === 'team_activity' ? 'accent' : 'default'} onClick={() => go('team_activity')} testId="admin-bar-team" />
+            <SettingsBar badge="16" title="REPORTS & FEEDBACK" value={openReports > 0 ? `${openReports} NEW` : undefined} tone={openReports > 0 || activeView === 'reports' ? 'accent' : 'default'} onClick={() => go('reports')} testId="admin-bar-reports" />
+            <SettingsBar badge="17" title="IMTIAZ LIST" value="PC & APP" tone={activeView === 'team_list' ? 'accent' : 'default'} onClick={() => go('team_list')} testId="admin-bar-team-list" />
+            <SettingsBar badge="18" title="STORE READINESS" value="ROSE APP · PLAY · MS" tone={activeView === 'store' ? 'accent' : 'default'} onClick={() => go('store')} testId="admin-bar-store" />
+            <SettingsBar badge="19" title="TUTORIAL VIDEOS" value="YOUTUBE" tone={activeView === 'videos' ? 'accent' : 'default'} onClick={() => go('videos')} testId="admin-bar-videos" />
+            <SettingsBar badge="20" title="WEBSITE BUILDER" value="STORES · LIVE" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
+            <SettingsBar badge="21" title="WEBSITE ACCESS" value="GMAIL" tone={activeView === 'website_access' ? 'accent' : 'default'} onClick={() => go('website_access')} testId="admin-bar-website-access" />
+            <SettingsBar badge="22" title="SITE SWITCHES" value="ROSE BRANDING" tone={activeView === 'site_switches' ? 'accent' : 'default'} onClick={() => go('site_switches')} testId="admin-bar-site-switches" />
           </div>
   );
 
@@ -604,8 +600,6 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'income' && <AdminIncomePage />}
         {view === 'give_premium' && <AdminGivePremiumPage />}
         {view === 'logins' && <AdminLoginActivityPage />}
-        {view === 'api_providers' && <AdminApiProvidersPage />}
-        {view === 'system_logs' && <AdminSystemLogsPage />}
         {view === 'deletions' && <AdminDeletionRequestsPage />}
         {view === 'dev_profile' && <AdminDeveloperProfilePage />}
         {view === 'businesses' && <AdminBusinessesPage />}

@@ -10,7 +10,7 @@ import { INVOICE_SIZES, PRINT_CSS, invoiceDims, invoicePreviewHTML, STICKER_SIZE
 /**
  * Workspace > MY STORE: the ROSE Store Builder for the store owner.
  * Pick a demo design, then manage Products, Categories, Orders and Homepage.
- * Access comes from Admin > 23 WEBSITE ACCESS (or the 5-day free trial).
+ * Access comes from Admin > 21 WEBSITE ACCESS (or the 5-day free trial).
  */
 type Access = { plan: StorePlanId; ends_at: string; stores_limit: number; products_limit: number } | null;
 type Store = {
