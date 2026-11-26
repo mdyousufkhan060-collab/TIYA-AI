@@ -746,7 +746,27 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
         </button>
         <SettingsBar badge="02" title="MYROSEBD.COM BUSINESS" value={modeLabel} onClick={() => setView('rose_hub')} testId="ws-rose" />
         <SettingsBar badge="03" title="WEBSITE ADMIN" value="STORE · ORDERS · PRODUCTS" onClick={() => setView('store')} testId="ws-site-admin" />
-        {shopUrl && <SettingsBar badge="04" title="MY SHOP" value="CUSTOMER VIEW ↗" onClick={() => window.open(shopUrl, '_blank', 'noopener')} testId="ws-shop" />}
+        {shopUrl && (
+          <SettingsBar
+            badge="04"
+            title="MY SHOP"
+            value="CUSTOMER VIEW ↗"
+            onClick={() => {
+              // open the shop's home page, already signed in with this Gmail (the shop is another address, so the sign-in goes along)
+              const w = window.open('', '_blank');
+              void supabase.auth.getSession().then(({ data }) => {
+                const ss = data.session;
+                const base = shopUrl;
+                const url = ss
+                  ? `${base}#access_token=${encodeURIComponent(ss.access_token)}&refresh_token=${encodeURIComponent(ss.refresh_token)}&expires_in=${Math.max(60, (ss.expires_at || 0) - Math.round(Date.now() / 1000))}&token_type=bearer`
+                  : `${base}#/`;
+                if (w) w.location.href = url;
+                else window.location.href = url;
+              });
+            }}
+            testId="ws-shop"
+          />
+        )}
       </div>
     );
   } else if (view === 'hub' || view === 'rose_hub') {

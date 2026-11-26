@@ -698,7 +698,8 @@ function start(S, P, liveId) {
   if (S.live && /(^#|&)access_token=/.test(location.hash)) {
     var hp = new URLSearchParams(location.hash.slice(1));
     if (useTok(hp.get('access_token'), hp.get('refresh_token'), Date.now() + (+hp.get('expires_in') || 3600) * 1000)) setTimeout(function () { toast('Signed in: ' + cust.email); }, 400);
-    history.replaceState(null, '', authBack() + '#/account');
+    // after login the shop opens on its home page
+    history.replaceState(null, '', authBack() + '#/');
   } else if (S.live && /(^#|&)error=/.test(location.hash)) {
     var eh = new URLSearchParams(location.hash.slice(1));
     setTimeout(function () { toast(eh.get('error_description') || 'Login failed. Try again.'); }, 400);

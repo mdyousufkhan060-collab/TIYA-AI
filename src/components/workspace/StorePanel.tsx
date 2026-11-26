@@ -141,8 +141,10 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = (
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create' | 'viewas'>('home');
   const [roles, setRoles] = useState<Record<string, string>>({});
+  // owner can look at the admin the way a staff role sees it (nothing opens or saves in this view)
+  const [previewRole, setPreviewRole] = useState('');
   const [, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
 
@@ -222,7 +224,8 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = (
     return <CreateStore demos={demos} canCreate={stores.length < limit} onBack={stores.length ? () => setTab('home') : undefined} onDone={() => { setTab('home'); void load(); }} />;
   }
   if (!store) return null;
-  const myRole = roles[store.id] && store.owner_id !== userId && !isAdmin ? roles[store.id] : 'owner';
+  const realRole = roles[store.id] && store.owner_id !== userId && !isAdmin ? roles[store.id] : 'owner';
+  const myRole = previewRole || realRole;
   // what each staff role may open (the server enforces the same rules)
   const ROLE_AREAS: Record<string, string[]> = {
     manager: ['orders', 'ordersWrite', 'chat', 'products', 'design', 'marketing', 'money'],
@@ -298,6 +301,15 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = (
         {back}
         {tab === 'dashboard' && <DashboardTab store={store} seeOrders={can('orders') || can('money')} onOpen={(t) => setTab(t as typeof tab)} />}
         {tab === 'customers' && <CustomersTab store={store} />}
+        {tab === 'viewas' && (
+          <div className="space-y-1.5">
+            <p className="px-1 text-[11.5px] text-slate-400">See your shop the way others see it. Nothing is changed.</p>
+            <DemoBar n={1} icon="🛍️" color="#16a34a" title="CUSTOMER" value="YOUR SHOP ↗" onClick={() => window.open(url, '_blank', 'noopener')} />
+            {([['manager', '🧑‍💼'], ['orders', '🧾'], ['products', '📦'], ['support', '🎧'], ['accounts', '📑'], ['marketing', '📈']] as Array<[string, string]>).map(([r2, ic], i) => (
+              <DemoBar key={r2} n={i + 2} icon={ic} color="#38bdf8" title={`STAFF · ${r2.toUpperCase()}`} value="SEE THEIR BARS" onClick={() => { setPreviewRole(r2); setTab('home'); }} />
+            ))}
+          </div>
+        )}
         {tab === 'reviews' && <ReviewsTab store={store} />}
         {tab === 'payments' && <PaymentsTab store={store} onSaved={() => void load()} />}
         {tab === 'print' && <DeliveryTab store={store} part="print" onSaved={() => void load()} />}
@@ -331,7 +343,14 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = (
         </select>
       )}
       {header}
-      {myRole !== 'owner' && <p className="px-1 text-[11px] font-bold text-amber-300">You are STAFF here · role: {myRole.toUpperCase()}</p>}
+      {previewRole ? (
+        <div className="flex items-center gap-2 rounded-xl border border-sky-400/50 bg-sky-500/10 p-3">
+          <p className="min-w-0 flex-1 text-[12px] font-bold text-sky-200">👁️ VIEW AS {previewRole.toUpperCase()} · these are the only bars they see</p>
+          <button type="button" className={btn} onClick={() => setPreviewRole('')}>EXIT</button>
+        </div>
+      ) : (
+        myRole !== 'owner' && <p className="px-1 text-[11px] font-bold text-amber-300">You are STAFF here · role: {myRole.toUpperCase()}</p>
+      )}
       <div>
         {(
           [
@@ -357,8 +376,9 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = (
         )
           .filter((x) => x[0])
           .map(([, k, title, icon, color, value], i) => (
-            <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} value={value} onClick={() => setTab(k as typeof tab)} testId={`store-${k}`} />
+            <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} value={value} onClick={() => (previewRole ? setMsg(`View only: a ${previewRole.toUpperCase()} can open ${title}.`) : setTab(k as typeof tab))} testId={`store-${k}`} />
           ))}
+        {realRole === 'owner' && !previewRole && <DemoBar n="VA" icon="👁️" color="#38bdf8" title="VIEW AS" value="CUSTOMER · STAFF" onClick={() => setTab('viewas' as typeof tab)} testId="store-viewas" />}
         {can('owner') && !forceStoreId && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
     </div>
@@ -1345,9 +1365,9 @@ const SeoTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSave
 
 
 // ---------------------------------------------------------------- the same bar as the demo admin (number, coloured icon, title, value)
-const DemoBar: React.FC<{ n: number; icon: string; color: string; title: string; value?: string; onClick: () => void; testId?: string }> = ({ n, icon, color, title, value, onClick, testId }) => (
+const DemoBar: React.FC<{ n: number | string; icon: string; color: string; title: string; value?: string; onClick: () => void; testId?: string }> = ({ n, icon, color, title, value, onClick, testId }) => (
   <button type="button" onClick={onClick} data-testid={testId} className="mb-1.5 flex h-[50px] w-full items-center gap-2.5 rounded-xl border border-[#1e293b] bg-[#11151e] px-2.5 text-left text-slate-200 transition-colors hover:border-teal-500/40">
-    <span className="rounded-md bg-[#1e293b] px-1.5 py-[3px] font-mono text-[10px] font-bold text-teal-400">{String(n).padStart(2, '0')}</span>
+    <span className="rounded-md bg-[#1e293b] px-1.5 py-[3px] font-mono text-[10px] font-bold text-teal-400">{typeof n === 'number' ? String(n).padStart(2, '0') : n}</span>
     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px] text-[17px]" style={{ background: `${color}22`, border: `1px solid ${color}55` }}>{icon}</span>
     <span className="min-w-0 flex-1 truncate text-[12px] font-bold tracking-[0.06em]">{title}</span>
     {value ? <span className="max-w-[45%] truncate text-[10.5px] text-slate-400">{value}</span> : null}
