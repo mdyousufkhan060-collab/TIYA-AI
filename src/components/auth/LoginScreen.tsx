@@ -29,7 +29,8 @@ export const LoginScreen: React.FC = () => {
         provider: 'google',
         options: {
           // ROSE Android app: Google sign-in runs in Chrome and comes back through com.myrosebd.rose://auth
-          redirectTo: (window as any).TiyaNative ? 'com.myrosebd.rose://auth' : `${window.location.origin}/app`,
+          // Chrome shows a small ROSE page with an OPEN ROSE APP button (Chrome only opens the app after a tap)
+          redirectTo: (window as any).TiyaNative ? 'https://www.myrosebd.com/app-return.html' : `${window.location.origin}/app`,
         },
       });
       if (error) {

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ROSE · Signing in</title>
+<style>
+  html,body{margin:0;height:100%;background:#07090D;color:#E8F4FF;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;box-sizing:border-box;text-align:center}
+  img{width:84px;height:84px}
+  h1{font-size:20px;letter-spacing:.35em;margin:0}
+  p{margin:0;color:#9FB3C8;font-size:14px;max-width:300px;line-height:1.5}
+  a.btn{display:block;width:100%;max-width:300px;padding:16px 0;border-radius:16px;background:linear-gradient(90deg,#22C3E6,#1D6FD8);color:#04121C;font-weight:700;letter-spacing:.12em;text-decoration:none;font-size:15px}
+  a.alt{color:#5FD3F0;font-size:13px;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img src="/auth/rose-neon-logo.png" alt="">
+  <h1>ROSE</h1>
+  <p id="msg">Signed in with Google. Tap the button to go back to the ROSE app.</p>
+  <a class="btn" id="open" href="/app">OPEN ROSE APP</a>
+  <a class="alt" id="web" href="/app">Continue on the website instead</a>
+</div>
+<script>
+  // Google sign-in for the ROSE Android app ends here (in Chrome).
+  // The sign-in data stays in the #part of the link and goes straight to the app.
+  (function () {
+    var h = location.hash || '';
+    var ok = /access_token=/.test(h);
+    var bad = /error/.test(h) || /error/.test(location.search);
+    var open = document.getElementById('open');
+    var web = document.getElementById('web');
+    web.href = '/app' + location.search + h;
+    if (ok) {
+      var target = 'com.myrosebd.rose://auth' + h;
+      open.href = target;
+      setTimeout(function () { location.href = target; }, 150);
+    } else {
+      document.getElementById('msg').textContent = bad
+        ? 'Google sign-in did not finish. Open ROSE and try again.'
+        : 'Open ROSE to continue.';
+      open.href = 'com.myrosebd.rose://auth';
+    }
+  })();
+</script>
+</body>
+</html>
