@@ -1058,15 +1058,9 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   } else if (view === 'hub' || view === 'rose_hub') {
     const personal = [bar('01', 'tasks'), bar('02', 'content'), bar('03', 'writer'), bar('04', 'social', 'YT · FB · TT · IG'), bar('05', 'store', 'WEBSITE'), bar('06', 'domain', 'ROSE ACCESS')];
     const student = [bar('01', 'notes'), bar('02', 'routine'), bar('03', 'tests'), bar('04', 'tasks'), bar('05', 'writer'), bar('06', 'social', 'YT · FB · TT · IG'), bar('07', 'store', 'WEBSITE'), bar('08', 'domain', 'ROSE ACCESS')];
-    const label = (t: string) => (
-      <p key={`l_${t}`} className="px-1 pt-2 text-[10px] font-bold tracking-wider text-slate-400">
-        {t}
-      </p>
-    );
     // one numbered list, no headings or gaps. Business mode: ROSE's bars here, the shop's bars inside 'BUSINESS'
     const business = grouped
       ? [
-          <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
           ...(
             [
               ['biz_ai'],
@@ -1110,16 +1104,38 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
           <SettingsBar badge="M" title="MODE" value={modeLabel} tone="accent" onClick={() => setView('mode')} testId="ws-mode" />
         )}
         {allModes && (
+          // admin: every mode in one numbered list, no headings or gaps; START HERE is left out (same as ROSE · BUSINESS INFO)
           <div className="space-y-1.5">
-            {label('PERSONAL')}
-            {[bar('P1', 'tasks'), bar('P2', 'content')]}
-            {label('STUDENT')}
-            {[bar('S1', 'notes'), bar('S2', 'routine'), bar('S3', 'tests')]}
-            {label('WRITE & POST')}
-            {[bar('W1', 'writer'), bar('W2', 'social', 'YT · FB · TT · IG'), bar('W3', 'store', 'WEBSITE'), bar('W4', 'domain', 'ROSE ACCESS')]}
-            {label('BUSINESS')}
+            {(
+              [
+                ['tasks'],
+                ['content'],
+                ['notes'],
+                ['routine'],
+                ['tests'],
+                ['writer'],
+                ['social', 'YT · FB · TT · IG'],
+                ['store', 'WEBSITE'],
+                ['domain', 'DNS · ROSE ACCESS'],
+                ['rose_info', 'WHAT ROSE KNOWS'],
+                ['biz_profile', businessId ? 'READY' : 'SET UP'],
+                ['products'],
+                ['faqs'],
+                ['couriers'],
+                ['discounts'],
+                ['biz_ai'],
+                ['orders'],
+                ['customers'],
+                ['customer_check', 'COURIER HISTORY'],
+                ['approvals'],
+                ['biz_dashboard'],
+                ['expenses'],
+                ['channels', 'KEYS'],
+              ] as Array<[View, string?]>
+            ).map(([v, extra], i) => bar(String(i + 1).padStart(2, '0'), v, extra))}
           </div>
         )}
+        {!allModes && (
         <div className="space-y-1.5">
           {mode === 'business' && !bizLoaded ? (
             <div className="flex items-center justify-center py-8 text-xs text-slate-500">
@@ -1133,6 +1149,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             tidy(personal)
           )}
         </div>
+        )}
       </div>
     );
   } else if (view === 'grp_biz') {

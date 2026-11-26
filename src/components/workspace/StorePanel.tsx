@@ -5,6 +5,7 @@ import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { AdminBrandPage } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
+import { DomainAccess } from './DomainAccess';
 import { INVOICE_SIZES, PRINT_CSS, invoiceDims, kgText, invoicePreviewHTML, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
@@ -1752,6 +1753,13 @@ const DomainTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
         <p>3. Wait 10 minutes to a few hours, then press CHECK. When it says LIVE, the free SSL lock is on.</p>
         <p>4. Ask ROSE: "আমার ডোমেইন বসাও" and she guides you step by step.</p>
       </div>
+      {store.owner_id && (
+        <div className="space-y-2">
+          <p className="px-1 text-[11px] font-bold tracking-wider text-teal-300">OR LET ROSE DO IT · DNS KEY</p>
+          <p className="px-1 text-[11px] text-slate-400">Give ROSE a DNS key from Hostinger or Cloudflare: she adds both records by herself, then CONNECT TO MY STORE. The key is never shown again.</p>
+          <DomainAccess userId={store.owner_id} />
+        </div>
+      )}
     </div>
   );
 };
