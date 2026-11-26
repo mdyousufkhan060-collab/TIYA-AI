@@ -651,6 +651,11 @@ export class LocalLiveSocket {
   private apiKey = '';
   private voiceName = 'Zephyr';
   private language = 'Bengali';
+  // Live voice: the user's last words (audio + text). Google's live transcript sometimes writes Bangla
+  // speech in Hindi, Spanish or other letters; then we transcribe those same words again in Bangla.
+  private liveUserChunks: Int16Array[] = [];
+  private liveUserSamples = 0;
+  private liveUserText = '';
   private systemInstruction = 'You are ROSE.';
   private turnHistory: Array<{ role: 'user' | 'assistant'; text: string }> = [];
   // Noise gate for live voice: quiet background between words is sent as silence,
@@ -1032,15 +1037,54 @@ export class LocalLiveSocket {
     }
   }
 
+  private keepUserAudio(b64: string) {
+    try {
+      const bin = atob(b64);
+      const pcm = new Int16Array(bin.length >> 1);
+      for (let i = 0; i < pcm.length; i++) pcm[i] = (bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8)) << 16 >> 16;
+      this.liveUserChunks.push(pcm);
+      this.liveUserSamples += pcm.length;
+      while (this.liveUserSamples > 16000 * 20 && this.liveUserChunks.length > 1) this.liveUserSamples -= this.liveUserChunks.shift()!.length;
+    } catch {
+      // ignore
+    }
+  }
+
+  /** The reply started: if the user's Bangla words came out in other letters, write them again in Bangla. */
+  private fixUserTranscript() {
+    const heard = this.liveUserText.trim();
+    this.liveUserText = '';
+    if (!heard || !languageCode(this.language).startsWith('bn')) return;
+    if (/[\u0980-\u09FF]/.test(heard)) return; // already Bangla
+    if (!/[\u0900-\u097F\u0600-\u06FF]|[A-Za-zÀ-ÿ]{2,}/.test(heard)) return;
+    const chunks = this.liveUserChunks;
+    this.liveUserChunks = [];
+    this.liveUserSamples = 0;
+    if (!chunks.length) return;
+    void this.turnTranscribe(pcmToWavBase64(chunks, 16000))
+      .then((t) => {
+        if (t && /[\u0980-\u09FF]/.test(t) && !this.closedByClient) this.emit({ type: 'input_fix', text: t });
+      })
+      .catch(() => undefined);
+  }
+
   private onLiveMessage(message: any) {
     const content = message.serverContent;
-    if (content?.inputTranscription?.text) this.emit({ type: 'input_transcript', text: content.inputTranscription.text });
+    if (content?.inputTranscription?.text) {
+      this.liveUserText += content.inputTranscription.text;
+      this.emit({ type: 'input_transcript', text: content.inputTranscription.text });
+    }
+    if (content?.outputTranscription?.text || content?.modelTurn) this.fixUserTranscript();
     if (content?.outputTranscription?.text) this.emit({ type: 'output_transcript', text: content.outputTranscription.text });
     for (const part of content?.modelTurn?.parts ?? []) {
       if (part.inlineData?.data) this.emit({ type: 'audio', data: part.inlineData.data });
     }
     if (content?.interrupted) this.emit({ type: 'interrupted' });
-    if (content?.turnComplete) this.emit({ type: 'turn_complete' });
+    if (content?.turnComplete) {
+      this.liveUserChunks = [];
+      this.liveUserSamples = 0;
+      this.emit({ type: 'turn_complete' });
+    }
 
     for (const call of message.toolCall?.functionCalls ?? []) {
       if (call.name === 'trigger_phone_action' && call.args) {
@@ -1132,6 +1176,7 @@ export class LocalLiveSocket {
         }
       })();
     } else if (msg.type === 'audio' && msg.data && this.session) {
+      this.keepUserAudio(String(msg.data));
       this.session.sendRealtimeInput({ audio: { data: this.gateNoise(String(msg.data)), mimeType: 'audio/pcm;rate=16000' } });
     } else if (msg.type === 'text' && msg.text && this.session) {
       this.session.sendRealtimeInput({ text: msg.text });

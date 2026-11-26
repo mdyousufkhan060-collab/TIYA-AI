@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { ChatMessage, MemoryItem } from '../../types/tiya';
 import { groupMessagesIntoChatSessions } from '../../utils/storage';
 import { SettingsShell } from './SettingsShell';
+import { RoseBrainPanel } from './RoseBrainPanel';
 
 interface ChatsMemoryPageProps {
   messages: ChatMessage[];
@@ -61,6 +62,9 @@ export const ChatsMemoryPage: React.FC<ChatsMemoryPageProps> = ({
               </p>
             </div>
           </div>
+
+          {/* ROSE BRAIN: switches + what ROSE remembers (server) */}
+          <RoseBrainPanel />
 
           {/* SAVED CHATS list */}
           <div className="space-y-1.5">

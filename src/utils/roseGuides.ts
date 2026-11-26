@@ -100,7 +100,8 @@ N4 Bank transfer details and a card-type picker (Visa, Mastercard, Amex, Nexus) 
 N5 Product options fit the shop: food has Portion, medicine has Pack / Strength, grocery has Weight, furniture has Size / Material, clothes have Size / Colour.
 N6 Workspace: the 4 empty glance tiles are gone; new MY DOMAIN bar where users give ROSE access to their own domain (Hostinger, Cloudflare and others) and connect it to their store.
 N0 Admin 02 AI KEY & BILLING: paste the paid Gemini and Groq keys right in ROSE (no Supabase needed), TEST, GET KEY, BUY PAID PLAN. Only Gmails with ROSE PREMIUM and that AI switched ON (03 USERS → tap the Gmail → AI ACCESS) can use them; PAUSE AI and REMOVE PREMIUM are there too. Admin bars 20-22 now have logos.
-N8 ROSE BRAIN: ROSE remembers his plans and facts on the server and can find what he said days or weeks ago.
+N8 ROSE BRAIN: ROSE remembers plans and facts on the server and can find what was said days or weeks ago. Settings → 05 CHATS & MEMORY → ROSE BRAIN: switches (LONG-TERM MEMORY, AUTO MEMORY, SMART RECALL, KEEP ALL TALKS), search, filter, pin, edit or delete each memory, CLEAR MEMORIES, CLEAR BRAIN + TALKS. Every user sees only their own memory.
+N9 Voice: when the live transcript writes his Bangla in Hindi or other letters, ROSE writes it again in Bangla in the chat.
 N7 ROSE talks with him in a new, more natural way; "মোবাইলের হোমে যাও" (go_home) and "ROSE-এ ফিরে এসো" are separate; "তোমার ওয়েবসাইটে যাও" opens myrosebd.com.
 25 November 2026:
 M1 Admin 21 WEBSITE ACCESS: every Gmail as one row; tap to open plan, give / extend days, payments, stores and the MADE WITH ROSE switch for that Gmail. 20 WEBSITE BUILDER shows live stores, orders, sign-ups, payments, chats and alerts. Unneeded admin bars (API providers, system logs) removed.

@@ -403,6 +403,9 @@ export function useTiyaLiveVoice({
           if (voiceStateRef.current === 'listening') {
             setVoiceState('thinking');
           }
+        } else if (msg.type === 'input_fix' && msg.text) {
+          // the live transcript wrote Bangla in other letters: show the corrected Bangla words
+          callbacksRef.current.onUpdateLastVoiceMessage('user', msg.text);
         } else if (msg.type === 'output_transcript' && msg.text) {
           hasStartedUserBubbleRef.current = false;
           currentUserTurnRef.current = '';
