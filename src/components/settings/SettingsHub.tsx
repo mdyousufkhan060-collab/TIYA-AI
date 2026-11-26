@@ -14,6 +14,8 @@ interface SettingsHubProps {
   onOpenPage: (page: SettingsPageId) => void;
   /** PC two-pane view: highlight the open page */
   activePage?: SettingsPageId | null;
+  /** website owners and their staff: top button back to their 6-bar website page */
+  onBackToWebsite?: () => void;
 }
 
 export const SettingsHub: React.FC<SettingsHubProps> = ({
@@ -24,6 +26,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
   isAdmin = false,
   onOpenPage,
   activePage = null,
+  onBackToWebsite,
 }) => {
   const hasNativeBridge =
     typeof window !== 'undefined' && typeof window.TiyaNative?.run === 'function';
@@ -114,6 +117,17 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
       </header>
 
       <div className="tiya-scroll flex-1 space-y-3 overflow-y-auto px-3.5 py-3">
+        {onBackToWebsite && (
+          <button
+            type="button"
+            onClick={onBackToWebsite}
+            data-testid="settings-back-to-website"
+            className="flex h-12 w-full items-center gap-2.5 rounded-xl px-3.5 text-left text-[12.5px] font-extrabold tracking-wider text-white"
+            style={{ background: 'linear-gradient(90deg,#6d28d9,#7c3aed)' }}
+          >
+            <span className="text-base">‹</span> BACK TO MY WEBSITE ADMIN
+          </button>
+        )}
         {roseOn && (
           <div className="space-y-2">
             <RoseSupportCard open={roseOpen} onOpen={() => setRoseOpen((v) => !v)} />

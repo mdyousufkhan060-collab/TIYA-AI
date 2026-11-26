@@ -26,6 +26,8 @@ interface WorkspacePageProps {
   subpage?: string | null;
   /** admin: every Personal, Student and Business section at once */
   allModes?: boolean;
+  /** website owners: 02 MYROSEBD.COM BUSINESS opens ROSE's own Settings bars */
+  onOpenRoseSettings?: () => void;
 }
 
 // ---------- Personal / Student tables ----------
@@ -148,6 +150,12 @@ const BUSINESS_FIELDS: CrudField[] = [
   { key: 'business_rules', label: 'BUSINESS RULES', type: 'textarea' },
   { key: 'communication_style', label: 'REPLY STYLE WITH CUSTOMERS', type: 'text', placeholder: 'Polite, short, Bangla' },
   { key: 'logo_url', label: 'LOGO LINK', type: 'text' },
+];
+
+// website owners: the shop's details come from the website; only these two are asked here
+const OWNER_CONTACT_FIELDS: CrudField[] = [
+  { key: 'emergency_phone', label: 'EMERGENCY PHONE (ROSE ASKS YOU HERE FOR REFUNDS AND BIG DISCOUNTS)', type: 'text' },
+  { key: 'notify_email', label: 'REPORT EMAIL (GMAIL FOR APPROVALS AND REPORTS)', type: 'text' },
 ];
 
 const AI_FIELDS: CrudField[] = [
@@ -565,6 +573,109 @@ const RoseBusinessInfo: React.FC<{ businessId: string | null; userId: string; on
   );
 };
 
+/** Website owners: what ROSE got from the website, and the little that is still to give */
+const RoseSiteInfo: React.FC<{ businessId: string | null; userId: string; onOpen: (v: View) => void }> = ({ businessId, userId, onOpen }) => {
+  type Row = [View, string, string, boolean, string];
+  const [groups, setGroups] = useState<Array<[string, Row[]]> | null>(null);
+  useEffect(() => {
+    let gone = false;
+    void (async () => {
+      const { data: st } = await supabase
+        .from('stores')
+        .select('id,name,phone,email,published,delivery_inside,pay_methods,pay_numbers,custom_domain,domain_ready')
+        .eq('owner_id', userId)
+        .limit(1)
+        .maybeSingle();
+      const s = (st || {}) as Record<string, any>;
+      const cnt = async (t: string, col: string, v: string | null) => {
+        if (!v) return 0;
+        const { count } = await supabase.from(t).select('*', { count: 'exact', head: true }).eq(col, v);
+        return count || 0;
+      };
+      const [products, staff, faqs, ai, channels, { data: b }] = await Promise.all([
+        cnt('store_products', 'store_id', s.id || null),
+        cnt('store_staff', 'store_id', s.id || null),
+        cnt('business_faqs', 'business_id', businessId),
+        cnt('business_ai_settings', 'business_id', businessId),
+        cnt('business_integrations', 'business_id', businessId),
+        businessId ? supabase.from('businesses').select('emergency_phone').eq('id', businessId).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      const pay = Array.isArray(s.pay_methods) && s.pay_methods.length > 0;
+      const out: Array<[string, Row[]]> = [
+        [
+          'BUSINESS',
+          [
+            ['biz_ai', 'AI REPLY CONTROL', 'Tone, max discount, topics ROSE must not discuss.', ai > 0, ai > 0 ? 'READY' : 'SET'],
+            ['faqs', 'CUSTOMER FAQ', 'Only answers the website does not have (optional).', faqs > 0, faqs > 0 ? String(faqs) : 'OPTIONAL'],
+            ['channels', 'FACEBOOK · WHATSAPP CHAT', 'So ROSE replies to customers there.', channels > 0, channels > 0 ? String(channels) : 'NONE'],
+          ],
+        ],
+        [
+          'WEBSITE (FROM WEBSITE ADMIN)',
+          [
+            ['store', 'WEBSITE', 'Shop details, logo, phone and address: ROSE reads them.', Boolean(s.published), s.published ? 'LIVE' : 'OFF'],
+            ['store', 'PRODUCTS & PRICES', 'ROSE reads prices and stock from the website.', products > 0, String(products)],
+            ['store', 'DELIVERY & COURIER', 'Delivery charges and courier.', s.delivery_inside != null, s.delivery_inside != null ? 'READY' : 'MISSING'],
+            ['store', 'PAYMENT', 'bKash, Nagad, cash on delivery.', pay, pay ? 'READY' : 'MISSING'],
+            ['store', 'OWN DOMAIN', 'yourshop.com (optional).', Boolean(s.custom_domain && s.domain_ready), s.custom_domain ? (s.domain_ready ? 'LIVE' : 'WAITING') : 'NONE'],
+          ],
+        ],
+        [
+          'OWNER · ADMIN',
+          [
+            ['store', 'OWNER', 'Shop phone and Gmail.', Boolean(s.phone), s.phone ? 'READY' : 'MISSING'],
+            ['biz_ai', 'EMERGENCY PHONE', 'ROSE asks you here for refunds and big discounts.', Boolean((b as { emergency_phone?: string } | null)?.emergency_phone), (b as { emergency_phone?: string } | null)?.emergency_phone ? 'READY' : 'MISSING'],
+            ['viewas', 'STAFF', 'Who may do what.', true, String(staff)],
+          ],
+        ],
+      ];
+      if (!gone) setGroups(out);
+    })();
+    return () => {
+      gone = true;
+    };
+  }, [businessId, userId]);
+  if (!groups)
+    return (
+      <div className="flex items-center justify-center py-10 text-xs text-slate-500">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
+      </div>
+    );
+  const all = groups.flatMap((g) => g[1]);
+  const done = all.filter((x) => x[3]).length;
+  const pct = Math.round((done / all.length) * 100);
+  let n = 0;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-teal-500/40 bg-teal-500/[0.07] p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-extrabold tracking-wider text-teal-200">ROSE KNOWS {done}/{all.length}</p>
+          <p className="font-mono text-sm font-bold text-teal-300">{pct}%</p>
+        </div>
+        <div className="mt-2 h-1.5 w-full bg-white/10">
+          <div className="h-full bg-gradient-to-r from-teal-400 to-cyan-400" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="mt-2 text-[10.5px] text-slate-300">ROSE takes your shop's details from the website by herself. Tap a grey line to fill it.</p>
+      </div>
+      {groups.map(([title, rows]) => (
+        <div key={title} className="space-y-1.5">
+          <p className="px-1 text-[10px] font-extrabold tracking-[0.15em] text-teal-300">{title}</p>
+          {rows.map(([v, t, d, ok, val]) => (
+            <button key={t} type="button" onClick={() => onOpen(v)} className="flex w-full items-start gap-2.5 rounded-xl border border-white/[0.08] bg-[#11151E] px-3 py-2.5 text-left">
+              {ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />}
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11.5px] font-bold text-white">{String(++n).padStart(2, '0')} · {t}</span>
+                <span className="block text-[10.5px] leading-snug text-slate-400">{d}</span>
+              </span>
+              <span className={`shrink-0 font-mono text-[10px] font-bold ${ok ? 'text-emerald-300' : 'text-amber-300'}`}>{val}</span>
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const BusinessGuide: React.FC<{ businessId: string | null; onOpen: (v: View) => void }> = ({ businessId, onOpen }) => {
   const [c, setC] = useState<Record<string, number> | null>(null);
   useEffect(() => {
@@ -712,8 +823,8 @@ const BusinessDashboard: React.FC = () => {
   );
 };
 
-export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMinor, onBack, onModeChanged, subpage = null, allModes = false }) => {
-  const [view, setView] = useState<View>('hub');
+export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMinor, onBack, onModeChanged, subpage = null, allModes = false, onOpenRoseSettings }) => {
+  const [view, setView] = useState<View>(() => (subpage && subpage in TITLES ? (subpage as View) : 'hub'));
   useEffect(() => {
     if (subpage && subpage in TITLES) setView(subpage as View);
   }, [subpage]);
@@ -768,6 +879,46 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   // things the WEBSITE ADMIN already has: not shown again inside ROSE
   const SITE_HIDES = new Set<string>(['store', 'couriers', 'orders', 'customers', 'expenses']);
 
+  // Website owners: ROSE takes the shop's details from the website, so there is no BUSINESS PROFILE to fill.
+  // The business row is kept in step with the store (name, phone, address, delivery, payment, logo).
+  const [storeSynced, setStoreSynced] = useState(false);
+  useEffect(() => {
+    if (allModes || !isOwner || storeSynced) return;
+    let gone = false;
+    void (async () => {
+      const { data: st } = await supabase
+        .from('stores')
+        .select('name,phone,whatsapp,email,address,city,logo,logo_url,delivery_inside,delivery_outside,pay_methods,pay_numbers,slug,subdomain_ready,custom_domain,domain_ready')
+        .eq('owner_id', userId)
+        .limit(1)
+        .maybeSingle();
+      if (gone || !st) return;
+      const s = st as Record<string, any>;
+      const pm = Array.isArray(s.pay_methods) ? (s.pay_methods as string[]).join(', ') : '';
+      const nums = s.pay_numbers && typeof s.pay_numbers === 'object' ? Object.entries(s.pay_numbers as Record<string, string>).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(', ') : '';
+      const site = s.custom_domain && s.domain_ready ? `https://${s.custom_domain}` : s.subdomain_ready ? `https://${s.slug}.myrosebd.com` : `https://www.myrosebd.com/shop/${s.slug}`;
+      const row: Record<string, unknown> = {
+        owner_id: userId,
+        name: s.name || 'My shop',
+        phone: s.phone || null,
+        whatsapp: s.whatsapp || null,
+        address: s.address || null,
+        city: s.city || null,
+        website: site,
+        logo_url: s.logo_url || s.logo || null,
+        delivery_info: s.delivery_inside != null || s.delivery_outside != null ? `Inside city ${s.delivery_inside ?? '-'} Tk, outside ${s.delivery_outside ?? '-'} Tk` : null,
+        payment_methods: [pm, nums].filter(Boolean).join(' · ') || null,
+      };
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user?.email) row.owner_email = u.user.email;
+      await supabase.from('businesses').upsert(row, { onConflict: 'owner_id' });
+      if (!gone) setStoreSynced(true);
+    })();
+    return () => {
+      gone = true;
+    };
+  }, [allModes, isOwner, storeSynced, userId]);
+
   const loadBusiness = useCallback(async () => {
     if (mode !== 'business') return;
     const { data } = await supabase.from('businesses').select('id,name,payment_methods').eq('owner_id', userId).maybeSingle();
@@ -778,7 +929,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
 
   useEffect(() => {
     void loadBusiness();
-  }, [loadBusiness]);
+  }, [loadBusiness, storeSynced]);
 
   const refreshAi = () => void refreshModeContext(allModes ? 'admin' : mode, userId);
 
@@ -799,6 +950,12 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   const grouped = mode === 'business' && !allModes;
   const back = () => {
     if (view === 'hub') return onBack();
+    if (siteOwner) {
+      // 6-bar page ⇄ its own bars; ROSE's business bars (from Settings → WORKSPACE) go back to Settings
+      if (view === 'rose_hub') return onBack();
+      if (['store', 'rose_support', 'profile', 'viewas'].includes(view)) return setView('hub');
+      return setView('rose_hub');
+    }
     if (grouped && (BIZ_GRP.includes(view) || (view === 'store' && !siteOwner))) return setView('grp_biz');
     if (view === 'grp_biz') return setView(siteOwner ? 'rose_hub' : 'hub');
     if (siteOwner && !['store', 'rose_hub', 'rose_support', 'profile', 'viewas'].includes(view)) return setView('rose_hub');
@@ -846,7 +1003,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
           </span>
           <span className="text-base text-slate-500">›</span>
         </button>
-        <SettingsBar badge="02" title="MYROSEBD.COM BUSINESS" value={modeLabel} onClick={() => setView('rose_hub')} testId="ws-rose" />
+        <SettingsBar badge="02" title="MYROSEBD.COM BUSINESS" value={modeLabel} onClick={() => (onOpenRoseSettings ? onOpenRoseSettings() : setView('rose_hub'))} testId="ws-rose" />
         <SettingsBar badge="03" title="WEBSITE ADMIN" value="STORE · ORDERS · PRODUCTS" onClick={() => setView('store')} testId="ws-site-admin" />
         {shopUrl && (
           <SettingsBar
@@ -883,6 +1040,19 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
           />
         )}
         {isOwner && <SettingsBar badge="06" title="MY STAFF" value={`${staffCount} STAFF`} onClick={() => setView('viewas')} testId="ws-my-staff" />}
+      </div>
+    );
+  } else if (view === 'rose_hub' && siteOwner) {
+    // Website owners (Settings → WORKSPACE): one list, only what the website does not already give ROSE
+    body = (
+      <div className="space-y-1.5">
+        {bar('01', 'rose_info', 'WHAT ROSE KNOWS')}
+        {bar('02', 'biz_ai', 'TONE · DISCOUNT')}
+        {bar('03', 'faqs', 'OPTIONAL')}
+        <SettingsBar key="channels" badge="04" title="FACEBOOK · WHATSAPP CHAT" value="KEYS" onClick={() => setView('channels')} testId="ws-channels" />
+        {bar('05', 'social', 'YT · FB · TT · IG')}
+        {bar('06', 'writer')}
+        {bar('07', 'approvals')}
       </div>
     );
   } else if (view === 'hub' || view === 'rose_hub') {
@@ -1036,10 +1206,18 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     );
   else if (view === 'biz_dashboard') body = <BusinessDashboard />;
   else if (view === 'biz_guide') body = <BusinessGuide businessId={businessId} onOpen={setView} />;
-  else if (view === 'rose_info') body = <RoseBusinessInfo businessId={businessId} userId={userId} onOpen={setView} />;
+  else if (view === 'rose_info')
+    body = siteOwner ? <RoseSiteInfo businessId={businessId} userId={userId} onOpen={setView} /> : <RoseBusinessInfo businessId={businessId} userId={userId} onOpen={setView} />;
   else if (bScope) {
     if (view === 'biz_ai')
-      body = <SingleRowForm table="business_ai_settings" match={bScope} fields={AI_FIELDS} onSaved={refreshAi} />;
+      body = siteOwner && isOwner ? (
+        <div className="space-y-4">
+          <SingleRowForm table="businesses" match={{ owner_id: userId }} fields={OWNER_CONTACT_FIELDS} onSaved={refreshAi} />
+          <SingleRowForm table="business_ai_settings" match={bScope} fields={AI_FIELDS} onSaved={refreshAi} />
+        </div>
+      ) : (
+        <SingleRowForm table="business_ai_settings" match={bScope} fields={AI_FIELDS} onSaved={refreshAi} />
+      );
     else if (view === 'products') body = <CrudSection config={PRODUCTS} scope={bScope} onChanged={refreshAi} />;
     else if (view === 'customers') body = <CrudSection config={CUSTOMERS} scope={bScope} />;
     else if (view === 'orders') body = <CrudSection config={ORDERS} scope={bScope} />;

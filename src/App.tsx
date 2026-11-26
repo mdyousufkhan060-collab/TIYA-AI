@@ -316,8 +316,8 @@ export default function App() {
     setSettingsSubpage(null);
   }, []);
 
-  // Store admin link from a shop page (/app?open=store): kept through login, then Settings opens with the same bars
-  // as everywhere else (ROSE's bars first, WORKSPACE last)
+  // Store admin link from a shop page (/app?open=store): kept through login, then the website owner's 6-bar page opens
+  // (MY DETAILS · MYROSEBD.COM BUSINESS · WEBSITE ADMIN · MY SHOP · CUSTOMER VIEW · MY STAFF)
   const [openAfterLogin] = useState<string | null>(() => {
     try {
       const v = new URLSearchParams(window.location.search).get('open');
@@ -337,7 +337,7 @@ export default function App() {
     } catch {
       /* ignore */
     }
-    navigateTo('settings', 'hub', null);
+    navigateTo('settings', 'workspace', 'hub');
   }, [session?.user?.id, openAfterLogin, navigateTo]);
 
   const handleNavigateCommand = useCallback(
@@ -1809,7 +1809,7 @@ export default function App() {
     void supabase.rpc('set_account_mode', { p_mode: 'business', p_dob: null }).then(({ data, error }) => {
       if (error || (data && (data as { ok?: boolean }).ok === false)) return;
       setProfile((prev) => (prev ? { ...prev, account_mode: 'business', onboarding_done: true } : prev));
-      navigateTo('settings', 'hub', null);
+      navigateTo('settings', 'workspace', 'hub');
     });
   }, [isShopStaff, profileLoaded, profile, navigateTo]);
 
@@ -1817,6 +1817,13 @@ export default function App() {
   // and WORKSPACE shows MYROSEBD.COM BUSINESS for them.
   const [isSiteOwner, setIsSiteOwner] = useState<boolean | null>(null);
   const [siteModeFailed, setSiteModeFailed] = useState(false);
+  const [hasShop, setHasShop] = useState(false);
+  // a website owner or their staff: has the 6-bar website page and the BACK TO MY WEBSITE ADMIN button
+  const shopUser = hasShop || isShopStaff === true;
+  const openSettingsFromHub = (pg: SettingsPageId) => {
+    if (pg === 'workspace' && shopUser) navigateTo('settings', 'workspace', 'rose_hub');
+    else handleOpenSettingsPage(pg);
+  };
   useEffect(() => {
     const uid = session?.user?.id;
     if (!uid) {
@@ -1828,6 +1835,13 @@ export default function App() {
       if (gone) return;
       setIsSiteOwner(!error && Boolean((data as { email?: string | null } | null)?.email));
     });
+    void supabase
+      .from('stores')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', uid)
+      .then(({ count }) => {
+        if (!gone) setHasShop((count || 0) > 0);
+      });
     return () => {
       gone = true;
     };
@@ -1885,7 +1899,10 @@ export default function App() {
   const [desktopTab, setDesktopTab] = useState<DesktopTab>('dashboard');
   const [writerInbox, setWriterInbox] = useState<string | null>(null);
   const [adminView, setAdminView] = useState<string>('dashboard');
+  // PC shows the same bars as the phone (one ROSE everywhere, just wider), so the separate PC dashboard is off
+  const PC_DASHBOARD = false;
   const desktopMode =
+    PC_DASHBOARD &&
     isWide &&
     Boolean(session?.user?.id) &&
     profileLoaded &&
@@ -1986,8 +2003,9 @@ export default function App() {
                 onOpenPage={(pg) => {
                   setShowAdminScreen(false);
                   setShowMotivationScreen(false);
-                  handleOpenSettingsPage(pg);
+                  openSettingsFromHub(pg);
                 }}
+                onBackToWebsite={shopUser ? () => navigateTo('settings', 'workspace', 'hub') : undefined}
               />
             </div>
           )}
@@ -2005,7 +2023,7 @@ export default function App() {
         </>
       )}
       {/* Portrait Phone Container */}
-      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' || desktopTab === 'admin' ? 'col-start-1 row-start-2 ml-[342px] !w-auto min-[481px]:!h-full min-[481px]:!max-w-none min-[481px]:!rounded-[10px]' : 'hidden') : ''}`}>
+      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] lg:!max-w-[760px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' || desktopTab === 'admin' ? 'col-start-1 row-start-2 ml-[342px] !w-auto min-[481px]:!h-full min-[481px]:!max-w-none min-[481px]:!rounded-[10px]' : 'hidden') : ''}`}>
         {!authReady ? (
           <div className="flex flex-1 items-center justify-center text-xs text-slate-500 dark:text-slate-400">
             Loading ROSE...
@@ -2154,7 +2172,8 @@ export default function App() {
                 chatCount={chatSessionCount}
                 userEmail={session.user.email}
                 isAdmin={isAdmin}
-                onOpenPage={handleOpenSettingsPage}
+                onOpenPage={openSettingsFromHub}
+                onBackToWebsite={shopUser ? () => navigateTo('settings', 'workspace', 'hub') : undefined}
               />
             )}
 
@@ -2262,6 +2281,7 @@ export default function App() {
                 onModeChanged={() => {
                   if (session?.user?.id) loadAccountData(session.user.id);
                 }}
+                onOpenRoseSettings={() => navigateTo('settings', 'hub', null)}
                 onBack={() => {
                   setSettingsPage('hub');
                   setSettingsSubpage(null);

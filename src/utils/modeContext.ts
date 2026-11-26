@@ -82,6 +82,20 @@ export async function refreshModeContext(mode: string | null | undefined, userId
   if (mode === 'business' && userId) {
     try {
       const { data: b } = await supabase.from('businesses').select('*').eq('owner_id', userId).maybeSingle();
+      // website owners: ROSE reads products, prices and stock straight from their myrosebd.com website
+      let siteProducts = '';
+      try {
+        const { data: st } = await supabase.from('stores').select('id').eq('owner_id', userId).limit(1).maybeSingle();
+        if (st?.id) {
+          const { data: sp } = await supabase.from('store_products').select('name,price,stock').eq('store_id', st.id).eq('active', true).order('sort').limit(60);
+          if (sp && sp.length)
+            siteProducts = `Website products (from the owner's myrosebd.com website):\n${sp
+              .map((p: any) => `- ${clip(p.name, 60)}: ${p.price} Tk${p.stock !== null && p.stock !== undefined ? `, stock ${p.stock}` : ''}`)
+              .join('\n')}`;
+        }
+      } catch {
+        siteProducts = '';
+      }
       if (b) {
         const [{ data: products }, { data: faqs }, { data: ai }] = await Promise.all([
           supabase.from('business_products').select('name,price,stock,kind,discount_allowed,description').eq('business_id', b.id).eq('is_active', true).order('name').limit(60),
@@ -107,7 +121,10 @@ export async function refreshModeContext(mode: string | null | undefined, userId
             ? `Products/services:\n${products
                 .map((p: any) => `- ${clip(p.name, 60)}: ${p.price} Tk${p.stock !== null && p.stock !== undefined ? `, stock ${p.stock}` : ''}${p.discount_allowed ? '' : ', no discount'}${p.description ? ` (${clip(p.description, 80)})` : ''}`)
                 .join('\n')}`
-            : 'No products added yet.',
+            : siteProducts
+              ? ''
+              : 'No products added yet.',
+          siteProducts,
           faqs && faqs.length ? `FAQ:\n${faqs.map((f: any) => `Q: ${clip(f.question, 120)} A: ${clip(f.answer, 200)}`).join('\n')}` : '',
         ].filter(Boolean);
 
