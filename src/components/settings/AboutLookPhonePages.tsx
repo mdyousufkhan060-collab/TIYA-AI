@@ -406,6 +406,10 @@ export const PhoneControlPage: React.FC<PhoneControlPageProps> = ({
   };
 
   const getPermissionStatus = (id: PermissionItemId): { text: string; allowed: boolean } => {
+    // ROSE Android app: the phone's own answer for the microphone and camera (the web view always says "prompt")
+    if ((id === 'camera' || id === 'microphone') && hasNativeBridge && nativeStatuses[id]) {
+      return nativeStatuses[id] === 'Allowed' ? { text: 'Allowed', allowed: true } : { text: 'Off', allowed: false };
+    }
     if (id === 'camera') {
       if (camPerm === 'granted') return { text: 'Allowed', allowed: true };
       if (camPerm === 'denied') return { text: 'Blocked', allowed: false };
