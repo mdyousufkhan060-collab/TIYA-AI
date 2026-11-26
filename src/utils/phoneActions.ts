@@ -211,7 +211,7 @@ export function getConfirmationPromptText(action: PhoneAction): string {
     case 'call':
       return `${action.contact}-কে সাধারণ কল দেবো?`;
     case 'whatsapp_call':
-      return `${action.contact}-কে হোয়াটসঅ্যাপে কল দেবো?`;
+      return `${action.contact}-কে হোয়াটসঅ্যাপে ${action.video ? 'ভিডিও ' : ''}কল দেবো?`;
     case 'messenger_call':
       return `${action.contact}-কে মেসেঞ্জারে কল দেবো?`;
     case 'whatsapp_message':
@@ -258,8 +258,10 @@ export function validatePhoneAction(raw: unknown): PhoneAction | null {
       }
       return null;
     case 'whatsapp_call':
+    case 'whatsapp_video_call':
       if (typeof obj.contact === 'string' && obj.contact.trim()) {
-        return { action: 'whatsapp_call', contact: obj.contact.trim() };
+        const video = actionType === 'whatsapp_video_call' || obj.video === true || /video|ভিডিও/i.test(String(obj.text || ''));
+        return video ? { action: 'whatsapp_call', contact: obj.contact.trim(), video: true } : { action: 'whatsapp_call', contact: obj.contact.trim() };
       }
       return null;
     case 'whatsapp_message':
@@ -533,9 +535,13 @@ export async function executePhoneAction(
       }
 
       if (parsed && parsed.success) {
-        // WhatsApp has no way for another app to place a call or press send by itself
-        const waNote =
-          action.action === 'whatsapp_call'
+        // With ROSE Access the Android app presses Send / Call itself and says so (WA_SENT); otherwise he presses it
+        const nativeMsg = String(parsed.message || '');
+        const waNote = /^WA_SENT/.test(nativeMsg)
+          ? nativeMsg.replace(/^WA_SENT\s*/, '')
+          : /বাটন পাইনি|ROSE Access/.test(nativeMsg)
+            ? nativeMsg
+          : action.action === 'whatsapp_call'
             ? `হোয়াটসঅ্যাপে ${action.contact}-এর চ্যাট খুলেছে। কল যেতে উপরের ফোন আইকনে চাপ দিতে হবে (কল এখনো যায়নি)।`
             : action.action === 'whatsapp_message'
               ? `হোয়াটসঅ্যাপে ${action.contact}-এর চ্যাটে মেসেজ লেখা আছে। পাঠাতে সেন্ড বাটনে চাপ দিতে হবে (এখনো যায়নি)।`

@@ -244,7 +244,7 @@ export interface ErrorLogEntry {
 export type PhoneAction =
   | { action: 'open_app'; app: string }
   | { action: 'call'; contact: string }
-  | { action: 'whatsapp_call'; contact: string }
+  | { action: 'whatsapp_call'; contact: string; video?: boolean }
   | { action: 'whatsapp_message'; contact: string; text: string }
   | { action: 'messenger_message'; contact: string; text: string }
   | { action: 'messenger_call'; contact: string }
