@@ -163,7 +163,7 @@
     coupons: [{ code: 'ROSE10', text: '10% off, min 1,000 Tk', on: true }, { code: 'FREESHIP', text: 'Free delivery over 1,500 Tk', on: true }, { code: 'EID500', text: '500 Tk off, min 5,000 Tk', on: false }],
     pm: { cod: { on: true }, bkash: { on: true, type: 'personal', num: '01712345678' }, nagad: { on: true, type: 'merchant', num: '01812345678' }, rocket: { on: false, type: 'personal', num: '' }, bank: { on: false, bank_name: 'Dutch-Bangla Bank', bank_acc_name: S.name, bank_acc_no: '1234567890123', bank_branch: 'Motijheel', bank_routing: '090275725' }, card: { on: false } },
     couriers: [['Steadfast', true, '#0f766e', 'Most used · 60/110 Tk'], ['Pathao', false, '#e11d48', 'Fast in Dhaka'], ['RedX', false, '#dc2626', 'All 64 districts'], ['Paperfly', false, '#2563eb', 'Good for outside Dhaka'], ['eCourier', false, '#7c3aed', 'Same day in Dhaka'], ['Sundarban Courier', false, '#16a34a', 'Office pickup, all districts'], ['SA Paribahan', false, '#ea580c', 'Heavy parcels, furniture']],
-    staff: [['rahim.staff@gmail.com', 'ORDER STAFF'], ['mitu.design@gmail.com', 'PRODUCT STAFF']],
+    staff: [['rahim.staff@gmail.com', 'MANAGER'], ['mitu.design@gmail.com', 'MODERATOR']],
     banners: S.banners.map(function (b) { return { title: b.title, badge: b.badge, img: b.img }; }),
     chats: [], takeover: false,
   };
@@ -411,7 +411,7 @@
   };
   V.staff = function () {
     return '<div class="card">' + st.staff.map(function (s, i) { return row('<span class="ph">👤</span>', s[0], s[1], btn('Remove', 'st.staff.splice(' + i + ',1);toast(\'Access removed\');render()', 'alt')); }).join('') + (st.staff.length ? '' : '<p class="note">No staff yet.</p>') + '</div>' +
-      '<div class="card" style="margin-top:10px"><div class="field"><span>Staff Gmail</span><input id="sfMail" placeholder="staff@gmail.com"></div><div class="field"><span>Role</span><select id="sfRole"><option>MANAGER</option><option>ORDER STAFF</option><option>PRODUCT STAFF</option><option>CHAT SUPPORT</option><option>MARKETING</option><option>ACCOUNTS</option><option>CUSTOM</option></select></div>' + btn('SEND INVITE', 'addStaff()') + '<p class="note">Staff sign in with that Gmail and see only their bars. Activity log shows who changed what.</p></div>';
+      '<div class="card" style="margin-top:10px"><div class="field"><span>Staff Gmail</span><input id="sfMail" placeholder="staff@gmail.com"></div><div class="field"><span>Role</span><select id="sfRole"><option>MANAGER</option><option>MODERATOR</option><option>SUPPORT</option></select></div>' + btn('SEND INVITE', 'addStaff()') + '<p class="note">Staff sign in with that Gmail and see only their bars. Activity log shows who changed what.</p></div>';
   };
   var dmState = { d: '', step: 0 };
   V.domain = function () {
@@ -421,7 +421,7 @@
       '<div class="field" style="margin-top:8px"><span>Your domain</span><input id="dmIn" placeholder="yourshop.com" value="' + esc(dmState.d) + '"></div>' +
       (dmState.step === 2 ? '<p style="color:#34d399;font-weight:800">✅ LIVE: https://' + esc(dmState.d) + ' · SSL lock on</p>' : dmState.step === 1 ? '<p style="color:#fbbf24;font-weight:800">⏳ WAITING FOR DNS: ' + esc(dmState.d) + '</p>' : '') +
       '<div class="btns">' + btn('CONNECT', 'connectDomain()') + btn('CHECK', 'checkDomain()', 'alt') + (dmState.step ? btn('REMOVE', 'dmState.step=0;dmState.d=\'\';render()', 'red') : '') + '</div>' +
-      (dmState.step ? '<div class="card" style="margin-top:10px;background:#0a0f1a"><p class="note" style="margin-top:0">Add these records in your domain’s DNS page:</p>' + recs.map(function (r) { return '<div class="row"><b style="width:60px;color:#2dd4bf">' + r[0] + '</b><span style="width:50px">' + r[1] + '</span><span class="f" style="font-family:ui-monospace,monospace">' + r[2] + '</span>' + btn('COPY', "navigator.clipboard&&navigator.clipboard.writeText('" + r[2] + "');toast('Copied')", 'alt') + '</div>'; }).join('') + '</div>' : '') +
+      (true ? '<div class="card" style="margin-top:10px;background:#0a0f1a"><p class="note" style="margin-top:0"><b style="color:#2dd4bf">DNS RECORDS</b> · add these where you bought the domain (delete any old A record for @ first):</p>' + recs.map(function (r) { return '<div class="row"><b style="width:60px;color:#2dd4bf">' + r[0] + '</b><span style="width:50px">' + r[1] + '</span><span class="f" style="font-family:ui-monospace,monospace">' + r[2] + '</span>' + btn('COPY', "navigator.clipboard&&navigator.clipboard.writeText('" + r[2] + "');toast('Copied')", 'alt') + '</div>'; }).join('') + '</div>' : '') +
       '</div><div class="card" style="margin-top:10px"><b style="font-size:13px">HOW IT WORKS</b><p class="note">1. Write your domain and press CONNECT.<br>2. Open the DNS page where you bought it (Hostinger, Namecheap, GoDaddy or a BD seller) and add the 2 records.<br>3. Wait 10 minutes to a few hours, then press CHECK. When it says LIVE, the free SSL lock is on.<br>4. Or just tell ROSE: “আমার ডোমেইন বসাও”, and she guides you step by step.</p></div>' +
       '<div class="card" style="margin-top:10px"><b style="font-size:13px">Hostinger</b><p class="note">Business plan: DOWNLOAD FOR HOSTINGER (ZIP) with a step-by-step guide.</p>' + btn('DOWNLOAD ZIP', "toast('Business plan: ZIP download starts')", 'alt') + '</div>';
   };

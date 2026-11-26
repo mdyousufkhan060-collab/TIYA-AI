@@ -1,5 +1,4 @@
 import React from 'react';
-import { ShieldCheck, User as UserIcon } from 'lucide-react';
 import { SettingsPageId, TiyaSettings, UserProfile } from '../../types/tiya';
 import { isProfilePremium } from './PremiumPage';
 import { SettingsBar } from './SettingsShell';
@@ -122,12 +121,17 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
             {roseOpen && <AdminBrandPage />}
           </div>
         )}
-        {/* Main Numbered Bars (01 to 07) */}
-        <div className="space-y-1.5">
-          {mainItems.map((item) => (
+        {/* One numbered list, no gaps: 01–07, then (TEAM) MY TASK LIST, PRIVACY CONTROLS, MY ACCOUNT */}
+        <div className="space-y-1.5 pb-2">
+          {[
+            ...mainItems,
+            ...(myTasks.total > 0 ? [{ num: '', id: 'team_list' as SettingsPageId, title: 'MY TASK LIST', value: `${myTasks.done}/${myTasks.total}` }] : []),
+            { num: '', id: 'privacy_controls' as SettingsPageId, title: 'PRIVACY CONTROLS', value: undefined as string | undefined },
+            { num: '', id: 'my_account' as SettingsPageId, title: 'MY ACCOUNT', value: userEmail || undefined },
+          ].map((item, i) => (
             <SettingsBar
               key={item.id}
-              badge={item.num}
+              badge={String(i + 1).padStart(2, '0')}
               title={item.title}
               value={item.value}
               onClick={() => onOpenPage(item.id)}
@@ -136,49 +140,6 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
             />
           ))}
         </div>
-
-        {myTasks.total > 0 && (
-          <section aria-label="My task list" className="space-y-1.5">
-            <p className="px-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">TEAM</p>
-            <SettingsBar
-              badge="T"
-              title="MY TASK LIST"
-              value={`${myTasks.done}/${myTasks.total}`}
-              onClick={() => onOpenPage('team_list')}
-              tone={activePage === 'team_list' ? 'accent' : 'default'}
-              testId="settings-item-team_list"
-            />
-          </section>
-        )}
-
-        {/* ABOUT section */}
-        <section aria-label="About and privacy" className="space-y-1.5 pt-0.5">
-          <p className="px-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-            ABOUT
-          </p>
-          <SettingsBar
-            badge={<ShieldCheck className="h-3.5 w-3.5" />}
-            title="PRIVACY CONTROLS"
-            onClick={() => onOpenPage('privacy_controls')}
-            tone={activePage === 'privacy_controls' ? 'accent' : 'default'}
-            testId="settings-item-privacy_controls"
-          />
-        </section>
-
-        {/* SESSION section */}
-        <section aria-label="Account session" className="space-y-1.5 pb-2 pt-0.5">
-          <p className="px-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-            SESSION
-          </p>
-          <SettingsBar
-            badge={<UserIcon className="h-3.5 w-3.5" />}
-            title="MY ACCOUNT"
-            value={userEmail || undefined}
-            onClick={() => onOpenPage('my_account')}
-            tone={activePage === 'my_account' ? 'accent' : 'default'}
-            testId="settings-item-my_account"
-          />
-        </section>
       </div>
     </div>
   );

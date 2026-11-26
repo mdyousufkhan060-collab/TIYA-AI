@@ -1686,7 +1686,11 @@ export const AdminSupportOpen: React.FC = () => {
 // ---------------------------------------------------------------- own domain
 const DomainTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
   const [domain, setDomain] = useState(store.custom_domain || '');
-  const [records, setRecords] = useState<Array<{ type: string; name: string; value: string }>>([]);
+  const BASE_DNS = [
+    { type: 'A', name: '@', value: '216.198.79.1' },
+    { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com' },
+  ];
+  const [records, setRecords] = useState<Array<{ type: string; name: string; value: string }>>(BASE_DNS);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const call = async (action: 'add' | 'check' | 'remove') => {
@@ -1696,7 +1700,7 @@ const DomainTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
     setBusy(false);
     const err = (data as any)?.error || (error ? await (error as any).context?.json?.().then((j: any) => j.error).catch(() => error.message) : '');
     if (err) return setMsg(String(err));
-    setRecords((data as any)?.records || []);
+    setRecords((data as any)?.records?.length ? (data as any).records : BASE_DNS);
     setMsg((data as any)?.message || (action === 'remove' ? 'Domain removed.' : 'Done.'));
     if (action === 'remove') setDomain('');
     onSaved();
@@ -1714,7 +1718,7 @@ const DomainTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
         <input className={input} value={domain} onChange={(e) => setDomain(e.target.value.trim().toLowerCase())} placeholder="yourshop.com" autoCapitalize="off" />
         {store.custom_domain && (
           <p className={`text-[12px] font-bold ${store.domain_ready ? 'text-emerald-400' : 'text-amber-300'}`}>
-            {store.domain_ready ? `✅ LIVE: https://${store.custom_domain}` : `⏳ WAITING FOR DNS: ${store.custom_domain}`}
+            {store.domain_ready ? `✅ LIVE: https://${store.custom_domain}` : `⏳ WAITING: ${store.custom_domain} · add the DNS records below`}
           </p>
         )}
         <div className="grid grid-cols-2 gap-2">
@@ -1723,7 +1727,8 @@ const DomainTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
         </div>
         {records.length > 0 && (
           <div className="space-y-1.5 rounded-lg bg-black/30 p-2">
-            <p className="text-[11px] text-slate-300">Add these records in your domain's DNS page:</p>
+            <p className="text-[11px] font-bold tracking-wider text-teal-300">DNS RECORDS · add these where you bought the domain</p>
+            <div className="grid grid-cols-[48px_56px_1fr_auto] gap-1.5 text-[10px] font-bold tracking-wider text-slate-500"><span>TYPE</span><span>NAME</span><span>VALUE</span><span /></div>
             {records.map((r, i) => (
               <div key={i} className="grid grid-cols-[48px_56px_1fr_auto] items-center gap-1.5 text-[11.5px]">
                 <b className="text-teal-300">{r.type}</b>
@@ -1742,7 +1747,8 @@ const DomainTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
       <div className={box + ' space-y-1 text-[11.5px] text-slate-300'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">HOW IT WORKS</p>
         <p>1. Write your domain and press CONNECT.</p>
-        <p>2. Open the DNS page where you bought it and add the records shown (A for @, CNAME for www).</p>
+        <p>2. Open the DNS page where you bought it and add the 2 records above: A (name @) and CNAME (name www). Delete any old A record for @ first. TTL: leave as it is.</p>
+        <p className="text-slate-400">Hostinger: Domains → your domain → DNS / Nameservers → DNS records. Namecheap: Domain List → Manage → Advanced DNS. GoDaddy: My Products → DNS.</p>
         <p>3. Wait 10 minutes to a few hours, then press CHECK. When it says LIVE, the free SSL lock is on.</p>
         <p>4. Ask ROSE: "আমার ডোমেইন বসাও" and she guides you step by step.</p>
       </div>
