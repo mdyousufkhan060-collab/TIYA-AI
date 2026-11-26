@@ -90,12 +90,13 @@
 <script src="/demos/stores.js"></script>
 <script>
   var S = window.ROSE_STORES, g = document.getElementById('g');
-  var bg = { foodbazaar: '#d9f99d,#facc15', fashionhub: '#ede9fe,#a78bfa', sotadari: '#dcfce7,#86efac', shopshotoi: '#fed7aa,#fb923c', homenest: '#fef3c7,#d6a46a', medicare: '#cffafe,#5eead4' };
+  var bg = { foodbazaar: '#d9f99d,#facc15', fashionhub: '#ede9fe,#a78bfa', sotadari: '#dcfce7,#86efac', shopshotoi: '#fed7aa,#fb923c', homenest: '#fef3c7,#d6a46a', medicare: '#cffafe,#5eead4', printpack: '#fce7f3,#f472b6' };
   g.innerHTML = Object.keys(S).map(function (k) {
     var s = S[k];
     var feats = [s.categories.slice(0, 4).map(function (c) { return c[0]; }).join(', '), s.trust.slice(0, 2).join(' · ')];
     if (s.pharmacy) feats.push('Prescription upload + pharmacist check');
     if (k === 'homenest') feats.push('Wood / colour options, EMI, free fitting');
+    if (k === 'printpack') feats.push('Quantity options (100 · 500 · 1000 pcs), free design proof');
     var im = s.banners[0].img ? window.ROSE_IMG(s.banners[0].img, 800) : '';
     return '<div class="card"><div class="shot" style="background:' + (im ? 'linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,.55) 55%,rgba(255,255,255,0)),url(' + im + ') center/cover' : 'linear-gradient(120deg,' + bg[k] + ')') + '"><div><b>' + s.logo + ' ' + s.name + '</b><small>' + s.type + ' · ' + s.tagline + '</small></div></div>' +
       '<div class="body"><ul>' + feats.map(function (f) { return '<li>' + f + '</li>'; }).join('') + '</ul>' +

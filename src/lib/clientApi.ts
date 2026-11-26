@@ -47,7 +47,7 @@ function buildPhoneActionTool(nonBlocking: boolean): Record<string, unknown> {
           type: 'STRING',
           description: 'One of: open_app, call, whatsapp_call, whatsapp_message, messenger_message, messenger_call, web_search, close_opened (come back to ROSE), go_home (phone home screen), courier_dispatch, parcels_email, camera_on, camera_off',
         },
-        site: { type: 'STRING', description: 'For web_search: google, youtube, music, facebook, maps, directions, flights, hotels, images, news, wikipedia, store (open the store sign-up with a design: query = foodbazaar, fashionhub, sotadari, shopshotoi, homenest or medicare) or demo (show that demo store)' },
+        site: { type: 'STRING', description: 'For web_search: google, youtube, music, facebook, maps, directions, flights, hotels, images, news, wikipedia, store (open the store sign-up with a design: query = foodbazaar, fashionhub, sotadari, shopshotoi, homenest, medicare or printpack) or demo (show that demo store)' },
         query: { type: 'STRING', description: 'For web_search: what to search or play' },
         app: { type: 'STRING', description: 'App name when action is open_app (e.g. YouTube)' },
         contact: { type: 'STRING', description: 'Contact name or phone number for call/message actions' },

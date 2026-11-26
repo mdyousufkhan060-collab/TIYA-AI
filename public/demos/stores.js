@@ -154,6 +154,35 @@ window.ROSE_STORES = {
     ],
     note: 'Medicines marked Rx need a doctor’s prescription. A licensed pharmacist checks every prescription. Ask your doctor or pharmacist about dose.',
   },
+  printpack: {
+    name: 'PrintPack', tagline: 'Labels, Stickers & Packaging for Your Brand', logo: '🏷️', type: 'Printing & packaging',
+    color: '#be185d', accent: '#fde047', city: 'Dhaka',
+    banners: [
+      { title: 'Custom Stickers & Labels with Your Logo', badge: 'From 1.5 Tk per piece', icon: '🏷️', bg: 'linear-gradient(120deg,#fce7f3,#f472b6)', img: 'photo-1621252756235-7f37e5e5125e' },
+      { title: 'Printed Paper Bags & Boxes for Shops', badge: 'Free design help', icon: '🛍️', bg: 'linear-gradient(120deg,#fef9c3,#f59e0b)', img: 'photo-1573855619003-97b4799dcd8b' },
+    ],
+    trust: ['🎨 Free design proof', '🖨️ Print in 3-5 days', '📦 Bulk price', '🚚 All Bangladesh delivery'],
+    categories: [['Stickers', '⭐'], ['Labels', '🏷️'], ['Paper Bags', '🛍️'], ['Boxes', '📦'], ['Cards', '💳'], ['Tape & Wrap', '🎀']],
+    sectionTitle: 'Best Sellers',
+    products: [
+      ['Die-Cut Logo Stickers (100 pcs)', 'Stickers', '⭐', 450, 600, '', 'photo-1621252756235-7f37e5e5125e'],
+      ['Round Product Labels 2 inch (500 pcs)', 'Labels', '🏷️', 950, 1200, '', 'photo-1602599497039-3e98f30adab4'],
+      ['Thank You Stickers (200 pcs)', 'Stickers', '⭐', 380, 500, '', 'photo-1612314578108-cdd41a612f2a'],
+      ['Kraft Paper Bag with Handle (100 pcs)', 'Paper Bags', '🛍️', 2200, 2600, '', 'photo-1513884923967-4b182ef167ab'],
+      ['Printed Shopping Bag Medium (100 pcs)', 'Paper Bags', '🛍️', 2850, 3300, '', 'photo-1573855619003-97b4799dcd8b'],
+      ['Brown Paper Bag Small (100 pcs)', 'Paper Bags', '🛍️', 900, 1100, '', 'photo-1633414654227-2b5ea828b3ef'],
+      ['Cotton Tote Bag with Print (25 pcs)', 'Paper Bags', '👜', 3750, 4500, '', 'photo-1561715276-a2d087060f1d'],
+      ['Kraft Mailer Box 8×6×3 in (50 pcs)', 'Boxes', '📦', 2400, 2900, '', 'photo-1626253934161-08cfea22e968'],
+      ['Shipping Carton Box (50 pcs)', 'Boxes', '📦', 1950, 2300, '', 'photo-1618381297523-e6c0ab13a5b2'],
+      ['White Product Box with Logo (100 pcs)', 'Boxes', '📦', 3200, 3800, '', 'photo-1573376670774-4427757f7963'],
+      ['Business Cards Matte (500 pcs)', 'Cards', '💳', 650, 850, '', 'photo-1513710281312-7a43f9cdbfcc'],
+      ['Thank You Cards A6 (100 pcs)', 'Cards', '💌', 550, 700, '', 'photo-1624567881801-a5a85867d990'],
+      ['Brand Packing Tape 2 inch (6 rolls)', 'Tape & Wrap', '🎀', 720, 900, '', 'photo-1595246135406-803418233494'],
+      ['Eco Kraft Wrapping Paper (50 sheets)', 'Tape & Wrap', '🎀', 480, 600, '', 'photo-1695131020621-f10f73442c42'],
+    ],
+    options: { label: 'Quantity', values: ['100 pcs', '500 pcs', '1000 pcs'] },
+    note: 'Send your logo after you order (WhatsApp or e-mail). We send a design proof first and print only after you say OK. Bulk price for 1000+ pieces.',
+  },
 };
 
 // Each kind of shop shows its own product tabs and info fields (food ≠ medicine ≠ furniture).
@@ -177,6 +206,9 @@ window.ROSE_KINDS = {
   pharmacy: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Medicine', 'ওষুধ'], ['ship', 'Safety', 'সতর্কতা']],
     specs: [['generic', 'Generic name', 'জেনেরিক নাম', 'See the pack'], ['strength', 'Strength', 'মাত্রা', 'As on the pack'], ['company', 'Company', 'কোম্পানি', 'Licensed manufacturer'], ['form', 'Form', 'ধরন', 'Tablet'], ['pack', 'Pack', 'প্যাক', '1 strip']],
     ship: ['👩‍⚕️ Take it only as your doctor or pharmacist says', '📄 Rx medicine needs a prescription', '🌡️ Keep below 30°C, away from children', '✅ Genuine medicine from licensed sources'] },
+  packaging: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Print', 'প্রিন্ট'], ['ship', 'Delivery', 'ডেলিভারি']],
+    specs: [['size', 'Size', 'মাপ', 'As in the name'], ['material', 'Paper / material', 'কাগজ / উপকরণ', 'Art paper / kraft, 120-300 GSM'], ['print', 'Print', 'প্রিন্ট', 'Full colour, one side'], ['finish', 'Finish', 'ফিনিশ', 'Matte or glossy'], ['moq', 'Minimum order', 'সর্বনিম্ন অর্ডার', '100 pieces'], ['time', 'Ready in', 'তৈরি হতে', '3-5 working days']],
+    ship: ['🎨 Free design proof before printing', '🖨️ Printed in 3-5 working days', '🚚 Delivery all over Bangladesh', '🔁 Wrong print from our side? We print again free'] },
 };
 // Product options that fit each kind of shop (food has portions, medicine has packs, not clothing sizes)
 (function () {
@@ -191,6 +223,8 @@ window.ROSE_KINDS = {
       quick: { Weight: ['250g', '500g', '1kg', '2kg', '5kg', '10kg', '25kg'], Pack: ['500 ml', '1 L', '2 L', '5 L', '1 pc', '6 pcs', '1 dozen'] } },
     furniture: { labels: ['Colour', 'Size', 'Material'], sets: [['Bed size', ['Single', 'Semi-double', 'Double', 'King']], ['Sofa seats', ['2 seater', '3 seater', '5 seater']], ['Colour', ['Natural', 'Brown', 'Black', 'White']]],
       quick: { Colour: ['Natural', 'Brown', 'Walnut', 'Black', 'White', 'Grey'], Size: ['Single', 'Semi-double', 'Double', 'King', '2 seater', '3 seater', '5 seater'], Material: ['Segun (teak)', 'Mahogany', 'Oak', 'Board', 'Metal'] } },
+    packaging: { labels: ['Quantity', 'Size', 'Finish'], sets: [['Pieces', ['100 pcs', '500 pcs', '1000 pcs']], ['Sticker size', ['1 inch', '2 inch', '3 inch']], ['Bag size', ['Small', 'Medium', 'Large']], ['Finish', ['Matte', 'Glossy']]],
+      quick: { Quantity: ['50 pcs', '100 pcs', '200 pcs', '500 pcs', '1000 pcs', '5000 pcs'], Size: ['1 inch', '2 inch', '3 inch', 'A6', 'A5', 'A4', 'Small', 'Medium', 'Large'], Finish: ['Matte', 'Glossy', 'Kraft', 'Lamination'] } },
     market: { labels: ['Model', 'Colour', 'Storage', 'Size'], sets: [['Phone storage', ['64GB', '128GB', '256GB']], ['Colour', ['Black', 'White', 'Blue']], ['Size', ['S', 'M', 'L', 'XL']]],
       quick: { Model: [], Colour: ['Black', 'White', 'Blue', 'Red', 'Silver', 'Gold'], Storage: ['32GB', '64GB', '128GB', '256GB', '512GB'], Size: ['S', 'M', 'L', 'XL', 'Free size'] } },
   };
@@ -206,8 +240,8 @@ window.ROSE_KG_TEXT = function (kg) { kg = +kg || 0; return kg <= 0 ? '' : kg < 
 // Courier charge: base price up to 1 kg, then a charge for each started extra kg (1.2 kg = 1 extra kg).
 window.ROSE_DEL = function (base, perKg, kg) { kg = +kg || 0; return (+base || 0) + (kg > 1 ? Math.ceil(kg - 1 - 1e-9) * (+perKg || 0) : 0); };
 // Demo weights when a demo product has none (kg)
-window.ROSE_DEMO_KG = { food: 0.6, fashion: 0.4, grocery: 1, pharmacy: 0.05, furniture: 15, market: 0.5 };
-window.ROSE_KIND_OF = { foodbazaar: 'food', fashionhub: 'fashion', sotadari: 'grocery', shopshotoi: 'market', homenest: 'furniture', medicare: 'pharmacy' };
+window.ROSE_DEMO_KG = { food: 0.6, fashion: 0.4, grocery: 1, pharmacy: 0.05, furniture: 15, market: 0.5, packaging: 1.5 };
+window.ROSE_KIND_OF = { foodbazaar: 'food', fashionhub: 'fashion', sotadari: 'grocery', shopshotoi: 'market', homenest: 'furniture', medicare: 'pharmacy', printpack: 'packaging' };
 
 // Brand logos for payment methods and couriers. Put the official logo files in /public/brand/ with these names
 // (PNG or SVG renamed to .png is fine). Until a file is there, a neat text badge in the brand colour shows instead.

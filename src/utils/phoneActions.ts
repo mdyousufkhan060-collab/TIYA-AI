@@ -74,10 +74,11 @@ const SEARCH_SITES: Record<string, { label: string; url: (q: string) => string }
   demo: { label: 'ROSE demo store', url: (q) => `https://www.myrosebd.com/demos/store.html?s=${storeDesign(q)}` },
 };
 
-/** Words about what the user sells -> one of the 6 store designs. */
+/** Words about what the user sells -> one of the 7 store designs. */
 export function storeDesign(q: string): string {
   const t = decodeURIComponent(q || '').toLowerCase();
   if (/medic|pharma|ঔষধ|ওষুধ|ফার্মেসি|medicare/.test(t)) return 'medicare';
+  if (/sticker|label|packag|paper bag|print|স্টিকার|লেবেল|প্যাকেজিং|ব্যাগ প্রিন্ট|প্রিন্টিং|printpack/.test(t)) return 'printpack';
   if (/furnit|sofa|bed|table|chair|ফার্নিচার|আসবাব|homenest/.test(t)) return 'homenest';
   if (/food|restaurant|burger|pizza|biryani|cake|খাবার|রেস্টুরেন্ট|বিরিয়ানি|কেক|foodbazaar/.test(t)) return 'foodbazaar';
   if (/grocer|rice|oil|vegetable|fish|meat|বাজার|মুদি|চাল|তেল|সবজি|মাছ|sotadari/.test(t)) return 'sotadari';
