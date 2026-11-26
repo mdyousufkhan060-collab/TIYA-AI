@@ -1785,17 +1785,46 @@ export default function App() {
   );
 
   const unreadNotifications = notifications.filter((n) => !n.read_at).length;
+  // Shop staff (a Gmail a website owner added in WEBSITE ADMIN → STAFF) skip the mode and age screens:
+  // their first login sets BUSINESS mode by itself and goes straight to the shop admin.
+  const [isShopStaff, setIsShopStaff] = useState<boolean | null>(null);
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) {
+      setIsShopStaff(null);
+      return;
+    }
+    let gone = false;
+    void supabase.rpc('my_staff_stores').then(({ data, error }) => {
+      if (gone) return;
+      setIsShopStaff(!error && Array.isArray(data) && data.length > 0);
+    });
+    return () => {
+      gone = true;
+    };
+  }, [session?.user?.id]);
+  useEffect(() => {
+    if (!isShopStaff || !profileLoaded || !profile || profile.onboarding_done) return;
+    void supabase.rpc('set_account_mode', { p_mode: 'business', p_dob: null }).then(({ data, error }) => {
+      if (error || (data && (data as { ok?: boolean }).ok === false)) return;
+      setProfile((prev) => (prev ? { ...prev, account_mode: 'business', onboarding_done: true } : prev));
+      navigateTo('settings', 'workspace', 'hub');
+    });
+  }, [isShopStaff, profileLoaded, profile, navigateTo]);
+
   // Admin goes straight in. Everyone else picks Personal/Student/Business (+ age) once.
   const needsOnboarding =
     Boolean(session?.user) &&
     profileLoaded &&
     !isAdmin &&
+    isShopStaff === false &&
     Boolean(profile) &&
     !profile?.onboarding_done;
   const needsAgeCheck =
     Boolean(session?.user) &&
     profileLoaded &&
     !isAdmin &&
+    isShopStaff === false &&
     !needsOnboarding &&
     effectiveBirthYear === null;
 
