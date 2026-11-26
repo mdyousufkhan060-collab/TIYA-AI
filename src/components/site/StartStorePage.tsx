@@ -11,6 +11,7 @@ const KEY = 'rose_start_store';
 const input = 'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-[13.5px] text-white placeholder:text-slate-500';
 const lbl = 'block text-[12px] font-bold text-slate-200';
 const bn = 'ml-1 font-normal text-slate-400';
+const bnL = bn + ' max-sm:ml-0 max-sm:block max-sm:text-[11px]';
 const phoneOk = (p: string) => /^01[3-9]\d{8}$/.test(p);
 
 export default function StartStorePage() {
@@ -207,45 +208,54 @@ export default function StartStorePage() {
         )}
         <p className="hidden text-[11.5px] text-slate-400 md:block">You get a full copy of this website: pages, categories, banners and demo products. Then change anything.</p>
       </div>
-      <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:p-4">
+      <div
+        className="space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:p-4"
+        onFocusCapture={(e) => {
+          const t = e.target as HTMLElement;
+          if (!/^(INPUT|TEXTAREA)$/.test(t.tagName) || (t as HTMLInputElement).type === 'file') return;
+          window.setTimeout(() => t.scrollIntoView({ block: 'center', behavior: 'smooth' }), 280);
+        }}
+      >
         <p className="text-[12px] text-slate-400">Signed in as <b className="text-white">{email}</b></p>
-        <div className="grid gap-2.5 sm:grid-cols-2">
-          <label className={lbl}>Company name (English) *<span className={bn}>কোম্পানির নাম</span>
+        <div className="grid grid-cols-2 gap-2.5">
+          <label className={lbl}>Company name (English) *<span className={bnL}>কোম্পানির নাম</span>
             <input className={input + ' mt-1'} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Rahim Fashion" /></label>
-          <label className={lbl}>Company name (Bangla)<span className={bn}>বাংলায় নাম</span>
+          <label className={lbl}>Company name (Bangla)<span className={bnL}>বাংলায় নাম</span>
             <input className={input + ' mt-1'} value={f.nameBn} onChange={(e) => set('nameBn', e.target.value)} placeholder="রহিম ফ্যাশন" /></label>
         </div>
-        <label className={lbl}>Web address *<span className={bn}>ওয়েবসাইটের ঠিকানা</span>
+        <label className={lbl}>Web address *<span className={bnL}>ওয়েবসাইটের ঠিকানা</span>
           <span className="mt-1 flex items-center gap-1"><input className={input} value={f.slug || slugify(f.name)} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="rahim-fashion" /><span className="shrink-0 text-[12px] text-slate-400">.myrosebd.com</span></span></label>
         <div className="grid gap-2.5 sm:grid-cols-2">
-          <label className={lbl}>Company Gmail *<span className={bn}>জিমেইল ১</span>
+          <label className={lbl}>Company Gmail *<span className={bnL}>জিমেইল ১</span>
             <input className={input + ' mt-1'} value={f.email} onChange={(e) => set('email', e.target.value.trim())} inputMode="email" /></label>
-          <label className={lbl}>Second email<span className={bn}>জিমেইল ২</span>
+          <label className={lbl}>Second email<span className={bnL}>জিমেইল ২</span>
             <input className={input + ' mt-1'} value={f.email2} onChange={(e) => set('email2', e.target.value.trim())} inputMode="email" placeholder="optional" /></label>
-          <label className={lbl}>WhatsApp number *<span className={bn}>হোয়াটসঅ্যাপ</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <label className={lbl}>WhatsApp number *<span className={bnL}>হোয়াটসঅ্যাপ</span>
             <input className={input + ' mt-1'} value={f.whatsapp} onChange={(e) => set('whatsapp', e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" placeholder="01XXXXXXXXX" /></label>
-          <label className={lbl}>Other phone<span className={bn}>অন্য ফোন</span>
+          <label className={lbl}>Other phone<span className={bnL}>অন্য ফোন</span>
             <input className={input + ' mt-1'} value={f.phone2} onChange={(e) => set('phone2', e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" placeholder="optional" /></label>
         </div>
-        <div className="grid gap-2.5 sm:grid-cols-[1fr_180px]">
-          <label className={lbl}>Full address *<span className={bn}>পুরো ঠিকানা</span>
-            <textarea className={input + ' mt-1'} rows={1} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area, thana, district" /></label>
-          <label className={lbl}>City / District<span className={bn}>শহর / জেলা</span>
+        <div className="grid grid-cols-[1fr_118px] gap-2.5 sm:grid-cols-[1fr_180px]">
+          <label className={lbl}>Full address *<span className={bnL}>পুরো ঠিকানা</span>
+            <textarea className={input + ' mt-1'} rows={2} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area, thana, district" /></label>
+          <label className={lbl}>City / District<span className={bnL}>শহর / জেলা</span>
             <input className={input + ' mt-1'} value={f.city} onChange={(e) => set('city', e.target.value)} /></label>
         </div>
-        <div className="grid gap-2.5 sm:grid-cols-2">
-          <label className={lbl}>Logo<span className={bn}>লোগো (ঐচ্ছিক)</span>
-            <input className="mt-1 block w-full text-[12px] text-slate-300" type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] || null)} />
+        <div className="grid grid-cols-2 gap-2.5">
+          <label className={lbl}>Logo<span className={bnL}>লোগো (ঐচ্ছিক)</span>
+            <input className="mt-1 block w-full text-[11px] text-slate-300 file:mr-1.5 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:font-bold file:text-white" type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] || null)} />
             <span className="mt-0.5 block text-[10.5px] font-normal text-slate-500">{IMG_HINT.logo}</span></label>
-          <label className={lbl}>Banner photos (up to 4)<span className={bn}>ব্যানারের ছবি</span>
-            <input className="mt-1 block w-full text-[12px] text-slate-300" type="file" accept="image/*" multiple onChange={(e) => setBanners(Array.from(e.target.files || []).slice(0, 4))} />
+          <label className={lbl}>Banner photos (up to 4)<span className={bnL}>ব্যানারের ছবি</span>
+            <input className="mt-1 block w-full text-[11px] text-slate-300 file:mr-1.5 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:font-bold file:text-white" type="file" accept="image/*" multiple onChange={(e) => setBanners(Array.from(e.target.files || []).slice(0, 4))} />
             <span className="mt-0.5 block text-[10.5px] font-normal text-slate-500">{IMG_HINT.banner}</span></label>
         </div>
         <label className="flex items-start gap-2 text-[13px] text-slate-200">
           <input type="checkbox" className="mt-1" checked={f.sample} onChange={(e) => set('sample', e.target.checked)} />
           <span>Copy the full demo website: categories, products and banners (change later) <span className={bn}>পুরো ডেমো ওয়েবসাইট কপি হবে</span></span>
         </label>
-        <div className="sticky bottom-0 -mx-3 space-y-1 bg-[#0d1016]/95 px-3 py-2 backdrop-blur md:-mx-4 md:px-4">
+        <div className="sticky bottom-0 -mx-3 space-y-1 border-t border-white/10 bg-[#0d1016]/95 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:backdrop-blur-none">
           {msg && <p className="text-[13px] text-rose-300">{msg}</p>}
           <button type="button" disabled={busy || !d} onClick={() => void create()} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 text-[14px] font-extrabold text-black disabled:opacity-60">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} START 5-DAY FREE STORE
