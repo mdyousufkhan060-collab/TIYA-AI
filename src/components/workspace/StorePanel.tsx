@@ -1796,6 +1796,11 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
   const [s, setS] = useState<Store>(store);
   const [msg, setMsg] = useState('');
   const [logoBusy, setLogoBusy] = useState(false);
+  // payment numbers: only the store owner (staff, even a manager, cannot change where money goes; the server blocks it too)
+  const [ownerHere, setOwnerHere] = useState(true);
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setOwnerHere(!data.user || data.user.id === store.owner_id));
+  }, [store.owner_id]);
   const set = (k: keyof Store, v: unknown) => setS((x) => ({ ...x, [k]: v }));
   const setBanner = (i: number, k: keyof Banner, v: string) =>
     setS((x) => ({ ...x, banners: x.banners.map((b, j) => (j === i ? { ...b, [k]: v } : b)) }));
@@ -1900,7 +1905,11 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
           <input className={input} value={s.delivery_inside} onChange={(e) => set('delivery_inside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Inside Dhaka Tk (up to 1 kg)" inputMode="numeric" />
           <input className={input} value={s.delivery_outside} onChange={(e) => set('delivery_outside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Outside Dhaka Tk (up to 1 kg)" inputMode="numeric" />
         </div>
-        <PaySetup value={s.pay_numbers || {}} onChange={(v) => set('pay_numbers', v)} storeId={store.id} />
+        {ownerHere ? (
+          <PaySetup value={s.pay_numbers || {}} onChange={(v) => set('pay_numbers', v)} storeId={store.id} />
+        ) : (
+          <p className="text-[11.5px] text-amber-300">Payment numbers: only the store owner can change them.</p>
+        )}
         <textarea className={input} rows={2} value={s.note} onChange={(e) => set('note', e.target.value)} placeholder="Delivery note shown on product pages" />
       </div>
       <button type="button" onClick={() => void save()} className={btn + ' w-full'}>SAVE</button>

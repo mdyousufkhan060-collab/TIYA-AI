@@ -285,6 +285,10 @@
   @media print { header, nav, .demo, footer, .chatbtn, .chat, .buybar, .noprint, .crumb, .toast { display: none !important; } body { background: #fff; } main { padding: 0 !important; } .inv { border: 0; } }
 
   .gacc { width: 36px; height: 36px; border-radius: 99px; border: 1.5px solid var(--line); background: #fff; display: grid; place-items: center; padding: 0; flex-shrink: 0; }
+  .gacc .pic { width: 32px; height: 32px; border-radius: 99px; object-fit: cover; display: block; }
+  .gacc .you { width: 30px; height: 30px; border-radius: 99px; background: var(--c); color: #fff; display: grid; place-items: center; }
+  .gacc .you svg { width: 18px; height: 18px; }
+  .acc1 .av img { width: 100%; height: 100%; border-radius: 99px; object-fit: cover; }
   .gacc .ini { width: 30px; height: 30px; border-radius: 99px; background: var(--c); color: #fff; display: grid; place-items: center; font-weight: 800; }
   .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
   .pays { grid-template-columns: repeat(3, 1fr) !important; }
@@ -662,7 +666,7 @@ function start(S, P, liveId) {
   lb.onclick = function () { LANG = LANG === 'bn' ? 'en' : 'bn'; try { localStorage.setItem('rose_lang', LANG); } catch (e) {} paintLang(); route(); };
   paintLang();
   var GSVG = '<svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
-  function paintAcc() { var g = document.getElementById('gAcc'); if (cust.email) { g.innerHTML = '<span class="ini">' + esc((cust.name || cust.email).charAt(0).toUpperCase()) + '</span>'; g.title = cust.email; } else { g.innerHTML = GSVG; g.title = LANG === 'bn' ? 'Google দিয়ে লগইন' : 'Log in with Google'; } }
+  function paintAcc() { var g = document.getElementById('gAcc'); if (cust.email) { g.innerHTML = cust.pic ? '<img class="pic" src="' + esc(cust.pic) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=IC.user">' : '<span class="you">' + IC.user + '</span>'; g.title = cust.email; } else { g.innerHTML = GSVG; g.title = LANG === 'bn' ? 'Google দিয়ে লগইন' : 'Log in with Google'; } }
   document.getElementById('gAcc').onclick = function () { if (cust.email) location.hash = '#/account'; else openAuth('google'); };
   var place = function (p) { return LANG === 'bn' && p[1] ? p[1] : p[0]; };
 
@@ -681,7 +685,7 @@ function start(S, P, liveId) {
     var j = jwtInfo(at); if (!j || !j.email) return false;
     setTok({ at: at, rt: rt, exp: exp });
     var md = j.user_metadata || {};
-    cust.email = j.email; if (!cust.name && (md.full_name || md.name)) cust.name = md.full_name || md.name; saveCust();
+    cust.email = j.email; if (!cust.name && (md.full_name || md.name)) cust.name = md.full_name || md.name; if (md.avatar_url || md.picture) cust.pic = md.avatar_url || md.picture; saveCust(); paintAcc();
     return true;
   }
   function authBack() { return location.origin + location.pathname + location.search; }
@@ -733,7 +737,11 @@ function start(S, P, liveId) {
       .then(function () { closeAuth(); toast('Login link sent to ' + e + '. Open it on this phone.'); })
       .catch(function (x) { if (b) { b.disabled = false; b.textContent = 'Send login link'; } toast(x.message); });
   };
-  if (S.live && getTok()) setTimeout(function () { syncAccount(true); }, 600);
+  if (S.live && getTok()) {
+    var j0 = jwtInfo(getTok().at), m0 = (j0 && j0.user_metadata) || {};
+    if (!cust.pic && (m0.avatar_url || m0.picture)) { cust.pic = m0.avatar_url || m0.picture; saveCust(); }
+    setTimeout(function () { syncAccount(true); }, 600);
+  }
 
   // ---------------- product page ----------------
   var short = function (p) { return p.short || (p.desc ? p.desc.split('. ')[0] : 'Premium quality ' + p.name + ' from ' + S.name + '. Checked before delivery.'); };
@@ -1108,14 +1116,14 @@ function start(S, P, liveId) {
     if (S.live && cust.email) syncAccount();
     var list = myOrders(), logged = !!cust.email;
     var nm = cust.name || (logged ? cust.email.split('@')[0] : t('guestName'));
-    var top = '<div class="acc1"><div class="av">' + esc(nm.charAt(0).toUpperCase()) + '</div><div style="min-width:0"><b style="font-size:17px;display:block">' + esc(nm) + '</b><span class="small">' + (cust.phone ? '📞 ' + esc(cust.phone) : logged ? esc(cust.email) : t('loginTip')) + '</span></div><button class="ep" onclick="editProfile()">' + t('editProfile') + ' ›</button></div>';
+    var top = '<div class="acc1"><div class="av">' + (cust.pic ? '<img src="' + esc(cust.pic) + '" alt="" referrerpolicy="no-referrer">' : esc(nm.charAt(0).toUpperCase())) + '</div><div style="min-width:0"><b style="font-size:17px;display:block">' + esc(nm) + '</b><span class="small">' + (cust.phone ? '📞 ' + esc(cust.phone) : logged ? esc(cust.email) : t('loginTip')) + '</span></div><button class="ep" onclick="editProfile()">' + t('editProfile') + ' ›</button></div>';
     var login = logged ? '' : '<div class="authb" style="grid-template-columns:1fr 1fr;margin-top:10px"><button class="btn gbtn" onclick="openAuth(\'google\')">' + GSVG + t('google') + '</button><button class="btn alt" onclick="openAuth(\'login\')">✉️ ' + t('emailLogin') + '</button></div>';
     var ord = '<div class="head" style="margin-top:16px"><h3 style="font-size:16px">📦 ' + t('myOrders') + '</h3><a href="#/account/orders" style="color:var(--c);font-weight:700;font-size:13px">' + t('viewAll') + ' ›</a></div>' +
       '<div class="ord4"><a href="#/account/orders"><span>📦</span>' + t('allOrders') + '</a><a href="#/account/track"><span>🚚</span>' + t('trackOrder') + '</a><a href="#/account/returns"><span>↩️</span>' + t('myReturns') + '</a><a href="#/account/reviews"><span>⭐</span>' + t('myReviews') + '</a></div>';
     var menu = [['#/wishlist', '❤️', t('myWish'), st.wish.length ? st.wish.length : ''], ['#/account/coupons', '🎟️', t('myCoupons'), ''], ['#/account/address', '📍', t('addresses'), ''], ['#/account/help', '🎧', t('help'), ''], ['#/page/about', 'ℹ️', t('aboutUs'), '']];
     var ml = '<div class="mlist" style="margin-top:14px">' + menu.map(function (m) { return '<a href="' + m[0] + '"><span class="i">' + m[1] + '</span>' + m[2] + '<em>' + (m[3] ? '<small style="font-size:12px;margin-right:6px;color:var(--c)">' + m[3] + '</small>' : '') + '›</em></a>'; }).join('') +
       '<button onclick="shareStore()"><span class="i">🔗</span>' + t('shareApp') + '<em>›</em></button>' + (logged ? '<button class="lo" onclick="logoutCust()"><span class="i">🚪</span>' + t('logout') + '<em>›</em></button>' : '') + '</div>';
-    var own = S.live && logged && acct.owner ? '<a class="btn" style="margin-top:10px;padding:12px" href="https://www.myrosebd.com/app" target="_blank" rel="noopener">🛠️ Store admin · products · orders</a>' : '';
+    var own = S.live && logged && acct.owner ? '<a class="btn" style="margin-top:10px;padding:12px" href="https://www.myrosebd.com/app?open=store" target="_blank" rel="noopener">🛠️ Store admin · products · orders</a>' : '';
     return '<div style="max-width:620px;margin:0 auto">' + top + login + own + ord + (list.length ? '<div style="margin-top:10px">' + orderRows(list.slice(0, 2)) + '</div>' : '') + ml + '</div>';
   }
   window.openAuth = function (mode) {
@@ -1163,6 +1171,7 @@ function start(S, P, liveId) {
   window.route = function () {
     var h = decodeURIComponent((location.hash || '#/').slice(1));
     var v = document.getElementById('view'), html;
+    var ft = document.querySelector('footer'); if (ft) ft.style.display = h === '/' || h === '' ? '' : 'none';
     if (h === '/' || h === '') html = home();
     else if (h === '/categories') html = '<div class="head"><h3>All categories</h3></div>' + catTiles(false);
     else if (h.indexOf('/c/') === 0) { var cat = h.slice(3); html = list(cat, P.filter(function (p) { return p.cat === cat; })); }

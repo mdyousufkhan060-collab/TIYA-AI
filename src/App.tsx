@@ -316,6 +316,29 @@ export default function App() {
     setSettingsSubpage(null);
   }, []);
 
+  // Store admin link from a shop page (/app?open=store): kept through Google login, then STORE · WEBSITE opens
+  const [openAfterLogin] = useState<string | null>(() => {
+    try {
+      const v = new URLSearchParams(window.location.search).get('open');
+      if (v === 'store') {
+        window.sessionStorage.setItem('rose_open', v);
+        window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+      }
+      return window.sessionStorage.getItem('rose_open');
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    if (!session?.user?.id || openAfterLogin !== 'store') return;
+    try {
+      window.sessionStorage.removeItem('rose_open');
+    } catch {
+      /* ignore */
+    }
+    navigateTo('settings', 'workspace', 'store');
+  }, [session?.user?.id, openAfterLogin, navigateTo]);
+
   const handleNavigateCommand = useCallback(
     (cmd: NavigationCommand) => {
       if (cmd.type === 'back') {
