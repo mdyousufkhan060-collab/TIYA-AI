@@ -28,6 +28,11 @@ const HOW: Record<string, string[]> = {
   hostinger: ['hpanel.hostinger.com → top right profile → Account → API (or open hpanel.hostinger.com/profile/api)', 'New token → name: ROSE → longest expiry → Create', 'Copy the key and paste it below. It shows only once.'],
   cloudflare: ['dash.cloudflare.com → My Profile → API Tokens → Create Token', 'Use the template "Edit zone DNS" → Zone Resources: your domain → Continue → Create Token', 'Copy the key and paste it below.'],
 };
+// the 2 records every domain needs to open a ROSE store (same as WEBSITE ADMIN → DOMAIN)
+const BASE_DNS: Rec[] = [
+  { type: 'A', name: '@', value: '216.198.79.1' },
+  { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com' },
+];
 const STATUS: Record<string, [string, string]> = {
   saved: ['SAVED', 'text-amber-300'],
   connected: ['ROSE CONNECTED', 'text-emerald-300'],
@@ -132,12 +137,28 @@ export const DomainAccess: React.FC<{ userId: string }> = ({ userId }) => {
       <div className={box + ' space-y-1 text-[11.5px] text-slate-300'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">WHAT ROSE DOES WITH YOUR DOMAIN</p>
         <p>Give ROSE your domain's DNS key once. Then ROSE checks it, shows its records and points it to your ROSE store by herself. No DNS work for you.</p>
-        <p>Works by itself with Hostinger and Cloudflare. Other sellers: ROSE shows the records and you add them by hand.</p>
+        <p>Works by itself with Hostinger and Cloudflare. Other sellers: add the 2 DNS records below by hand. You can add more than one domain.</p>
         <p className="text-slate-400">The key stays on ROSE's server. Nobody sees it again, not even you. You can remove it any time.</p>
       </div>
 
+      <div className={box + ' space-y-1.5'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">DNS RECORDS · add these where you bought the domain</p>
+        <div className="grid grid-cols-[52px_56px_1fr_auto] gap-1.5 text-[10px] font-bold tracking-wider text-slate-500"><span>TYPE</span><span>NAME</span><span>VALUE</span><span /></div>
+        {BASE_DNS.map((x) => (
+          <div key={x.type} className="grid grid-cols-[52px_56px_1fr_auto] items-center gap-1.5 text-[11.5px]">
+            <b className="text-teal-300">{x.type}</b>
+            <span className="text-slate-300">{x.name}</span>
+            <span className="truncate font-mono text-white">{x.value}</span>
+            <button type="button" className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white" onClick={() => { void navigator.clipboard?.writeText(x.value); say('dns', `Copied ${x.value}`); }}>COPY</button>
+          </div>
+        ))}
+        <p className="text-[11px] text-slate-400">Delete any old A record for @ first. TTL: leave as it is. With a Hostinger or Cloudflare key below, ROSE adds both by herself.</p>
+        <p className="text-[10.5px] text-slate-500">Hostinger: Domains → your domain → DNS / Nameservers → DNS records. Namecheap: Domain List → Manage → Advanced DNS. GoDaddy: My Products → DNS. BTCL: ask your seller to add them.</p>
+        {msg.dns && <p className="text-[11.5px] text-teal-200">{msg.dns}</p>}
+      </div>
+
       <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">ADD A DOMAIN</p>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">ADD A DOMAIN · up to 10</p>
         <input className={input} value={domain} onChange={(e) => setDomain(e.target.value.trim().toLowerCase())} placeholder="yourshop.com" autoCapitalize="off" />
         <select className={input} value={provider} onChange={(e) => setProvider(e.target.value)}>
           {PROVIDERS.map(([k, l]) => <option key={k} value={k}>Bought from: {l}</option>)}
@@ -159,7 +180,7 @@ export const DomainAccess: React.FC<{ userId: string }> = ({ userId }) => {
 
       {list.map((d) => {
         const [label, color] = STATUS[d.status] || STATUS.saved;
-        const r = recs[d.id] || [];
+        const r = recs[d.id]?.length ? recs[d.id] : BASE_DNS;
         const pname = PROVIDERS.find((p) => p[0] === d.provider)?.[1] || d.provider;
         return (
           <div key={d.id} className={box + ' space-y-2'}>

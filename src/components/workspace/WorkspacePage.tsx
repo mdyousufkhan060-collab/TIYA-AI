@@ -412,7 +412,9 @@ type View =
   | 'channels'
   | 'writer'
   | 'customer_check'
-  | 'biz_guide';
+  | 'biz_guide'
+  | 'grp_rose'
+  | 'grp_biz';
 
 const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
@@ -427,6 +429,8 @@ const TITLES: Record<View, string> = {
   domain: 'MY DOMAIN',
   customer_check: 'CUSTOMER CHECK',
   biz_guide: 'START HERE · GUIDE',
+  grp_rose: 'ROSE',
+  grp_biz: 'BUSINESS',
   tasks: TASKS.title,
   content: CONTENT.title,
   notes: NOTES.title,
@@ -707,8 +711,15 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     setView('hub');
   };
 
+  // business mode: bars sit inside two groups, 01 ROSE and 02 BUSINESS
+  const ROSE_GRP: View[] = ['biz_ai', 'writer', 'social', 'store', 'domain', 'channels'];
+  const BIZ_GRP: View[] = ['biz_profile', 'products', 'faqs', 'couriers', 'discounts', 'orders', 'customers', 'customer_check', 'approvals', 'biz_dashboard', 'expenses'];
+  const grouped = mode === 'business' && !allModes;
   const back = () => {
     if (view === 'hub') return onBack();
+    if (grouped && ROSE_GRP.includes(view) && !(siteOwner && view === 'store')) return setView('grp_rose');
+    if (grouped && BIZ_GRP.includes(view)) return setView('grp_biz');
+    if (view === 'grp_rose' || view === 'grp_biz') return setView(siteOwner ? 'rose_hub' : 'hub');
     if (siteOwner && !['store', 'rose_hub', 'rose_support', 'profile', 'viewas'].includes(view)) return setView('rose_hub');
     setView('hub');
   };
@@ -801,43 +812,38 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
         {t}
       </p>
     );
-    const business = [
-      <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
-      label('SETUP'),
-      bar('01', 'biz_profile', businessId ? 'READY' : 'SET UP'),
-      ...(true
-        ? [
-            bar('02', 'products'),
-            bar('03', 'faqs'),
-            bar('04', 'couriers'),
-            bar('05', 'discounts'),
-            bar('06', 'biz_ai'),
-            label('DAILY WORK'),
-            bar('07', 'orders'),
-            bar('08', 'customers'),
-            bar('09', 'customer_check', 'COURIER HISTORY'),
-            bar('10', 'approvals'),
-            label('MONEY & REPORTS'),
-            bar('11', 'biz_dashboard'),
-            bar('12', 'expenses'),
-            // admin (ALL) already sees WRITER, SOCIAL POST, MY STORE and MY DOMAIN in WRITE & POST above
-            ...(allModes
-              ? [label('CHANNELS'), bar('13', 'channels', 'KEYS')]
-              : [
-                  label('TOOLS'),
-                  bar('13', 'writer'),
-                  bar('14', 'social', 'YT · FB · TT · IG'),
-                  bar('15', 'store', 'WEBSITE'),
-                  bar('16', 'domain', 'ROSE ACCESS'),
-                  label('CHANNELS'),
-                  bar('17', 'channels', 'KEYS'),
-                ]),
-          ]
-        : []),
-    ];
+    const business = grouped
+      ? [
+          <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
+          <SettingsBar key="grp_rose" badge="01" title="ROSE" value="AI · POSTS · CHANNELS" onClick={() => setView('grp_rose')} testId="ws-grp_rose" />,
+          <SettingsBar key="grp_biz" badge="02" title="BUSINESS" value="PROFILE · PRODUCTS · REPORTS" onClick={() => setView('grp_biz')} testId="ws-grp_biz" />,
+        ]
+      : [
+          <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
+          label('SETUP'),
+          bar('01', 'biz_profile', businessId ? 'READY' : 'SET UP'),
+          bar('02', 'products'),
+          bar('03', 'faqs'),
+          bar('04', 'couriers'),
+          bar('05', 'discounts'),
+          bar('06', 'biz_ai'),
+          label('DAILY WORK'),
+          bar('07', 'orders'),
+          bar('08', 'customers'),
+          bar('09', 'customer_check', 'COURIER HISTORY'),
+          bar('10', 'approvals'),
+          label('MONEY & REPORTS'),
+          bar('11', 'biz_dashboard'),
+          bar('12', 'expenses'),
+          label('CHANNELS'),
+          bar('13', 'channels', 'KEYS'),
+        ];
     body = (
       <div className="space-y-3">
         <TutorialStrip audience={mode || 'personal'} />
+        {mode === 'business' && !businessId && bizLoaded && (
+          <p className="px-1 text-[11px] text-amber-300">Fill in your Business Profile first (02 BUSINESS → 01). Then products, orders and the dashboard appear.</p>
+        )}
         {allModes ? (
           <SettingsBar badge="A" title="MODE" value="ADMIN · ALL" tone="accent" hideChevron onClick={() => undefined} testId="ws-mode" />
         ) : (
@@ -867,9 +873,30 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             tidy(personal)
           )}
         </div>
-        {mode === 'business' && !businessId && bizLoaded && (
-          <p className="px-1 text-[11px] text-slate-400">Fill in your Business Profile first. Then products, orders and the dashboard appear here.</p>
-        )}
+      </div>
+    );
+  } else if (view === 'grp_rose') {
+    body = (
+      <div className="space-y-1.5">
+        {tidy([bar('01', 'biz_ai'), bar('02', 'writer'), bar('03', 'social', 'YT · FB · TT · IG'), bar('04', 'store', 'WEBSITE'), bar('05', 'domain', 'DNS · ROSE ACCESS'), bar('06', 'channels', 'KEYS')])}
+      </div>
+    );
+  } else if (view === 'grp_biz') {
+    body = (
+      <div className="space-y-1.5">
+        {tidy([
+          bar('01', 'biz_profile', businessId ? 'READY' : 'SET UP'),
+          bar('02', 'products'),
+          bar('03', 'faqs'),
+          bar('04', 'couriers'),
+          bar('05', 'discounts'),
+          bar('06', 'orders'),
+          bar('07', 'customers'),
+          bar('08', 'customer_check', 'COURIER HISTORY'),
+          bar('09', 'approvals'),
+          bar('10', 'biz_dashboard'),
+          bar('11', 'expenses'),
+        ])}
       </div>
     );
   } else if (view === 'mode') {
