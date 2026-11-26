@@ -11,7 +11,7 @@ const KEY = 'rose_start_store';
 const input = 'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-[13.5px] text-white placeholder:text-slate-500';
 const lbl = 'block text-[12px] font-bold text-slate-200';
 const bn = 'ml-1 font-normal text-slate-400';
-const bnL = bn + ' max-sm:ml-0 max-sm:block max-sm:text-[11px]';
+const bnL = bn + ' max-sm:hidden';
 const phoneOk = (p: string) => /^01[3-9]\d{8}$/.test(p);
 
 export default function StartStorePage() {
@@ -135,9 +135,9 @@ export default function StartStorePage() {
 
   const shell = (body: React.ReactNode) => (
     <div className="min-h-[100dvh] bg-[#07090D] px-4 py-4 text-white md:px-8 md:py-3">
-      <div className="mx-auto max-w-5xl space-y-3">
+      <div className="mx-auto max-w-5xl space-y-2.5 md:space-y-3">
         <a href="/demos" className="text-[12px] font-bold text-teal-300">‹ All designs</a>
-        <h1 className="text-2xl font-extrabold md:flex md:items-baseline md:gap-3">Get your own store <span className="block text-[15px] font-semibold text-slate-400">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span></h1>
+        <h1 className="text-xl font-extrabold md:flex md:items-baseline md:gap-3 md:text-2xl">Get your own store <span className="block text-[13px] font-semibold text-slate-400 md:text-[15px]">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span></h1>
         {body}
         <p className="pt-4 text-center text-[11px] text-slate-500">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a className="underline" href="/policies.html">Policies</a></p>
       </div>
@@ -199,10 +199,10 @@ export default function StartStorePage() {
   return shell(
     <div className="grid gap-4 md:grid-cols-[300px_1fr] md:items-start">
       <div className="space-y-2 md:sticky md:top-4">
-        <p className="text-[13px] text-slate-300">Design <span className={bn}>ডিজাইন</span></p>
+        <p className="hidden text-[13px] text-slate-300 md:block">Design <span className={bn}>ডিজাইন</span></p>
         {designs}
         {d && (
-          <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="block rounded-lg border border-white/10 px-2 py-1.5 text-center text-[12px] text-teal-300">
+          <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="block text-center text-[12px] text-teal-300 underline md:rounded-lg md:border md:border-white/10 md:px-2 md:py-1.5 md:no-underline">
             See {d.name} demo ↗
           </a>
         )}
@@ -216,7 +216,7 @@ export default function StartStorePage() {
           window.setTimeout(() => t.scrollIntoView({ block: 'center', behavior: 'smooth' }), 280);
         }}
       >
-        <p className="text-[12px] text-slate-400">Signed in as <b className="text-white">{email}</b></p>
+        <p className="hidden text-[12px] text-slate-400 md:block">Signed in as <b className="text-white">{email}</b></p>
         <div className="grid grid-cols-2 gap-2.5">
           <label className={lbl}>Company name (English) *<span className={bnL}>কোম্পানির নাম</span>
             <input className={input + ' mt-1'} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Rahim Fashion" /></label>
@@ -225,11 +225,11 @@ export default function StartStorePage() {
         </div>
         <label className={lbl}>Web address *<span className={bnL}>ওয়েবসাইটের ঠিকানা</span>
           <span className="mt-1 flex items-center gap-1"><input className={input} value={f.slug || slugify(f.name)} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="rahim-fashion" /><span className="shrink-0 text-[12px] text-slate-400">.myrosebd.com</span></span></label>
-        <div className="grid gap-2.5 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <label className={lbl}>Company Gmail *<span className={bnL}>জিমেইল ১</span>
-            <input className={input + ' mt-1'} value={f.email} onChange={(e) => set('email', e.target.value.trim())} inputMode="email" /></label>
+            <input className={input + ' mt-1 max-sm:px-2 max-sm:text-[12px]'} value={f.email} onChange={(e) => set('email', e.target.value.trim())} inputMode="email" /></label>
           <label className={lbl}>Second email<span className={bnL}>জিমেইল ২</span>
-            <input className={input + ' mt-1'} value={f.email2} onChange={(e) => set('email2', e.target.value.trim())} inputMode="email" placeholder="optional" /></label>
+            <input className={input + ' mt-1 max-sm:px-2 max-sm:text-[12px]'} value={f.email2} onChange={(e) => set('email2', e.target.value.trim())} inputMode="email" placeholder="optional" /></label>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           <label className={lbl}>WhatsApp number *<span className={bnL}>হোয়াটসঅ্যাপ</span>
@@ -255,7 +255,7 @@ export default function StartStorePage() {
           <input type="checkbox" className="mt-1" checked={f.sample} onChange={(e) => set('sample', e.target.checked)} />
           <span>Copy the full demo website: categories, products and banners (change later) <span className={bn}>পুরো ডেমো ওয়েবসাইট কপি হবে</span></span>
         </label>
-        <div className="sticky bottom-0 -mx-3 space-y-1 border-t border-white/10 bg-[#0d1016]/95 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:backdrop-blur-none">
+        <div className="space-y-1 pt-1">
           {msg && <p className="text-[13px] text-rose-300">{msg}</p>}
           <button type="button" disabled={busy || !d} onClick={() => void create()} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 text-[14px] font-extrabold text-black disabled:opacity-60">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} START 5-DAY FREE STORE
