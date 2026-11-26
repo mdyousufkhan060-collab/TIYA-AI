@@ -52,7 +52,12 @@ export default function StartStorePage() {
       if (em) {
         setF((x) => ({ ...x, email: x.email || em }));
         const { data: st } = await supabase.from('stores').select('slug,name').eq('owner_id', data.session!.user.id).limit(1);
-        if (st && st[0]) setExisting(st[0] as { slug: string; name: string });
+        if (st && st[0]) {
+          setExisting(st[0] as { slug: string; name: string });
+          // sign-up is over: a later Google login must open the app, not this page
+          localStorage.removeItem(KEY);
+          localStorage.removeItem(KEY + '_form');
+        }
       }
       setReady(true);
     };
@@ -187,8 +192,8 @@ export default function StartStorePage() {
     return shell(
       <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         <p className="text-[14px]">You already have a store: <b>{existing.name}</b></p>
-        <a href={`/shop/${existing.slug}`} className="flex h-11 items-center justify-center rounded-xl bg-white text-[13px] font-bold text-black">OPEN MY STORE</a>
-        <a href="/app" className="flex h-11 items-center justify-center rounded-xl bg-teal-600 text-[13px] font-bold">MANAGE MY STORE</a>
+        <a href={`/shop/${existing.slug}`} className="flex h-11 items-center justify-center rounded-xl bg-white text-[13px] font-bold text-black">OPEN MY SHOP</a>
+        <a href="/app?open=store" className="flex h-11 items-center justify-center rounded-xl bg-teal-600 text-[13px] font-bold">STORE ADMIN</a>
         <p className="text-[12px] text-slate-400">Signed in as {email}. More stores need the BUSINESS plan.</p>
       </div>,
     );

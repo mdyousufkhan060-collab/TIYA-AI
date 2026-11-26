@@ -36,6 +36,8 @@ const isStartPage = (() => {
   try {
     const { pathname, hash, search } = window.location;
     if (pathname.startsWith('/start')) return true;
+    // the app (/app, e.g. Store admin from a shop) is never the store sign-up page
+    if (pathname.startsWith('/app')) return false;
     return Boolean(localStorage.getItem('rose_start_store')) && (/access_token/.test(hash) || /[?&]code=/.test(search)) && !(window as any).TiyaNative;
   } catch {
     return false;
