@@ -47,7 +47,7 @@ export const AdminVideosPage: React.FC = () => (
       <br />
       <b className="text-white">BUSINESS:</b> Start Here guide, profile, products, FAQ, couriers, orders, customer check, approvals by email, dashboard, profit.
       <br />
-      Choose <b className="text-white">SHOW TO</b> so each user sees only their own video at the top of 07 WORKSPACE. EVERYONE videos also show on the website.
+      Choose <b className="text-white">SHOW TO</b> so each user sees only their own video at the top of WORKSPACE. EVERYONE videos also show on the website.
     </div>
     <CrudSection config={VIDEOS} scope={{}} />
   </div>

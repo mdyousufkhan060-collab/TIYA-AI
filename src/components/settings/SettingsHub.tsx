@@ -96,15 +96,14 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
       title: 'PREMIUM',
       value: premiumValue,
     },
-    ...[
-          {
-            num: '07',
-            id: 'workspace' as SettingsPageId,
-            title: 'WORKSPACE',
-            value: isAdmin ? 'BUSINESS' : (profile?.account_mode || 'personal').toUpperCase(),
-          },
-        ],
   ];
+  // WORKSPACE (business) is always the last bar, under ROSE's own bars
+  const workspaceItem = {
+    num: '',
+    id: 'workspace' as SettingsPageId,
+    title: 'WORKSPACE',
+    value: isAdmin ? 'BUSINESS' : (profile?.account_mode || 'personal').toUpperCase(),
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -121,13 +120,14 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
             {roseOpen && <AdminBrandPage />}
           </div>
         )}
-        {/* One numbered list, no gaps: 01–07, then (TEAM) MY TASK LIST, PRIVACY CONTROLS, MY ACCOUNT */}
+        {/* One numbered list, no gaps: ROSE's bars, (TEAM) MY TASK LIST, PRIVACY CONTROLS, MY ACCOUNT, then WORKSPACE last */}
         <div className="space-y-1.5 pb-2">
           {[
             ...mainItems,
             ...(myTasks.total > 0 ? [{ num: '', id: 'team_list' as SettingsPageId, title: 'MY TASK LIST', value: `${myTasks.done}/${myTasks.total}` }] : []),
             { num: '', id: 'privacy_controls' as SettingsPageId, title: 'PRIVACY CONTROLS', value: undefined as string | undefined },
             { num: '', id: 'my_account' as SettingsPageId, title: 'MY ACCOUNT', value: userEmail || undefined },
+            workspaceItem,
           ].map((item, i) => (
             <SettingsBar
               key={item.id}

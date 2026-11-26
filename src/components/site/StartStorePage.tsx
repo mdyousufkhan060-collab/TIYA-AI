@@ -90,7 +90,7 @@ export default function StartStorePage() {
         const { error } = await supabase.rpc('start_website_trial');
         if (error) throw new Error(error.message);
       } else if (a.ends_at && new Date(a.ends_at) < new Date()) {
-        throw new Error('Your free trial or plan has ended. Buy a plan in the app: myrosebd.com/app → Settings → 07 WORKSPACE → STORE · WEBSITE.');
+        throw new Error('Your free trial or plan has ended. Buy a plan in the app: myrosebd.com/app → Settings → WORKSPACE → STORE · WEBSITE.');
       }
       const { data: st, error } = await supabase
         .from('stores')
@@ -170,7 +170,7 @@ export default function StartStorePage() {
         {done.ends && <p className="text-[13px] text-slate-200">Free until {new Date(done.ends).toLocaleDateString('en-GB')}. After that choose 3, 6, 9, 12 or 24 months to keep it open.</p>}
         <a href={done.url} target="_blank" rel="noreferrer" className="flex h-11 items-center justify-center rounded-xl bg-white text-[13px] font-bold text-black">OPEN MY STORE</a>
         <a href="/app" className="flex h-11 items-center justify-center rounded-xl bg-teal-600 text-[13px] font-bold">MANAGE: PRODUCTS · ORDERS · PLAN</a>
-        <p className="text-[12px] text-slate-300">To change the name, phone, address, logo or banners later: myrosebd.com/app → sign in with this Gmail → Settings → 07 WORKSPACE → MY DETAILS (name, phone, address) and WEBSITE ADMIN → HOMEPAGE & DESIGN (logo, banners). Or on your shop: Account → Store admin.</p>
+        <p className="text-[12px] text-slate-300">To change the name, phone, address, logo or banners later: myrosebd.com/app → sign in with this Gmail → Settings → WORKSPACE → MY DETAILS (name, phone, address) and WEBSITE ADMIN → HOMEPAGE & DESIGN (logo, banners). Or on your shop: Account → Store admin.</p>
       </div>,
     );
 

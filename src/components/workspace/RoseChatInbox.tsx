@@ -111,7 +111,7 @@ export const StoreChatTab: React.FC<{ store: { id: string; name: string; chat_ai
             </button>
           )}
         </div>
-        {ready === false && <p className="text-[10.5px] text-amber-300">Turn on ROSE Business: Settings → 07 WORKSPACE → M MODE → BUSINESS (18+).</p>}
+        {ready === false && <p className="text-[10.5px] text-amber-300">Turn on ROSE Business: Settings → WORKSPACE → M MODE → BUSINESS (18+).</p>}
       </div>
       <RoseChatInbox storeId={store.id} name={store.name} />
     </div>

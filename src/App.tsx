@@ -316,7 +316,8 @@ export default function App() {
     setSettingsSubpage(null);
   }, []);
 
-  // Store admin link from a shop page (/app?open=store): kept through login, then 07 WORKSPACE opens (MY DETAILS · BUSINESS · WEBSITE ADMIN)
+  // Store admin link from a shop page (/app?open=store): kept through login, then Settings opens with the same bars
+  // as everywhere else (ROSE's bars first, WORKSPACE last)
   const [openAfterLogin] = useState<string | null>(() => {
     try {
       const v = new URLSearchParams(window.location.search).get('open');
@@ -336,7 +337,7 @@ export default function App() {
     } catch {
       /* ignore */
     }
-    navigateTo('settings', 'workspace', 'hub');
+    navigateTo('settings', 'hub', null);
   }, [session?.user?.id, openAfterLogin, navigateTo]);
 
   const handleNavigateCommand = useCallback(
@@ -1808,9 +1809,39 @@ export default function App() {
     void supabase.rpc('set_account_mode', { p_mode: 'business', p_dob: null }).then(({ data, error }) => {
       if (error || (data && (data as { ok?: boolean }).ok === false)) return;
       setProfile((prev) => (prev ? { ...prev, account_mode: 'business', onboarding_done: true } : prev));
-      navigateTo('settings', 'workspace', 'hub');
+      navigateTo('settings', 'hub', null);
     });
   }, [isShopStaff, profileLoaded, profile, navigateTo]);
+
+  // Website plan owners (trial or paid, myrosebd.com shop) are always in BUSINESS mode: no mode screen,
+  // and WORKSPACE shows MYROSEBD.COM BUSINESS for them.
+  const [isSiteOwner, setIsSiteOwner] = useState<boolean | null>(null);
+  const [siteModeFailed, setSiteModeFailed] = useState(false);
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) {
+      setIsSiteOwner(null);
+      return;
+    }
+    let gone = false;
+    void supabase.rpc('my_website_access').then(({ data, error }) => {
+      if (gone) return;
+      setIsSiteOwner(!error && Boolean((data as { email?: string | null } | null)?.email));
+    });
+    return () => {
+      gone = true;
+    };
+  }, [session?.user?.id]);
+  useEffect(() => {
+    if (!isSiteOwner || isAdmin || !profileLoaded || !profile || profile.account_mode === 'business' || siteModeFailed) return;
+    void supabase.rpc('set_account_mode', { p_mode: 'business', p_dob: null }).then(({ data, error }) => {
+      if (error || (data && (data as { ok?: boolean }).ok === false)) {
+        setSiteModeFailed(true);
+        return;
+      }
+      setProfile((prev) => (prev ? { ...prev, account_mode: 'business', onboarding_done: true } : prev));
+    });
+  }, [isSiteOwner, isAdmin, profileLoaded, profile, siteModeFailed]);
 
   // Admin goes straight in. Everyone else picks Personal/Student/Business (+ age) once.
   const needsOnboarding =
@@ -1818,6 +1849,8 @@ export default function App() {
     profileLoaded &&
     !isAdmin &&
     isShopStaff === false &&
+    isSiteOwner !== null &&
+    !(isSiteOwner && !siteModeFailed) &&
     Boolean(profile) &&
     !profile?.onboarding_done;
   const needsAgeCheck =

@@ -145,7 +145,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
   const [roles, setRoles] = useState<Record<string, string>>({});
   // owner can look at the admin the way a staff role sees it (nothing opens or saves in this view)
   const [previewRole, setPreviewRole] = useState('');
-  // MY STAFF (07 WORKSPACE): the owner's staff list, and the one being looked at
+  // MY STAFF (WORKSPACE): the owner's staff list, and the one being looked at
   const [staffList, setStaffList] = useState<StaffRow[]>([]);
   const [staffSel, setStaffSel] = useState<StaffRow | null>(null);
   const [myMoney, setMyMoney] = useState<Record<string, boolean>>({});
@@ -1564,7 +1564,7 @@ const CouponsTab: React.FC<{ store: Store }> = ({ store }) => {
   );
 };
 
-// ---------------------------------------------------------------- my details (07 WORKSPACE: second bar for website owners and staff)
+// ---------------------------------------------------------------- my details (WORKSPACE: second bar for website owners and staff)
 export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
   const [me, setMe] = useState<{ email: string; name: string; pic: string } | null>(null);
   const [pwOpen, setPwOpen] = useState(false);
@@ -1674,7 +1674,7 @@ export const AdminSupportOpen: React.FC = () => {
     <div className="space-y-2">
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">OPEN A SHOP BY SUPPORT ID</p>
-        <p className="text-[11.5px] text-slate-400">The owner finds the ID under their Gmail in 07 WORKSPACE. Only ROSE admin can open a shop with it.</p>
+        <p className="text-[11.5px] text-slate-400">The owner finds the ID under their Gmail in WORKSPACE. Only ROSE admin can open a shop with it.</p>
         <input className={input + ' font-mono uppercase tracking-wider'} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="RS-123456" onKeyDown={(e) => { if (e.key === 'Enter') void open(); }} />
         <button type="button" disabled={busy || code.replace(/\D/g, '').length < 6} className={btn + ' w-full'} onClick={() => void open()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} OPEN SHOP</button>
         {msg && <p className="text-[12px] text-rose-300">{msg}</p>}

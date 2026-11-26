@@ -461,7 +461,7 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
         </div>
       ) : tiles.length === 0 ? (
         <div className="rounded-[10px] border border-white/[0.08] bg-[#120F22] p-4 text-sm text-slate-300">
-          Set up your Business Profile (Settings → 07 WORKSPACE) to see sales, orders and customers here.
+          Set up your Business Profile (Settings → WORKSPACE) to see sales, orders and customers here.
         </div>
       ) : (
         <div className="grid grid-cols-5 gap-3">

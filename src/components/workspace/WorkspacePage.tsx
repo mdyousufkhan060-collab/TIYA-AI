@@ -1076,7 +1076,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     );
 
   return (
-    <SettingsShell title={view === 'hub' ? '07 WORKSPACE' : view === 'store' && siteOwner ? 'WEBSITE ADMIN' : TITLES[view]} onBack={back}>
+    <SettingsShell title={view === 'hub' ? 'WORKSPACE' : view === 'store' && siteOwner ? 'WEBSITE ADMIN' : TITLES[view]} onBack={back}>
       <div className="pb-4">{body}</div>
     </SettingsShell>
   );
