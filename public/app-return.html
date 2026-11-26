@@ -34,7 +34,8 @@
     var web = document.getElementById('web');
     web.href = '/app' + location.search + h;
     if (ok) {
-      var target = 'com.myrosebd.rose://auth' + h;
+      // the sign-in data goes in the ?part: Chrome can drop the #part when it opens an app
+      var target = 'com.myrosebd.rose://auth?' + h.slice(1);
       open.href = target;
       setTimeout(function () { location.href = target; }, 150);
     } else {
