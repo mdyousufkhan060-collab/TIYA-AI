@@ -114,6 +114,34 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
     case '/api/health':
       return ok({ ok: true });
 
+    // ROSE Android app: a gallery video (whole small video, or 6 pictures from it) -> ready-to-post words
+    case '/api/video-describe': {
+      if (!key) return fail(401, 'No API key', 'Add your Gemini API key in Connections.');
+      const parts: any[] = [];
+      if (body?.video) parts.push({ inlineData: { mimeType: body.mime || 'video/mp4', data: body.video } });
+      for (const f of (Array.isArray(body?.frames) ? body.frames : []).slice(0, 6)) parts.push({ inlineData: { mimeType: 'image/jpeg', data: f } });
+      parts.push({
+        text:
+          `This is the user's own ${body?.video ? 'video' : 'video, shown as pictures taken from it'} (${body?.seconds || '?'} seconds). ${body?.hint ? `The owner says: ${body.hint}. ` : ''}` +
+          'Describe in one Bengali line what happens and what is said, then write ready-to-post text in Bengali (keep brand or English words as they are). ' +
+          'youtube: title under 60 characters, main keyword first, and a description whose first 2 lines carry the keywords. facebook / tiktok / instagram: one caption each with a hook. ' +
+          '3-6 fitting hashtags. Never promise views. Return ONLY JSON: {"summary":"...","title":"...","description":"...","caption":"...","hashtags":["#..."]}',
+      });
+      let lastErr: unknown = null;
+      for (const model of await pickChatModels(key, body?.model)) {
+        try {
+          const res = await generateContent(key, model, { contents: [{ role: 'user', parts }] });
+          const raw = responseText(res) || '';
+          const m = raw.match(/\{[\s\S]*\}/);
+          const j = m ? JSON.parse(m[0]) : null;
+          if (j && (j.title || j.caption)) return ok({ ok: true, ...j });
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      return lastErr ? failFromError(lastErr) : fail(500, 'No answer', 'Could not understand the video.');
+    }
+
     case '/api/gemini/test-key': {
       if (!key) return fail(401, 'No API key', 'Enter your Gemini API key first.');
       try {

@@ -1,5 +1,6 @@
 import { DispatchStep, PhoneAction, TiyaNativeResult } from '../types/tiya';
 import { supabase } from '../lib/supabase';
+import { loadSettings } from './storage';
 
 export const SUPPORTED_PHONE_ACTIONS_META = [
   {
@@ -161,7 +162,8 @@ export function requiresConfirmation(action: PhoneAction): boolean {
     action.action === 'whatsapp_message' ||
     action.action === 'messenger_message' ||
     action.action === 'messenger_call' ||
-    action.action === 'courier_dispatch'
+    action.action === 'courier_dispatch' ||
+    (action.action === 'open_app' && /^publish video/i.test(action.app))
   );
 }
 
@@ -487,6 +489,100 @@ export function buildWebFallback(action: PhoneAction): ActionExecutionResult {
   };
 }
 
+type NativeBridge = { run: (json: string) => Promise<string | TiyaNativeResult> | string | TiyaNativeResult };
+
+/** One call into the Android app (async with a request id), answer parsed */
+async function nativeCall(bridge: NativeBridge, payload: Record<string, unknown>, ms = 30000): Promise<any> {
+  const rid = Math.random().toString(36).slice(2);
+  let raw = await bridge.run(JSON.stringify({ ...payload, async: true, rid }));
+  if (typeof raw === 'string' && /"pending"\s*:\s*true/.test(raw)) raw = await waitNativeResult(rid, ms);
+  if (typeof raw !== 'string') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { success: false, message: raw };
+  }
+}
+
+// the video ROSE prepared last (gallery number + the words she wrote), used when he says to publish
+let videoPack: { index: number; title: string; description: string; caption: string; hashtags: string[] } | null = null;
+
+const PLATFORMS: Array<[RegExp, string]> = [
+  [/youtube|ইউটিউব/i, 'youtube'],
+  [/facebook|fb|ফেসবুক/i, 'facebook'],
+  [/tiktok|tik tok|টিকটক/i, 'tiktok'],
+  [/instagram|insta|ইনস্টাগ্রাম/i, 'instagram'],
+];
+
+/** Gallery videos -> words -> YouTube / Facebook / TikTok / Instagram (ROSE Android app) */
+async function videoCommand(app: string, bridge: NativeBridge): Promise<ActionExecutionResult | null> {
+  const a = app.trim();
+  if (/^(list|show|count) (gallery )?videos|^gallery videos/i.test(a)) {
+    const r = await nativeCall(bridge, { action: 'list_videos' });
+    return { success: Boolean(r?.success), via: 'android_native', messageBn: String(r?.message || 'ভিডিওর তালিকা পাওয়া যায়নি।') };
+  }
+  const prep = a.match(/^(prepare|describe|check) video (\d+)\s*(?::\s*(.*))?$/i);
+  if (prep) {
+    const index = Number(prep[2]);
+    const d = await nativeCall(bridge, { action: 'video_data', index }, 60000);
+    if (!d?.success) return { success: false, via: 'android_native', messageBn: String(d?.message || 'ভিডিওটা পড়া গেল না।') };
+    let j: any = null;
+    try {
+      const s = loadSettings();
+      const res = await fetch('/api/video-describe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-gemini-api-key': s.apiKey?.trim() || '' },
+        body: JSON.stringify({ video: d.video, mime: d.mime, frames: d.frames, seconds: d.seconds, hint: prep[3] || '' }),
+      });
+      j = await res.json();
+    } catch {
+      j = null;
+    }
+    if (!j?.ok) return { success: false, via: 'android_native', messageBn: String(j?.detail || j?.error || 'ভিডিওটা বুঝতে পারলাম না। ভিডিওতে কী আছে মুখে বলে দিন।') };
+    const hashtags: string[] = Array.isArray(j.hashtags) ? j.hashtags.map(String).slice(0, 8) : [];
+    videoPack = { index, title: String(j.title || ''), description: String(j.description || j.caption || ''), caption: String(j.caption || j.description || ''), hashtags };
+    return {
+      success: true,
+      via: 'android_native',
+      messageBn:
+        `ভিডিও ${index}: ${j.summary || ''}\nTitle: ${videoPack.title}\nDescription: ${videoPack.description}\nCaption: ${videoPack.caption}\nHashtags: ${hashtags.join(' ')}\n` +
+        'Read these to him and ask where to publish (YouTube, Facebook, TikTok, Instagram or all) or what to change.',
+    };
+  }
+  const edit = a.match(/^video words:\s*(.*?)\s*\|\|\s*(.*)$/i);
+  if (edit) {
+    if (!videoPack) return { success: false, via: 'android_native', messageBn: 'আগে কোন ভিডিও সেটা প্রস্তুত করতে হবে।' };
+    if (edit[1]) videoPack.title = edit[1];
+    if (edit[2]) videoPack.caption = videoPack.description = edit[2];
+    return { success: true, via: 'android_native', messageBn: `ঠিক আছে। Title: ${videoPack.title}\nCaption: ${videoPack.caption}` };
+  }
+  const pub = a.match(/^publish video (\d+) (?:to|on) (.+)$/i);
+  if (pub) {
+    const index = Number(pub[1]);
+    if (!videoPack || videoPack.index !== index) return { success: false, via: 'android_native', messageBn: `আগে ${index} নম্বর ভিডিওটা দেখে লেখা বানাতে হবে।` };
+    const want = /all|সব/i.test(pub[2]) ? PLATFORMS.map((p) => p[1]) : PLATFORMS.filter(([re]) => re.test(pub[2])).map((p) => p[1]);
+    if (!want.length) return { success: false, via: 'android_native', messageBn: 'কোথায় প্রকাশ করবো বলুন: YouTube, Facebook, TikTok না Instagram?' };
+    const out: string[] = [];
+    for (const platform of want) {
+      const tags = videoPack.hashtags.join(' ');
+      const r = await nativeCall(
+        bridge,
+        {
+          action: 'publish_video',
+          index,
+          platform,
+          title: platform === 'youtube' ? videoPack.title : '',
+          caption: `${platform === 'youtube' ? videoPack.description : videoPack.caption}${tags ? `\n\n${tags}` : ''}`,
+        },
+        90000,
+      );
+      out.push(String(r?.message || `${platform}: হয়নি।`));
+    }
+    return { success: true, via: 'android_native', messageBn: out.join('\n') };
+  }
+  return null;
+}
+
 /** Waits for the Android app's answer to an async action (see executePhoneAction) */
 function waitNativeResult(rid: string, ms: number): Promise<string> {
   return new Promise((resolve) => {
@@ -548,6 +644,15 @@ export async function executePhoneAction(
   // page (and ROSE's voice) never freezes while ROSE waits for WhatsApp's Send / Call button. Older apps answer at once.
   const rid = Math.random().toString(36).slice(2);
   const actionJson = JSON.stringify({ ...action, async: true, rid });
+
+  if (nativeBridge && typeof nativeBridge.run === 'function' && action.action === 'open_app') {
+    try {
+      const v = await videoCommand(action.app, nativeBridge);
+      if (v) return v;
+    } catch {
+      return { success: false, via: 'android_native', messageBn: 'ভিডিওর কাজটা করা গেল না।' };
+    }
+  }
 
   if (nativeBridge && typeof nativeBridge.run === 'function') {
     try {
