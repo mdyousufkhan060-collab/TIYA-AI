@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/shops-sitemap.xml",
+      "destination": "/api/shops-sitemap"
+    },
+    {
       "source": "/store-sitemap.xml",
       "destination": "/api/sitemap"
     },

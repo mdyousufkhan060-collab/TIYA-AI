@@ -117,7 +117,20 @@ export async function uploadImage(storeId: string, file: File, max = 1200): Prom
   return supabase.storage.from('store-media').getPublicUrl(path).data.publicUrl;
 }
 
-export const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+/** Web address from a name. People often type a domain ("Tazumart BD.com", "www.tazumarbd.com.bd"):
+ *  the www, http and the ending (.com, .com.bd, .net, .shop …) are dropped, so the address is tazumarbd.myrosebd.com. */
+export const slugify = (t: string) =>
+  t
+    .toLowerCase()
+    .trim()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/.*$/, '')
+    .replace(/\.(com|net|org|info|shop|store|online|site|xyz|biz|co)(\.bd)?$|\.(bd|com\.bd)$/, '')
+    .replace(/\.myrosebd$/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
 /** Names that cannot become yourshop.myrosebd.com (site pages, mail, demo stores). */
 export const RESERVED_SLUGS = ['www', 'app', 'api', 'admin', 'mail', 'webmail', 'shop', 'demos', 'demo', 'autodiscover', 'autoconfig', 'ftp', 'cpanel', 'ns1', 'ns2', 'rose', 'help', 'support', 'blog', 'foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare'];
 
