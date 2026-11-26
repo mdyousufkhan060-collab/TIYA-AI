@@ -134,7 +134,7 @@ export const slugify = (t: string) =>
 /** Names that cannot become yourshop.myrosebd.com (site pages, mail, demo stores). */
 export const RESERVED_SLUGS = ['www', 'app', 'api', 'admin', 'mail', 'webmail', 'shop', 'demos', 'demo', 'autodiscover', 'autoconfig', 'ftp', 'cpanel', 'ns1', 'ns2', 'rose', 'help', 'support', 'blog', 'foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare'];
 
-export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
+export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = ({ userId, forceStoreId }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [access, setAccess] = useState<Access>(null);
@@ -151,9 +151,9 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
     const [{ data: adm }, { data: acc }, { data: st }, d, { data: mine }, { data: flags }] = await Promise.all([
       supabase.rpc('is_admin'),
       supabase.rpc('my_website_access'),
-      supabase.from('stores').select('*').eq('owner_id', userId).order('created_at'),
+      forceStoreId ? supabase.from('stores').select('*').eq('id', forceStoreId) : supabase.from('stores').select('*').eq('owner_id', userId).order('created_at'),
       loadDemos(),
-      supabase.rpc('my_staff_stores'),
+      forceStoreId ? Promise.resolve({ data: [] as unknown[] }) : supabase.rpc('my_staff_stores'),
       supabase.from('site_settings').select('key, value'),
     ]);
     const staffRows = ((mine as Array<{ store_id: string; role: string }>) || []);
@@ -173,7 +173,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
     setStore((cur) => (cur ? list.find((x) => x.id === cur.id) || list[0] || null : list[0] || null));
     setDemos(d);
     setLoading(false);
-  }, [userId]);
+  }, [userId, forceStoreId]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -359,7 +359,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
           .map(([, k, title, icon, color, value], i) => (
             <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} value={value} onClick={() => setTab(k as typeof tab)} testId={`store-${k}`} />
           ))}
-        {can('owner') && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
+        {can('owner') && !forceStoreId && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
     </div>
   );
@@ -709,7 +709,7 @@ const CompanyTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, on
     if (!error) onSaved();
   };
   const row = (k: keyof typeof s, label: string, ph = '', mode?: 'email' | 'numeric') => (
-    <label className="block text-[11px] font-bold text-slate-300">
+    <label className="block text-[10.5px] font-bold tracking-wide text-slate-400">
       {label}
       <input
         className={input + ' mt-1'}
@@ -721,34 +721,26 @@ const CompanyTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, on
     </label>
   );
   return (
-    <div className="space-y-2">
-      <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">COMPANY</p>
-        {row('name', 'Company name (English)', 'Rahim Fashion')}
-        {row('name_bn', 'Company name (Bangla)', 'রহিম ফ্যাশন')}
+    <div className={box + ' space-y-2.5'}>
+      <p className="text-[11px] font-bold tracking-wider text-teal-300">SHOP DETAILS</p>
+      <div className="grid grid-cols-2 gap-2">
+        {row('name', 'NAME (ENGLISH)', 'Rahim Fashion')}
+        {row('name_bn', 'NAME (BANGLA)', 'রহিম ফ্যাশন')}
+        {row('email', 'GMAIL 1', '', 'email')}
+        {row('email2', 'GMAIL 2', 'optional', 'email')}
+        {row('whatsapp', 'WHATSAPP', '01XXXXXXXXX', 'numeric')}
+        {row('phone2', 'OTHER PHONE', 'optional', 'numeric')}
       </div>
-      <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">EMAIL</p>
-        {row('email', 'Company Gmail 1', '', 'email')}
-        {row('email2', 'Email 2 (optional)', '', 'email')}
-      </div>
-      <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">PHONE</p>
-        {row('whatsapp', 'WhatsApp number', '01XXXXXXXXX', 'numeric')}
-        {row('phone2', 'Other phone (optional)', '01XXXXXXXXX', 'numeric')}
-      </div>
-      <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">ADDRESS</p>
-        <label className="block text-[11px] font-bold text-slate-300">
-          Full address (where customers find you)
-          <textarea className={input + ' mt-1'} rows={2} value={s.address} onChange={(e) => set('address', e.target.value)} />
-        </label>
-        {row('city', 'City / District')}
-        {row('licence', 'Trade / drug licence no. (optional)')}
+      <label className="block text-[10.5px] font-bold tracking-wide text-slate-400">
+        ADDRESS
+        <input className={input + ' mt-1'} value={s.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area" />
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        {row('city', 'CITY / DISTRICT')}
+        {row('licence', 'LICENCE NO.', 'optional')}
       </div>
       <button type="button" onClick={() => void save()} className={btn + ' w-full'}>SAVE</button>
-      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
-      <p className="px-1 text-[11px] text-slate-400">Logo, banners and colours: WEBSITE ADMIN → HOMEPAGE & DESIGN. The login Gmail stays the same; to move the store to another Gmail, contact ROSE.</p>
+      {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
     </div>
   );
 };
@@ -1453,6 +1445,8 @@ const CouponsTab: React.FC<{ store: Store }> = ({ store }) => {
 // ---------------------------------------------------------------- my details (07 WORKSPACE: second bar for website owners and staff)
 export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
   const [me, setMe] = useState<{ email: string; name: string; pic: string } | null>(null);
+  const [pwOpen, setPwOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [own, setOwn] = useState<Store | null | undefined>(undefined);
   const [staffOf, setStaffOf] = useState<Array<{ name: string; role: string }>>([]);
   const [pw, setPw] = useState('');
@@ -1480,29 +1474,89 @@ export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
     if (pw !== pw2) return setMsg('The two passwords are not the same.');
     const { error } = await supabase.auth.updateUser({ password: pw });
     setPw(''); setPw2('');
-    setMsg(error ? error.message : 'Password saved. You can now also log in with this Gmail and password.');
+    setMsg(error ? error.message : 'Password saved.');
   };
   if (!me || own === undefined) return <p className="px-1 text-xs text-slate-400">Loading…</p>;
+  const sid = (own as (Store & { support_code?: string }) | null)?.support_code || '';
   return (
     <div className="space-y-2">
-      <div className={box + ' flex items-center gap-3'}>
-        {me.pic ? <img src={me.pic} alt="" referrerPolicy="no-referrer" className="h-14 w-14 rounded-full object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-full bg-teal-600 text-xl font-bold text-white">{(me.name || me.email).charAt(0).toUpperCase()}</span>}
-        <div className="min-w-0 flex-1">
-          {me.name && <p className="truncate text-[14px] font-bold text-white">{me.name}</p>}
-          <p className="truncate text-[12px] text-slate-300">{me.email}</p>
-          <p className="text-[11px] font-bold text-teal-300">{own ? 'STORE OWNER' : staffOf.length ? `STAFF · ${staffOf.map((x) => `${x.name} (${x.role.toUpperCase()})`).join(', ')}` : ''}</p>
+      <div className={box + ' space-y-3'}>
+        <div className="flex items-center gap-3">
+          {me.pic ? <img src={me.pic} alt="" referrerPolicy="no-referrer" className="h-14 w-14 rounded-full object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-full bg-teal-600 text-xl font-bold text-white">{(me.name || me.email).charAt(0).toUpperCase()}</span>}
+          <div className="min-w-0 flex-1">
+            {me.name && <p className="truncate text-[15px] font-bold text-white">{me.name}</p>}
+            <p className="truncate text-[12px] text-slate-400">{me.email}</p>
+            <p className="mt-0.5 text-[10.5px] font-bold tracking-wider text-teal-300">{own ? 'STORE OWNER' : staffOf.length ? `STAFF · ${staffOf.map((x) => `${x.name} · ${x.role.toUpperCase()}`).join(', ')}` : ''}</p>
+          </div>
         </div>
+        {sid && (
+          <button type="button" onClick={() => { void navigator.clipboard?.writeText(sid); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }} className="flex w-full items-center justify-between rounded-lg border border-teal-500/40 bg-teal-500/10 px-3 py-2 text-left">
+            <span>
+              <span className="block text-[10px] font-bold tracking-wider text-teal-300">SUPPORT ID</span>
+              <span className="block font-mono text-[17px] font-bold tracking-widest text-white">{sid}</span>
+            </span>
+            <span className="text-[10.5px] font-bold text-teal-200">{copied ? 'COPIED ✓' : 'COPY'}</span>
+          </button>
+        )}
       </div>
       {own && <CompanyTab store={own} onSaved={() => void load()} />}
-      <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">PASSWORD</p>
-        <p className="text-[11px] text-slate-400">You log in with Google. Set a password here if you also want to log in with this Gmail and a password, or if you forgot the old one.</p>
-        <input className={input} type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (8+ characters)" />
-        <input className={input} type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Type it again" />
-        <button type="button" className={btn + ' w-full'} onClick={() => void setPassword()}>SAVE PASSWORD</button>
-        {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+      <div className={box}>
+        <button type="button" onClick={() => setPwOpen(!pwOpen)} className="flex w-full items-center justify-between text-left">
+          <span className="text-[11px] font-bold tracking-wider text-teal-300">PASSWORD</span>
+          <span className="text-[11px] text-slate-400">{pwOpen ? 'CLOSE' : 'SET ›'}</span>
+        </button>
+        {pwOpen && (
+          <div className="mt-2 space-y-2">
+            <input className={input} type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (8+ characters)" />
+            <input className={input} type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Type it again" />
+            <button type="button" className={btn + ' w-full'} onClick={() => void setPassword()}>SAVE PASSWORD</button>
+          </div>
+        )}
+        {msg && <p className="mt-2 text-[12px] text-teal-200">{msg}</p>}
       </div>
-      <button type="button" className={btn + ' w-full bg-rose-600/80'} onClick={() => { if (window.confirm('Log out from ROSE on this phone?')) void supabase.auth.signOut(); }}>LOG OUT</button>
+      <button type="button" className="h-10 w-full rounded-lg border border-rose-500/40 text-[11px] font-bold text-rose-300" onClick={() => { if (window.confirm('Log out from ROSE on this phone?')) void supabase.auth.signOut(); }}>LOG OUT</button>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- ROSE admin: open any shop by its support ID (server allows admin only)
+export const AdminSupportOpen: React.FC = () => {
+  const [code, setCode] = useState('');
+  const [shop, setShop] = useState<{ id: string; name: string; slug: string; owner_email: string; support_code: string } | null>(null);
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const open = async () => {
+    setBusy(true);
+    setMsg('');
+    const { data, error } = await supabase.rpc('admin_store_by_code', { p_code: code });
+    setBusy(false);
+    if (error) return setMsg(error.message);
+    const d = data as { ok: boolean; id: string; name: string; slug: string; owner_email: string; support_code: string };
+    if (!d?.ok) return setMsg('No shop has this ID. Check the number and try again.');
+    setShop(d);
+  };
+  if (shop)
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-bold text-white">{shop.name} · {shop.support_code}</p>
+            <p className="truncate text-[11px] text-amber-200">Owner {shop.owner_email} · you are working as ROSE admin</p>
+          </div>
+          <button type="button" className={btn + ' bg-white/10'} onClick={() => { setShop(null); setCode(''); }}>CLOSE</button>
+        </div>
+        <StorePanel userId="" forceStoreId={shop.id} />
+      </div>
+    );
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">OPEN A SHOP BY SUPPORT ID</p>
+        <p className="text-[11.5px] text-slate-400">The owner finds the ID under their Gmail in 07 WORKSPACE. Only ROSE admin can open a shop with it.</p>
+        <input className={input + ' font-mono uppercase tracking-wider'} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="RS-123456" onKeyDown={(e) => { if (e.key === 'Enter') void open(); }} />
+        <button type="button" disabled={busy || code.replace(/\D/g, '').length < 6} className={btn + ' w-full'} onClick={() => void open()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} OPEN SHOP</button>
+        {msg && <p className="text-[12px] text-rose-300">{msg}</p>}
+      </div>
     </div>
   );
 };

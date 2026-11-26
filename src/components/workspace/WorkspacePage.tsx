@@ -638,12 +638,13 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   const [me, setMe] = useState<{ email: string; pic: string }>({ email: '', pic: '' });
   const [roseCard, setRoseCard] = useState(true);
   const [shopUrl, setShopUrl] = useState('');
+  const [supportId, setSupportId] = useState('');
   useEffect(() => {
     if (allModes) return;
     let gone = false;
     void (async () => {
       const [{ data: own }, { data: staff }, { data: u }, { data: flags }] = await Promise.all([
-        supabase.from('stores').select('id,slug,subdomain_ready,custom_domain,domain_ready').eq('owner_id', userId).limit(1),
+        supabase.from('stores').select('id,slug,subdomain_ready,custom_domain,domain_ready,support_code').eq('owner_id', userId).limit(1),
         supabase.rpc('my_staff_stores'),
         supabase.auth.getUser(),
         supabase.from('site_settings').select('key,value').eq('key', 'store_admin_rose_card'),
@@ -656,6 +657,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
       // the customer side of the shop (owner's shop, or the shop a staff member works for)
       type St = { slug: string; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean };
       let st = ((own as St[]) || [])[0];
+      setSupportId(((own as Array<{ support_code?: string }>) || [])[0]?.support_code || '');
       if (!st && Array.isArray(staff) && staff.length) {
         const { data: ss } = await supabase.from('stores').select('slug,subdomain_ready,custom_domain,domain_ready').eq('id', (staff[0] as { store_id: string }).store_id).maybeSingle();
         st = (ss as St) || undefined;
@@ -738,7 +740,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
           )}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[12.5px] font-bold text-slate-900 dark:text-slate-100">{me.email}</span>
-            <span className="block text-[10.5px] text-slate-400">MY DETAILS · NAME · PHONE · PASSWORD</span>
+            <span className="block text-[10.5px] text-slate-400">{supportId ? <>ID <b className="font-mono tracking-wider text-teal-300">{supportId}</b> · MY DETAILS</> : 'MY DETAILS'}</span>
           </span>
           <span className="text-base text-slate-500">›</span>
         </button>
