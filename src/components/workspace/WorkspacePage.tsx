@@ -637,12 +637,13 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   const [siteOwner, setSiteOwner] = useState(false);
   const [me, setMe] = useState<{ email: string; pic: string }>({ email: '', pic: '' });
   const [roseCard, setRoseCard] = useState(true);
+  const [shopUrl, setShopUrl] = useState('');
   useEffect(() => {
     if (allModes) return;
     let gone = false;
     void (async () => {
       const [{ data: own }, { data: staff }, { data: u }, { data: flags }] = await Promise.all([
-        supabase.from('stores').select('id').eq('owner_id', userId).limit(1),
+        supabase.from('stores').select('id,slug,subdomain_ready,custom_domain,domain_ready').eq('owner_id', userId).limit(1),
         supabase.rpc('my_staff_stores'),
         supabase.auth.getUser(),
         supabase.from('site_settings').select('key,value').eq('key', 'store_admin_rose_card'),
@@ -652,6 +653,14 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
       setMe({ email: u.user?.email || '', pic: md.avatar_url || md.picture || '' });
       setRoseCard(!((flags as Array<{ value: unknown }>) || []).some((f) => f.value === false));
       setSiteOwner(Boolean((own && own.length) || (Array.isArray(staff) && staff.length)));
+      // the customer side of the shop (owner's shop, or the shop a staff member works for)
+      type St = { slug: string; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean };
+      let st = ((own as St[]) || [])[0];
+      if (!st && Array.isArray(staff) && staff.length) {
+        const { data: ss } = await supabase.from('stores').select('slug,subdomain_ready,custom_domain,domain_ready').eq('id', (staff[0] as { store_id: string }).store_id).maybeSingle();
+        st = (ss as St) || undefined;
+      }
+      if (!gone && st) setShopUrl(st.custom_domain && st.domain_ready ? `https://${st.custom_domain}` : st.subdomain_ready ? `https://${st.slug}.myrosebd.com` : `https://www.myrosebd.com/shop/${st.slug}`);
     })();
     return () => {
       gone = true;
@@ -735,6 +744,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
         </button>
         <SettingsBar badge="02" title="MYROSEBD.COM BUSINESS" value={modeLabel} onClick={() => setView('rose_hub')} testId="ws-rose" />
         <SettingsBar badge="03" title="WEBSITE ADMIN" value="STORE · ORDERS · PRODUCTS" onClick={() => setView('store')} testId="ws-site-admin" />
+        {shopUrl && <SettingsBar badge="04" title="MY SHOP" value="CUSTOMER VIEW ↗" onClick={() => window.open(shopUrl, '_blank', 'noopener')} testId="ws-shop" />}
       </div>
     );
   } else if (view === 'hub' || view === 'rose_hub') {
