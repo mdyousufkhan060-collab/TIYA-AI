@@ -759,7 +759,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] px-4 pt-[env(safe-area-inset-top)] [min-height:calc(3rem+env(safe-area-inset-top))]">
           <span className="text-sm font-semibold tracking-wider text-amber-200">ADMIN</span>
         </header>
-        <div className="tiya-scroll flex-1 overflow-y-auto px-3.5 py-3">{hubBars}</div>
+        <div className="one-layer tiya-scroll flex-1 overflow-y-auto px-3.5 py-3">{hubBars}</div>
       </div>
     );
   }
@@ -835,7 +835,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="tiya-scroll flex-1 overflow-y-auto px-4 py-4"
+        className="one-layer tiya-scroll flex-1 overflow-y-auto px-4 py-4"
       >
         {view === 'hub' && hubBars}
 
@@ -968,7 +968,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                       </div>
                       <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${selectedUser?.id === u.id ? 'rotate-90' : ''}`} />
                     </button>
-                    {selectedUser?.id === u.id && <div className="bg-slate-50 p-2 dark:bg-black/20">{userDetailPanel}</div>}
+                    {selectedUser?.id === u.id && <div className="px-3.5 pb-3">{userDetailPanel}</div>}
                     </React.Fragment>
                   ))
                 )}

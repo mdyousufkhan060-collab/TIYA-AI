@@ -139,9 +139,6 @@ export const PremiumGrantCard: React.FC<PremiumGrantCardProps> = ({ user, onUpda
           </div>
         </div>
       ))}
-      <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-        Only text, only voice, or both. Credits without months on a free account also turn Premium on for 1 month.
-      </p>
 
       <div className="grid grid-cols-2 gap-2">
         <label className={labelCls}>
@@ -159,10 +156,6 @@ export const PremiumGrantCard: React.FC<PremiumGrantCardProps> = ({ user, onUpda
           </select>
         </label>
       </div>
-      <label className={labelCls}>
-        TRX ID
-        <input type="text" value={trx} onChange={(e) => setTrx(e.target.value)} placeholder="Optional" className={inputCls} />
-      </label>
       <label className={labelCls}>
         NOTE
         <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" className={inputCls} />

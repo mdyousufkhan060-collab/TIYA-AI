@@ -100,3 +100,19 @@
 }
 .rose-auth input { background-color: transparent !important; }
 
+
+/* One layer everywhere (Settings pages and Admin): a card inside another card loses its own frame,
+   so pages show one clean box with the fields inside it, not box-in-box-in-box.
+   Inputs, buttons and the rows' own borders stay. Add class "keep-layer" to keep a frame on purpose. */
+.one-layer :is(div, section, form).border :is(div, section, form).border:not(.keep-layer):not(:has(> input:only-child)) {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.one-layer :is(div, section, form).border :is(div, section, form).border:not(.keep-layer) + :is(div, section, form).border:not(.keep-layer) {
+  border-top-color: rgba(148, 163, 184, 0.14) !important;
+  padding-top: 0.9rem !important;
+  border-radius: 0 !important;
+}

@@ -158,7 +158,7 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
         <div className="flex min-w-[40px] justify-end pr-1">{rightAction}</div>
       </header>
 
-      <div className="tiya-scroll flex-1 overflow-y-auto px-3.5 py-3">{children}</div>
+      <div className="one-layer tiya-scroll flex-1 overflow-y-auto px-3.5 py-3">{children}</div>
     </div>
   );
 };
