@@ -436,7 +436,7 @@ if (liveSlug || ownDomain) {
       });
       if (banners.length < 2) banners.push({ title: 'Best Quality, Best Price', badge: 'Order now', icon: r.logo, bg: 'linear-gradient(120deg,#fef3c7,' + r.accent + ')' });
       var S = {
-        live: true, slug: r.slug, template: r.template, logoUrl: r.logo_url || '', name: r.name, tagline: r.tagline || '', logo: r.logo || '🛍️', type: 'Store', color: r.color, accent: r.accent,
+        live: true, id: r.id, seo: r.seo || {}, slug: r.slug, template: r.template, logoUrl: r.logo_url || '', name: r.name, tagline: r.tagline || '', logo: r.logo || '🛍️', type: 'Store', color: r.color, accent: r.accent,
         city: r.city || 'Dhaka', phone: r.phone, email: r.email, address: r.address, licence: r.licence, nameBn: r.name_bn || '', email2: r.email2 || '', whatsapp: r.whatsapp || '', phone2: r.phone2 || '',
         pharmacy: prods.some(function (p) { return p.rx; }), banners: banners,
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
@@ -470,7 +470,8 @@ function start(S, P, liveId) {
   var root = document.documentElement;
   root.style.setProperty('--c', S.color);
   root.style.setProperty('--a', S.accent);
-  document.title = S.name + ' · ' + S.tagline + ' (Demo)';
+  document.title = S.live ? ((S.seo && S.seo.title) || (S.name + (S.tagline ? ' · ' + S.tagline : ''))) : S.name + ' · ' + S.tagline + ' (Demo)';
+  (function () { var md = document.querySelector('meta[name="description"]'); if (md) md.setAttribute('content', S.live ? ((S.seo && S.seo.description) || (S.name + ': ' + (S.tagline || 'online shop') + '. Home delivery, ' + (S.city || 'Bangladesh') + '.')) : 'Demo online store made with ROSE Store Builder.'); })();
 
   var tk = function (n) { return '৳ ' + n.toLocaleString('en-IN'); };
   var off = function (p) { return p.old > p.price ? Math.round((1 - p.price / p.old) * 100) : 0; };
@@ -728,6 +729,16 @@ function start(S, P, liveId) {
       if ((changed || was !== acct.owner) && /^#\/account/.test(location.hash)) route();
     }).catch(function () {});
   }
+  // owner / staff: open WEBSITE ADMIN with the same sign-in (no second Google login)
+  window.goAdmin = function () {
+    var base = 'https://www.myrosebd.com/app?open=store', w = null;
+    try { w = window.open('', '_blank'); } catch (e) {}
+    freshTok().then(function (at) {
+      var t0 = getTok(), url = base;
+      if (at && t0 && t0.rt) url += '#access_token=' + encodeURIComponent(at) + '&refresh_token=' + encodeURIComponent(t0.rt) + '&expires_in=' + Math.max(60, Math.round((t0.exp - Date.now()) / 1000)) + '&expires_at=' + Math.round(t0.exp / 1000) + '&token_type=bearer&type=magiclink';
+      if (w) { try { w.opener = null; } catch (e) {} w.location.href = url; } else location.href = url;
+    });
+  };
   window.sendLink = function () {
     var e = (document.getElementById('aMail') || {}).value || ''; e = e.trim();
     if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(e)) return toast('Write a correct email');
@@ -755,7 +766,13 @@ function start(S, P, liveId) {
       '<div class="gthumbs" id="gThumbs">' + imgs.map(function (u, i) { return '<button class="' + (i ? '' : 'on') + '" data-i="' + i + '">' + one(u, '') + '</button>'; }).join('') + '</div>';
   }
   var DEMO_REV = [['Rahim Uddin', 5, 'Good quality and fast delivery. Same as the photo.'], ['Nusrat Jahan', 4, 'Nice product, packing was good. Will order again.'], ['Tanvir Ahmed', 5, 'Price is fair. Delivery man was polite.']];
-  function revList(p) { var mine = (st.rev && st.rev[p.id]) || []; return mine.concat(S.live ? [] : DEMO_REV.map(function (r, i) { return { n: r[0], s: (p.id + i) % 4 === 3 ? 4 : r[1], t: r[2], d: (i * 6 + 3) + ' days ago' }; })); }
+  // live shops: approved reviews from the server (buyers only, checked by the shop)
+  var REV = {};
+  if (S.live) sb('store_reviews?select=product_id,name,stars,body,reply,created_at&store_id=eq.' + S.id + '&approved=eq.true&order=created_at.desc&limit=1000').then(function (rows) {
+    (rows || []).forEach(function (x) { (REV[x.product_id] = REV[x.product_id] || []).push({ n: x.name, s: x.stars, t: x.body, reply: x.reply, d: new Date(x.created_at).toLocaleDateString('en-GB') }); });
+    if (/^#\/p\//.test(location.hash)) route();
+  }).catch(function () {});
+  function revList(p) { if (S.live) return REV[p.uuid] || []; var mine = (st.rev && st.rev[p.id]) || []; return mine.concat(S.live ? [] : DEMO_REV.map(function (r, i) { return { n: r[0], s: (p.id + i) % 4 === 3 ? 4 : r[1], t: r[2], d: (i * 6 + 3) + ' days ago' }; })); }
   var stars = function (n) { return '<span class="stars">' + '★★★★★'.slice(0, n) + '<span style="color:#e5e7eb">' + '★★★★★'.slice(0, 5 - n) + '</span></span>'; };
   function reviewsBox(p) {
     var R = revList(p), avg = R.length ? R.reduce(function (a, r) { return a + r.s; }, 0) / R.length : 0;
@@ -766,8 +783,8 @@ function start(S, P, liveId) {
       '<div class="field"><span>' + t('fullName') + '</span><input id="rName" value="' + esc(cust.name || '') + '"></div>' +
       (S.live ? '<div class="field"><span>Phone used for the order</span><input id="rPhone" inputmode="numeric" maxlength="11"></div>' : '') +
       '<div class="field"><span>Your review</span><textarea id="rText" rows="3" placeholder="How was the product and delivery?"></textarea></div>' +
-      '<div class="field"><span>Photo (optional)</span><input type="file" id="rPic" accept="image/*"></div><button class="btn" id="revSend">Post review</button><p class="small">Only real buyers can review. The shop can reply.</p></div>' +
-      R.map(function (r) { return '<div class="review"><div class="ravatar">' + esc(r.n.charAt(0)) + '</div><div style="flex:1"><b>' + esc(r.n) + '</b><span class="vb">✓ Verified Buyer</span><div>' + stars(r.s) + ' <small style="color:#94a3b8">' + esc(r.d || 'today') + '</small></div><p style="margin:4px 0 0">' + esc(r.t) + '</p>' + (r.pic ? '<img src="' + r.pic + '" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:10px;margin-top:6px">' : '') + '</div></div>'; }).join('') + '</div>';
+      (S.live ? '' : '<div class="field"><span>Photo (optional)</span><input type="file" id="rPic" accept="image/*"></div>') + '<button class="btn" id="revSend">Post review</button><p class="small">Only real buyers can review. The shop can reply.</p></div>' +
+      R.map(function (r) { return '<div class="review"><div class="ravatar">' + esc(r.n.charAt(0)) + '</div><div style="flex:1"><b>' + esc(r.n) + '</b><span class="vb">✓ Verified Buyer</span><div>' + stars(r.s) + ' <small style="color:#94a3b8">' + esc(r.d || 'today') + '</small></div><p style="margin:4px 0 0">' + esc(r.t) + '</p>' + (r.pic ? '<img src="' + r.pic + '" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:10px;margin-top:6px">' : '') + (r.reply ? '<p class="small" style="margin:6px 0 0;padding:6px 8px;background:#f1f5f9;border-radius:8px"><b>' + esc(S.name) + ':</b> ' + esc(r.reply) + '</p>' : '') + '</div></div>'; }).join('') + '</div>';
   }
   function product(p) {
     track('ViewContent', { value: p.price, ids: [String(p.id)], items: [{ id: p.id, name: p.name, price: p.price, q: 1 }] });
@@ -820,9 +837,17 @@ function start(S, P, liveId) {
     ro.onclick = function () { rf.hidden = !rf.hidden; };
     document.getElementById('rStar').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; rs = +b.dataset.n; [].forEach.call(this.children, function (x) { x.classList.toggle('on', +x.dataset.n <= rs); }); };
     document.getElementById('revSend').onclick = function () {
-      var n = document.getElementById('rName').value.trim(), tx = document.getElementById('rText').value.trim(), f = document.getElementById('rPic').files[0];
+      var n = document.getElementById('rName').value.trim(), tx = document.getElementById('rText').value.trim(), rp = document.getElementById('rPic'), f = rp && rp.files ? rp.files[0] : null;
       if (n.length < 3 || tx.length < 10) return toast('Write your name and at least a short sentence');
-      if (S.live) { var ph = (document.getElementById('rPhone').value || '').replace(/\D/g, ''); if (!/^01[3-9]\d{8}$/.test(ph)) return toast('Write the phone number used for the order'); toast('Thanks! Your review shows after the shop checks your order.'); rf.hidden = true; return; }
+      if (S.live) {
+        var ph = (document.getElementById('rPhone').value || '').replace(/\D/g, ''); if (!/^01[3-9]\d{8}$/.test(ph)) return toast('Write the phone number used for the order');
+        var sbtn = this; sbtn.disabled = true;
+        sb('rpc/add_store_review', { p_slug: S.slug, p_product: P[pid].uuid, p_phone: ph, p_name: n, p_stars: rs, p_text: tx })
+          .then(function () { toast('Thanks! Your review shows after the shop checks it.'); rf.hidden = true; })
+          .catch(function (e) { toast(e.message); })
+          .then(function () { sbtn.disabled = false; });
+        return;
+      }
       var put = function (pic) { st.rev = st.rev || {}; (st.rev[pid] = st.rev[pid] || []).unshift({ n: n, s: rs, t: tx, d: 'today', pic: pic }); save(); toast('Review posted (demo)'); route(); setTimeout(function () { var r = document.getElementById('revBox'); if (r) r.scrollIntoView(); }, 50); };
       if (f) { var rd = new FileReader(); rd.onload = function () { put(rd.result); }; rd.readAsDataURL(f); } else put('');
     };
@@ -1123,7 +1148,7 @@ function start(S, P, liveId) {
     var menu = [['#/wishlist', '❤️', t('myWish'), st.wish.length ? st.wish.length : ''], ['#/account/coupons', '🎟️', t('myCoupons'), ''], ['#/account/address', '📍', t('addresses'), ''], ['#/account/help', '🎧', t('help'), ''], ['#/page/about', 'ℹ️', t('aboutUs'), '']];
     var ml = '<div class="mlist" style="margin-top:14px">' + menu.map(function (m) { return '<a href="' + m[0] + '"><span class="i">' + m[1] + '</span>' + m[2] + '<em>' + (m[3] ? '<small style="font-size:12px;margin-right:6px;color:var(--c)">' + m[3] + '</small>' : '') + '›</em></a>'; }).join('') +
       '<button onclick="shareStore()"><span class="i">🔗</span>' + t('shareApp') + '<em>›</em></button>' + (logged ? '<button class="lo" onclick="logoutCust()"><span class="i">🚪</span>' + t('logout') + '<em>›</em></button>' : '') + '</div>';
-    var own = S.live && logged && acct.owner ? '<a class="btn" style="margin-top:10px;padding:12px" href="https://www.myrosebd.com/app?open=store" target="_blank" rel="noopener">🛠️ Store admin · products · orders</a>' : '';
+    var own = S.live && logged && acct.owner ? '<button class="btn" style="margin-top:10px;padding:12px" onclick="goAdmin()">🛠️ Store admin · products · orders</button>' : '';
     return '<div style="max-width:620px;margin:0 auto">' + top + login + own + ord + (list.length ? '<div style="margin-top:10px">' + orderRows(list.slice(0, 2)) + '</div>' : '') + ml + '</div>';
   }
   window.openAuth = function (mode) {

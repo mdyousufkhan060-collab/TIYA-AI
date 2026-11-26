@@ -18,7 +18,7 @@ type Store = {
   city: string; phone: string; email: string; address: string; licence: string; note: string;
   name_bn?: string; email2?: string; whatsapp?: string; phone2?: string; pixels?: Record<string, string>; chat_ai?: boolean;
   delivery_inside: number; delivery_outside: number; delivery_kg_inside?: number; delivery_kg_outside?: number; banners: Banner[]; trust: string[]; offer_banners?: OfferBanner[];
-  pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean;
+  pay_numbers: Record<string, string>; published: boolean; suspended: boolean; print_settings: PrintSettings; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean; seo?: Record<string, string>;
 };
 /** Courier charge: base up to 1 kg, then each started extra kg (same as the server). */
 const delByKg = (base: number, perKg: number, kg: number) => (base || 0) + (kg > 1 ? Math.ceil(kg - 1 - 1e-9) * (perKg || 0) : 0);
@@ -128,7 +128,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'orders' | 'products' | 'categories' | 'design' | 'delivery' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create'>('home');
+  const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create'>('home');
   const [roles, setRoles] = useState<Record<string, string>>({});
   const [showRose, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
@@ -278,11 +278,17 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
     return (
       <div className="space-y-3">
         {back}
+        {tab === 'dashboard' && <DashboardTab store={store} seeOrders={can('orders') || can('money')} onOpen={(t) => setTab(t as typeof tab)} />}
+        {tab === 'customers' && <CustomersTab store={store} />}
+        {tab === 'reviews' && <ReviewsTab store={store} />}
+        {tab === 'payments' && <PaymentsTab store={store} onSaved={() => void load()} />}
+        {tab === 'print' && <DeliveryTab store={store} part="print" onSaved={() => void load()} />}
+        {tab === 'seo' && <SeoTab store={store} onSaved={() => void load()} />}
         {tab === 'orders' && <OrdersTab store={store} />}
         {tab === 'products' && <ProductsTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} />}
         {tab === 'categories' && <CategoriesTab store={store} />}
         {tab === 'design' && <DesignTab store={store} onSaved={() => void load()} />}
-        {tab === 'delivery' && <DeliveryTab store={store} onSaved={() => void load()} />}
+        {tab === 'delivery' && <DeliveryTab store={store} part="delivery" onSaved={() => void load()} />}
         {tab === 'domain' && <DomainTab store={store} onSaved={() => void load()} />}
         {tab === 'staff' && <StaffTab store={store} limit={isAdmin ? 50 : access?.staff_limit || 0} />}
         {tab === 'rose' && <AdminBrandPage />}
@@ -310,23 +316,36 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
       {header}
       {myRole !== 'owner' && <p className="px-1 text-[11px] font-bold text-amber-300">You are STAFF here · role: {myRole.toUpperCase()}</p>}
       <div className="space-y-1.5">
-        {can('orders') && <SettingsBar badge="01" title="ORDERS" onClick={() => setTab('orders')} testId="store-orders" />}
-        {can('products') && <SettingsBar badge="02" title="PRODUCTS" onClick={() => setTab('products')} testId="store-products" />}
-        {can('products') && <SettingsBar badge="03" title="CATEGORIES" onClick={() => setTab('categories')} testId="store-categories" />}
-        {can('design') && <SettingsBar badge="04" title="HOMEPAGE & DESIGN" value="BANNERS · COLOURS" onClick={() => setTab('design')} testId="store-design" />}
-        {can('design') && <SettingsBar badge="05" title="DELIVERY & COURIER" value="STICKER · INVOICE" onClick={() => setTab('delivery')} testId="store-delivery" />}
-        {can('owner') && <SettingsBar badge="06" title="OWN DOMAIN" value={store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'CONNECT'} onClick={() => setTab('domain')} testId="store-domain" />}
-        {can('owner') && <SettingsBar badge="07" title="STAFF" value="GMAIL · ROLES" onClick={() => setTab('staff')} testId="store-staff" />}
-        {can('owner') && !isAdmin && <SettingsBar badge="08" title="PLAN & RENEW" value={access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'} onClick={() => setTab('plan')} testId="store-plan" />}
-        {can('design') && <SettingsBar badge="09" title="COMPANY INFO" value="NAME · EMAIL · PHONE · ADDRESS" onClick={() => setTab('company')} testId="store-company" />}
-        {can('money') && <SettingsBar badge="10" title="REPORTS & PROFIT" value="DAY · MONTH · YEAR" onClick={() => setTab('reports')} testId="store-reports" />}
-        {can('money') && <SettingsBar badge="11" title="EXPENSES & PURCHASES" value="ADS · STOCK · RENT" onClick={() => setTab('expenses')} testId="store-expenses" />}
-        {can('products') && <SettingsBar badge="14" title="OFFERS" value="BANNERS · OFFER PRODUCTS" onClick={() => setTab('offers')} testId="store-offers" />}
-        {can('orders') && <SettingsBar badge="13" title="LIVE CHAT" value="ROSE · CUSTOMERS" onClick={() => setTab('chat')} testId="store-chat" />}
-        {can('design') && <SettingsBar badge="12" title="PIXELS & ANALYTICS" value="FACEBOOK · GOOGLE · TIKTOK" onClick={() => setTab('pixels')} testId="store-pixels" />}
+        {(
+          [
+            [true, 'dashboard', 'DASHBOARD', 'TODAY'],
+            [can('owner') && !isAdmin, 'plan', 'PLAN & PAYMENT', access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'],
+            [can('orders'), 'orders', 'ORDERS', ''],
+            [can('products'), 'products', 'PRODUCTS', ''],
+            [can('products'), 'categories', 'CATEGORIES', ''],
+            [can('design'), 'design', 'HOMEPAGE & DESIGN', 'LOGO · BANNERS'],
+            [can('orders'), 'customers', 'CUSTOMERS', ''],
+            [can('products'), 'offers', 'OFFERS', 'BANNERS · OFFER PRODUCTS'],
+            [can('products'), 'reviews', 'REVIEWS', ''],
+            [can('orders'), 'chat', 'LIVE CHAT', 'ROSE'],
+            [myRole === 'owner', 'payments', 'PAYMENTS', 'BKASH · NAGAD · BANK'],
+            [can('design'), 'delivery', 'DELIVERY & COURIER', 'CHARGE · COURIERS'],
+            [can('design'), 'print', 'INVOICE & STICKER', 'PRINT'],
+            [can('design'), 'pixels', 'TRACKING & PIXELS', 'ADS'],
+            [can('design'), 'seo', 'SEO', 'GOOGLE'],
+            [can('owner'), 'staff', 'STAFF', 'GMAIL · ROLES'],
+            [can('owner'), 'domain', 'DOMAIN', store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'CONNECT'],
+            [can('money'), 'reports', 'REPORTS', 'DAY · MONTH · YEAR'],
+            [can('money'), 'expenses', 'EXPENSES', 'ADS · STOCK · RENT'],
+            [can('design'), 'company', 'COMPANY INFO', 'NAME · PHONE · ADDRESS'],
+          ] as Array<[boolean, string, string, string]>
+        )
+          .filter((x) => x[0])
+          .map(([, k, title, value], i) => (
+            <SettingsBar key={k} badge={String(i + 1).padStart(2, '0')} title={title} value={value || undefined} onClick={() => setTab(k as typeof tab)} testId={`store-${k}`} />
+          ))}
         {can('owner') && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
-      <p className="px-1 text-[11px] text-slate-400">Coming next: Payments, Pixels & Analytics, Live chat.</p>
     </div>
   );
 };
@@ -659,7 +678,7 @@ const PixelsTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
 const CompanyTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
   const [s, setS] = useState({
     name: store.name || '', name_bn: store.name_bn || '', email: store.email || '', email2: store.email2 || '',
-    whatsapp: store.whatsapp || store.phone || '', phone2: store.phone2 || '', address: store.address || '', city: store.city || '',
+    whatsapp: store.whatsapp || store.phone || '', phone2: store.phone2 || '', address: store.address || '', city: store.city || '', licence: store.licence || '',
   });
   const [msg, setMsg] = useState('');
   const set = (k: keyof typeof s, v: string) => setS((x) => ({ ...x, [k]: v }));
@@ -710,10 +729,11 @@ const CompanyTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, on
           <textarea className={input + ' mt-1'} rows={2} value={s.address} onChange={(e) => set('address', e.target.value)} />
         </label>
         {row('city', 'City / District')}
+        {row('licence', 'Trade / drug licence no. (optional)')}
       </div>
       <button type="button" onClick={() => void save()} className={btn + ' w-full'}>SAVE</button>
       {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
-      <p className="px-1 text-[11px] text-slate-400">Logo, banners and colours: 04 HOMEPAGE & DESIGN. The login Gmail stays the same; to move the store to another Gmail, contact ROSE.</p>
+      <p className="px-1 text-[11px] text-slate-400">Logo, banners and colours: HOMEPAGE & DESIGN. The login Gmail stays the same; to move the store to another Gmail, contact ROSE.</p>
     </div>
   );
 };
@@ -971,7 +991,8 @@ const COURIERS: Array<[string, string, string]> = [
   ['paperfly', 'Paperfly', 'Save keys now, booking comes next'],
   ['ecourier', 'eCourier', 'Save keys now, booking comes next'],
 ];
-const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
+const DeliveryTab: React.FC<{ store: Store; onSaved: () => void; part?: 'delivery' | 'print' }> = ({ store, onSaved, part = 'delivery' }) => {
+  const [note, setNote] = useState(store.note || '');
   const [conn, setConn] = useState<string[]>([]);
   const [open, setOpen] = useState('');
   const [key, setKey] = useState('');
@@ -996,7 +1017,7 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
     setKey(''); setSecret(''); setOpen(''); setMsg(remove ? 'Disconnected.' : 'Connected. Keys are kept on the server only.'); void loadConn();
   };
   const saveStore = async () => {
-    const { error } = await supabase.from('stores').update({ delivery_inside: Number(inside) || 0, delivery_outside: Number(outside) || 0, delivery_kg_inside: Number(kgIn) || 0, delivery_kg_outside: Number(kgOut) || 0, print_settings: ps, updated_at: new Date().toISOString() }).eq('id', store.id);
+    const { error } = await supabase.from('stores').update({ delivery_inside: Number(inside) || 0, delivery_outside: Number(outside) || 0, delivery_kg_inside: Number(kgIn) || 0, delivery_kg_outside: Number(kgOut) || 0, note, print_settings: ps, updated_at: new Date().toISOString() }).eq('id', store.id);
     setMsg(error ? error.message : 'Saved.');
     if (!error) onSaved();
   };
@@ -1005,6 +1026,7 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
   const scale = Math.min(1, 280 / (w * 3.78));
   return (
     <div className="space-y-2">
+      {part === 'delivery' && (<>
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">DELIVERY CHARGE BY WEIGHT</p>
         <div className="grid grid-cols-2 gap-2">
@@ -1048,6 +1070,12 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
         ))}
       </div>
       <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">DELIVERY NOTE</p>
+        <textarea className={input} rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Shown on product pages, e.g. Delivery in 1–3 days" />
+      </div>
+      </>)}
+      {part === 'print' && (
+      <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">INVOICE & STICKER</p>
         <select className={input} value={ps.stk} onChange={(e) => setPs({ ...ps, stk: e.target.value })}>
           {STICKER_SIZES.map((s) => <option key={s[0]} value={s[0]}>Sticker: {s[1]}</option>)}
@@ -1070,7 +1098,7 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
           ))}
         </div>
         <input className={input} value={ps.terms || ''} onChange={(e) => setPs({ ...ps, terms: e.target.value })} placeholder="Invoice terms (e.g. 7-day return with this invoice)" />
-        <p className="text-[10.5px] text-slate-400">Your logo, name, WhatsApp, bKash number, emails and address come on the invoice and sticker by themselves (04 HOMEPAGE & DESIGN, 09 COMPANY INFO). Best sticker: 100 × 70 mm.</p>
+        <p className="text-[10.5px] text-slate-400">Your logo, name, WhatsApp, bKash number, emails and address come on the invoice and sticker by themselves (HOMEPAGE & DESIGN, COMPANY INFO). Best sticker: 100 × 70 mm.</p>
         <style>{PRINT_CSS}</style>
         <p className="text-[11px] font-bold tracking-wider text-slate-300">INVOICE PREVIEW · {invoiceDims(ps.inv)[2]}</p>
         <div dangerouslySetInnerHTML={{ __html: invoicePreviewHTML(sample, ps, store, 280) }} />
@@ -1082,8 +1110,224 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, o
         </div>
         <button type="button" className={btn + ' w-full bg-white/10'} onClick={() => { const e = printOrders('sticker', [sample], ps, store); if (e) setMsg(e); }}>TEST PRINT 1 STICKER</button>
       </div>
+      )}
       <button type="button" className={btn + ' w-full'} onClick={() => void saveStore()}>SAVE</button>
       {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
+    </div>
+  );
+};
+
+
+// ---------------------------------------------------------------- dashboard (today at a glance)
+const DashboardTab: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: string) => void }> = ({ store, seeOrders, onOpen }) => {
+  const [d, setD] = useState<{ today: number; todayTk: number; month: number; monthTk: number; fresh: number; prods: number; low: Array<{ name: string; stock: number }> } | null>(null);
+  useEffect(() => {
+    void (async () => {
+      const now = new Date();
+      const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const mon0 = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const [{ data: o }, { data: p }] = await Promise.all([
+        seeOrders ? supabase.from('store_orders').select('total,status,created_at').eq('store_id', store.id).gte('created_at', mon0).limit(5000) : Promise.resolve({ data: [] as unknown[] }),
+        supabase.from('store_products').select('name,stock,active').eq('store_id', store.id).limit(5000),
+      ]);
+      const rows = ((o as Array<{ total: number; status: string; created_at: string }>) || []).filter((x) => x.status !== 'cancelled');
+      const t = rows.filter((x) => x.created_at >= day0);
+      const prods = ((p as Array<{ name: string; stock: number; active: boolean }>) || []).filter((x) => x.active);
+      setD({
+        today: t.length, todayTk: t.reduce((a, x) => a + Number(x.total || 0), 0), month: rows.length, monthTk: rows.reduce((a, x) => a + Number(x.total || 0), 0),
+        fresh: rows.filter((x) => x.status === 'new').length, prods: prods.length, low: prods.filter((x) => Number(x.stock) <= 3).slice(0, 8),
+      });
+    })();
+  }, [store.id, seeOrders]);
+  if (!d) return <p className="px-1 text-xs text-slate-400">Loading…</p>;
+  const tile = (label: string, value: string, go?: string) => (
+    <button type="button" onClick={() => go && onOpen(go)} className="rounded-xl border border-white/[0.08] bg-[#11151E] p-3 text-left">
+      <p className="text-[10px] font-bold tracking-wider text-slate-400">{label}</p>
+      <p className="mt-1 text-lg font-extrabold text-white">{value}</p>
+    </button>
+  );
+  return (
+    <div className="space-y-2">
+      {seeOrders && (
+        <div className="grid grid-cols-2 gap-2">
+          {tile('ORDERS TODAY', String(d.today), 'orders')}
+          {tile('SALES TODAY', tk(d.todayTk), 'orders')}
+          {tile('NEW · NOT CONFIRMED', String(d.fresh), 'orders')}
+          {tile('THIS MONTH', `${d.month} · ${tk(d.monthTk)}`, 'orders')}
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        {tile('PRODUCTS ON SALE', String(d.prods), 'products')}
+        {tile('LOW STOCK (3 OR LESS)', String(d.low.length), 'products')}
+      </div>
+      {d.low.length > 0 && (
+        <div className={box + ' space-y-1'}>
+          <p className="text-[11px] font-bold tracking-wider text-amber-300">LOW STOCK</p>
+          {d.low.map((x) => <p key={x.name} className="flex justify-between text-[12px] text-slate-200"><span className="truncate">{x.name}</span><b>{x.stock}</b></p>)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- customers (from the orders)
+const CustomersTab: React.FC<{ store: Store }> = ({ store }) => {
+  const [rows, setRows] = useState<Array<{ name: string; phone: string; email: string; district: string; n: number; spent: number; last: string }> | null>(null);
+  const [q, setQ] = useState('');
+  useEffect(() => {
+    void supabase.from('store_orders').select('customer_name,phone,email,district,total,status,created_at').eq('store_id', store.id).order('created_at', { ascending: false }).limit(5000).then(({ data }) => {
+      const m = new Map<string, { name: string; phone: string; email: string; district: string; n: number; spent: number; last: string }>();
+      ((data as Array<{ customer_name: string; phone: string; email: string; district: string; total: number; status: string; created_at: string }>) || []).forEach((o) => {
+        const k = o.phone || o.email || o.customer_name;
+        const c = m.get(k) || { name: o.customer_name, phone: o.phone, email: o.email || '', district: o.district || '', n: 0, spent: 0, last: o.created_at };
+        c.n += 1;
+        if (o.status !== 'cancelled' && o.status !== 'returned') c.spent += Number(o.total || 0);
+        m.set(k, c);
+      });
+      setRows([...m.values()]);
+    });
+  }, [store.id]);
+  if (!rows) return <p className="px-1 text-xs text-slate-400">Loading…</p>;
+  const f = q.trim().toLowerCase();
+  const list = f ? rows.filter((c) => `${c.name} ${c.phone} ${c.email} ${c.district}`.toLowerCase().includes(f)) : rows;
+  return (
+    <div className="space-y-2">
+      <input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${rows.length} customers: name, phone, district`} />
+      {list.length === 0 && <p className="px-1 text-[12px] text-slate-400">No customers yet. Everyone who orders comes here by themselves.</p>}
+      {list.slice(0, 300).map((c) => (
+        <div key={c.phone + c.name} className={box + ' flex items-center gap-2'}>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-bold text-white">{c.name}</p>
+            <p className="truncate text-[11px] text-slate-400">{c.phone}{c.district ? ` · ${c.district}` : ''} · last {new Date(c.last).toLocaleDateString('en-GB')}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[12px] font-bold text-teal-300">{tk(c.spent)}</p>
+            <p className="text-[10.5px] text-slate-400">{c.n} order{c.n > 1 ? 's' : ''}</p>
+          </div>
+          {c.phone && <a href={`https://wa.me/88${c.phone}`} target="_blank" rel="noreferrer" className="rounded-md bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white">WA</a>}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- reviews (buyers write, the shop checks and replies)
+const ReviewsTab: React.FC<{ store: Store }> = ({ store }) => {
+  type Rev = { id: string; product_id: string | null; name: string; stars: number; body: string; reply: string; approved: boolean; created_at: string; order_no: number | null };
+  const [rows, setRows] = useState<Rev[] | null>(null);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState('');
+  const load = useCallback(async () => {
+    const [{ data: r, error }, { data: p }] = await Promise.all([
+      supabase.from('store_reviews').select('id,product_id,name,stars,body,reply,approved,created_at,order_no').eq('store_id', store.id).order('created_at', { ascending: false }).limit(500),
+      supabase.from('store_products').select('id,name').eq('store_id', store.id).limit(5000),
+    ]);
+    if (error) setMsg(error.message);
+    const m: Record<string, string> = {};
+    ((p as Array<{ id: string; name: string }>) || []).forEach((x) => { m[x.id] = x.name; });
+    setNames(m);
+    setRows((r as Rev[]) || []);
+  }, [store.id]);
+  useEffect(() => { void load(); }, [load]);
+  const patch = async (id: string, v: Partial<Rev>, note: string) => {
+    const { error } = await supabase.from('store_reviews').update(v).eq('id', id);
+    setMsg(error ? error.message : note);
+    void load();
+  };
+  if (!rows) return <p className="px-1 text-xs text-slate-400">Loading…</p>;
+  const waiting = rows.filter((x) => !x.approved).length;
+  const avg = rows.filter((x) => x.approved).reduce((a, x, _i, all) => a + x.stars / all.length, 0);
+  return (
+    <div className="space-y-2">
+      <p className="px-1 text-[12px] text-slate-300">{rows.length} reviews · {waiting} waiting · average {avg ? avg.toFixed(1) : '–'} ★. Only buyers can write (the server checks their order phone). A review shows on the store after you press SHOW.</p>
+      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
+      {rows.map((x) => (
+        <ReviewRow key={x.id} x={x} product={x.product_id ? names[x.product_id] || 'Product' : 'Store'}
+          onToggle={() => void patch(x.id, { approved: !x.approved }, x.approved ? 'Hidden from the store.' : 'Now shown on the store.')}
+          onReply={(t) => void patch(x.id, { reply: t.slice(0, 400) }, 'Reply saved.')}
+          onDelete={() => { if (window.confirm('Delete this review?')) void supabase.from('store_reviews').delete().eq('id', x.id).then(() => void load()); }} />
+      ))}
+      {rows.length === 0 && <p className="px-1 text-[12px] text-slate-400">No reviews yet. After an order, buyers can review the product on the product page.</p>}
+    </div>
+  );
+};
+const ReviewRow: React.FC<{ x: { name: string; stars: number; body: string; reply: string; approved: boolean; created_at: string; order_no: number | null }; product: string; onToggle: () => void; onReply: (t: string) => void; onDelete: () => void }> = ({ x, product, onToggle, onReply, onDelete }) => {
+  const [rep, setRep] = useState(x.reply || '');
+  return (
+    <div className={box + ' space-y-1.5'}>
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-white">{x.name} · <span className="text-amber-300">{'★'.repeat(x.stars)}</span></p>
+        <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${x.approved ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-black'}`}>{x.approved ? 'SHOWN' : 'WAITING'}</span>
+      </div>
+      <p className="text-[11px] text-slate-400">{product}{x.order_no ? ` · order #${x.order_no}` : ''} · {new Date(x.created_at).toLocaleDateString('en-GB')}</p>
+      <p className="text-[12.5px] text-slate-200">{x.body}</p>
+      <input className={input} value={rep} onChange={(e) => setRep(e.target.value)} placeholder="Reply from the shop (optional)" />
+      <div className="grid grid-cols-3 gap-1.5">
+        <button type="button" className={btn} onClick={onToggle}>{x.approved ? 'HIDE' : 'SHOW'}</button>
+        <button type="button" className={btn + ' bg-white/10'} onClick={() => onReply(rep)}>SAVE REPLY</button>
+        <button type="button" className={btn + ' bg-rose-600/80'} onClick={onDelete}>DELETE</button>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- payments (owner only: where the money goes)
+const PaymentsTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => (
+  <div className="space-y-2">
+    <PaySetup value={store.pay_numbers || {}} onChange={() => onSaved()} storeId={store.id} />
+  </div>
+);
+
+// ---------------------------------------------------------------- SEO (Google search)
+const SeoTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSaved }) => {
+  const [title, setTitle] = useState(store.seo?.title || '');
+  const [desc, setDesc] = useState(store.seo?.description || '');
+  const [info, setInfo] = useState<{ prods: number; withPic: number; withText: number } | null>(null);
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    void supabase.from('store_products').select('images,description,active').eq('store_id', store.id).limit(5000).then(({ data }) => {
+      const p = ((data as Array<{ images: string[]; description: string; active: boolean }>) || []).filter((x) => x.active);
+      setInfo({ prods: p.length, withPic: p.filter((x) => (x.images || []).length > 0).length, withText: p.filter((x) => (x.description || '').length >= 40).length });
+    });
+  }, [store.id]);
+  const checks: Array<[string, boolean]> = [
+    ['Search title written (30–60 letters)', title.trim().length >= 30 && title.trim().length <= 60],
+    ['Search description written (80–160 letters)', desc.trim().length >= 80 && desc.trim().length <= 160],
+    ['Logo uploaded', Boolean(store.logo_url)],
+    ['Banner with a photo', (store.banners || []).some((b) => b.img)],
+    ['At least 5 products', (info?.prods || 0) >= 5],
+    ['Every product has a photo', Boolean(info && info.prods > 0 && info.withPic === info.prods)],
+    ['Every product has a description (40+ letters)', Boolean(info && info.prods > 0 && info.withText === info.prods)],
+    ['Store is published', store.published],
+    ['Own address (shop.myrosebd.com or own domain)', Boolean(store.subdomain_ready || store.domain_ready)],
+    ['Phone and address in COMPANY INFO', Boolean((store.whatsapp || store.phone) && store.address)],
+  ];
+  const score = Math.round((checks.filter((c) => c[1]).length / checks.length) * 100);
+  const save = async () => {
+    const { error } = await supabase.from('stores').update({ seo: { title: title.trim().slice(0, 70), description: desc.trim().slice(0, 180) }, updated_at: new Date().toISOString() }).eq('id', store.id);
+    setMsg(error ? error.message : 'Saved. Google reads the new title and description on its next visit.');
+    if (!error) onSaved();
+  };
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">SEO SCORE · {score} / 100</p>
+        {checks.map(([t, ok]) => <p key={t} className={`text-[12px] ${ok ? 'text-emerald-300' : 'text-slate-400'}`}>{ok ? '✓' : '○'} {t}</p>)}
+      </div>
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">GOOGLE SEARCH</p>
+        <label className="block text-[11px] font-bold text-slate-300">Search title · {title.trim().length} letters
+          <input className={input + ' mt-1'} value={title} maxLength={70} onChange={(e) => setTitle(e.target.value)} placeholder={`${store.name} · ${store.tagline || 'Online shop in Bangladesh'}`} /></label>
+        <label className="block text-[11px] font-bold text-slate-300">Search description · {desc.trim().length} letters
+          <textarea className={input + ' mt-1'} rows={3} maxLength={180} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What you sell, where you deliver, how to pay. Example: Cotton T-shirts and polo shirts. Home delivery all over Bangladesh, cash on delivery." /></label>
+        <div className="rounded-lg bg-white p-2.5">
+          <p className="truncate text-[14px] text-[#1a0dab]">{title.trim() || `${store.name}${store.tagline ? ' · ' + store.tagline : ''}`}</p>
+          <p className="truncate text-[11px] text-[#006621]">{store.slug}.myrosebd.com</p>
+          <p className="line-clamp-2 text-[11.5px] text-[#545454]">{desc.trim() || `${store.name}: ${store.tagline || 'online shop'}. Home delivery, ${store.city || 'Bangladesh'}.`}</p>
+        </div>
+        <button type="button" className={btn + ' w-full'} onClick={() => void save()}>SAVE</button>
+        {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+      </div>
     </div>
   );
 };
@@ -1796,11 +2040,6 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
   const [s, setS] = useState<Store>(store);
   const [msg, setMsg] = useState('');
   const [logoBusy, setLogoBusy] = useState(false);
-  // payment numbers: only the store owner (staff, even a manager, cannot change where money goes; the server blocks it too)
-  const [ownerHere, setOwnerHere] = useState(true);
-  useEffect(() => {
-    void supabase.auth.getUser().then(({ data }) => setOwnerHere(!data.user || data.user.id === store.owner_id));
-  }, [store.owner_id]);
   const set = (k: keyof Store, v: unknown) => setS((x) => ({ ...x, [k]: v }));
   const setBanner = (i: number, k: keyof Banner, v: string) =>
     setS((x) => ({ ...x, banners: x.banners.map((b, j) => (j === i ? { ...b, [k]: v } : b)) }));
@@ -1808,9 +2047,7 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
     const { error } = await supabase
       .from('stores')
       .update({
-        name: s.name, tagline: s.tagline, logo: s.logo, logo_url: s.logo_url || '', color: s.color, accent: s.accent, city: s.city, phone: s.phone, email: s.email,
-        address: s.address, licence: s.licence, note: s.note, delivery_inside: Number(s.delivery_inside) || 0,
-        delivery_outside: Number(s.delivery_outside) || 0, banners: s.banners, trust: s.trust, pay_numbers: s.pay_numbers,
+        tagline: s.tagline, logo: s.logo, logo_url: s.logo_url || '', color: s.color, accent: s.accent, banners: s.banners, trust: s.trust,
         updated_at: new Date().toISOString(),
       })
       .eq('id', store.id);
@@ -1847,7 +2084,7 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
         </div>
         <div className="flex gap-2">
           <input className={input + ' w-14 text-center'} value={s.logo} onChange={(e) => set('logo', e.target.value)} aria-label="Icon if no logo" />
-          {field('name', 'Store name')}
+          <p className="flex-1 self-center text-[11px] text-slate-400">Icon shown when there is no logo. The store name is in COMPANY INFO.</p>
         </div>
         {field('tagline', 'Tagline')}
         <div className="flex items-center gap-2 text-[12px] text-slate-300">
@@ -1890,27 +2127,6 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
             + ADD BANNER
           </button>
         )}
-      </div>
-      <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">CONTACT & FOOTER</p>
-        {field('phone', 'Phone')}
-        {field('email', 'E-mail')}
-        {field('address', 'Full address')}
-        {field('city', 'City')}
-        {field('licence', 'Trade / drug licence no. (optional)')}
-      </div>
-      <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">DELIVERY & PAYMENT</p>
-        <div className="grid grid-cols-2 gap-2">
-          <input className={input} value={s.delivery_inside} onChange={(e) => set('delivery_inside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Inside Dhaka Tk (up to 1 kg)" inputMode="numeric" />
-          <input className={input} value={s.delivery_outside} onChange={(e) => set('delivery_outside', e.target.value.replace(/[^\d]/g, ''))} placeholder="Outside Dhaka Tk (up to 1 kg)" inputMode="numeric" />
-        </div>
-        {ownerHere ? (
-          <PaySetup value={s.pay_numbers || {}} onChange={(v) => set('pay_numbers', v)} storeId={store.id} />
-        ) : (
-          <p className="text-[11.5px] text-amber-300">Payment numbers: only the store owner can change them.</p>
-        )}
-        <textarea className={input} rows={2} value={s.note} onChange={(e) => set('note', e.target.value)} placeholder="Delivery note shown on product pages" />
       </div>
       <button type="button" onClick={() => void save()} className={btn + ' w-full'}>SAVE</button>
       {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}

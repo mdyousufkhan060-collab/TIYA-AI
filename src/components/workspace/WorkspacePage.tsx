@@ -384,6 +384,7 @@ const APPROVALS: CrudConfig = {
 
 type View =
   | 'hub'
+  | 'rose_hub'
   | 'social'
   | 'store'
   | 'domain'
@@ -411,6 +412,7 @@ type View =
 
 const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
+  rose_hub: 'ROSE',
   mode: 'MODE',
   writer: 'WRITER',
   social: 'SOCIAL POST',
@@ -626,6 +628,24 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   const [bizInfo, setBizInfo] = useState<{ name: string | null; pay: string | null } | null>(null);
   const [modeBusy, setModeBusy] = useState(false);
   const [modeMsg, setModeMsg] = useState('');
+  // Website owners and their staff: the workspace opens with two bars, WEBSITE ADMIN and ROSE
+  const [siteOwner, setSiteOwner] = useState(false);
+  useEffect(() => {
+    if (allModes) return;
+    let gone = false;
+    void (async () => {
+      const [{ data: own }, { data: staff }] = await Promise.all([
+        supabase.from('stores').select('id').eq('owner_id', userId).limit(1),
+        supabase.rpc('my_staff_stores'),
+      ]);
+      if (!gone) setSiteOwner(Boolean((own && own.length) || (Array.isArray(staff) && staff.length)));
+    })();
+    return () => {
+      gone = true;
+    };
+  }, [userId, allModes]);
+  // things the WEBSITE ADMIN already has: not shown again inside ROSE
+  const SITE_HIDES = new Set<string>(['store', 'couriers', 'orders', 'customers', 'expenses']);
 
   const loadBusiness = useCallback(async () => {
     if (mode !== 'business') return;
@@ -653,7 +673,27 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     setView('hub');
   };
 
-  const back = () => (view === 'hub' ? onBack() : setView('hub'));
+  const back = () => {
+    if (view === 'hub') return onBack();
+    if (siteOwner && view !== 'store' && view !== 'rose_hub') return setView('rose_hub');
+    setView('hub');
+  };
+  // one list, numbered 01, 02, 03… in order; for website owners the hidden bars drop out and the rest close up
+  const tidy = (items: React.ReactElement[]): React.ReactElement[] => {
+    if (!siteOwner) return items;
+    const kept = items.filter((el) => !SITE_HIDES.has(String(el.key)));
+    const noEmptyLabels = kept.filter((el, i) => {
+      if (!String(el.key).startsWith('l_')) return true;
+      const next = kept[i + 1];
+      return Boolean(next && !String(next.key).startsWith('l_'));
+    });
+    let n = 0;
+    return noEmptyLabels.map((el) => {
+      const b = (el.props as { badge?: unknown }).badge;
+      if (typeof b === 'string' && /^\d+$/.test(b) && b !== '00') return React.cloneElement(el as React.ReactElement<{ badge?: string }>, { badge: String(++n).padStart(2, '0') });
+      return el;
+    });
+  };
   const uScope = { user_id: userId };
   const bScope = businessId ? { business_id: businessId } : null;
   const modeLabel = mode ? mode.toUpperCase() : 'NOT SET';
@@ -663,7 +703,14 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   );
 
   let body: React.ReactNode = null;
-  if (view === 'hub') {
+  if (view === 'hub' && siteOwner) {
+    body = (
+      <div className="space-y-1.5">
+        <SettingsBar badge="01" title="WEBSITE ADMIN" value="STORE · ORDERS · PRODUCTS" onClick={() => setView('store')} testId="ws-site-admin" />
+        <SettingsBar badge="02" title="ROSE" value={modeLabel} onClick={() => setView('rose_hub')} testId="ws-rose" />
+      </div>
+    );
+  } else if (view === 'hub' || view === 'rose_hub') {
     const personal = [bar('01', 'tasks'), bar('02', 'content'), bar('03', 'writer'), bar('04', 'social', 'YT · FB · TT · IG'), bar('05', 'store', 'WEBSITE'), bar('06', 'domain', 'ROSE ACCESS')];
     const student = [bar('01', 'notes'), bar('02', 'routine'), bar('03', 'tests'), bar('04', 'tasks'), bar('05', 'writer'), bar('06', 'social', 'YT · FB · TT · IG'), bar('07', 'store', 'WEBSITE'), bar('08', 'domain', 'ROSE ACCESS')];
     const label = (t: string) => (
@@ -730,11 +777,11 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             </div>
           ) : mode === 'business' ? (
-            business
+            tidy(business)
           ) : mode === 'student' ? (
-            student
+            tidy(student)
           ) : (
-            personal
+            tidy(personal)
           )}
         </div>
         {mode === 'business' && !businessId && bizLoaded && (
@@ -823,7 +870,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     );
 
   return (
-    <SettingsShell title={view === 'hub' ? '07 WORKSPACE' : TITLES[view]} onBack={back}>
+    <SettingsShell title={view === 'hub' ? '07 WORKSPACE' : view === 'store' && siteOwner ? 'WEBSITE ADMIN' : TITLES[view]} onBack={back}>
       <div className="pb-4">{body}</div>
     </SettingsShell>
   );
