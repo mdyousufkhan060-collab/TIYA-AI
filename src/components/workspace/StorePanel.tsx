@@ -356,13 +356,14 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
         {tab === 'viewas' && realRole === 'owner' && !staffSel && (
           <div className="space-y-1.5">
             <p className="px-1 text-[11px] font-bold tracking-wider text-teal-300">MY STAFF · {staffList.length}</p>
+            {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
             {staffList.length === 0 && (
               <div className={box}>
                 <p className="text-[12px] text-slate-300">No staff yet. Add staff in 03 WEBSITE ADMIN → STAFF. They show here by themselves.</p>
               </div>
             )}
             {staffList.map((s2) => (
-              <button key={s2.email} type="button" onClick={() => setStaffSel(s2)} className="mb-1.5 flex h-[58px] w-full items-center gap-2.5 rounded-xl border border-[#1e293b] bg-[#11151e] px-2.5 text-left transition-colors hover:border-teal-500/40">
+              <button key={s2.email} type="button" onClick={() => { setMsg(""); setStaffSel(s2); }} className="mb-1.5 flex h-[58px] w-full items-center gap-2.5 rounded-xl border border-[#1e293b] bg-[#11151e] px-2.5 text-left transition-colors hover:border-teal-500/40">
                 <StaffFace s={s2} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[12.5px] font-bold text-slate-100">{s2.email}</span>
@@ -375,30 +376,64 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
                 <span className="text-base text-slate-600">›</span>
               </button>
             ))}
+            <p className="px-1 pt-3 text-[11px] font-bold tracking-wider text-teal-300">ROLES · WHAT EACH ONE CAN OPEN</p>
+            {([['manager', '🧑‍💼', '#38bdf8'], ['moderator', '🛡️', '#a78bfa'], ['support', '🎧', '#34d399']] as Array<[string, string, string]>).map(([rk, ic, col], i) => (
+              <DemoBar key={rk} n={i + 1} icon={ic} color={col} title={rk.toUpperCase()} value={`${barsFor(rk).length} BARS`} onClick={() => setStaffSel({ email: rk.toUpperCase(), role: rk, suspended: false, money_access: false, isRole: true })} testId={`role-${rk}`} />
+            ))}
           </div>
         )}
         {tab === 'viewas' && realRole === 'owner' && staffSel && (
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5 rounded-xl border border-teal-500/30 bg-teal-500/5 p-2.5">
-              <StaffFace s={staffSel} size={42} />
+              {staffSel.isRole ? <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-sky-700 text-xl">👥</span> : <StaffFace s={staffSel} size={42} />}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-bold text-white">{staffSel.email}</span>
-                <span className="block text-[11px] font-bold tracking-wider text-teal-300">{staffSel.role.toUpperCase()}{staffSel.suspended ? ' · SUSPENDED' : ' · ACTIVE'}</span>
+                <span className="block truncate text-[13px] font-bold text-white">{staffSel.isRole ? `${staffSel.role.toUpperCase()} ROLE` : staffSel.email}</span>
+                <span className="block text-[11px] font-bold tracking-wider">
+                  <span className="text-teal-300">{staffSel.role.toUpperCase()}</span>
+                  {!staffSel.isRole && <span className={staffSel.suspended ? 'text-rose-300' : 'text-emerald-300'}>{staffSel.suspended ? ' · SUSPENDED' : ' · ACTIVE'}</span>}
+                  {staffSel.role === 'manager' && staffSel.money_access && <span className="text-amber-300"> · MONEY</span>}
+                </span>
               </span>
             </div>
-            {staffSel.suspended ? (
-              <div className={box}>
-                <p className="text-[12px] text-rose-200">This staff member is suspended, so they have no access and nothing is shown here. Resume them in 03 WEBSITE ADMIN → STAFF.</p>
+            {!staffSel.isRole && (
+              <div className="grid grid-cols-2 gap-1.5">
+                <button type="button" className={btn + ' h-9'} style={{ background: staffSel.suspended ? '#0d9488' : '#d97706' }}
+                  onClick={async () => {
+                    const next = !staffSel.suspended;
+                    const { error } = await supabase.rpc('set_store_staff', { p_store: store.id, p_email: staffSel.email, p_suspended: next });
+                    if (error) return setMsg(error.message);
+                    setStaffSel({ ...staffSel, suspended: next });
+                    setStaffList((l) => l.map((x) => (x.email === staffSel.email ? { ...x, suspended: next } : x)));
+                    setMsg(next ? `${staffSel.email} is SUSPENDED. They cannot open anything now.` : `${staffSel.email} is ACTIVE again.`);
+                  }}>
+                  {staffSel.suspended ? '▶ RESUME' : '⏸ SUSPEND'}
+                </button>
+                <button type="button" className={btn + ' h-9'} style={{ background: '#e11d48' }}
+                  onClick={async () => {
+                    if (!window.confirm(`Remove ${staffSel.email}? Their access is deleted everywhere at once. You can add the same Gmail again later in 03 WEBSITE ADMIN → STAFF.`)) return;
+                    const { error } = await supabase.from('store_staff').delete().eq('store_id', store.id).eq('email', staffSel.email);
+                    if (error) return setMsg(error.message);
+                    setStaffList((l) => l.filter((x) => x.email !== staffSel.email));
+                    setMsg(`${staffSel.email} is removed. To give access again, add the Gmail in 03 WEBSITE ADMIN → STAFF.`);
+                    setStaffSel(null);
+                  }}>
+                  ✕ REMOVE
+                </button>
               </div>
-            ) : (
-              <>
-                <p className="px-1 pt-1 text-[11px] font-bold tracking-wider text-slate-400">WHAT THEY CAN DO · {barsFor(staffSel.role, staffSel.money_access).length}</p>
-                {barsFor(staffSel.role, staffSel.money_access).map(([, k, title, icon, color], i) => (
-                  <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} onClick={() => { setPreviewRole(staffSel.role); setTab(k as typeof tab); }} testId={`staff-job-${k}`} />
-                ))}
-                <p className="px-1 text-[11px] text-slate-500">Tap a job to see it the way they see it · EXIT brings you back here</p>
-              </>
             )}
+            {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
+            {staffSel.suspended && (
+              <div className="rounded-xl border border-rose-500/40 bg-rose-950/40 p-2.5 text-[11.5px] text-rose-200">
+                SUSPENDED · these bars are closed for them now. Tap RESUME to open them again.
+              </div>
+            )}
+            <p className="px-1 pt-1 text-[11px] font-bold tracking-wider text-slate-400">THE BARS THEY SEE · {barsFor(staffSel.role, staffSel.money_access).length} OF {barsFor('owner').length}</p>
+            <div className={staffSel.suspended ? 'opacity-50' : ''}>
+              {barsFor(staffSel.role, staffSel.money_access).map(([, k, title, icon, color, value]) => (
+                <DemoBar key={k} n={barsFor('owner').findIndex((x) => x[1] === k) + 1} icon={icon} color={color} title={title} value={value} onClick={() => { setPreviewRole(staffSel.role); setTab(k as typeof tab); }} testId={`staff-job-${k}`} />
+              ))}
+            </div>
+            <p className="px-1 text-[11px] text-slate-500">Same bars and numbers as your WEBSITE ADMIN. Tap one to see it the way they see it · EXIT brings you back here</p>
           </div>
         )}
         {tab === 'reviews' && <ReviewsTab store={store} />}
@@ -1721,7 +1756,7 @@ const ROLES: Array<[string, string]> = [
   ['moderator', 'Moderator · adds and edits products, checks reviews'],
   ['support', 'Support · chats with customers, sees order status'],
 ];
-type StaffRow = { email: string; role: string; suspended: boolean; money_access: boolean; added_at?: string; name?: string; pic?: string; joined?: boolean };
+type StaffRow = { email: string; role: string; suspended: boolean; money_access: boolean; isRole?: boolean; added_at?: string; name?: string; pic?: string; joined?: boolean };
 const StaffFace: React.FC<{ s: StaffRow; size?: number }> = ({ s, size = 36 }) =>
   s.pic ? (
     <img src={s.pic} alt="" referrerPolicy="no-referrer" className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
@@ -1756,7 +1791,7 @@ const StaffTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) =
     setBusy(e);
     const { error } = await supabase.rpc('set_store_staff', { p_store: store.id, p_email: e, ...patch });
     setBusy('');
-    setMsg(error ? error.message : 'Saved. It works at once.');
+    setMsg(error ? error.message : patch.p_suspended === true ? `${e} is SUSPENDED. They cannot open anything now.` : patch.p_suspended === false ? `${e} is ACTIVE again.` : 'Saved. It works at once.');
     void load();
   };
   const remove = async (e: string) => {
@@ -1793,8 +1828,8 @@ const StaffTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) =
               </label>
             )}
             <div className="grid grid-cols-2 gap-1.5">
-              <button type="button" disabled={busy === s.email} onClick={() => void change(s.email, { p_suspended: !s.suspended })} className={btn + ' h-8 ' + (s.suspended ? '' : 'bg-amber-600/80')}>{s.suspended ? 'RESUME' : 'SUSPEND'}</button>
-              <button type="button" onClick={() => void remove(s.email)} className={btn + ' h-8 bg-rose-600/80'}>REMOVE</button>
+              <button type="button" disabled={busy === s.email} onClick={() => void change(s.email, { p_suspended: !s.suspended })} className={btn + ' h-8'} style={{ background: s.suspended ? '#0d9488' : '#d97706' }}>{s.suspended ? '▶ RESUME' : '⏸ SUSPEND'}</button>
+              <button type="button" onClick={() => void remove(s.email)} className={btn + ' h-8'} style={{ background: '#e11d48' }}>✕ REMOVE</button>
             </div>
           </div>
         ))}
