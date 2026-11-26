@@ -134,17 +134,20 @@ export const slugify = (t: string) =>
 /** Names that cannot become yourshop.myrosebd.com (site pages, mail, demo stores). */
 export const RESERVED_SLUGS = ['www', 'app', 'api', 'admin', 'mail', 'webmail', 'shop', 'demos', 'demo', 'autodiscover', 'autoconfig', 'ftp', 'cpanel', 'ns1', 'ns2', 'rose', 'help', 'support', 'blog', 'foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare'];
 
-export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = ({ userId, forceStoreId }) => {
+export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; startTab?: 'viewas' }> = ({ userId, forceStoreId, startTab }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [access, setAccess] = useState<Access>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create' | 'viewas'>('home');
+  const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create' | 'viewas'>(startTab || 'home');
   const [roles, setRoles] = useState<Record<string, string>>({});
   // owner can look at the admin the way a staff role sees it (nothing opens or saves in this view)
   const [previewRole, setPreviewRole] = useState('');
+  // MY STAFF (07 WORKSPACE): the owner's staff list, and the one being looked at
+  const [staffList, setStaffList] = useState<Array<{ email: string; role: string }>>([]);
+  const [staffSel, setStaffSel] = useState<{ email: string; role: string } | null>(null);
   const [, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
 
@@ -179,6 +182,10 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = (
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    if (tab !== 'viewas' || !store?.id) return;
+    void supabase.from('store_staff').select('email, role').eq('store_id', store.id).order('created_at').then(({ data }) => setStaffList((data as Array<{ email: string; role: string }>) || []));
+  }, [tab, store?.id]);
 
   const active = isAdmin || (access && new Date(access.ends_at) > new Date()) || Object.keys(roles).length > 0;
 
@@ -238,6 +245,32 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = (
   const can = (area: 'orders' | 'ordersWrite' | 'chat' | 'products' | 'design' | 'marketing' | 'owner' | 'money') =>
     myRole === 'owner' || (area !== 'owner' && (ROLE_AREAS[myRole] || []).includes(area));
 
+  // the bars a role sees in WEBSITE ADMIN (same rules as the server)
+  const barsFor = (r: string) => {
+    const c = (area: string) => r === 'owner' || (area !== 'owner' && (ROLE_AREAS[r] || []).includes(area));
+    return (
+      [
+            [true, 'dashboard', 'DASHBOARD', '📊', '#1d4ed8', 'TODAY'],
+            [c('owner') && !isAdmin, 'plan', 'PLAN & PAYMENT', '⭐', '#f59e0b', access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'],
+            [c('orders'), 'orders', 'ORDERS', '🧾', '#7c3aed', ''],
+            [c('products'), 'products', 'PRODUCTS', '📦', '#0d9488', ''],
+            [c('products'), 'categories', 'CATEGORIES', '🗂️', '#ca8a04', ''],
+            [c('design'), 'design', 'HOMEPAGE & DESIGN', '🎨', '#db2777', 'BANNERS'],
+            [c('orders'), 'customers', 'CUSTOMERS', '👥', '#2563eb', ''],
+            [c('products'), 'offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', ''],
+            [c('products'), 'reviews', 'REVIEWS', '⭐', '#eab308', ''],
+            [c('chat'), 'chat', 'LIVE CHAT', '💬', '#059669', 'ROSE'],
+            [r === 'owner', 'payments', 'PAYMENTS', '💳', '#4f46e5', ''],
+            [c('design'), 'delivery', 'DELIVERY & COURIER', '🚚', '#b45309', ''],
+            [c('design'), 'print', 'INVOICE & STICKER', '🏷️', '#e11d48', 'PRINT'],
+            [c('marketing'), 'pixels', 'TRACKING & PIXELS', '📈', '#0284c7', 'ADS'],
+            [c('marketing'), 'seo', 'SEO', '🔍', '#16a34a', 'GOOGLE'],
+            [c('owner'), 'staff', 'STAFF', '👤', '#9333ea', ''],
+            [c('owner'), 'domain', 'DOMAIN', '🌐', '#0891b2', store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'LINK'],
+            [c('money'), 'reports', 'REPORTS', '📑', '#64748b', 'MONTH'],
+      ] as Array<[boolean, string, string, string, string, string]>
+    ).filter((x) => x[0]);
+  };
   const url = store.custom_domain && store.domain_ready ? `https://${store.custom_domain}` : store.subdomain_ready ? `https://${store.slug}.myrosebd.com` : `${window.location.origin}/shop/${store.slug}`;
   const makeSubdomain = async () => {
     setMsg('Setting up your address…');
@@ -292,22 +325,63 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = (
 
   if (tab !== 'home') {
     const back = (
-      <button type="button" onClick={() => setTab('home')} className="px-1 text-[11px] font-bold tracking-wider text-teal-400">
-        ‹ {store.name.toUpperCase()}
-      </button>
+      previewRole ? (
+        <div className="flex items-center gap-2 rounded-xl border border-sky-400/50 bg-sky-500/10 p-3">
+          <p className="min-w-0 flex-1 truncate text-[12px] font-bold text-sky-200">👁️ {staffSel?.email || 'STAFF'} · {previewRole.toUpperCase()} · their view</p>
+          <button type="button" className={btn} onClick={() => { setPreviewRole(''); setTab('viewas'); }}>EXIT</button>
+        </div>
+      ) : tab === 'viewas' ? (
+        staffSel ? (
+          <button type="button" onClick={() => setStaffSel(null)} className="px-1 text-[11px] font-bold tracking-wider text-teal-400">‹ ALL STAFF</button>
+        ) : null
+      ) : (
+        <button type="button" onClick={() => setTab('home')} className="px-1 text-[11px] font-bold tracking-wider text-teal-400">
+          ‹ {store.name.toUpperCase()}
+        </button>
+      )
     );
     return (
       <div className="space-y-3">
         {back}
         {tab === 'dashboard' && <DashboardTab store={store} seeOrders={can('orders') || can('money')} onOpen={(t) => setTab(t as typeof tab)} />}
         {tab === 'customers' && <CustomersTab store={store} />}
-        {tab === 'viewas' && (
+        {tab === 'viewas' && realRole !== 'owner' && <p className="px-1 text-[12px] text-amber-300">Only the shop owner can see this.</p>}
+        {tab === 'viewas' && realRole === 'owner' && !staffSel && (
           <div className="space-y-1.5">
-            <p className="px-1 text-[11.5px] text-slate-400">See your shop the way others see it. Nothing is changed.</p>
-            <DemoBar n={1} icon="🛍️" color="#16a34a" title="CUSTOMER" value="YOUR SHOP ↗" onClick={() => window.open(url, '_blank', 'noopener')} />
-            {([['manager', '🧑‍💼'], ['orders', '🧾'], ['products', '📦'], ['support', '🎧'], ['accounts', '📑'], ['marketing', '📈']] as Array<[string, string]>).map(([r2, ic], i) => (
-              <DemoBar key={r2} n={i + 2} icon={ic} color="#38bdf8" title={`STAFF · ${r2.toUpperCase()}`} value="SEE THEIR BARS" onClick={() => { setPreviewRole(r2); setTab('home'); }} />
+            <p className="px-1 text-[11px] font-bold tracking-wider text-teal-300">MY STAFF · {staffList.length}</p>
+            {staffList.length === 0 && (
+              <div className={box + ' space-y-2'}>
+                <p className="text-[12px] text-slate-300">No staff yet. Add a Gmail and choose a role in WEBSITE ADMIN → STAFF.</p>
+                <button type="button" className={btn + ' w-full'} onClick={() => setTab('staff')}>ADD STAFF</button>
+              </div>
+            )}
+            {staffList.map((s2) => (
+              <button key={s2.email} type="button" onClick={() => setStaffSel(s2)} className="mb-1.5 flex h-[54px] w-full items-center gap-2.5 rounded-xl border border-[#1e293b] bg-[#11151e] px-2.5 text-left transition-colors hover:border-teal-500/40">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-teal-600 text-sm font-bold text-white">{s2.email.charAt(0).toUpperCase()}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12.5px] font-bold text-slate-100">{s2.email}</span>
+                  <span className="block text-[10.5px] font-bold tracking-wider text-teal-300">{s2.role.toUpperCase()}</span>
+                </span>
+                <span className="text-base text-slate-600">›</span>
+              </button>
             ))}
+            {staffList.length > 0 && <p className="px-1 text-[11px] text-slate-500">Add or remove staff: WEBSITE ADMIN → STAFF</p>}
+          </div>
+        )}
+        {tab === 'viewas' && realRole === 'owner' && staffSel && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5 rounded-xl border border-teal-500/30 bg-teal-500/5 p-2.5">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-600 text-base font-bold text-white">{staffSel.email.charAt(0).toUpperCase()}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-bold text-white">{staffSel.email}</span>
+                <span className="block text-[11px] font-bold tracking-wider text-teal-300">{staffSel.role.toUpperCase()}</span>
+              </span>
+            </div>
+            <p className="px-1 pt-1 text-[11px] font-bold tracking-wider text-slate-400">WHAT THEY CAN DO · {barsFor(staffSel.role).length}</p>
+            {barsFor(staffSel.role).map(([, k, title, icon, color], i) => (
+              <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} onClick={() => { setPreviewRole(staffSel.role); setTab(k as typeof tab); }} testId={`staff-job-${k}`} />
+            ))}
+            <p className="px-1 text-[11px] text-slate-500">Tap a job to see it the way they see it · EXIT brings you back here</p>
           </div>
         )}
         {tab === 'reviews' && <ReviewsTab store={store} />}
@@ -345,40 +419,16 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string }> = (
       {header}
       {previewRole ? (
         <div className="flex items-center gap-2 rounded-xl border border-sky-400/50 bg-sky-500/10 p-3">
-          <p className="min-w-0 flex-1 text-[12px] font-bold text-sky-200">👁️ VIEW AS {previewRole.toUpperCase()} · these are the only bars they see</p>
-          <button type="button" className={btn} onClick={() => setPreviewRole('')}>EXIT</button>
+          <p className="min-w-0 flex-1 text-[12px] font-bold text-sky-200">👁️ {staffSel ? staffSel.email : 'VIEW AS'} · {previewRole.toUpperCase()} · these are the only bars they see</p>
+          <button type="button" className={btn} onClick={() => { setPreviewRole(''); setTab(staffSel ? 'viewas' : 'home'); }}>EXIT</button>
         </div>
       ) : (
         myRole !== 'owner' && <p className="px-1 text-[11px] font-bold text-amber-300">You are STAFF here · role: {myRole.toUpperCase()}</p>
       )}
       <div>
-        {(
-          [
-            [true, 'dashboard', 'DASHBOARD', '📊', '#1d4ed8', 'TODAY'],
-            [can('owner') && !isAdmin, 'plan', 'PLAN & PAYMENT', '⭐', '#f59e0b', access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'],
-            [can('orders'), 'orders', 'ORDERS', '🧾', '#7c3aed', ''],
-            [can('products'), 'products', 'PRODUCTS', '📦', '#0d9488', ''],
-            [can('products'), 'categories', 'CATEGORIES', '🗂️', '#ca8a04', ''],
-            [can('design'), 'design', 'HOMEPAGE & DESIGN', '🎨', '#db2777', 'BANNERS'],
-            [can('orders'), 'customers', 'CUSTOMERS', '👥', '#2563eb', ''],
-            [can('products'), 'offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', ''],
-            [can('products'), 'reviews', 'REVIEWS', '⭐', '#eab308', ''],
-            [can('chat'), 'chat', 'LIVE CHAT', '💬', '#059669', 'ROSE'],
-            [myRole === 'owner', 'payments', 'PAYMENTS', '💳', '#4f46e5', ''],
-            [can('design'), 'delivery', 'DELIVERY & COURIER', '🚚', '#b45309', ''],
-            [can('design'), 'print', 'INVOICE & STICKER', '🏷️', '#e11d48', 'PRINT'],
-            [can('marketing'), 'pixels', 'TRACKING & PIXELS', '📈', '#0284c7', 'ADS'],
-            [can('marketing'), 'seo', 'SEO', '🔍', '#16a34a', 'GOOGLE'],
-            [can('owner'), 'staff', 'STAFF', '👤', '#9333ea', ''],
-            [can('owner'), 'domain', 'DOMAIN', '🌐', '#0891b2', store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'LINK'],
-            [can('money'), 'reports', 'REPORTS', '📑', '#64748b', 'MONTH'],
-          ] as Array<[boolean, string, string, string, string, string]>
-        )
-          .filter((x) => x[0])
-          .map(([, k, title, icon, color, value], i) => (
-            <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} value={value} onClick={() => (previewRole ? setMsg(`View only: a ${previewRole.toUpperCase()} can open ${title}.`) : setTab(k as typeof tab))} testId={`store-${k}`} />
+        {barsFor(myRole).map(([, k, title, icon, color, value], i) => (
+            <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} value={value} onClick={() => setTab(k as typeof tab)} testId={`store-${k}`} />
           ))}
-        {realRole === 'owner' && !previewRole && <DemoBar n="VA" icon="👁️" color="#38bdf8" title="VIEW AS" value="CUSTOMER · STAFF" onClick={() => setTab('viewas' as typeof tab)} testId="store-viewas" />}
         {can('owner') && !forceStoreId && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
     </div>

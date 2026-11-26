@@ -387,6 +387,7 @@ type View =
   | 'hub'
   | 'rose_hub'
   | 'rose_support'
+  | 'viewas'
   | 'profile'
   | 'social'
   | 'store'
@@ -417,6 +418,7 @@ const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
   rose_hub: 'MYROSEBD.COM BUSINESS',
   rose_support: 'MYROSEBD.COM',
+  viewas: 'MY STAFF',
   profile: 'MY DETAILS',
   mode: 'MODE',
   writer: 'WRITER',
@@ -639,6 +641,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   const [roseCard, setRoseCard] = useState(true);
   const [shopUrl, setShopUrl] = useState('');
   const [supportId, setSupportId] = useState('');
+  const [isOwner, setIsOwner] = useState(false);
+  const [staffCount, setStaffCount] = useState(0);
   useEffect(() => {
     if (allModes) return;
     let gone = false;
@@ -658,6 +662,12 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
       type St = { slug: string; subdomain_ready?: boolean; custom_domain?: string | null; domain_ready?: boolean };
       let st = ((own as St[]) || [])[0];
       setSupportId(((own as Array<{ support_code?: string }>) || [])[0]?.support_code || '');
+      setIsOwner(Boolean(own && own.length));
+      const ownId = ((own as Array<{ id: string }>) || [])[0]?.id;
+      if (ownId) {
+        const { count } = await supabase.from('store_staff').select('email', { count: 'exact', head: true }).eq('store_id', ownId);
+        if (!gone) setStaffCount(count || 0);
+      }
       if (!st && Array.isArray(staff) && staff.length) {
         const { data: ss } = await supabase.from('stores').select('slug,subdomain_ready,custom_domain,domain_ready').eq('id', (staff[0] as { store_id: string }).store_id).maybeSingle();
         st = (ss as St) || undefined;
@@ -699,7 +709,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
 
   const back = () => {
     if (view === 'hub') return onBack();
-    if (siteOwner && !['store', 'rose_hub', 'rose_support', 'profile'].includes(view)) return setView('rose_hub');
+    if (siteOwner && !['store', 'rose_hub', 'rose_support', 'profile', 'viewas'].includes(view)) return setView('rose_hub');
     setView('hub');
   };
   // one list, numbered 01, 02, 03… in order; for website owners the hidden bars drop out and the rest close up
@@ -750,7 +760,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
           <SettingsBar
             badge="04"
             title="MY SHOP"
-            value="CUSTOMER VIEW ↗"
+            value="OPEN ↗"
             onClick={() => {
               // open the shop's home page, already signed in with this Gmail (the shop is another address, so the sign-in goes along)
               const w = window.open('', '_blank');
@@ -767,6 +777,20 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             testId="ws-shop"
           />
         )}
+        {isOwner && shopUrl && (
+          <SettingsBar
+            badge="05"
+            title="CUSTOMER VIEW"
+            value="AS A CUSTOMER ↗"
+            onClick={() => {
+              // the shop as a guest customer sees it (owner sign-in is not used there); BACK TO ADMIN returns here
+              const u = shopUrl + (shopUrl.includes('?') ? '&' : '?') + 'as=customer#/';
+              if (!window.open(u, '_blank')) window.location.href = u;
+            }}
+            testId="ws-customer-view"
+          />
+        )}
+        {isOwner && <SettingsBar badge="06" title="MY STAFF" value={`${staffCount} STAFF`} onClick={() => setView('viewas')} testId="ws-my-staff" />}
       </div>
     );
   } else if (view === 'hub' || view === 'rose_hub') {
@@ -871,6 +895,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   else if (view === 'store') body = <StorePanel userId={userId} />;
   else if (view === 'rose_support') body = <AdminBrandPage />;
   else if (view === 'profile') body = <SiteProfile userId={userId} />;
+  else if (view === 'viewas') body = <StorePanel userId={userId} startTab="viewas" />;
   else if (view === 'domain') body = <DomainAccess userId={userId} />;
   else if (view === 'writer') body = <div className="h-[calc(100dvh-140px)]"><WriterPanel /></div>;
   else if (view === 'tasks') body = <CrudSection config={TASKS} scope={uScope} />;

@@ -36,6 +36,10 @@ import {
   Smartphone,
   Sparkles,
   Store,
+  ShoppingBag,
+  Eye,
+  UserCog,
+  MonitorCog,
   Trash2,
   Truck,
   User,
@@ -54,6 +58,10 @@ import {
 
 /** Small logo for each bar, picked from its title (shown next to the number). */
 const BAR_ICONS: Array<[RegExp, React.ElementType, string]> = [
+  [/^WEBSITE ADMIN$/, MonitorCog, '#14b8a6'],
+  [/^MY SHOP$/, ShoppingBag, '#22c55e'],
+  [/^CUSTOMER VIEW$/, Eye, '#38bdf8'],
+  [/^MY STAFF$/, UserCog, '#a78bfa'],
   [/AI KEY|BILLING/, KeyRound, '#fbbf24'],
   [/WEBSITE BUILDER/, Globe, '#22d3ee'],
   [/WEBSITE ACCESS/, AtSign, '#60a5fa'],

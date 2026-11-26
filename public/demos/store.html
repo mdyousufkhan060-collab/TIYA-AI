@@ -677,7 +677,18 @@ function start(S, P, liveId) {
   var place = function (p) { return LANG === 'bn' && p[1] ? p[1] : p[0]; };
 
   // ---------------- customer (saved info, demo login) ----------------
-  var CKEY = 'rose_cust_' + id, OKEY = 'rose_orders_' + id;
+  // CUSTOMER VIEW (opened by the owner from 07 WORKSPACE): a clean guest visit, the owner's sign-in is not used or changed
+  var ASCUST = S.live && /[?&]as=customer(&|$)/.test(location.search);
+  var CKEY = (ASCUST ? 'rose_cview_c_' : 'rose_cust_') + id, OKEY = (ASCUST ? 'rose_cview_o_' : 'rose_orders_') + id;
+  if (ASCUST) {
+    try { localStorage.removeItem(CKEY); localStorage.removeItem(OKEY); } catch (e) {}
+    window.backToAdmin = function () { try { if (window.opener) { window.close(); return; } } catch (e) {} location.href = 'https://www.myrosebd.com/app?open=store'; };
+    var cvBar = function () {
+      if (!document.body || document.getElementById('cvBar')) return;
+      document.body.insertAdjacentHTML('afterbegin', '<div id="cvBar" style="position:sticky;top:0;z-index:9999;display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0b1220;color:#e2e8f0;font:700 12px/1.3 system-ui,sans-serif;letter-spacing:.04em;border-bottom:1px solid #1e293b"><span style="flex:1">👁️ CUSTOMER VIEW · this is what customers see</span><button type="button" onclick="backToAdmin()" style="border:0;border-radius:8px;padding:7px 10px;background:#14b8a6;color:#04211d;font:800 11px system-ui,sans-serif;letter-spacing:.05em;cursor:pointer">‹ BACK TO ADMIN</button></div>');
+    };
+    if (document.body) cvBar(); else document.addEventListener('DOMContentLoaded', cvBar);
+  }
   var cust = {}; try { cust = JSON.parse(localStorage.getItem(CKEY)) || {}; } catch (e) {}
   function saveCust() { try { localStorage.setItem(CKEY, JSON.stringify(cust)); } catch (e) {} }
   function myOrders() { try { return JSON.parse(localStorage.getItem(OKEY)) || []; } catch (e) { return []; } }
@@ -685,8 +696,8 @@ function start(S, P, liveId) {
   // ---------------- real customer login on live stores (Google or e-mail link, through ROSE sign-in) ----------------
   var TKEY = 'rose_shop_tok', acct = { owner: false }, lastSync = 0;
   function jwtInfo(tok) { try { var b = String(tok).split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); b += '===='.slice(0, (4 - b.length % 4) % 4); return JSON.parse(decodeURIComponent(escape(atob(b)))); } catch (e) { return null; } }
-  function getTok() { try { return JSON.parse(localStorage.getItem(TKEY)) || null; } catch (e) { return null; } }
-  function setTok(v) { try { if (v) localStorage.setItem(TKEY, JSON.stringify(v)); else localStorage.removeItem(TKEY); } catch (e) {} }
+  function getTok() { if (ASCUST) return null; try { return JSON.parse(localStorage.getItem(TKEY)) || null; } catch (e) { return null; } }
+  function setTok(v) { if (ASCUST) return; try { if (v) localStorage.setItem(TKEY, JSON.stringify(v)); else localStorage.removeItem(TKEY); } catch (e) {} }
   function useTok(at, rt, exp) {
     var j = jwtInfo(at); if (!j || !j.email) return false;
     setTok({ at: at, rt: rt, exp: exp });
