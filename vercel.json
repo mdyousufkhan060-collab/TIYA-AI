@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/store-sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
       "source": "/demos",
       "destination": "/demos/index.html"
     },
@@ -10,7 +14,7 @@
     },
     {
       "source": "/shop/:slug",
-      "destination": "/demos/store.html"
+      "destination": "/api/shop?slug=:slug"
     },
     {
       "source": "/((?!.*\\.).*)",
@@ -30,7 +34,7 @@
           "value": "(?<sub>[a-z0-9-]+)\\.myrosebd\\.com"
         }
       ],
-      "destination": "/demos/store.html"
+      "destination": "/api/shop"
     },
     {
       "source": "/((?!.*\\.).*)",
@@ -48,7 +52,7 @@
           "value": "localhost"
         }
       ],
-      "destination": "/demos/store.html"
+      "destination": "/api/shop"
     },
     {
       "source": "/((?!.*\\.).*)",
