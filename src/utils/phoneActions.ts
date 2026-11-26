@@ -267,6 +267,10 @@ export function validatePhoneAction(raw: unknown): PhoneAction | null {
       }
       return null;
     case 'whatsapp_message':
+      // no text = he only wants that person's chat open (never an empty message to confirm)
+      if (typeof obj.contact === 'string' && obj.contact.trim() && !(typeof obj.text === 'string' && obj.text.trim())) {
+        return { action: 'open_app', app: `open whatsapp chat ${obj.contact.trim()}` };
+      }
       if (
         typeof obj.contact === 'string' &&
         obj.contact.trim() &&
@@ -483,6 +487,23 @@ export function buildWebFallback(action: PhoneAction): ActionExecutionResult {
   };
 }
 
+/** Waits for the Android app's answer to an async action (see executePhoneAction) */
+function waitNativeResult(rid: string, ms: number): Promise<string> {
+  return new Promise((resolve) => {
+    const done = (v: string) => {
+      window.clearTimeout(t);
+      window.removeEventListener('rose-native-result', on as EventListener);
+      resolve(v);
+    };
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<{ rid?: string; result?: string }>).detail;
+      if (d && d.rid === rid) done(String(d.result || ''));
+    };
+    const t = window.setTimeout(() => done(JSON.stringify({ success: false, message: 'ফোন থেকে উত্তর আসতে দেরি হচ্ছে, আরেকবার বলুন।' })), ms);
+    window.addEventListener('rose-native-result', on as EventListener);
+  });
+}
+
 export async function executePhoneAction(
   action: PhoneAction,
   nativeBridge?: { run: (json: string) => Promise<string | TiyaNativeResult> | string | TiyaNativeResult },
@@ -523,11 +544,15 @@ export async function executePhoneAction(
   if ('contact' in action && typeof action.contact === 'string') {
     action = { ...action, contact: toLatinDigits(action.contact) } as PhoneAction;
   }
-  const actionJson = JSON.stringify(action);
+  // async: the Android app does the work on its own thread and answers with a 'rose-native-result' event, so the
+  // page (and ROSE's voice) never freezes while ROSE waits for WhatsApp's Send / Call button. Older apps answer at once.
+  const rid = Math.random().toString(36).slice(2);
+  const actionJson = JSON.stringify({ ...action, async: true, rid });
 
   if (nativeBridge && typeof nativeBridge.run === 'function') {
     try {
-      const rawRes = await nativeBridge.run(actionJson);
+      let rawRes = await nativeBridge.run(actionJson);
+      if (typeof rawRes === 'string' && /"pending"\s*:\s*true/.test(rawRes)) rawRes = await waitNativeResult(rid, 20000);
       let parsed: TiyaNativeResult;
       if (typeof rawRes === 'string') {
         try {
