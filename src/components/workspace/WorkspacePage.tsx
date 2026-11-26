@@ -413,7 +413,8 @@ type View =
   | 'writer'
   | 'customer_check'
   | 'biz_guide'
-  | 'rose_info';
+  | 'rose_info'
+  | 'grp_biz';
 
 const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
@@ -429,6 +430,7 @@ const TITLES: Record<View, string> = {
   customer_check: 'CUSTOMER CHECK',
   biz_guide: 'START HERE · GUIDE',
   rose_info: 'ROSE · BUSINESS INFO',
+  grp_biz: 'BUSINESS',
   tasks: TASKS.title,
   content: CONTENT.title,
   notes: NOTES.title,
@@ -792,8 +794,13 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     setView('hub');
   };
 
+  // business mode: ROSE's own bars stay on the main list; everything about the shop sits inside 'BUSINESS'
+  const BIZ_GRP: View[] = ['biz_profile', 'products', 'faqs', 'couriers', 'discounts', 'orders', 'customers', 'customer_check', 'approvals', 'biz_dashboard', 'expenses', 'domain', 'rose_info'];
+  const grouped = mode === 'business' && !allModes;
   const back = () => {
     if (view === 'hub') return onBack();
+    if (grouped && (BIZ_GRP.includes(view) || (view === 'store' && !siteOwner))) return setView('grp_biz');
+    if (view === 'grp_biz') return setView(siteOwner ? 'rose_hub' : 'hub');
     if (siteOwner && !['store', 'rose_hub', 'rose_support', 'profile', 'viewas'].includes(view)) return setView('rose_hub');
     setView('hub');
   };
@@ -886,34 +893,46 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
         {t}
       </p>
     );
-    // one numbered list, no headings or gaps; ROSE · BUSINESS INFO at the end shows what ROSE knows about the business
-    const business = [
-      <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
-      ...(
-        [
-          ['biz_profile', businessId ? 'READY' : 'SET UP'],
-          ['products'],
-          ['faqs'],
-          ['couriers'],
-          ['discounts'],
-          ['biz_ai'],
-          ['orders'],
-          ['customers'],
-          ['customer_check', 'COURIER HISTORY'],
-          ['approvals'],
-          ['biz_dashboard'],
-          ['expenses'],
-          ...(allModes ? [] : [['writer'], ['social', 'YT · FB · TT · IG'], ['store', 'WEBSITE'], ['domain', 'DNS · ROSE ACCESS']]),
-          ['channels', 'KEYS'],
-          ['rose_info', 'WHAT ROSE KNOWS'],
-        ] as Array<[View, string?]>
-      ).map(([v, extra], i) => bar(String(i + 1).padStart(2, '0'), v, extra)),
-    ];
+    // one numbered list, no headings or gaps. Business mode: ROSE's bars here, the shop's bars inside 'BUSINESS'
+    const business = grouped
+      ? [
+          <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
+          ...(
+            [
+              ['biz_ai'],
+              ['writer'],
+              ['social', 'YT · FB · TT · IG'],
+              ['channels', 'KEYS'],
+              ['grp_biz', businessId ? 'PROFILE · PRODUCTS · DOMAIN' : 'SET UP FIRST'],
+            ] as Array<[View, string?]>
+          ).map(([v, extra], i) => bar(String(i + 1).padStart(2, '0'), v, extra)),
+        ]
+      : [
+          <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
+          ...(
+            [
+              ['biz_profile', businessId ? 'READY' : 'SET UP'],
+              ['products'],
+              ['faqs'],
+              ['couriers'],
+              ['discounts'],
+              ['biz_ai'],
+              ['orders'],
+              ['customers'],
+              ['customer_check', 'COURIER HISTORY'],
+              ['approvals'],
+              ['biz_dashboard'],
+              ['expenses'],
+              ['channels', 'KEYS'],
+              ['rose_info', 'WHAT ROSE KNOWS'],
+            ] as Array<[View, string?]>
+          ).map(([v, extra], i) => bar(String(i + 1).padStart(2, '0'), v, extra)),
+        ];
     body = (
       <div className="space-y-3">
         <TutorialStrip audience={mode || 'personal'} />
         {mode === 'business' && !businessId && bizLoaded && (
-          <p className="px-1 text-[11px] text-amber-300">Fill in your Business Profile first (02 BUSINESS → 01). Then products, orders and the dashboard appear.</p>
+          <p className="px-1 text-[11px] text-amber-300">Fill in your Business Profile first: BUSINESS → 01 BUSINESS PROFILE. Then products, orders and the dashboard work.</p>
         )}
         {allModes ? (
           <SettingsBar badge="A" title="MODE" value="ADMIN · ALL" tone="accent" hideChevron onClick={() => undefined} testId="ws-mode" />
@@ -944,6 +963,32 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             tidy(personal)
           )}
         </div>
+      </div>
+    );
+  } else if (view === 'grp_biz') {
+    body = (
+      <div className="space-y-1.5">
+        {!businessId && bizLoaded && <p className="px-1 text-[11px] text-amber-300">Fill in 01 BUSINESS PROFILE first. Then the other bars work.</p>}
+        {tidy(
+          (
+            [
+              ['biz_profile', businessId ? 'READY' : 'SET UP'],
+              ['products'],
+              ['faqs'],
+              ['couriers'],
+              ['discounts'],
+              ['orders'],
+              ['customers'],
+              ['customer_check', 'COURIER HISTORY'],
+              ['approvals'],
+              ['biz_dashboard'],
+              ['expenses'],
+              ['store', 'WEBSITE'],
+              ['domain', 'DNS · ROSE ACCESS'],
+              ['rose_info', 'WHAT ROSE KNOWS'],
+            ] as Array<[View, string?]>
+          ).map(([v, extra], i) => bar(String(i + 1).padStart(2, '0'), v, extra)),
+        )}
       </div>
     );
   } else if (view === 'mode') {

@@ -67,6 +67,7 @@ const BAR_ICONS: Array<[RegExp, React.ElementType, string]> = [
   [/ALL STORES|DEMO STORES|NEW STORE/, Store, '#22d3ee'],
   [/^MYROSEBD\.COM$/, Sparkles, '#2dd4bf'],
   [/^ROSE$/, Sparkles, '#f472b6'],
+  [/BUSINESS INFO/, BadgeCheck, '#22c55e'],
   [/MY DETAILS/, User, '#c4b5fd'],
   [/SOCIAL/, AtSign, '#f472b6'],
   [/MY STORE/, Store, '#22c55e'],
