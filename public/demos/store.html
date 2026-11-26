@@ -36,7 +36,7 @@
   .search { display: flex; align-items: center; border: 1.5px solid var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 10px; background: #fff; padding: 4px 4px 4px 14px; box-shadow: 0 2px 8px rgba(15,23,42,.05); }
   .search .si { width: 22px; height: 22px; color: #334155; flex-shrink: 0; }
   .search input { flex: 1; border: 0; padding: 10px 10px; font-size: 15px; outline: none; min-width: 0; }
-  .search button { background: var(--c); color: #fff; border: 0; width: 64px; height: 42px; border-radius: 999px; display: grid; place-items: center; }
+  .search button { background: transparent; color: var(--c); border: 0; width: 46px; height: 42px; border-radius: 999px; display: grid; place-items: center; }
   .search button svg { width: 22px; height: 22px; }
   .search button.cam { background: transparent; color: #334155; width: 46px; margin-right: 4px; }
   main { padding: 12px 0 90px; }
@@ -558,7 +558,7 @@ function start(S, P, liveId) {
   document.getElementById('hCart').insertAdjacentHTML('afterbegin', IC.cart);
   document.getElementById('hBell').insertAdjacentHTML('afterbegin', IC.bell);
   if (!S.live) { var bc = document.getElementById('bCount'); bc.hidden = false; bc.textContent = '3'; }
-  document.getElementById('sIc').outerHTML = IC.search.replace('<svg', '<svg class="si"');
+  document.getElementById('sIc').remove();
   document.getElementById('camBtn').innerHTML = IC.cam;
   document.getElementById('sBtn').innerHTML = IC.search;
   document.getElementById('foot').innerHTML =
@@ -671,6 +671,69 @@ function start(S, P, liveId) {
   var cust = {}; try { cust = JSON.parse(localStorage.getItem(CKEY)) || {}; } catch (e) {}
   function saveCust() { try { localStorage.setItem(CKEY, JSON.stringify(cust)); } catch (e) {} }
   function myOrders() { try { return JSON.parse(localStorage.getItem(OKEY)) || []; } catch (e) { return []; } }
+
+  // ---------------- real customer login on live stores (Google or e-mail link, through ROSE sign-in) ----------------
+  var TKEY = 'rose_shop_tok', acct = { owner: false }, lastSync = 0;
+  function jwtInfo(tok) { try { var b = String(tok).split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); b += '===='.slice(0, (4 - b.length % 4) % 4); return JSON.parse(decodeURIComponent(escape(atob(b)))); } catch (e) { return null; } }
+  function getTok() { try { return JSON.parse(localStorage.getItem(TKEY)) || null; } catch (e) { return null; } }
+  function setTok(v) { try { if (v) localStorage.setItem(TKEY, JSON.stringify(v)); else localStorage.removeItem(TKEY); } catch (e) {} }
+  function useTok(at, rt, exp) {
+    var j = jwtInfo(at); if (!j || !j.email) return false;
+    setTok({ at: at, rt: rt, exp: exp });
+    var md = j.user_metadata || {};
+    cust.email = j.email; if (!cust.name && (md.full_name || md.name)) cust.name = md.full_name || md.name; saveCust();
+    return true;
+  }
+  function authBack() { return location.origin + location.pathname + location.search; }
+  if (S.live && /(^#|&)access_token=/.test(location.hash)) {
+    var hp = new URLSearchParams(location.hash.slice(1));
+    if (useTok(hp.get('access_token'), hp.get('refresh_token'), Date.now() + (+hp.get('expires_in') || 3600) * 1000)) setTimeout(function () { toast('Signed in: ' + cust.email); }, 400);
+    history.replaceState(null, '', authBack() + '#/account');
+  } else if (S.live && /(^#|&)error=/.test(location.hash)) {
+    var eh = new URLSearchParams(location.hash.slice(1));
+    setTimeout(function () { toast(eh.get('error_description') || 'Login failed. Try again.'); }, 400);
+    history.replaceState(null, '', authBack() + '#/account');
+  }
+  function freshTok() {
+    var t0 = getTok(); if (!t0) return Promise.resolve(null);
+    if (t0.exp - Date.now() > 60000) return Promise.resolve(t0.at);
+    return fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: t0.rt }) })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (!j || !j.access_token) { setTok(null); return null; } useTok(j.access_token, j.refresh_token, Date.now() + (j.expires_in || 3600) * 1000); return j.access_token; })
+      .catch(function () { return null; });
+  }
+  // orders this Gmail placed in this shop (any phone) + whether this Gmail is the shop owner or staff
+  function syncAccount(force) {
+    if (!S.live || !getTok() || (!force && Date.now() - lastSync < 20000)) return;
+    lastSync = Date.now();
+    freshTok().then(function (at) {
+      if (!at) return null;
+      return fetch(SB_URL + '/rest/v1/rpc/my_store_account', { method: 'POST', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + at, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_slug: S.slug }) })
+        .then(function (r) { return r.ok ? r.json() : null; });
+    }).then(function (r) {
+      if (!r || !r.ok) return;
+      var was = acct.owner, changed = false, mine = myOrders(), seen = {};
+      acct.owner = !!r.owner;
+      mine.forEach(function (o) { seen[String(o.no)] = o; });
+      (r.orders || []).forEach(function (o) {
+        var x = seen[String(o.no)];
+        if (!x) { o.total = +o.total; o.sub = +o.sub; o.del = +o.del; o.kg = +o.kg || 0; mine.push(o); changed = true; }
+        else if (x.status !== o.status || x.payState !== o.payState || x.tracking !== o.tracking) { x.status = o.status; x.payState = o.payState; x.courier = o.courier; x.tracking = o.tracking; changed = true; }
+      });
+      if (changed) { mine.sort(function (a, b) { return new Date(b.date) - new Date(a.date); }); try { localStorage.setItem(OKEY, JSON.stringify(mine.slice(0, 30))); } catch (e) {} }
+      if ((changed || was !== acct.owner) && /^#\/account/.test(location.hash)) route();
+    }).catch(function () {});
+  }
+  window.sendLink = function () {
+    var e = (document.getElementById('aMail') || {}).value || ''; e = e.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(e)) return toast('Write a correct email');
+    var b = document.getElementById('aSend'); if (b) { b.disabled = true; b.textContent = 'Sending…'; }
+    fetch(SB_URL + '/auth/v1/otp?redirect_to=' + encodeURIComponent(authBack()), { method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: e, create_user: true }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.msg || j.message || 'Could not send. Try again in a minute.'); }); })
+      .then(function () { closeAuth(); toast('Login link sent to ' + e + '. Open it on this phone.'); })
+      .catch(function (x) { if (b) { b.disabled = false; b.textContent = 'Send login link'; } toast(x.message); });
+  };
+  if (S.live && getTok()) setTimeout(function () { syncAccount(true); }, 600);
 
   // ---------------- product page ----------------
   var short = function (p) { return p.short || (p.desc ? p.desc.split('. ')[0] : 'Premium quality ' + p.name + ' from ' + S.name + '. Checked before delivery.'); };
@@ -885,7 +948,7 @@ function start(S, P, liveId) {
   }
   function check(k, quiet) { var m = valid(k), e = document.getElementById('e_' + k), w = document.getElementById('w_' + k); if (e) e.textContent = m; if (w) w.classList.toggle('bad', !!m); return !m; }
   window.fillSaved = function () { route(); toast('Saved address added'); };
-  window.logoutCust = function () { cust = {}; saveCust(); toast('Logged out'); route(); };
+  window.logoutCust = function () { cust = {}; saveCust(); setTok(null); acct.owner = false; toast('Logged out'); route(); };
   // payment screenshot -> small JPEG in the private pay-proofs bucket (only the shop owner can open it)
   function uploadProof(file) {
     if (!file || !S.live) return Promise.resolve('');
@@ -1042,6 +1105,7 @@ function start(S, P, liveId) {
     return back + '<div class="panel"><h3 style="margin-top:0">🎧 ' + t('help') + '</h3>' + (ph ? '<a class="row" href="https://wa.me/88' + esc(ph) + '" target="_blank" rel="noopener"><span class="e">💬</span><b>WhatsApp ' + esc(ph) + '</b></a><a class="row" href="tel:' + esc(ph) + '"><span class="e">📞</span><b>' + esc(ph) + '</b></a>' : '') + (S.live && S.email ? '<a class="row" href="mailto:' + esc(S.email) + '"><span class="e">✉️</span><b>' + esc(S.email) + '</b></a>' : '') + '<p class="small">Or use the live chat at the bottom right.</p></div>';
   }
   function account() {
+    if (S.live && cust.email) syncAccount();
     var list = myOrders(), logged = !!cust.email;
     var nm = cust.name || (logged ? cust.email.split('@')[0] : t('guestName'));
     var top = '<div class="acc1"><div class="av">' + esc(nm.charAt(0).toUpperCase()) + '</div><div style="min-width:0"><b style="font-size:17px;display:block">' + esc(nm) + '</b><span class="small">' + (cust.phone ? '📞 ' + esc(cust.phone) : logged ? esc(cust.email) : t('loginTip')) + '</span></div><button class="ep" onclick="editProfile()">' + t('editProfile') + ' ›</button></div>';
@@ -1051,11 +1115,17 @@ function start(S, P, liveId) {
     var menu = [['#/wishlist', '❤️', t('myWish'), st.wish.length ? st.wish.length : ''], ['#/account/coupons', '🎟️', t('myCoupons'), ''], ['#/account/address', '📍', t('addresses'), ''], ['#/account/help', '🎧', t('help'), ''], ['#/page/about', 'ℹ️', t('aboutUs'), '']];
     var ml = '<div class="mlist" style="margin-top:14px">' + menu.map(function (m) { return '<a href="' + m[0] + '"><span class="i">' + m[1] + '</span>' + m[2] + '<em>' + (m[3] ? '<small style="font-size:12px;margin-right:6px;color:var(--c)">' + m[3] + '</small>' : '') + '›</em></a>'; }).join('') +
       '<button onclick="shareStore()"><span class="i">🔗</span>' + t('shareApp') + '<em>›</em></button>' + (logged ? '<button class="lo" onclick="logoutCust()"><span class="i">🚪</span>' + t('logout') + '<em>›</em></button>' : '') + '</div>';
-    return '<div style="max-width:620px;margin:0 auto">' + top + login + ord + (list.length ? '<div style="margin-top:10px">' + orderRows(list.slice(0, 2)) + '</div>' : '') + ml + '</div>';
+    var own = S.live && logged && acct.owner ? '<a class="btn" style="margin-top:10px;padding:12px" href="https://www.myrosebd.com/app" target="_blank" rel="noopener">🛠️ Store admin · products · orders</a>' : '';
+    return '<div style="max-width:620px;margin:0 auto">' + top + login + own + ord + (list.length ? '<div style="margin-top:10px">' + orderRows(list.slice(0, 2)) + '</div>' : '') + ml + '</div>';
   }
   window.openAuth = function (mode) {
     var m = document.getElementById('authM');
-    if (S.live) { toast('Customer login is coming soon. You can order as a guest.'); return; }
+    if (S.live) {
+      if (mode === 'google') { location.href = SB_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(authBack()); return; }
+      m.innerHTML = '<div class="mbox"><button class="mx" onclick="closeAuth()">✕</button><h3 style="margin-top:0">' + t('emailLogin') + '</h3><p class="small">We send a login link to your email. Open it on this phone. No password needed.</p>' +
+        '<div class="field"><span>Email</span><input id="aMail" type="email" autocomplete="email" placeholder="name@gmail.com"></div><button class="btn" id="aSend" onclick="sendLink()">Send login link</button></div>';
+      m.hidden = false; return;
+    }
     var titles = { google: 'Continue with Google', login: 'Log in', signup: 'Create account', forgot: 'Forgot password' };
     m.innerHTML = '<div class="mbox"><button class="mx" onclick="closeAuth()">✕</button><h3 style="margin-top:0">' + titles[mode] + '</h3>' +
       (mode === 'google' ? '<p class="small">Choose your Gmail account (demo).</p><div class="field"><span>Gmail</span><input id="aMail" type="email" placeholder="yourname@gmail.com"></div><button class="btn" onclick="doAuth(\'google\')">Continue</button>'
