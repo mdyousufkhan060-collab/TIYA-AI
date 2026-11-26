@@ -130,11 +130,11 @@ export default function StartStorePage() {
     }
   };
 
-  const shell = (body: React.ReactNode) => (
+  const shell = (body: React.ReactNode, sub = true) => (
     <div className="min-h-[100dvh] bg-[#07090D] px-4 py-3 text-white md:px-8 md:py-3">
       <div className="mx-auto max-w-5xl space-y-2.5 md:space-y-3">
         <a href="/demos" className="text-[12px] font-bold text-teal-300">‹ All designs</a>
-        <h1 className="text-xl font-extrabold md:flex md:items-baseline md:gap-3 md:text-2xl">Get your own store <span className="block text-[13px] font-semibold text-slate-400 md:text-[15px]">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span></h1>
+        <h1 className="text-xl font-extrabold md:flex md:items-baseline md:gap-3 md:text-2xl">Get your own store {sub && <span className="block text-[13px] font-semibold text-slate-400 md:text-[15px]">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span>}</h1>
         {body}
         <p className="pt-2 text-center text-[11px] text-slate-500">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a className="underline" href="/policies.html">Policies</a></p>
       </div>
@@ -195,7 +195,7 @@ export default function StartStorePage() {
 
   return shell(
     <div className="grid gap-3 md:grid-cols-[280px_1fr] md:items-start md:gap-4">
-      <div className="space-y-2 md:sticky md:top-4">
+      <div className="space-y-2 md:sticky md:top-4 md:mt-12">
         {designs}
         {d && (
           <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="block text-center text-[12px] text-teal-300 underline">
@@ -203,6 +203,8 @@ export default function StartStorePage() {
           </a>
         )}
       </div>
+      <div className="space-y-2">
+      <p className="text-center text-[17px] font-extrabold text-teal-300 md:text-[22px]">নিজের অনলাইন দোকান খুলুন <span className="text-amber-300">· ৫ দিন ফ্রি</span></p>
       <div
         className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:p-4"
         onFocusCapture={(e) => {
@@ -237,6 +239,8 @@ export default function StartStorePage() {
           <p className="text-center text-[11px] text-slate-500">Logo, banners, more phones and emails: add later in Settings · <a className="underline" href="/terms.html">Terms</a></p>
         </div>
       </div>
+      </div>
     </div>,
+    false,
   );
 }
