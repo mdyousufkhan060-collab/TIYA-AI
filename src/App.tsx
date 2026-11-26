@@ -510,6 +510,32 @@ export default function App() {
     premiumVoiceStop();
   }, [liveStopVoice, premiumVoiceStop]);
 
+  // Android app: ROSE keeps listening during a WhatsApp call (so "কল কাটো" works). If her voice was off when a
+  // call ends, the Android app brings ROSE back and sends 'rose-call-ended': ROSE listens again.
+  const voiceStateNowRef = useRef(voiceState);
+  voiceStateNowRef.current = voiceState;
+  useEffect(() => {
+    let t: number | undefined;
+    const onStart = () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(() => stopVoice(), 2500);
+    };
+    const onEnd = () => {
+      window.clearTimeout(t);
+      navigateTo('home');
+      if (!['connecting', 'listening', 'thinking', 'speaking'].includes(String(voiceStateNowRef.current))) {
+        t = window.setTimeout(() => toggleVoice(), 700);
+      }
+    };
+    window.addEventListener('rose-call-started', onStart);
+    window.addEventListener('rose-call-ended', onEnd);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('rose-call-started', onStart);
+      window.removeEventListener('rose-call-ended', onEnd);
+    };
+  }, [stopVoice, toggleVoice, navigateTo]);
+
   // Android app: keep the mic alive when ROSE is minimized ("ROSE is listening" notification)
   const voiceActiveForService = ['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState);
   useEffect(() => {

@@ -230,6 +230,8 @@ export function getConfirmationPromptText(action: PhoneAction): string {
       return 'ROSE-এ ফিরে আসছি…';
     case 'go_home':
       return 'ফোনের হোম স্ক্রিনে যাচ্ছি…';
+    case 'end_call':
+      return 'কল কাটছি…';
     case 'web_search': {
       const site = SEARCH_SITES[normalizeSearchSite(action.site)];
       return `${site.label}-এ "${action.query}" খোলা হচ্ছে…`;
@@ -302,6 +304,9 @@ export function validatePhoneAction(raw: unknown): PhoneAction | null {
     case 'go_home':
     case 'phone_home':
       return { action: 'go_home' };
+    case 'end_call':
+    case 'hang_up':
+      return { action: 'end_call' };
     case 'courier_dispatch':
     case 'send_parcels': {
       const text = typeof obj.text === 'string' ? obj.text : typeof obj.query === 'string' ? obj.query : '';
