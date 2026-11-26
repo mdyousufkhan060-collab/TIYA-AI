@@ -316,7 +316,7 @@ export default function App() {
     setSettingsSubpage(null);
   }, []);
 
-  // Store admin link from a shop page (/app?open=store): kept through Google login, then STORE · WEBSITE opens
+  // Store admin link from a shop page (/app?open=store): kept through login, then 07 WORKSPACE opens (MY DETAILS · BUSINESS · WEBSITE ADMIN)
   const [openAfterLogin] = useState<string | null>(() => {
     try {
       const v = new URLSearchParams(window.location.search).get('open');
@@ -336,7 +336,7 @@ export default function App() {
     } catch {
       /* ignore */
     }
-    navigateTo('settings', 'workspace', 'store');
+    navigateTo('settings', 'workspace', 'hub');
   }, [session?.user?.id, openAfterLogin, navigateTo]);
 
   const handleNavigateCommand = useCallback(

@@ -12,7 +12,7 @@ export type PrintSettings = {
 export type PrintItem = { name: string; q: number; price: number; opt?: string; img?: string; id?: string; kg?: number };
 export type PrintOrder = {
   order_no: number | string; customer_name: string; phone: string; address: string; upazila?: string; district?: string; division?: string; email?: string;
-  items: PrintItem[]; subtotal?: number; delivery?: number; total: number; area?: string; status?: string; courier?: string;
+  items: PrintItem[]; subtotal?: number; delivery?: number; discount?: number; coupon?: string; total: number; area?: string; status?: string; courier?: string;
   payment_method: string; trx_id?: string; tracking?: string; created_at?: string; note?: string; weight_kg?: number;
 };
 export type PrintStore = {
@@ -157,7 +157,7 @@ export function invoiceHTML(o: PrintOrder, s: PrintSettings, st: PrintStore) {
     </tbody></table>
     <div class="ibot">
       ${pos ? '' : `<div class="ibox"><div class="ibh">🚚 COURIER INFORMATION</div><p><span>Courier:</span><b>${esc(o.courier ? o.courier.replace(/^\w/, (c) => c.toUpperCase()) : '—')}</b></p><p><span>Status:</span><b>${esc(STATUS[o.status || 'new'] || 'Pending')}</b></p><p><span>Tracking ID:</span><b>${esc(o.tracking || '—')}</b></p><p><span>Delivery area:</span><b>${o.area === 'outside' ? 'Outside Dhaka' : o.area === 'inside' ? 'Inside Dhaka' : esc(o.district || '—')}</b></p>${wt ? `<p><span>Total weight:</span><b>${wt}</b></p>` : ''}</div>`}
-      <div class="ibox"><div class="ibh">🧾 BILLING SUMMARY</div><p><span>Subtotal:</span><b>${tk(sub)}</b></p><p><span>Delivery${pos && wt ? ` (${wt})` : ''}:</span><b>${tk(del)}</b></p><p class="gt"><span>GRAND TOTAL:</span><b>${tk(o.total)}</b></p>${isCod(o) ? `<p><span>Collect (COD):</span><b>${tk(o.total)}</b></p>` : ''}</div>
+      <div class="ibox"><div class="ibh">🧾 BILLING SUMMARY</div><p><span>Subtotal:</span><b>${tk(sub)}</b></p><p><span>Delivery${pos && wt ? ` (${wt})` : ''}:</span><b>${tk(del)}</b></p>${o.discount ? `<p><span>Discount${o.coupon ? ` (${esc(o.coupon)})` : ''}:</span><b>- ${tk(o.discount)}</b></p>` : ''}<p class="gt"><span>GRAND TOTAL:</span><b>${tk(o.total)}</b></p>${isCod(o) ? `<p><span>Collect (COD):</span><b>${tk(o.total)}</b></p>` : ''}</div>
     </div>
     ${pos ? '' : `<div class="ibot"><div class="ibox"><div class="ibh">📝 NOTES</div><div class="small">${esc(o.note || 'পণ্য বুঝে নিয়ে চেক করে পেমেন্ট করবেন।')}</div></div><div class="ibox"><div class="ibh">📄 TERMS & CONDITIONS</div><div class="small">${esc(s.terms || 'This is a computer generated invoice. No physical signature required.')}</div></div></div>`}
     ${barcodeSVG(orderCode(st, o), pos ? 7 : 8)}

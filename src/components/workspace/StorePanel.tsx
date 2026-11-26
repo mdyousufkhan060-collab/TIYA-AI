@@ -3,7 +3,7 @@ import { ChevronRight, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase';
 import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
-import { AdminBrandPage, RoseSupportCard } from '../admin/AdminBrandPage';
+import { AdminBrandPage } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
 import { INVOICE_SIZES, PRINT_CSS, invoiceDims, kgText, invoicePreviewHTML, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
@@ -130,7 +130,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   const [demos, setDemos] = useState<Record<string, Demo>>({});
   const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create'>('home');
   const [roles, setRoles] = useState<Record<string, string>>({});
-  const [showRose, setShowRose] = useState(true);
+  const [, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
@@ -294,11 +294,11 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'rose' && <AdminBrandPage />}
         {tab === 'plan' && <BuyPlan current={access || undefined} onPaid={() => void load()} />}
         {tab === 'company' && <CompanyTab store={store} onSaved={() => void load()} />}
-        {tab === 'reports' && <ReportsTab store={store} />}
+        {tab === 'reports' && <ReportsWithExpenses store={store} />}
         {tab === 'expenses' && <ExpensesTab store={store} />}
         {tab === 'pixels' && <PixelsTab store={store} onSaved={() => void load()} />}
         {tab === 'chat' && <StoreChatTab store={store} />}
-        {tab === 'offers' && <OffersTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} onSaved={() => void load()} />}
+        {tab === 'offers' && <OffersWithCoupons store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} onSaved={() => void load()} />}
       </div>
     );
   }
@@ -312,37 +312,34 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
           ))}
         </select>
       )}
-      {showRose && <RoseSupportCard onOpen={() => setTab('rose')} />}
       {header}
       {myRole !== 'owner' && <p className="px-1 text-[11px] font-bold text-amber-300">You are STAFF here · role: {myRole.toUpperCase()}</p>}
-      <div className="space-y-1.5">
+      <div>
         {(
           [
-            [true, 'dashboard', 'DASHBOARD', 'TODAY'],
-            [can('owner') && !isAdmin, 'plan', 'PLAN & PAYMENT', access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'],
-            [can('orders'), 'orders', 'ORDERS', ''],
-            [can('products'), 'products', 'PRODUCTS', ''],
-            [can('products'), 'categories', 'CATEGORIES', ''],
-            [can('design'), 'design', 'HOMEPAGE & DESIGN', 'LOGO · BANNERS'],
-            [can('orders'), 'customers', 'CUSTOMERS', ''],
-            [can('products'), 'offers', 'OFFERS', 'BANNERS · OFFER PRODUCTS'],
-            [can('products'), 'reviews', 'REVIEWS', ''],
-            [can('orders'), 'chat', 'LIVE CHAT', 'ROSE'],
-            [myRole === 'owner', 'payments', 'PAYMENTS', 'BKASH · NAGAD · BANK'],
-            [can('design'), 'delivery', 'DELIVERY & COURIER', 'CHARGE · COURIERS'],
-            [can('design'), 'print', 'INVOICE & STICKER', 'PRINT'],
-            [can('design'), 'pixels', 'TRACKING & PIXELS', 'ADS'],
-            [can('design'), 'seo', 'SEO', 'GOOGLE'],
-            [can('owner'), 'staff', 'STAFF', 'GMAIL · ROLES'],
-            [can('owner'), 'domain', 'DOMAIN', store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'CONNECT'],
-            [can('money'), 'reports', 'REPORTS', 'DAY · MONTH · YEAR'],
-            [can('money'), 'expenses', 'EXPENSES', 'ADS · STOCK · RENT'],
-            [can('design'), 'company', 'COMPANY INFO', 'NAME · PHONE · ADDRESS'],
-          ] as Array<[boolean, string, string, string]>
+            [true, 'dashboard', 'DASHBOARD', '📊', '#1d4ed8', 'TODAY'],
+            [can('owner') && !isAdmin, 'plan', 'PLAN & PAYMENT', '⭐', '#f59e0b', access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'],
+            [can('orders'), 'orders', 'ORDERS', '🧾', '#7c3aed', ''],
+            [can('products'), 'products', 'PRODUCTS', '📦', '#0d9488', ''],
+            [can('products'), 'categories', 'CATEGORIES', '🗂️', '#ca8a04', ''],
+            [can('design'), 'design', 'HOMEPAGE & DESIGN', '🎨', '#db2777', 'BANNERS'],
+            [can('orders'), 'customers', 'CUSTOMERS', '👥', '#2563eb', ''],
+            [can('products'), 'offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', ''],
+            [can('products'), 'reviews', 'REVIEWS', '⭐', '#eab308', ''],
+            [can('orders'), 'chat', 'LIVE CHAT', '💬', '#059669', 'ROSE'],
+            [myRole === 'owner', 'payments', 'PAYMENTS', '💳', '#4f46e5', ''],
+            [can('design'), 'delivery', 'DELIVERY & COURIER', '🚚', '#b45309', ''],
+            [can('design'), 'print', 'INVOICE & STICKER', '🏷️', '#e11d48', 'PRINT'],
+            [can('design'), 'pixels', 'TRACKING & PIXELS', '📈', '#0284c7', 'ADS'],
+            [can('design'), 'seo', 'SEO', '🔍', '#16a34a', 'GOOGLE'],
+            [can('owner'), 'staff', 'STAFF', '👤', '#9333ea', ''],
+            [can('owner'), 'domain', 'DOMAIN', '🌐', '#0891b2', store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'LINK'],
+            [can('money'), 'reports', 'REPORTS', '📑', '#64748b', 'MONTH'],
+          ] as Array<[boolean, string, string, string, string, string]>
         )
           .filter((x) => x[0])
-          .map(([, k, title, value], i) => (
-            <SettingsBar key={k} badge={String(i + 1).padStart(2, '0')} title={title} value={value || undefined} onClick={() => setTab(k as typeof tab)} testId={`store-${k}`} />
+          .map(([, k, title, icon, color, value], i) => (
+            <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} value={value} onClick={() => setTab(k as typeof tab)} testId={`store-${k}`} />
           ))}
         {can('owner') && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
       </div>
@@ -733,7 +730,7 @@ const CompanyTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, on
       </div>
       <button type="button" onClick={() => void save()} className={btn + ' w-full'}>SAVE</button>
       {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
-      <p className="px-1 text-[11px] text-slate-400">Logo, banners and colours: HOMEPAGE & DESIGN. The login Gmail stays the same; to move the store to another Gmail, contact ROSE.</p>
+      <p className="px-1 text-[11px] text-slate-400">Logo, banners and colours: WEBSITE ADMIN → HOMEPAGE & DESIGN. The login Gmail stays the same; to move the store to another Gmail, contact ROSE.</p>
     </div>
   );
 };
@@ -1098,7 +1095,7 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void; part?: 'deliver
           ))}
         </div>
         <input className={input} value={ps.terms || ''} onChange={(e) => setPs({ ...ps, terms: e.target.value })} placeholder="Invoice terms (e.g. 7-day return with this invoice)" />
-        <p className="text-[10.5px] text-slate-400">Your logo, name, WhatsApp, bKash number, emails and address come on the invoice and sticker by themselves (HOMEPAGE & DESIGN, COMPANY INFO). Best sticker: 100 × 70 mm.</p>
+        <p className="text-[10.5px] text-slate-400">Your logo, name, WhatsApp, bKash number, emails and address come on the invoice and sticker by themselves (HOMEPAGE & DESIGN, MY DETAILS). Best sticker: 100 × 70 mm.</p>
         <style>{PRINT_CSS}</style>
         <p className="text-[11px] font-bold tracking-wider text-slate-300">INVOICE PREVIEW · {invoiceDims(ps.inv)[2]}</p>
         <div dangerouslySetInnerHTML={{ __html: invoicePreviewHTML(sample, ps, store, 280) }} />
@@ -1328,6 +1325,162 @@ const SeoTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onSave
         <button type="button" className={btn + ' w-full'} onClick={() => void save()}>SAVE</button>
         {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
       </div>
+    </div>
+  );
+};
+
+
+// ---------------------------------------------------------------- the same bar as the demo admin (number, coloured icon, title, value)
+const DemoBar: React.FC<{ n: number; icon: string; color: string; title: string; value?: string; onClick: () => void; testId?: string }> = ({ n, icon, color, title, value, onClick, testId }) => (
+  <button type="button" onClick={onClick} data-testid={testId} className="mb-1.5 flex h-[50px] w-full items-center gap-2.5 rounded-xl border border-[#1e293b] bg-[#11151e] px-2.5 text-left text-slate-200 transition-colors hover:border-teal-500/40">
+    <span className="rounded-md bg-[#1e293b] px-1.5 py-[3px] font-mono text-[10px] font-bold text-teal-400">{String(n).padStart(2, '0')}</span>
+    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px] text-[17px]" style={{ background: `${color}22`, border: `1px solid ${color}55` }}>{icon}</span>
+    <span className="min-w-0 flex-1 truncate text-[12px] font-bold tracking-[0.06em]">{title}</span>
+    {value ? <span className="max-w-[45%] truncate text-[10.5px] text-slate-400">{value}</span> : null}
+    <span className="text-base text-slate-600">›</span>
+  </button>
+);
+
+const ReportsWithExpenses: React.FC<{ store: Store }> = ({ store }) => {
+  const [part, setPart] = useState<'reports' | 'expenses'>('reports');
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-1.5">
+        {(['reports', 'expenses'] as const).map((k) => (
+          <button key={k} type="button" onClick={() => setPart(k)} className={btn + (part === k ? '' : ' bg-white/10')}>{k === 'reports' ? 'REPORTS & PROFIT' : 'EXPENSES & PURCHASES'}</button>
+        ))}
+      </div>
+      {part === 'reports' ? <ReportsTab store={store} /> : <ExpensesTab store={store} />}
+    </div>
+  );
+};
+
+const OffersWithCoupons: React.FC<{ store: Store; limit: number; onSaved: () => void }> = ({ store, limit, onSaved }) => {
+  const [part, setPart] = useState<'offers' | 'coupons'>('offers');
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-1.5">
+        {(['offers', 'coupons'] as const).map((k) => (
+          <button key={k} type="button" onClick={() => setPart(k)} className={btn + (part === k ? '' : ' bg-white/10')}>{k === 'offers' ? 'OFFERS' : 'COUPONS'}</button>
+        ))}
+      </div>
+      {part === 'offers' ? <OffersTab store={store} limit={limit} onSaved={onSaved} /> : <CouponsTab store={store} />}
+    </div>
+  );
+};
+
+const CouponsTab: React.FC<{ store: Store }> = ({ store }) => {
+  type Cp = { id: string; code: string; kind: 'pct' | 'tk'; value: number; min_total: number; max_uses: number; used: number; active: boolean; ends_at: string | null };
+  const [rows, setRows] = useState<Cp[]>([]);
+  const [f, setF] = useState({ code: '', kind: 'pct' as 'pct' | 'tk', value: '', min: '', max: '', ends: '' });
+  const [msg, setMsg] = useState('');
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('store_coupons').select('*').eq('store_id', store.id).order('created_at', { ascending: false });
+    setRows((data as Cp[]) || []);
+  }, [store.id]);
+  useEffect(() => { void load(); }, [load]);
+  const add = async () => {
+    const code = f.code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const v = Number(f.value);
+    if (code.length < 3) return setMsg('Write a code of 3+ letters or numbers, e.g. EID10.');
+    if (!(v > 0) || (f.kind === 'pct' && v > 90)) return setMsg(f.kind === 'pct' ? 'Percent must be 1 to 90.' : 'Write the Tk amount.');
+    const { error } = await supabase.from('store_coupons').insert({
+      store_id: store.id, code, kind: f.kind, value: v, min_total: Number(f.min) || 0, max_uses: Number(f.max) || 0,
+      ends_at: f.ends ? new Date(`${f.ends}T23:59:59`).toISOString() : null,
+    });
+    if (error) return setMsg(error.message.includes('duplicate') ? 'This code already exists.' : error.message);
+    setF({ code: '', kind: 'pct', value: '', min: '', max: '', ends: '' });
+    setMsg(`Coupon ${code} is ON. Customers type it at checkout.`);
+    void load();
+  };
+  return (
+    <div className="space-y-2">
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">NEW COUPON</p>
+        <div className="grid grid-cols-2 gap-2">
+          <input className={input} value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} placeholder="Code, e.g. EID10" />
+          <select className={input} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as 'pct' | 'tk' })}>
+            <option value="pct">% off</option>
+            <option value="tk">Tk off</option>
+          </select>
+          <input className={input} inputMode="numeric" value={f.value} onChange={(e) => setF({ ...f, value: e.target.value.replace(/\D/g, '') })} placeholder={f.kind === 'pct' ? 'Percent (10)' : 'Tk (100)'} />
+          <input className={input} inputMode="numeric" value={f.min} onChange={(e) => setF({ ...f, min: e.target.value.replace(/\D/g, '') })} placeholder="Minimum shopping Tk" />
+          <input className={input} inputMode="numeric" value={f.max} onChange={(e) => setF({ ...f, max: e.target.value.replace(/\D/g, '') })} placeholder="How many times (0 = no limit)" />
+          <input className={input} type="date" value={f.ends} onChange={(e) => setF({ ...f, ends: e.target.value })} aria-label="Last day" />
+        </div>
+        <button type="button" className={btn + ' w-full'} onClick={() => void add()}>ADD COUPON</button>
+        {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+      </div>
+      {rows.map((c) => (
+        <div key={c.id} className={box + ' flex items-center gap-2'}>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-bold text-white">{c.code} · {c.kind === 'pct' ? `${c.value}% off` : `${tk(c.value)} off`}</p>
+            <p className="text-[11px] text-slate-400">
+              Used {c.used}{c.max_uses ? ` / ${c.max_uses}` : ''}{c.min_total ? ` · min ${tk(c.min_total)}` : ''}{c.ends_at ? ` · until ${new Date(c.ends_at).toLocaleDateString('en-GB')}` : ''}
+            </p>
+          </div>
+          <Switch on={c.active} label={c.code} onClick={() => void supabase.from('store_coupons').update({ active: !c.active }).eq('id', c.id).then(() => void load())} />
+          <button type="button" className="text-[11px] font-bold text-rose-300" onClick={() => { if (window.confirm(`Delete ${c.code}?`)) void supabase.from('store_coupons').delete().eq('id', c.id).then(() => void load()); }}>DELETE</button>
+        </div>
+      ))}
+      {rows.length === 0 && <p className="px-1 text-[12px] text-slate-400">No coupons yet. Customers type the code at checkout; the server checks it and lowers the total.</p>}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- my details (07 WORKSPACE: second bar for website owners and staff)
+export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
+  const [me, setMe] = useState<{ email: string; name: string; pic: string } | null>(null);
+  const [own, setOwn] = useState<Store | null | undefined>(undefined);
+  const [staffOf, setStaffOf] = useState<Array<{ name: string; role: string }>>([]);
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [msg, setMsg] = useState('');
+  const load = useCallback(async () => {
+    const { data: u } = await supabase.auth.getUser();
+    const md = (u.user?.user_metadata || {}) as Record<string, string>;
+    setMe({ email: u.user?.email || '', name: md.full_name || md.name || '', pic: md.avatar_url || md.picture || '' });
+    const [{ data: st }, { data: sf }] = await Promise.all([
+      supabase.from('stores').select('*').eq('owner_id', userId).order('created_at').limit(1),
+      supabase.rpc('my_staff_stores'),
+    ]);
+    setOwn(((st as Store[]) || [])[0] || null);
+    const rows = (sf as Array<{ store_id: string; role: string }>) || [];
+    if (rows.length) {
+      const { data: names } = await supabase.from('stores').select('id,name').in('id', rows.map((x) => x.store_id));
+      const m = new Map(((names as Array<{ id: string; name: string }>) || []).map((x) => [x.id, x.name]));
+      setStaffOf(rows.map((x) => ({ name: m.get(x.store_id) || 'Store', role: x.role })));
+    }
+  }, [userId]);
+  useEffect(() => { void load(); }, [load]);
+  const setPassword = async () => {
+    if (pw.length < 8) return setMsg('Password needs at least 8 characters.');
+    if (pw !== pw2) return setMsg('The two passwords are not the same.');
+    const { error } = await supabase.auth.updateUser({ password: pw });
+    setPw(''); setPw2('');
+    setMsg(error ? error.message : 'Password saved. You can now also log in with this Gmail and password.');
+  };
+  if (!me || own === undefined) return <p className="px-1 text-xs text-slate-400">Loading…</p>;
+  return (
+    <div className="space-y-2">
+      <div className={box + ' flex items-center gap-3'}>
+        {me.pic ? <img src={me.pic} alt="" referrerPolicy="no-referrer" className="h-14 w-14 rounded-full object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-full bg-teal-600 text-xl font-bold text-white">{(me.name || me.email).charAt(0).toUpperCase()}</span>}
+        <div className="min-w-0 flex-1">
+          {me.name && <p className="truncate text-[14px] font-bold text-white">{me.name}</p>}
+          <p className="truncate text-[12px] text-slate-300">{me.email}</p>
+          <p className="text-[11px] font-bold text-teal-300">{own ? 'STORE OWNER' : staffOf.length ? `STAFF · ${staffOf.map((x) => `${x.name} (${x.role.toUpperCase()})`).join(', ')}` : ''}</p>
+        </div>
+      </div>
+      {own && <CompanyTab store={own} onSaved={() => void load()} />}
+      <div className={box + ' space-y-2'}>
+        <p className="text-[11px] font-bold tracking-wider text-teal-300">PASSWORD</p>
+        <p className="text-[11px] text-slate-400">You log in with Google. Set a password here if you also want to log in with this Gmail and a password, or if you forgot the old one.</p>
+        <input className={input} type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (8+ characters)" />
+        <input className={input} type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Type it again" />
+        <button type="button" className={btn + ' w-full'} onClick={() => void setPassword()}>SAVE PASSWORD</button>
+        {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
+      </div>
+      <button type="button" className={btn + ' w-full bg-rose-600/80'} onClick={() => { if (window.confirm('Log out from ROSE on this phone?')) void supabase.auth.signOut(); }}>LOG OUT</button>
     </div>
   );
 };
@@ -2084,7 +2237,7 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
         </div>
         <div className="flex gap-2">
           <input className={input + ' w-14 text-center'} value={s.logo} onChange={(e) => set('logo', e.target.value)} aria-label="Icon if no logo" />
-          <p className="flex-1 self-center text-[11px] text-slate-400">Icon shown when there is no logo. The store name is in COMPANY INFO.</p>
+          <p className="flex-1 self-center text-[11px] text-slate-400">Icon shown when there is no logo. The store name is in MY DETAILS.</p>
         </div>
         {field('tagline', 'Tagline')}
         <div className="flex items-center gap-2 text-[12px] text-slate-300">

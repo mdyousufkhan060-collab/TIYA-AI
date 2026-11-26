@@ -9,7 +9,8 @@ import { WriterPanel } from '../desktop/WriterPanel';
 import { CustomerCheck } from './CustomerCheck';
 import { TutorialStrip } from '../TutorialVideos';
 import { SocialPostPanel } from './SocialPostPanel';
-import { StorePanel } from './StorePanel';
+import { SiteProfile, StorePanel } from './StorePanel';
+import { AdminBrandPage, RoseSupportCard } from '../admin/AdminBrandPage';
 import { DomainAccess } from './DomainAccess';
 
 type Mode = 'personal' | 'student' | 'business';
@@ -385,6 +386,8 @@ const APPROVALS: CrudConfig = {
 type View =
   | 'hub'
   | 'rose_hub'
+  | 'rose_support'
+  | 'profile'
   | 'social'
   | 'store'
   | 'domain'
@@ -412,7 +415,9 @@ type View =
 
 const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
-  rose_hub: 'ROSE',
+  rose_hub: 'MYROSEBD.COM BUSINESS',
+  rose_support: 'MYROSEBD.COM',
+  profile: 'MY DETAILS',
   mode: 'MODE',
   writer: 'WRITER',
   social: 'SOCIAL POST',
@@ -630,15 +635,23 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   const [modeMsg, setModeMsg] = useState('');
   // Website owners and their staff: the workspace opens with two bars, WEBSITE ADMIN and ROSE
   const [siteOwner, setSiteOwner] = useState(false);
+  const [me, setMe] = useState<{ email: string; pic: string }>({ email: '', pic: '' });
+  const [roseCard, setRoseCard] = useState(true);
   useEffect(() => {
     if (allModes) return;
     let gone = false;
     void (async () => {
-      const [{ data: own }, { data: staff }] = await Promise.all([
+      const [{ data: own }, { data: staff }, { data: u }, { data: flags }] = await Promise.all([
         supabase.from('stores').select('id').eq('owner_id', userId).limit(1),
         supabase.rpc('my_staff_stores'),
+        supabase.auth.getUser(),
+        supabase.from('site_settings').select('key,value').eq('key', 'store_admin_rose_card'),
       ]);
-      if (!gone) setSiteOwner(Boolean((own && own.length) || (Array.isArray(staff) && staff.length)));
+      if (gone) return;
+      const md = (u.user?.user_metadata || {}) as Record<string, string>;
+      setMe({ email: u.user?.email || '', pic: md.avatar_url || md.picture || '' });
+      setRoseCard(!((flags as Array<{ value: unknown }>) || []).some((f) => f.value === false));
+      setSiteOwner(Boolean((own && own.length) || (Array.isArray(staff) && staff.length)));
     })();
     return () => {
       gone = true;
@@ -675,7 +688,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
 
   const back = () => {
     if (view === 'hub') return onBack();
-    if (siteOwner && view !== 'store' && view !== 'rose_hub') return setView('rose_hub');
+    if (siteOwner && !['store', 'rose_hub', 'rose_support', 'profile'].includes(view)) return setView('rose_hub');
     setView('hub');
   };
   // one list, numbered 01, 02, 03… in order; for website owners the hidden bars drop out and the rest close up
@@ -706,8 +719,22 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   if (view === 'hub' && siteOwner) {
     body = (
       <div className="space-y-1.5">
-        <SettingsBar badge="01" title="WEBSITE ADMIN" value="STORE · ORDERS · PRODUCTS" onClick={() => setView('store')} testId="ws-site-admin" />
-        <SettingsBar badge="02" title="ROSE" value={modeLabel} onClick={() => setView('rose_hub')} testId="ws-rose" />
+        {roseCard && <RoseSupportCard onOpen={() => setView('rose_support')} />}
+        <button type="button" onClick={() => setView('profile')} data-testid="ws-profile" className="flex h-14 w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 text-left dark:border-white/[0.08] dark:bg-[#11151E]">
+          <span className="rounded-md bg-[#1e293b] px-1.5 py-[3px] font-mono text-[10px] font-bold text-teal-400">01</span>
+          {me.pic ? (
+            <img src={me.pic} alt="" referrerPolicy="no-referrer" className="h-9 w-9 rounded-full object-cover" />
+          ) : (
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-teal-600 text-sm font-bold text-white">{(me.email || '?').charAt(0).toUpperCase()}</span>
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[12.5px] font-bold text-slate-900 dark:text-slate-100">{me.email}</span>
+            <span className="block text-[10.5px] text-slate-400">MY DETAILS · NAME · PHONE · PASSWORD</span>
+          </span>
+          <span className="text-base text-slate-500">›</span>
+        </button>
+        <SettingsBar badge="02" title="MYROSEBD.COM BUSINESS" value={modeLabel} onClick={() => setView('rose_hub')} testId="ws-rose" />
+        <SettingsBar badge="03" title="WEBSITE ADMIN" value="STORE · ORDERS · PRODUCTS" onClick={() => setView('store')} testId="ws-site-admin" />
       </div>
     );
   } else if (view === 'hub' || view === 'rose_hub') {
@@ -810,6 +837,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     );
   } else if (view === 'social') body = <SocialPostPanel />;
   else if (view === 'store') body = <StorePanel userId={userId} />;
+  else if (view === 'rose_support') body = <AdminBrandPage />;
+  else if (view === 'profile') body = <SiteProfile userId={userId} />;
   else if (view === 'domain') body = <DomainAccess userId={userId} />;
   else if (view === 'writer') body = <div className="h-[calc(100dvh-140px)]"><WriterPanel /></div>;
   else if (view === 'tasks') body = <CrudSection config={TASKS} scope={uScope} />;
