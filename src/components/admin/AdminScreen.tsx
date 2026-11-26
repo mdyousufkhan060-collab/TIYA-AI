@@ -38,6 +38,7 @@ import { AdminWebsiteAccessPage } from './AdminWebsiteAccessPage';
 import { AdminBrandCard, AdminBrandPage, AdminSiteSwitchesPage } from './AdminBrandPage';
 import { AdminDeletionRequestsPage, AdminOverviewTiles } from './AdminSystemPages';
 import { AdminAiKeyPage } from './AdminAiKeyPage';
+import { UserAiAccess } from './UserAiAccess';
 
 type AdminView =
   | 'hub'
@@ -280,7 +281,6 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
     setUserNotifTitle('');
     setUserNotifBody('');
     setUserNotifMsg('');
-    setView('user_detail');
   };
 
   const handleSaveUser = async () => {
@@ -416,325 +416,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
     );
   });
 
-  const handleHeaderBack = () => {
-    if (view === 'user_detail') {
-      setView('users');
-    } else if (view !== 'hub') {
-      setView('hub');
-    } else {
-      onBackToHome();
-    }
-  };
-
-  const headerTitle =
-    view === 'hub'
-      ? 'Admin'
-      : view === 'user_detail'
-        ? selectedUser?.full_name || selectedUser?.email || 'User Detail'
-        : (
-            {
-              dashboard: '01 Dashboard',
-              users: '02 Users',
-              give_premium: '03 Give Premium',
-              payments: '04 Payments',
-              plans: '05 Plans & Prices',
-              gifts: '06 Gift Codes',
-              income: '07 Income',
-              logins: '08 Login Activity',
-              notify_all: '09 Notify All',
-              deletions: '12 Delete Requests',
-              dev_profile: '13 Developers',
-              businesses: '14 Businesses',
-              team_activity: '15 Team Activity',
-              reports: '16 Reports & Feedback',
-              team_list: '17 Imtiaz List',
-              store: '18 Store Readiness',
-              videos: '19 Tutorial Videos',
-              website_builder: '20 Website Builder',
-              website_access: '21 Website Access',
-              brand: 'myrosebd.com',
-              site_switches: '22 Site Switches',
-              ai_key: '23 AI Key & Billing',
-              guide: '00 Admin Guide',
-            } as Record<string, string>
-          )[view] || 'Admin';
-
-  const isRefreshing = statsLoading || usersLoading;
-
-  const go = (v: AdminView) => {
-    if (navOnly) onPick?.(v);
-    else setView(v);
-  };
-  const hubBars = (
-          <div className="space-y-1.5">
-            <AdminBrandCard onOpen={() => go('brand')} />
-            <SettingsBar badge="00" title="ADMIN GUIDE" value="WHAT IS WHERE" tone={activeView === 'guide' ? 'accent' : 'default'} onClick={() => go('guide')} testId="admin-bar-guide" />
-            <SettingsBar badge="01" title="DASHBOARD" tone={activeView === 'dashboard' ? 'accent' : 'default'} onClick={() => go('dashboard')} testId="admin-bar-dashboard" />
-            <SettingsBar badge="02" title="USERS" tone={activeView === 'users' ? 'accent' : 'default'} onClick={() => go('users')} testId="admin-bar-users" />
-            <SettingsBar badge="03" title="GIVE PREMIUM" value="GMAIL" tone="accent" onClick={() => go('give_premium')} testId="admin-bar-give-premium" />
-            <SettingsBar
-              badge="04"
-              title="PAYMENTS"
-              value={pendingPayments > 0 ? `${pendingPayments} NEW` : undefined}
-              tone={pendingPayments > 0 || activeView === 'payments' ? 'accent' : 'default'}
-              onClick={() => go('payments')}
-              testId="admin-bar-payments"
-            />
-            <SettingsBar badge="05" title="PLANS & PRICES" tone={activeView === 'plans' ? 'accent' : 'default'} onClick={() => go('plans')} testId="admin-bar-plans" />
-            <SettingsBar badge="06" title="GIFT CODES" tone={activeView === 'gifts' ? 'accent' : 'default'} onClick={() => go('gifts')} testId="admin-bar-gifts" />
-            <SettingsBar badge="07" title="INCOME" tone={activeView === 'income' ? 'accent' : 'default'} onClick={() => go('income')} testId="admin-bar-income" />
-            <SettingsBar badge="08" title="LOGIN ACTIVITY" tone={activeView === 'logins' ? 'accent' : 'default'} onClick={() => go('logins')} testId="admin-bar-logins" />
-            <SettingsBar badge="09" title="NOTIFY ALL" tone={activeView === 'notify_all' ? 'accent' : 'default'} onClick={() => go('notify_all')} testId="admin-bar-notify" />
-            {onOpenMotivation && (
-              <SettingsBar badge="10" title="MOTIVATION" onClick={onOpenMotivation} testId="admin-motivation-btn" />
-            )}
-            <SettingsBar
-              badge="11"
-              title="DEVELOPER TOOLS"
-              onClick={() => {
-                setDevSubpage(null);
-                go('developer_tools');
-              }}
-              testId="admin-developer-tools-btn"
-            />
-            <SettingsBar badge="12" title="DELETE REQUESTS" tone={activeView === 'deletions' ? 'accent' : 'default'} onClick={() => go('deletions')} testId="admin-bar-deletions" />
-            <SettingsBar badge="13" title="DEVELOPERS" value="PUBLIC" tone={activeView === 'dev_profile' ? 'accent' : 'default'} onClick={() => go('dev_profile')} testId="admin-bar-dev-profile" />
-            <SettingsBar badge="14" title="BUSINESSES" tone={activeView === 'businesses' ? 'accent' : 'default'} onClick={() => go('businesses')} testId="admin-bar-businesses" />
-            <SettingsBar badge="15" title="TEAM ACTIVITY" tone={activeView === 'team_activity' ? 'accent' : 'default'} onClick={() => go('team_activity')} testId="admin-bar-team" />
-            <SettingsBar badge="16" title="REPORTS & FEEDBACK" value={openReports > 0 ? `${openReports} NEW` : undefined} tone={openReports > 0 || activeView === 'reports' ? 'accent' : 'default'} onClick={() => go('reports')} testId="admin-bar-reports" />
-            <SettingsBar badge="17" title="IMTIAZ LIST" value="PC & APP" tone={activeView === 'team_list' ? 'accent' : 'default'} onClick={() => go('team_list')} testId="admin-bar-team-list" />
-            <SettingsBar badge="18" title="STORE READINESS" value="ROSE APP · PLAY · MS" tone={activeView === 'store' ? 'accent' : 'default'} onClick={() => go('store')} testId="admin-bar-store" />
-            <SettingsBar badge="19" title="TUTORIAL VIDEOS" value="YOUTUBE" tone={activeView === 'videos' ? 'accent' : 'default'} onClick={() => go('videos')} testId="admin-bar-videos" />
-            <SettingsBar badge="20" title="WEBSITE BUILDER" value="STORES · LIVE" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
-            <SettingsBar badge="21" title="WEBSITE ACCESS" value="GMAIL" tone={activeView === 'website_access' ? 'accent' : 'default'} onClick={() => go('website_access')} testId="admin-bar-website-access" />
-            <SettingsBar badge="22" title="SITE SWITCHES" value="ROSE BRANDING" tone={activeView === 'site_switches' ? 'accent' : 'default'} onClick={() => go('site_switches')} testId="admin-bar-site-switches" />
-            <SettingsBar badge="23" title="AI KEY & BILLING" value="GEMINI PAID" tone={activeView === 'ai_key' ? 'accent' : 'default'} onClick={() => go('ai_key')} testId="admin-bar-ai-key" />
-          </div>
-  );
-
-  if (navOnly) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] px-4 pt-[env(safe-area-inset-top)] [min-height:calc(3rem+env(safe-area-inset-top))]">
-          <span className="text-sm font-semibold tracking-wider text-amber-200">ADMIN</span>
-        </header>
-        <div className="tiya-scroll flex-1 overflow-y-auto px-3.5 py-3">{hubBars}</div>
-      </div>
-    );
-  }
-
-  if (view === 'developer_tools') {
-    return (
-      <DeveloperToolsPage
-        settings={settings}
-        voiceState={voiceState}
-        errorLog={errorLog}
-        subpage={devSubpage}
-        onSelectSubpage={setDevSubpage}
-        onClearErrorLog={onClearErrorLog}
-        onBack={() => {
-          setDevSubpage(null);
-          setView('hub');
-        }}
-      />
-    );
-  }
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {/* Admin Top Header */}
-      <header className="flex shrink-0 pt-[env(safe-area-inset-top)] [min-height:calc(3.25rem+env(safe-area-inset-top))] items-center justify-between border-b border-slate-200 px-2 dark:border-white/[0.08]">
-        <button
-          type="button"
-          onClick={handleHeaderBack}
-          className="flex min-h-[44px] min-w-[64px] shrink-0 items-center gap-1 rounded-xl px-2 text-xs font-medium text-teal-600 hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-white/[0.06]"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span>{view === 'hub' ? 'Home' : 'Back'}</span>
-        </button>
-
-        <h1 className="font-display min-w-0 flex-1 truncate px-1 text-center text-sm font-semibold text-slate-900 dark:text-[#F4F5F7]">
-          {headerTitle}
-        </h1>
-
-        <div className="flex items-center gap-1 pr-1">
-          <button
-            type="button"
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            aria-label="Refresh admin data"
-            className="flex min-h-[44px] min-w-[44px] justify-center items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-teal-600 hover:bg-slate-100 disabled:opacity-50 dark:text-teal-400 dark:hover:bg-white/[0.06]"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span className="hidden min-[400px]:inline">REFRESH</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onLogout}
-            aria-label="Logout"
-            className="flex min-h-[44px] min-w-[44px] justify-center items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span className="hidden min-[400px]:inline">LOGOUT</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Pull-to-refresh indicator */}
-      {pullDistance > 16 && (
-        <div className="shrink-0 bg-teal-500/10 py-1.5 text-center text-[11px] font-medium text-teal-600 dark:text-teal-400">
-          {pullDistance >= 56 ? 'Release to refresh' : 'Pull down to refresh'}
-        </div>
-      )}
-
-      {/* Body */}
-      <div
-        ref={scrollRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        className="tiya-scroll flex-1 overflow-y-auto px-4 py-4"
-      >
-        {view === 'hub' && hubBars}
-
-        {view === 'payments' && <AdminPaymentsPage onCountChange={setPendingPayments} />}
-        {view === 'plans' && <AdminPlansPage />}
-        {view === 'gifts' && <AdminGiftCodesPage />}
-        {view === 'income' && <AdminIncomePage />}
-        {view === 'give_premium' && <AdminGivePremiumPage />}
-        {view === 'logins' && <AdminLoginActivityPage />}
-        {view === 'deletions' && <AdminDeletionRequestsPage />}
-        {view === 'dev_profile' && <AdminDeveloperProfilePage />}
-        {view === 'businesses' && <AdminBusinessesPage />}
-        {view === 'team_activity' && <AdminTeamActivityPage />}
-        {view === 'reports' && <AdminReportsPage />}
-        {view === 'team_list' && <TeamChecklist canEdit listName="IMTIAZ LIST" />}
-        {view === 'store' && <TeamChecklist canEdit listName="STORE READINESS" />}
-        {view === 'videos' && <AdminVideosPage />}
-        {view === 'website_builder' && <AdminWebsiteBuilderDemo />}
-        {view === 'website_access' && <AdminWebsiteAccessPage />}
-        {view === 'brand' && <AdminBrandPage />}
-        {view === 'site_switches' && <AdminSiteSwitchesPage />}
-        {view === 'ai_key' && <AdminAiKeyPage />}
-        {view === 'guide' && <AdminGuidePage onOpen={(v) => setView(v as AdminView)} />}
-
-        {view === 'dashboard' && (
-          <div className="space-y-4">
-            {statsError && (
-              <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-300">
-                {statsError}
-              </p>
-            )}
-
-            {statsLoading && !stats ? (
-              <div className="flex items-center justify-center py-12 text-xs text-slate-500">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading stats...
-              </div>
-            ) : stats ? (
-              <div className="grid grid-cols-2 gap-2.5">
-                {[
-                  { label: 'Total Users', value: stats.total },
-                  { label: 'Premium', value: stats.premium },
-                  { label: 'Blocked', value: stats.blocked },
-                  { label: 'New Today', value: stats.new_today },
-                  { label: 'Active Today', value: stats.active_today },
-                  { label: 'Adults (18+)', value: stats.adults },
-                  { label: 'Teens (<18)', value: stats.teens },
-                  { label: 'Age Unknown', value: stats.age_unknown },
-                ].map((metric) => (
-                  <div
-                    key={metric.label}
-                    className="rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-white/[0.08] dark:bg-[#11151E]"
-                  >
-                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                      {metric.label}
-                    </p>
-                    <p className="font-mono-code mt-1 text-xl font-bold text-slate-900 dark:text-white">
-                      {metric.value ?? 0}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            <AdminOverviewTiles />
-          </div>
-        )}
-
-        {view === 'users' && (
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search email, name, or plan..."
-                aria-label="Search users"
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-xs text-slate-900 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-[#11151E] dark:text-white"
-              />
-            </div>
-
-            {usersError && (
-              <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-300">
-                {usersError}
-              </p>
-            )}
-
-            {usersLoading && !usersLoaded ? (
-              <div className="flex items-center justify-center py-12 text-xs text-slate-500">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading users...
-              </div>
-            ) : (
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 dark:border-white/[0.08] dark:bg-[#11151E] dark:divide-white/[0.06]">
-                {filteredUsers.length === 0 ? (
-                  <p className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                    No matching users found.
-                  </p>
-                ) : (
-                  filteredUsers.map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => openUserDetail(u)}
-                      className="flex min-h-[60px] w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-                    >
-                      <UserAvatar src={(u as any).avatar_url} name={u.full_name} email={u.email} size={40} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">
-                          {u.full_name || 'Unnamed'} ·{' '}
-                          <span className="font-normal text-teal-600 dark:text-teal-400">
-                            {u.plan || 'free'}
-                          </span>
-                          {u.blocked ? (
-                            <span className="text-rose-500"> · Blocked</span>
-                          ) : null}
-                          {(u.premium_text_left || u.premium_voice_left) ? (
-                            <span className="font-normal text-amber-500 dark:text-amber-300">
-                              {' '}· T {u.premium_text_left ?? 0} · V {u.premium_voice_left ?? 0}
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
-                          {u.email || u.id}
-                        </p>
-                        <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
-                          Last seen:{' '}
-                          {u.last_seen_at
-                            ? new Date(u.last_seen_at).toLocaleString()
-                            : 'Never'}
-                        </p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {view === 'user_detail' && selectedUser && (
+  // Everything for one Gmail opens right under that Gmail in 03 USERS
+  const userDetailPanel = selectedUser ? (
           <div className="space-y-4 pb-6">
             {/* Summary */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/[0.08] dark:bg-[#11151E]">
@@ -767,6 +450,16 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                 const upd: UserProfile = { ...selectedUser, ...patchP };
                 setSelectedUser(upd);
                 setDraftPremium(true);
+                setUsers((prev) => prev.map((u) => (u.id === upd.id ? upd : u)));
+              }}
+            />
+
+            {/* AI ACCESS: Gemini / Groq / pause / remove, for this Gmail */}
+            <UserAiAccess
+              user={selectedUser as any}
+              onUpdated={(patch) => {
+                const upd = { ...selectedUser, ...patch } as UserProfile;
+                setSelectedUser(upd);
                 setUsers((prev) => prev.map((u) => (u.id === upd.id ? upd : u)));
               }}
             />
@@ -963,7 +656,327 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               </button>
             </form>
           </div>
+  ) : null;
+
+  const handleHeaderBack = () => {
+    if (view === 'user_detail') {
+      setView('users');
+    } else if (view !== 'hub') {
+      setView('hub');
+    } else {
+      onBackToHome();
+    }
+  };
+
+  const headerTitle =
+    view === 'hub'
+      ? 'Admin'
+      : view === 'user_detail'
+        ? selectedUser?.full_name || selectedUser?.email || 'User Detail'
+        : (
+            {
+              dashboard: '01 Dashboard',
+              users: '03 Users',
+              give_premium: '03 Give Premium',
+              payments: '04 Payments',
+              plans: '05 Plans & Prices',
+              gifts: '06 Gift Codes',
+              income: '07 Income',
+              logins: '08 Login Activity',
+              notify_all: '09 Notify All',
+              deletions: '12 Delete Requests',
+              dev_profile: '13 Developers',
+              businesses: '14 Businesses',
+              team_activity: '15 Team Activity',
+              reports: '16 Reports & Feedback',
+              team_list: '17 Imtiaz List',
+              store: '18 Store Readiness',
+              videos: '19 Tutorial Videos',
+              website_builder: '20 Website Builder',
+              website_access: '21 Website Access',
+              brand: 'myrosebd.com',
+              site_switches: '22 Site Switches',
+              ai_key: '02 AI Key & Billing',
+              guide: '00 Admin Guide',
+            } as Record<string, string>
+          )[view] || 'Admin';
+
+  const isRefreshing = statsLoading || usersLoading;
+
+  const go = (v: AdminView) => {
+    if (navOnly) onPick?.(v);
+    else setView(v);
+  };
+  const hubBars = (
+          <div className="space-y-1.5">
+            <AdminBrandCard onOpen={() => go('brand')} />
+            <SettingsBar badge="00" title="ADMIN GUIDE" value="WHAT IS WHERE" tone={activeView === 'guide' ? 'accent' : 'default'} onClick={() => go('guide')} testId="admin-bar-guide" />
+            <SettingsBar badge="01" title="DASHBOARD" tone={activeView === 'dashboard' ? 'accent' : 'default'} onClick={() => go('dashboard')} testId="admin-bar-dashboard" />
+            <SettingsBar badge="02" title="AI KEY & BILLING" value="GEMINI · GROQ" tone={activeView === 'ai_key' ? 'accent' : 'default'} onClick={() => go('ai_key')} testId="admin-bar-ai-key" />
+            <SettingsBar badge="03" title="USERS" value="GMAIL · PREMIUM" tone={activeView === 'users' ? 'accent' : 'default'} onClick={() => go('users')} testId="admin-bar-users" />
+            <SettingsBar
+              badge="04"
+              title="PAYMENTS"
+              value={pendingPayments > 0 ? `${pendingPayments} NEW` : undefined}
+              tone={pendingPayments > 0 || activeView === 'payments' ? 'accent' : 'default'}
+              onClick={() => go('payments')}
+              testId="admin-bar-payments"
+            />
+            <SettingsBar badge="05" title="PLANS & PRICES" tone={activeView === 'plans' ? 'accent' : 'default'} onClick={() => go('plans')} testId="admin-bar-plans" />
+            <SettingsBar badge="06" title="GIFT CODES" tone={activeView === 'gifts' ? 'accent' : 'default'} onClick={() => go('gifts')} testId="admin-bar-gifts" />
+            <SettingsBar badge="07" title="INCOME" tone={activeView === 'income' ? 'accent' : 'default'} onClick={() => go('income')} testId="admin-bar-income" />
+            <SettingsBar badge="08" title="LOGIN ACTIVITY" tone={activeView === 'logins' ? 'accent' : 'default'} onClick={() => go('logins')} testId="admin-bar-logins" />
+            <SettingsBar badge="09" title="NOTIFY ALL" tone={activeView === 'notify_all' ? 'accent' : 'default'} onClick={() => go('notify_all')} testId="admin-bar-notify" />
+            {onOpenMotivation && (
+              <SettingsBar badge="10" title="MOTIVATION" onClick={onOpenMotivation} testId="admin-motivation-btn" />
+            )}
+            <SettingsBar
+              badge="11"
+              title="DEVELOPER TOOLS"
+              onClick={() => {
+                setDevSubpage(null);
+                go('developer_tools');
+              }}
+              testId="admin-developer-tools-btn"
+            />
+            <SettingsBar badge="12" title="DELETE REQUESTS" tone={activeView === 'deletions' ? 'accent' : 'default'} onClick={() => go('deletions')} testId="admin-bar-deletions" />
+            <SettingsBar badge="13" title="DEVELOPERS" value="PUBLIC" tone={activeView === 'dev_profile' ? 'accent' : 'default'} onClick={() => go('dev_profile')} testId="admin-bar-dev-profile" />
+            <SettingsBar badge="14" title="BUSINESSES" tone={activeView === 'businesses' ? 'accent' : 'default'} onClick={() => go('businesses')} testId="admin-bar-businesses" />
+            <SettingsBar badge="15" title="TEAM ACTIVITY" tone={activeView === 'team_activity' ? 'accent' : 'default'} onClick={() => go('team_activity')} testId="admin-bar-team" />
+            <SettingsBar badge="16" title="REPORTS & FEEDBACK" value={openReports > 0 ? `${openReports} NEW` : undefined} tone={openReports > 0 || activeView === 'reports' ? 'accent' : 'default'} onClick={() => go('reports')} testId="admin-bar-reports" />
+            <SettingsBar badge="17" title="IMTIAZ LIST" value="PC & APP" tone={activeView === 'team_list' ? 'accent' : 'default'} onClick={() => go('team_list')} testId="admin-bar-team-list" />
+            <SettingsBar badge="18" title="STORE READINESS" value="ROSE APP · PLAY · MS" tone={activeView === 'store' ? 'accent' : 'default'} onClick={() => go('store')} testId="admin-bar-store" />
+            <SettingsBar badge="19" title="TUTORIAL VIDEOS" value="YOUTUBE" tone={activeView === 'videos' ? 'accent' : 'default'} onClick={() => go('videos')} testId="admin-bar-videos" />
+            <SettingsBar badge="20" title="WEBSITE BUILDER" value="STORES · LIVE" tone={activeView === 'website_builder' ? 'accent' : 'default'} onClick={() => go('website_builder')} testId="admin-bar-website-builder" />
+            <SettingsBar badge="21" title="WEBSITE ACCESS" value="GMAIL" tone={activeView === 'website_access' ? 'accent' : 'default'} onClick={() => go('website_access')} testId="admin-bar-website-access" />
+            <SettingsBar badge="22" title="SITE SWITCHES" value="ROSE BRANDING" tone={activeView === 'site_switches' ? 'accent' : 'default'} onClick={() => go('site_switches')} testId="admin-bar-site-switches" />
+          </div>
+  );
+
+  if (navOnly) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] px-4 pt-[env(safe-area-inset-top)] [min-height:calc(3rem+env(safe-area-inset-top))]">
+          <span className="text-sm font-semibold tracking-wider text-amber-200">ADMIN</span>
+        </header>
+        <div className="tiya-scroll flex-1 overflow-y-auto px-3.5 py-3">{hubBars}</div>
+      </div>
+    );
+  }
+
+  if (view === 'developer_tools') {
+    return (
+      <DeveloperToolsPage
+        settings={settings}
+        voiceState={voiceState}
+        errorLog={errorLog}
+        subpage={devSubpage}
+        onSelectSubpage={setDevSubpage}
+        onClearErrorLog={onClearErrorLog}
+        onBack={() => {
+          setDevSubpage(null);
+          setView('hub');
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Admin Top Header */}
+      <header className="flex shrink-0 pt-[env(safe-area-inset-top)] [min-height:calc(3.25rem+env(safe-area-inset-top))] items-center justify-between border-b border-slate-200 px-2 dark:border-white/[0.08]">
+        <button
+          type="button"
+          onClick={handleHeaderBack}
+          className="flex min-h-[44px] min-w-[64px] shrink-0 items-center gap-1 rounded-xl px-2 text-xs font-medium text-teal-600 hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-white/[0.06]"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span>{view === 'hub' ? 'Home' : 'Back'}</span>
+        </button>
+
+        <h1 className="font-display min-w-0 flex-1 truncate px-1 text-center text-sm font-semibold text-slate-900 dark:text-[#F4F5F7]">
+          {headerTitle}
+        </h1>
+
+        <div className="flex items-center gap-1 pr-1">
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            aria-label="Refresh admin data"
+            className="flex min-h-[44px] min-w-[44px] justify-center items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-teal-600 hover:bg-slate-100 disabled:opacity-50 dark:text-teal-400 dark:hover:bg-white/[0.06]"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden min-[400px]:inline">REFRESH</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            aria-label="Logout"
+            className="flex min-h-[44px] min-w-[44px] justify-center items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden min-[400px]:inline">LOGOUT</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Pull-to-refresh indicator */}
+      {pullDistance > 16 && (
+        <div className="shrink-0 bg-teal-500/10 py-1.5 text-center text-[11px] font-medium text-teal-600 dark:text-teal-400">
+          {pullDistance >= 56 ? 'Release to refresh' : 'Pull down to refresh'}
+        </div>
+      )}
+
+      {/* Body */}
+      <div
+        ref={scrollRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className="tiya-scroll flex-1 overflow-y-auto px-4 py-4"
+      >
+        {view === 'hub' && hubBars}
+
+        {view === 'payments' && <AdminPaymentsPage onCountChange={setPendingPayments} />}
+        {view === 'plans' && <AdminPlansPage />}
+        {view === 'gifts' && <AdminGiftCodesPage />}
+        {view === 'income' && <AdminIncomePage />}
+        {view === 'give_premium' && <AdminGivePremiumPage />}
+        {view === 'logins' && <AdminLoginActivityPage />}
+        {view === 'deletions' && <AdminDeletionRequestsPage />}
+        {view === 'dev_profile' && <AdminDeveloperProfilePage />}
+        {view === 'businesses' && <AdminBusinessesPage />}
+        {view === 'team_activity' && <AdminTeamActivityPage />}
+        {view === 'reports' && <AdminReportsPage />}
+        {view === 'team_list' && <TeamChecklist canEdit listName="IMTIAZ LIST" />}
+        {view === 'store' && <TeamChecklist canEdit listName="STORE READINESS" />}
+        {view === 'videos' && <AdminVideosPage />}
+        {view === 'website_builder' && <AdminWebsiteBuilderDemo />}
+        {view === 'website_access' && <AdminWebsiteAccessPage />}
+        {view === 'brand' && <AdminBrandPage />}
+        {view === 'site_switches' && <AdminSiteSwitchesPage />}
+        {view === 'ai_key' && <AdminAiKeyPage />}
+        {view === 'guide' && <AdminGuidePage onOpen={(v) => setView(v as AdminView)} />}
+
+        {view === 'dashboard' && (
+          <div className="space-y-4">
+            {statsError && (
+              <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-300">
+                {statsError}
+              </p>
+            )}
+
+            {statsLoading && !stats ? (
+              <div className="flex items-center justify-center py-12 text-xs text-slate-500">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading stats...
+              </div>
+            ) : stats ? (
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { label: 'Total Users', value: stats.total },
+                  { label: 'Premium', value: stats.premium },
+                  { label: 'Blocked', value: stats.blocked },
+                  { label: 'New Today', value: stats.new_today },
+                  { label: 'Active Today', value: stats.active_today },
+                  { label: 'Adults (18+)', value: stats.adults },
+                  { label: 'Teens (<18)', value: stats.teens },
+                  { label: 'Age Unknown', value: stats.age_unknown },
+                ].map((metric) => (
+                  <div
+                    key={metric.label}
+                    className="rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-white/[0.08] dark:bg-[#11151E]"
+                  >
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                      {metric.label}
+                    </p>
+                    <p className="font-mono-code mt-1 text-xl font-bold text-slate-900 dark:text-white">
+                      {metric.value ?? 0}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <AdminOverviewTiles />
+          </div>
         )}
+
+        {view === 'users' && (
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search email, name, or plan..."
+                aria-label="Search users"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-xs text-slate-900 focus:border-teal-500 focus:outline-none dark:border-white/10 dark:bg-[#11151E] dark:text-white"
+              />
+            </div>
+
+            {usersError && (
+              <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-300">
+                {usersError}
+              </p>
+            )}
+
+            {usersLoading && !usersLoaded ? (
+              <div className="flex items-center justify-center py-12 text-xs text-slate-500">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading users...
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 dark:border-white/[0.08] dark:bg-[#11151E] dark:divide-white/[0.06]">
+                {filteredUsers.length === 0 ? (
+                  <p className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                    No matching users found.
+                  </p>
+                ) : (
+                  filteredUsers.map((u) => (
+                    <React.Fragment key={u.id}>
+                    <button
+                      type="button"
+                      onClick={() => (selectedUser?.id === u.id ? setSelectedUser(null) : openUserDetail(u))}
+                      className="flex min-h-[60px] w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+                    >
+                      <UserAvatar src={(u as any).avatar_url} name={u.full_name} email={u.email} size={40} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">
+                          {u.full_name || 'Unnamed'} ·{' '}
+                          <span className="font-normal text-teal-600 dark:text-teal-400">
+                            {u.plan || 'free'}
+                          </span>
+                          {u.blocked ? (
+                            <span className="text-rose-500"> · Blocked</span>
+                          ) : null}
+                          {(u.premium_text_left || u.premium_voice_left) ? (
+                            <span className="font-normal text-amber-500 dark:text-amber-300">
+                              {' '}· T {u.premium_text_left ?? 0} · V {u.premium_voice_left ?? 0}
+                            </span>
+                          ) : null}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                          {u.email || u.id}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
+                          Last seen:{' '}
+                          {u.last_seen_at
+                            ? new Date(u.last_seen_at).toLocaleString()
+                            : 'Never'}
+                        </p>
+                      </div>
+                      <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${selectedUser?.id === u.id ? 'rotate-90' : ''}`} />
+                    </button>
+                    {selectedUser?.id === u.id && <div className="bg-slate-50 p-2 dark:bg-black/20">{userDetailPanel}</div>}
+                    </React.Fragment>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
 
         {view === 'notify_all' && (
           <form

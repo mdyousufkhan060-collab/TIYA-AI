@@ -55,8 +55,8 @@ export const AdminVideosPage: React.FC = () => (
 
 const GUIDE: Array<[string, string, string, string]> = [
   ['01', 'dashboard', 'DASHBOARD', 'Total users, premium, blocked, new and active today, ages, users by mode.'],
-  ['02', 'users', 'USERS', 'Search any user. Tap a Gmail: photo, plan, block, note, GIVE PREMIUM & CREDITS (text / voice), FORCE LOGOUT.'],
-  ['03', 'give_premium', 'GIVE PREMIUM', 'Type a Gmail and give premium and credits fast.'],
+  ['02', 'ai_key', 'AI KEY & BILLING', 'Paste the paid Gemini and Groq keys for ROSE PREMIUM customers (nobody can see them), TEST, GET KEY and BUY PAID PLAN.'],
+  ['03', 'users', 'USERS', 'Search any user. Tap a Gmail and everything opens right under it: plan, GIVE PREMIUM & CREDITS, AI ACCESS (Gemini / Groq ON/OFF, PAUSE AI, REMOVE PREMIUM), block, note, FORCE LOGOUT.'],
   ['04', 'payments', 'PAYMENTS', 'bKash / Nagad / Rocket requests. APPROVE adds the package credits, REJECT tells the user.'],
   ['05', 'plans', 'PLANS & PRICES', 'Payment numbers, free daily limit, AI models and cost per reply, every package with price, credits, max AI cost and profit.'],
   ['06', 'gifts', 'GIFT CODES', 'Make codes that give months and credits (giveaways, partners).'],

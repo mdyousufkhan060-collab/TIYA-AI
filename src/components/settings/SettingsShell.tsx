@@ -47,10 +47,17 @@ import {
   ClipboardCheck,
   BadgeCheck,
   Youtube,
+  Globe,
+  AtSign,
+  ToggleRight,
 } from 'lucide-react';
 
 /** Small logo for each bar, picked from its title (shown next to the number). */
 const BAR_ICONS: Array<[RegExp, React.ElementType, string]> = [
+  [/AI KEY|BILLING/, KeyRound, '#fbbf24'],
+  [/WEBSITE BUILDER/, Globe, '#22d3ee'],
+  [/WEBSITE ACCESS/, AtSign, '#60a5fa'],
+  [/SITE SWITCH/, ToggleRight, '#34d399'],
   [/ABOUT|GUIDE|HOW TO/, BookOpen, '#38bdf8'],
   [/HEALTH/, Activity, '#34d399'],
   [/CONNECTION|API PROVIDER/, Plug, '#a78bfa'],
