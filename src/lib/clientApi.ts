@@ -677,13 +677,15 @@ export class LocalLiveSocket {
       }
       const rms = Math.sqrt(sum / n);
       const now = Date.now();
-      const threshold = Math.max(this.gateFloor * 2.2, 0.008);
+      // Low bar, so soft Bangla words and word starts are never cut (a high bar made ROSE miss
+      // what he said and he had to say it 2-3 times). Fans and TV stay below it.
+      const threshold = Math.max(this.gateFloor * 2, 0.006);
       if (rms > threshold) {
-        this.gateOpenUntil = now + 600; // keep word endings
+        this.gateOpenUntil = now + 900; // keep word endings and short pauses inside a sentence
         return b64;
       }
-      // learn the room's background level only from quiet frames
-      this.gateFloor = Math.min(0.06, this.gateFloor * 0.96 + rms * 0.04);
+      // learn the room's background level only from clearly quiet frames, and never let it climb high
+      if (rms < threshold * 0.7) this.gateFloor = Math.min(0.018, this.gateFloor * 0.96 + rms * 0.04);
       if (now < this.gateOpenUntil) return b64;
       let silent = this.silentCache.get(bin.length);
       if (!silent) {
@@ -815,10 +817,10 @@ export class LocalLiveSocket {
             // background noise should not count as the user talking
             realtimeInputConfig: {
               automaticActivityDetection: {
-                startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
+                startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH', // hear him the first time; the noise gate above already removes background
                 endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
                 prefixPaddingMs: 300,
-                silenceDurationMs: 700,
+                silenceDurationMs: 800,
               },
             },
           },
