@@ -146,8 +146,9 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
   // owner can look at the admin the way a staff role sees it (nothing opens or saves in this view)
   const [previewRole, setPreviewRole] = useState('');
   // MY STAFF (07 WORKSPACE): the owner's staff list, and the one being looked at
-  const [staffList, setStaffList] = useState<Array<{ email: string; role: string }>>([]);
-  const [staffSel, setStaffSel] = useState<{ email: string; role: string } | null>(null);
+  const [staffList, setStaffList] = useState<StaffRow[]>([]);
+  const [staffSel, setStaffSel] = useState<StaffRow | null>(null);
+  const [myMoney, setMyMoney] = useState<Record<string, boolean>>({});
   const [, setShowRose] = useState(true);
   const [msg, setMsg] = useState('');
 
@@ -170,6 +171,14 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
       staffStores = ((ss as Store[]) || []).filter((x) => x.owner_id !== userId);
     }
     setRoles(r);
+    if (staffRows.length) {
+      // a MANAGER may also have MONEY ACCESS (the owner turns it on)
+      const { data: me } = await supabase.auth.getUser();
+      const { data: mm } = await supabase.from('store_staff').select('store_id, money_access').eq('email', (me.user?.email || '').toLowerCase());
+      const m: Record<string, boolean> = {};
+      ((mm as Array<{ store_id: string; money_access: boolean }>) || []).forEach((x) => { m[x.store_id] = x.money_access; });
+      setMyMoney(m);
+    }
     setShowRose(!((flags as Array<{ key: string; value: unknown }>) || []).some((f) => f.key === 'store_admin_rose_card' && f.value === false));
     setIsAdmin(Boolean(adm));
     setAccess(acc && (acc as any).email ? (acc as Access) : null);
@@ -184,7 +193,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
   }, [load]);
   useEffect(() => {
     if (tab !== 'viewas' || !store?.id) return;
-    void supabase.from('store_staff').select('email, role').eq('store_id', store.id).order('created_at').then(({ data }) => setStaffList((data as Array<{ email: string; role: string }>) || []));
+    void supabase.rpc('store_staff_list', { p_store: store.id }).then(({ data }) => setStaffList((data as StaffRow[]) || []));
   }, [tab, store?.id]);
 
   const active = isAdmin || (access && new Date(access.ends_at) > new Date()) || Object.keys(roles).length > 0;
@@ -235,34 +244,32 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
   const myRole = previewRole || realRole;
   // what each staff role may open (the server enforces the same rules)
   const ROLE_AREAS: Record<string, string[]> = {
-    manager: ['orders', 'ordersWrite', 'chat', 'products', 'design', 'marketing', 'money'],
-    orders: ['orders', 'ordersWrite', 'chat'],
-    support: ['orders', 'chat'],
-    accounts: ['orders', 'money'],
-    products: ['products'],
-    marketing: ['marketing'],
+    manager: ['orders', 'ordersWrite', 'chat', 'products', 'categories', 'design', 'marketing', 'reviews', 'coupons', 'customers'],
+    moderator: ['orders', 'products', 'reviews', 'customers'],
+    support: ['orders', 'productsView', 'chat', 'customers'],
   };
-  const can = (area: 'orders' | 'ordersWrite' | 'chat' | 'products' | 'design' | 'marketing' | 'owner' | 'money') =>
-    myRole === 'owner' || (area !== 'owner' && (ROLE_AREAS[myRole] || []).includes(area));
+  const areasOf = (r: string, money: boolean) => [...(ROLE_AREAS[r] || []), ...(r === 'manager' && money ? ['money'] : [])];
+  const myMoneyOn = previewRole ? Boolean(staffSel?.money_access) : Boolean(myMoney[store.id]);
+  const can = (area: string) => myRole === 'owner' || (area !== 'owner' && areasOf(myRole, myMoneyOn).includes(area));
 
   // the bars a role sees in WEBSITE ADMIN (same rules as the server)
-  const barsFor = (r: string) => {
-    const c = (area: string) => r === 'owner' || (area !== 'owner' && (ROLE_AREAS[r] || []).includes(area));
+  const barsFor = (r: string, money = false) => {
+    const c = (area: string) => r === 'owner' || (area !== 'owner' && areasOf(r, money).includes(area));
     return (
       [
             [true, 'dashboard', 'DASHBOARD', '📊', '#1d4ed8', 'TODAY'],
             [c('owner') && !isAdmin, 'plan', 'PLAN & PAYMENT', '⭐', '#f59e0b', access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'],
             [c('orders'), 'orders', 'ORDERS', '🧾', '#7c3aed', ''],
-            [c('products'), 'products', 'PRODUCTS', '📦', '#0d9488', ''],
-            [c('products'), 'categories', 'CATEGORIES', '🗂️', '#ca8a04', ''],
+            [c('products') || c('productsView'), 'products', 'PRODUCTS', '📦', '#0d9488', ''],
+            [c('categories'), 'categories', 'CATEGORIES', '🗂️', '#ca8a04', ''],
             [c('design'), 'design', 'HOMEPAGE & DESIGN', '🎨', '#db2777', 'BANNERS'],
-            [c('orders'), 'customers', 'CUSTOMERS', '👥', '#2563eb', ''],
-            [c('products'), 'offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', ''],
-            [c('products'), 'reviews', 'REVIEWS', '⭐', '#eab308', ''],
+            [c('customers'), 'customers', 'CUSTOMERS', '👥', '#2563eb', ''],
+            [c('coupons'), 'offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', ''],
+            [c('reviews'), 'reviews', 'REVIEWS', '⭐', '#eab308', ''],
             [c('chat'), 'chat', 'LIVE CHAT', '💬', '#059669', 'ROSE'],
             [r === 'owner', 'payments', 'PAYMENTS', '💳', '#4f46e5', ''],
             [c('design'), 'delivery', 'DELIVERY & COURIER', '🚚', '#b45309', ''],
-            [c('design'), 'print', 'INVOICE & STICKER', '🏷️', '#e11d48', 'PRINT'],
+            [c('ordersWrite'), 'print', 'INVOICE & STICKER', '🏷️', '#e11d48', 'PRINT'],
             [c('marketing'), 'pixels', 'TRACKING & PIXELS', '📈', '#0284c7', 'ADS'],
             [c('marketing'), 'seo', 'SEO', '🔍', '#16a34a', 'GOOGLE'],
             [c('owner'), 'staff', 'STAFF', '👤', '#9333ea', ''],
@@ -350,38 +357,48 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
           <div className="space-y-1.5">
             <p className="px-1 text-[11px] font-bold tracking-wider text-teal-300">MY STAFF · {staffList.length}</p>
             {staffList.length === 0 && (
-              <div className={box + ' space-y-2'}>
-                <p className="text-[12px] text-slate-300">No staff yet. Add a Gmail and choose a role in WEBSITE ADMIN → STAFF.</p>
-                <button type="button" className={btn + ' w-full'} onClick={() => setTab('staff')}>ADD STAFF</button>
+              <div className={box}>
+                <p className="text-[12px] text-slate-300">No staff yet. Add staff in 03 WEBSITE ADMIN → STAFF. They show here by themselves.</p>
               </div>
             )}
             {staffList.map((s2) => (
-              <button key={s2.email} type="button" onClick={() => setStaffSel(s2)} className="mb-1.5 flex h-[54px] w-full items-center gap-2.5 rounded-xl border border-[#1e293b] bg-[#11151e] px-2.5 text-left transition-colors hover:border-teal-500/40">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-teal-600 text-sm font-bold text-white">{s2.email.charAt(0).toUpperCase()}</span>
+              <button key={s2.email} type="button" onClick={() => setStaffSel(s2)} className="mb-1.5 flex h-[58px] w-full items-center gap-2.5 rounded-xl border border-[#1e293b] bg-[#11151e] px-2.5 text-left transition-colors hover:border-teal-500/40">
+                <StaffFace s={s2} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[12.5px] font-bold text-slate-100">{s2.email}</span>
-                  <span className="block text-[10.5px] font-bold tracking-wider text-teal-300">{s2.role.toUpperCase()}</span>
+                  <span className="block text-[10.5px] font-bold tracking-wider">
+                    <span className="text-teal-300">{s2.role.toUpperCase()}</span>
+                    {s2.suspended && <span className="text-rose-300"> · SUSPENDED</span>}
+                    {s2.role === 'manager' && s2.money_access && !s2.suspended && <span className="text-amber-300"> · MONEY</span>}
+                  </span>
                 </span>
                 <span className="text-base text-slate-600">›</span>
               </button>
             ))}
-            {staffList.length > 0 && <p className="px-1 text-[11px] text-slate-500">Add or remove staff: WEBSITE ADMIN → STAFF</p>}
           </div>
         )}
         {tab === 'viewas' && realRole === 'owner' && staffSel && (
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5 rounded-xl border border-teal-500/30 bg-teal-500/5 p-2.5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-600 text-base font-bold text-white">{staffSel.email.charAt(0).toUpperCase()}</span>
+              <StaffFace s={staffSel} size={42} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-bold text-white">{staffSel.email}</span>
-                <span className="block text-[11px] font-bold tracking-wider text-teal-300">{staffSel.role.toUpperCase()}</span>
+                <span className="block text-[11px] font-bold tracking-wider text-teal-300">{staffSel.role.toUpperCase()}{staffSel.suspended ? ' · SUSPENDED' : ' · ACTIVE'}</span>
               </span>
             </div>
-            <p className="px-1 pt-1 text-[11px] font-bold tracking-wider text-slate-400">WHAT THEY CAN DO · {barsFor(staffSel.role).length}</p>
-            {barsFor(staffSel.role).map(([, k, title, icon, color], i) => (
-              <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} onClick={() => { setPreviewRole(staffSel.role); setTab(k as typeof tab); }} testId={`staff-job-${k}`} />
-            ))}
-            <p className="px-1 text-[11px] text-slate-500">Tap a job to see it the way they see it · EXIT brings you back here</p>
+            {staffSel.suspended ? (
+              <div className={box}>
+                <p className="text-[12px] text-rose-200">This staff member is suspended, so they have no access and nothing is shown here. Resume them in 03 WEBSITE ADMIN → STAFF.</p>
+              </div>
+            ) : (
+              <>
+                <p className="px-1 pt-1 text-[11px] font-bold tracking-wider text-slate-400">WHAT THEY CAN DO · {barsFor(staffSel.role, staffSel.money_access).length}</p>
+                {barsFor(staffSel.role, staffSel.money_access).map(([, k, title, icon, color], i) => (
+                  <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} onClick={() => { setPreviewRole(staffSel.role); setTab(k as typeof tab); }} testId={`staff-job-${k}`} />
+                ))}
+                <p className="px-1 text-[11px] text-slate-500">Tap a job to see it the way they see it · EXIT brings you back here</p>
+              </>
+            )}
           </div>
         )}
         {tab === 'reviews' && <ReviewsTab store={store} />}
@@ -389,7 +406,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
         {tab === 'print' && <DeliveryTab store={store} part="print" onSaved={() => void load()} />}
         {tab === 'seo' && <SeoTab store={store} onSaved={() => void load()} />}
         {tab === 'orders' && <OrdersTab store={store} readOnly={!can('ordersWrite')} />}
-        {tab === 'products' && <ProductsTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} />}
+        {tab === 'products' && <ProductsTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} canEdit={can('products')} canDelete={myRole === 'owner'} />}
         {tab === 'categories' && <CategoriesTab store={store} />}
         {tab === 'design' && <DesignTab store={store} onSaved={() => void load()} />}
         {tab === 'delivery' && <DeliveryTab store={store} part="delivery" onSaved={() => void load()} />}
@@ -1700,34 +1717,50 @@ const DomainTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
 
 // ---------------------------------------------------------------- staff (owner adds by Gmail with a role)
 const ROLES: Array<[string, string]> = [
-  ['manager', 'Manager · everything except domain & staff'],
-  ['orders', 'Orders · see, edit, book courier, print'],
-  ['products', 'Products · products, photos, categories'],
-  ['support', 'Support · see orders, help customers'],
-  ['marketing', 'Marketing · see products for posts & ads'],
-  ['accounts', 'Accounts · see orders & sales'],
+  ['manager', 'Manager · runs the shop: orders, products, design, chat'],
+  ['moderator', 'Moderator · adds and edits products, checks reviews'],
+  ['support', 'Support · chats with customers, sees order status'],
 ];
+type StaffRow = { email: string; role: string; suspended: boolean; money_access: boolean; added_at?: string; name?: string; pic?: string; joined?: boolean };
+const StaffFace: React.FC<{ s: StaffRow; size?: number }> = ({ s, size = 36 }) =>
+  s.pic ? (
+    <img src={s.pic} alt="" referrerPolicy="no-referrer" className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
+  ) : (
+    <span className="grid shrink-0 place-items-center rounded-full bg-teal-600 font-bold text-white" style={{ width: size, height: size, fontSize: size * 0.4 }}>{s.email.charAt(0).toUpperCase()}</span>
+  );
 const StaffTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) => {
-  const [list, setList] = useState<Array<{ email: string; role: string }>>([]);
+  const [list, setList] = useState<StaffRow[]>([]);
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('orders');
+  const [role, setRole] = useState('manager');
   const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState('');
   const load = useCallback(async () => {
-    const { data } = await supabase.from('store_staff').select('email, role').eq('store_id', store.id).order('created_at');
-    setList((data as Array<{ email: string; role: string }>) || []);
+    const { data, error } = await supabase.rpc('store_staff_list', { p_store: store.id });
+    if (error) return setMsg(error.message);
+    setList((data as StaffRow[]) || []);
   }, [store.id]);
   useEffect(() => {
     void load();
   }, [load]);
   const add = async () => {
     setMsg('');
+    setBusy('add');
     const { error } = await supabase.rpc('add_store_staff', { p_store: store.id, p_email: email, p_role: role });
+    setBusy('');
     if (error) return setMsg(error.message);
     setEmail('');
-    setMsg('Added. They log in to ROSE with this Gmail (Continue with Google) and open Workspace → MY STORE.');
+    setMsg('Access given. Send them this link: www.myrosebd.com/app?open=store · they tap Continue with Google with this Gmail and the shop admin opens.');
+    void load();
+  };
+  const change = async (e: string, patch: { p_role?: string; p_suspended?: boolean; p_money?: boolean }) => {
+    setBusy(e);
+    const { error } = await supabase.rpc('set_store_staff', { p_store: store.id, p_email: e, ...patch });
+    setBusy('');
+    setMsg(error ? error.message : 'Saved. It works at once.');
     void load();
   };
   const remove = async (e: string) => {
+    if (!window.confirm(`Remove ${e}? Their access stops at once.`)) return;
     await supabase.from('store_staff').delete().eq('store_id', store.id).eq('email', e);
     setMsg('Access removed.');
     void load();
@@ -1738,12 +1771,31 @@ const StaffTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) =
         <p className="text-[11px] font-bold tracking-wider text-teal-300">STAFF · {list.length} / {limit}</p>
         {list.length === 0 && <p className="text-[12px] text-slate-400">No staff yet.</p>}
         {list.map((s) => (
-          <div key={s.email} className="flex items-center gap-2 rounded-lg bg-black/30 p-2">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-bold text-white">{s.email}</p>
-              <p className="text-[10.5px] text-teal-300">{s.role.toUpperCase()}</p>
+          <div key={s.email} className={'space-y-2 rounded-lg p-2 ' + (s.suspended ? 'bg-rose-950/40' : 'bg-black/30')}>
+            <div className="flex items-center gap-2">
+              <StaffFace s={s} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[12.5px] font-bold text-white">{s.email}</p>
+                <p className="text-[10.5px] font-bold tracking-wider">
+                  <span className="text-teal-300">{s.role.toUpperCase()}</span>
+                  <span className={s.suspended ? 'text-rose-300' : 'text-emerald-300'}> · {s.suspended ? 'SUSPENDED' : 'ACTIVE'}</span>
+                  {!s.joined && <span className="text-slate-500"> · NOT SIGNED IN YET</span>}
+                </p>
+              </div>
             </div>
-            <button type="button" onClick={() => void remove(s.email)} className={btn + ' h-8 bg-white/10'}>REMOVE</button>
+            <select className={input} value={s.role} disabled={busy === s.email} onChange={(e) => void change(s.email, { p_role: e.target.value })}>
+              {ROLES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+            {s.role === 'manager' && (
+              <label className="flex items-center gap-2 text-[12px] text-slate-200">
+                <input type="checkbox" checked={s.money_access} disabled={busy === s.email} onChange={(e) => void change(s.email, { p_money: e.target.checked })} />
+                MONEY ACCESS · reports, expenses, payment SMS
+              </label>
+            )}
+            <div className="grid grid-cols-2 gap-1.5">
+              <button type="button" disabled={busy === s.email} onClick={() => void change(s.email, { p_suspended: !s.suspended })} className={btn + ' h-8 ' + (s.suspended ? '' : 'bg-amber-600/80')}>{s.suspended ? 'RESUME' : 'SUSPEND'}</button>
+              <button type="button" onClick={() => void remove(s.email)} className={btn + ' h-8 bg-rose-600/80'}>REMOVE</button>
+            </div>
           </div>
         ))}
       </div>
@@ -1753,12 +1805,12 @@ const StaffTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) =
         <select className={input} value={role} onChange={(e) => setRole(e.target.value)}>
           {ROLES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <button type="button" disabled={!email || list.length >= limit} onClick={() => void add()} className={btn + ' w-full'}>GIVE ACCESS</button>
+        <button type="button" disabled={!email || list.length >= limit || busy === 'add'} onClick={() => void add()} className={btn + ' w-full'}>GIVE ACCESS</button>
         {list.length >= limit && <p className="text-[11px] text-amber-300">Your plan allows {limit} staff. Upgrade for more.</p>}
         {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
       </div>
       <div className={box + ' text-[11.5px] text-slate-300'}>
-        Staff see only their part. Courier keys, domain, staff and the plan stay with the owner. When the plan ends, staff access stops too.
+        Each staff member signs in with their own Gmail and sees only their part. Money, payments, staff, domain and the plan stay with the owner. SUSPEND or REMOVE stops access at once.
       </div>
     </div>
   );
@@ -1806,7 +1858,7 @@ const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
 // ---------------------------------------------------------------- products
 const emptyProd = (): Partial<Prod> => ({ name: '', price: 0, old_price: null, stock: 10, emoji: '📦', description: '', images: [], options_label: 'Size', options: [], rx: false, active: true, category_id: null, short_description: '', specs: {} });
 
-const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) => {
+const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; canDelete?: boolean }> = ({ store, limit, canEdit = true, canDelete = true }) => {
   const [prods, setProds] = useState<Prod[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
   const [edit, setEdit] = useState<Partial<Prod> | null>(null);
@@ -1962,7 +2014,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
           <button type="button" onClick={() => setEdit(null)} className={btn + ' bg-white/10'}>CANCEL</button>
           <button type="button" onClick={() => void save()} className={btn}>SAVE</button>
         </div>
-        {edit.id && (
+        {edit.id && canDelete && (
           <button type="button" onClick={async () => { if (window.confirm('Delete this product?')) { await supabase.from('store_products').delete().eq('id', edit.id!); setEdit(null); void load(); } }} className="w-full text-[11px] font-bold text-rose-300">
             DELETE PRODUCT
           </button>
@@ -1974,13 +2026,17 @@ const ProductsTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }
 
   return (
     <div className="space-y-2">
-      <button type="button" onClick={() => { setMsg(''); setEdit({ ...emptyProd(), options_label: optOf(kind).labels[0] }); }} className={btn + ' w-full'}>
-        <Plus className="h-4 w-4" /> ADD PRODUCT
-      </button>
+      {canEdit ? (
+        <button type="button" onClick={() => { setMsg(''); setEdit({ ...emptyProd(), options_label: optOf(kind).labels[0] }); }} className={btn + ' w-full'}>
+          <Plus className="h-4 w-4" /> ADD PRODUCT
+        </button>
+      ) : (
+        <p className="px-1 text-[11.5px] font-bold text-amber-300">View only · prices and stock to tell customers</p>
+      )}
       <p className="px-1 text-[11px] text-slate-400">{prods.length} / {limit > 10000 ? 'unlimited' : limit} products. Tip: tell ROSE "add a product" by voice (coming next).</p>
       {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
       {prods.map((p) => (
-        <button key={p.id} type="button" onClick={() => { setMsg(''); setEdit(p); }} className={box + ' flex w-full items-center gap-2 text-left'}>
+        <button key={p.id} type="button" onClick={() => { if (!canEdit) return; setMsg(''); setEdit(p); }} className={box + ' flex w-full items-center gap-2 text-left'}>
           {p.images?.[0] ? <img src={p.images[0].startsWith('http') ? p.images[0] : `https://images.unsplash.com/${p.images[0]}?w=120&q=60&auto=format&fit=crop`} alt="" className="h-10 w-10 rounded-lg object-cover" /> : <span className="text-2xl">{p.emoji}</span>}
           <div className="min-w-0 flex-1">
             <p className="truncate text-[12.5px] font-semibold text-white">{p.name}</p>
