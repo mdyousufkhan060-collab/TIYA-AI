@@ -71,7 +71,9 @@ export default async function handler(req, res) {
         .slice(0, 40)
         .map((p) => `<li><b>${esc(p.name)}</b> · ${tk(p.price)}${Number(p.old_price) > Number(p.price) ? ` <s>${tk(p.old_price)}</s>` : ''}</li>`)
         .join('');
-      const first = `<section class="panel" style="padding:18px"><h1 style="margin:0 0 6px">${esc(name)}${s.name_bn ? ` <small style="font-weight:600;color:#64748b">${esc(s.name_bn)}</small>` : ''}</h1><p style="margin:0 0 10px;color:#475569">${esc(desc)}</p>${list ? `<ul style="margin:0;padding-left:18px;line-height:1.7">${list}</ul>` : ''}</section>`;
+      // looks like a short loading screen with the shop's name; the full text is there for Google and screen readers
+      const sr = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+      const first = `<section class="panel" style="text-align:center;padding:40px 18px">${pic ? `<img src="${esc(pic)}" alt="${esc(name)}" style="width:64px;height:64px;object-fit:contain;border-radius:14px;margin-bottom:8px">` : ''}<h1 style="margin:0;font-size:22px">${esc(name)}</h1>${s.name_bn ? `<p style="margin:2px 0 0;color:#64748b">${esc(s.name_bn)}</p>` : ''}<p style="margin:10px 0 0;color:#94a3b8;font-size:13px">Loading…</p><div style="${sr}"><p>${esc(desc)}</p>${list ? `<ul>${list}</ul>` : ''}</div></section>`;
       html = html.replace('<div class="wrap" id="view"></div>', `<div class="wrap" id="view">${first}</div>`);
       res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
     } else {

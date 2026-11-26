@@ -427,7 +427,7 @@ var liveSlug = qs.get('store') || ((location.pathname.match(/^\/shop\/([a-z0-9-]
 // Own domain (e.g. tajumar.com): find the store by its domain
 var ownDomain = !liveSlug && !/(^|\.)myrosebd\.com$|\.vercel\.app$|^localhost$|^127\.0\.0\.1$/.test(location.hostname) ? location.hostname.replace(/^www\./, '') : '';
 if (liveSlug || ownDomain) {
-  document.getElementById('view').innerHTML = '<div class="panel" style="text-align:center;padding:40px">Loading…</div>';
+  if (!document.querySelector('#view h1')) document.getElementById('view').innerHTML = '<div class="panel" style="text-align:center;padding:40px">Loading…</div>';
   sb(ownDomain ? 'stores?select=*&custom_domain=eq.' + encodeURIComponent(ownDomain) : 'stores?select=*&slug=eq.' + encodeURIComponent(liveSlug)).then(function (st) {
     var r = st[0];
     if (!r) return sb('rpc/store_status', ownDomain ? { p_domain: ownDomain } : { p_slug: liveSlug }).then(function (x) { throw new Error(x === 'paused' ? 'This store is paused right now. The owner can renew the plan at myrosebd.com.' : 'This store is not open yet.'); }, function () { throw new Error('This store is not open yet.'); });
