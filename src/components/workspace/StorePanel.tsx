@@ -210,12 +210,17 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
   }
   if (!store) return null;
   const myRole = roles[store.id] && store.owner_id !== userId && !isAdmin ? roles[store.id] : 'owner';
-  const can = (area: 'orders' | 'products' | 'design' | 'owner' | 'money') =>
-    myRole === 'owner' ||
-    (area === 'money' && ['manager', 'accounts'].includes(myRole)) ||
-    (myRole === 'manager' && area !== 'owner') ||
-    (area === 'orders' && ['orders', 'support', 'accounts'].includes(myRole)) ||
-    (area === 'products' && ['products', 'marketing'].includes(myRole));
+  // what each staff role may open (the server enforces the same rules)
+  const ROLE_AREAS: Record<string, string[]> = {
+    manager: ['orders', 'ordersWrite', 'chat', 'products', 'design', 'marketing', 'money'],
+    orders: ['orders', 'ordersWrite', 'chat'],
+    support: ['orders', 'chat'],
+    accounts: ['orders', 'money'],
+    products: ['products'],
+    marketing: ['marketing'],
+  };
+  const can = (area: 'orders' | 'ordersWrite' | 'chat' | 'products' | 'design' | 'marketing' | 'owner' | 'money') =>
+    myRole === 'owner' || (area !== 'owner' && (ROLE_AREAS[myRole] || []).includes(area));
 
   const url = store.custom_domain && store.domain_ready ? `https://${store.custom_domain}` : store.subdomain_ready ? `https://${store.slug}.myrosebd.com` : `${window.location.origin}/shop/${store.slug}`;
   const makeSubdomain = async () => {
@@ -284,7 +289,7 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
         {tab === 'payments' && <PaymentsTab store={store} onSaved={() => void load()} />}
         {tab === 'print' && <DeliveryTab store={store} part="print" onSaved={() => void load()} />}
         {tab === 'seo' && <SeoTab store={store} onSaved={() => void load()} />}
-        {tab === 'orders' && <OrdersTab store={store} />}
+        {tab === 'orders' && <OrdersTab store={store} readOnly={!can('ordersWrite')} />}
         {tab === 'products' && <ProductsTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} />}
         {tab === 'categories' && <CategoriesTab store={store} />}
         {tab === 'design' && <DesignTab store={store} onSaved={() => void load()} />}
@@ -326,12 +331,12 @@ export const StorePanel: React.FC<{ userId: string }> = ({ userId }) => {
             [can('orders'), 'customers', 'CUSTOMERS', '👥', '#2563eb', ''],
             [can('products'), 'offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', ''],
             [can('products'), 'reviews', 'REVIEWS', '⭐', '#eab308', ''],
-            [can('orders'), 'chat', 'LIVE CHAT', '💬', '#059669', 'ROSE'],
+            [can('chat'), 'chat', 'LIVE CHAT', '💬', '#059669', 'ROSE'],
             [myRole === 'owner', 'payments', 'PAYMENTS', '💳', '#4f46e5', ''],
             [can('design'), 'delivery', 'DELIVERY & COURIER', '🚚', '#b45309', ''],
             [can('design'), 'print', 'INVOICE & STICKER', '🏷️', '#e11d48', 'PRINT'],
-            [can('design'), 'pixels', 'TRACKING & PIXELS', '📈', '#0284c7', 'ADS'],
-            [can('design'), 'seo', 'SEO', '🔍', '#16a34a', 'GOOGLE'],
+            [can('marketing'), 'pixels', 'TRACKING & PIXELS', '📈', '#0284c7', 'ADS'],
+            [can('marketing'), 'seo', 'SEO', '🔍', '#16a34a', 'GOOGLE'],
             [can('owner'), 'staff', 'STAFF', '👤', '#9333ea', ''],
             [can('owner'), 'domain', 'DOMAIN', '🌐', '#0891b2', store.custom_domain ? (store.domain_ready ? 'LIVE' : 'WAITING') : 'LINK'],
             [can('money'), 'reports', 'REPORTS', '📑', '#64748b', 'MONTH'],
@@ -830,7 +835,7 @@ const CreateStore: React.FC<{ demos: Record<string, Demo>; canCreate: boolean; o
 };
 
 // ---------------------------------------------------------------- orders
-const OrdersTab: React.FC<{ store: Store }> = ({ store }) => {
+const OrdersTab: React.FC<{ store: Store; readOnly?: boolean }> = ({ store, readOnly = false }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -963,12 +968,16 @@ const OrdersTab: React.FC<{ store: Store }> = ({ store }) => {
           {o.tracking && <p className="text-[11px] text-emerald-300">🚚 {o.courier} · {o.tracking}</p>}
           {open === o.id && (
             <div className="space-y-2 pt-2">
+              {readOnly ? (
+                <p className="text-[11px] font-bold text-amber-300">STATUS: {o.status.toUpperCase()} · your role can only see orders</p>
+              ) : (
               <select className={input} value={o.status} onChange={(e) => void setStatus(o, e.target.value)}>
                 {STATUSES.map((s) => <option key={s} value={s}>{s.toUpperCase()}</option>)}
               </select>
+              )}
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" className={btn + ' bg-white/10'} onClick={() => { setMsg(''); setEdit({ ...o, items: o.items.map((x) => ({ ...x })) }); }}>✏️ EDIT</button>
-                <button type="button" className={btn} disabled={Boolean(o.tracking) || busy === o.id} onClick={() => void book(o)}>{busy === o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : '🚚'} {o.tracking ? 'BOOKED' : 'BOOK STEADFAST'}</button>
+                {!readOnly && <button type="button" className={btn + ' bg-white/10'} onClick={() => { setMsg(''); setEdit({ ...o, items: o.items.map((x) => ({ ...x })) }); }}>✏️ EDIT</button>}
+                {!readOnly && <button type="button" className={btn} disabled={Boolean(o.tracking) || busy === o.id} onClick={() => void book(o)}>{busy === o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : '🚚'} {o.tracking ? 'BOOKED' : 'BOOK STEADFAST'}</button>}
                 <button type="button" className={btn + ' bg-white/10'} onClick={() => print('invoice', [o])}>🧾 INVOICE</button>
                 <button type="button" className={btn + ' bg-white/10'} onClick={() => print('sticker', [o])}>🏷️ STICKER</button>
               </div>
