@@ -894,11 +894,14 @@ export default function App() {
 
   // Android app: voice state + loudness for the floating ROSE rings shown outside the app
   const nativeLevelAtRef = useRef(0);
+  const nativeStateRef = useRef('');
   useEffect(() => {
     const nat = typeof window !== 'undefined' ? ((window as any).TiyaNative as any) : undefined;
     if (typeof nat?.voiceLevel !== 'function') return;
     const now = Date.now();
-    if (now - nativeLevelAtRef.current < 80 && voiceState === 'speaking') return;
+    // at most ~7 times a second: every call into the Android app costs the page time and made ROSE's voice stutter
+    if (now - nativeLevelAtRef.current < 150 && nativeStateRef.current === String(voiceState)) return;
+    nativeStateRef.current = String(voiceState);
     nativeLevelAtRef.current = now;
     try {
       nat.voiceLevel(String(voiceState), Number(audioLevel) || 0);
