@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { IMG_HINT, RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
+import { RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
 
 /**
  * myrosebd.com/start?d=foodbazaar — take a demo store as your own:
  * Google sign-in with the company Gmail → company details → 5-day free trial starts → the store is live.
  */
 const KEY = 'rose_start_store';
-const input = 'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-[13.5px] text-white placeholder:text-slate-500';
+const input = 'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-1.5 text-[13.5px] text-white placeholder:text-slate-500';
 const lbl = 'block text-[12px] font-bold text-slate-200';
 const bn = 'ml-1 font-normal text-slate-400';
-const bnL = bn + ' max-sm:hidden';
+const DISTRICTS = ['Dhaka', 'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogura', 'Brahmanbaria', 'Chandpur', 'Chapainawabganj', 'Chattogram', 'Chuadanga', "Cox's Bazar", 'Cumilla', 'Dinajpur', 'Faridpur', 'Feni', 'Gaibandha', 'Gazipur', 'Gopalganj', 'Habiganj', 'Jamalpur', 'Jashore', 'Jhalokati', 'Jhenaidah', 'Joypurhat', 'Khagrachhari', 'Khulna', 'Kishoreganj', 'Kurigram', 'Kushtia', 'Lakshmipur', 'Lalmonirhat', 'Madaripur', 'Magura', 'Manikganj', 'Meherpur', 'Moulvibazar', 'Munshiganj', 'Mymensingh', 'Naogaon', 'Narail', 'Narayanganj', 'Narsingdi', 'Natore', 'Netrokona', 'Nilphamari', 'Noakhali', 'Pabna', 'Panchagarh', 'Patuakhali', 'Pirojpur', 'Rajbari', 'Rajshahi', 'Rangamati', 'Rangpur', 'Satkhira', 'Shariatpur', 'Sherpur', 'Sirajganj', 'Sunamganj', 'Sylhet', 'Tangail', 'Thakurgaon'];
 const phoneOk = (p: string) => /^01[3-9]\d{8}$/.test(p);
 
 export default function StartStorePage() {
@@ -35,8 +35,8 @@ export default function StartStorePage() {
   useEffect(() => {
     try { localStorage.setItem(KEY + '_form', JSON.stringify(f)); } catch { /* ignore */ }
   }, [f]);
-  const [logo, setLogo] = useState<File | null>(null);
-  const [banners, setBanners] = useState<File[]>([]);
+  const [logo] = useState<File | null>(null);
+  const [banners] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [done, setDone] = useState<{ url: string; ends: string } | null>(null);
@@ -75,11 +75,8 @@ export default function StartStorePage() {
     if (!d) return setMsg('Choose a design first.');
     if (f.name.trim().length < 3) return setMsg('Write the company name (3+ letters).');
     if (slug.length < 3 || RESERVED_SLUGS.includes(slug)) return setMsg('This web address is not allowed. Choose another.');
-    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(f.email)) return setMsg('Write a correct company Gmail.');
-    if (f.email2 && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(f.email2)) return setMsg('The second email is not correct.');
-    if (!phoneOk(f.whatsapp)) return setMsg('WhatsApp number must be 11 digits (01XXXXXXXXX).');
-    if (f.phone2 && !phoneOk(f.phone2)) return setMsg('The second phone must be 11 digits.');
-    if (f.address.trim().length < 10) return setMsg('Write the full address where customers can find you.');
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(f.email || email || '')) return setMsg('Sign in with your Gmail first.');
+    if (!phoneOk(f.whatsapp)) return setMsg('Phone / WhatsApp number must be 11 digits (01XXXXXXXXX).');
     setBusy(true);
     try {
       const { data: acc } = await supabase.rpc('my_website_access');
@@ -94,7 +91,7 @@ export default function StartStorePage() {
         .from('stores')
         .insert({
           slug, template: key, name: f.name.trim(), name_bn: f.nameBn.trim(), tagline: d.tagline, logo: d.logo, color: d.color, accent: d.accent,
-          city: f.city.trim(), phone: f.whatsapp, whatsapp: f.whatsapp, phone2: f.phone2, email: f.email.trim(), email2: f.email2.trim(),
+          city: f.city.trim(), phone: f.whatsapp, whatsapp: f.whatsapp, phone2: '', email: (f.email || email || '').trim(), email2: '',
           address: f.address.trim(), banners: d.banners, trust: d.trust, note: d.note, published: true,
         })
         .select('id, slug')
@@ -134,12 +131,12 @@ export default function StartStorePage() {
   };
 
   const shell = (body: React.ReactNode) => (
-    <div className="min-h-[100dvh] bg-[#07090D] px-4 py-4 text-white md:px-8 md:py-3">
+    <div className="min-h-[100dvh] bg-[#07090D] px-4 py-3 text-white md:px-8 md:py-3">
       <div className="mx-auto max-w-5xl space-y-2.5 md:space-y-3">
         <a href="/demos" className="text-[12px] font-bold text-teal-300">‹ All designs</a>
         <h1 className="text-xl font-extrabold md:flex md:items-baseline md:gap-3 md:text-2xl">Get your own store <span className="block text-[13px] font-semibold text-slate-400 md:text-[15px]">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span></h1>
         {body}
-        <p className="pt-4 text-center text-[11px] text-slate-500">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a className="underline" href="/policies.html">Policies</a></p>
+        <p className="pt-2 text-center text-[11px] text-slate-500">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a className="underline" href="/policies.html">Policies</a></p>
       </div>
     </div>
   );
@@ -168,7 +165,7 @@ export default function StartStorePage() {
         {done.ends && <p className="text-[13px] text-slate-200">Free until {new Date(done.ends).toLocaleDateString('en-GB')}. After that choose 3, 6, 9, 12 or 24 months to keep it open.</p>}
         <a href={done.url} target="_blank" rel="noreferrer" className="flex h-11 items-center justify-center rounded-xl bg-white text-[13px] font-bold text-black">OPEN MY STORE</a>
         <a href="/app" className="flex h-11 items-center justify-center rounded-xl bg-teal-600 text-[13px] font-bold">MANAGE: PRODUCTS · ORDERS · PLAN</a>
-        <p className="text-[12px] text-slate-300">To manage later: myrosebd.com/app → sign in with this Gmail → Settings → 07 WORKSPACE → STORE · WEBSITE.</p>
+        <p className="text-[12px] text-slate-300">To change the name, phone, address, logo or banners later: myrosebd.com/app → sign in with this Gmail → Settings → 07 WORKSPACE → STORE · WEBSITE → 09 COMPANY INFO / 04 HOMEPAGE & DESIGN.</p>
       </div>,
     );
 
@@ -197,71 +194,48 @@ export default function StartStorePage() {
     );
 
   return shell(
-    <div className="grid gap-4 md:grid-cols-[300px_1fr] md:items-start">
+    <div className="grid gap-3 md:grid-cols-[280px_1fr] md:items-start md:gap-4">
       <div className="space-y-2 md:sticky md:top-4">
-        <p className="hidden text-[13px] text-slate-300 md:block">Design <span className={bn}>ডিজাইন</span></p>
         {designs}
         {d && (
-          <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="block text-center text-[12px] text-teal-300 underline md:rounded-lg md:border md:border-white/10 md:px-2 md:py-1.5 md:no-underline">
+          <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="block text-center text-[12px] text-teal-300 underline">
             See {d.name} demo ↗
           </a>
         )}
-        <p className="hidden text-[11.5px] text-slate-400 md:block">You get a full copy of this website: pages, categories, banners and demo products. Then change anything.</p>
       </div>
       <div
-        className="space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:p-4"
+        className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:p-4"
         onFocusCapture={(e) => {
           const t = e.target as HTMLElement;
           if (!/^(INPUT|TEXTAREA)$/.test(t.tagName) || (t as HTMLInputElement).type === 'file') return;
           window.setTimeout(() => t.scrollIntoView({ block: 'center', behavior: 'smooth' }), 280);
         }}
       >
-        <p className="hidden text-[12px] text-slate-400 md:block">Signed in as <b className="text-white">{email}</b></p>
-        <div className="grid grid-cols-2 gap-2.5">
-          <label className={lbl}>Company name (English) *<span className={bnL}>কোম্পানির নাম</span>
+        <div className="grid grid-cols-2 gap-2">
+          <label className={lbl}>Company name (English) *
             <input className={input + ' mt-1'} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Rahim Fashion" /></label>
-          <label className={lbl}>Company name (Bangla)<span className={bnL}>বাংলায় নাম</span>
+          <label className={lbl}>Company name (Bangla)
             <input className={input + ' mt-1'} value={f.nameBn} onChange={(e) => set('nameBn', e.target.value)} placeholder="রহিম ফ্যাশন" /></label>
         </div>
-        <label className={lbl}>Web address *<span className={bnL}>ওয়েবসাইটের ঠিকানা</span>
-          <span className="mt-1 flex items-center gap-1"><input className={input} value={f.slug || slugify(f.name)} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="rahim-fashion" /><span className="shrink-0 text-[12px] text-slate-400">.myrosebd.com</span></span></label>
-        <div className="grid grid-cols-2 gap-2.5">
-          <label className={lbl}>Company Gmail *<span className={bnL}>জিমেইল ১</span>
-            <input className={input + ' mt-1 max-sm:px-2 max-sm:text-[12px]'} value={f.email} onChange={(e) => set('email', e.target.value.trim())} inputMode="email" /></label>
-          <label className={lbl}>Second email<span className={bnL}>জিমেইল ২</span>
-            <input className={input + ' mt-1 max-sm:px-2 max-sm:text-[12px]'} value={f.email2} onChange={(e) => set('email2', e.target.value.trim())} inputMode="email" placeholder="optional" /></label>
-        </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          <label className={lbl}>WhatsApp number *<span className={bnL}>হোয়াটসঅ্যাপ</span>
+        <div className="grid grid-cols-2 gap-2">
+          <label className={lbl}>Phone / WhatsApp *
             <input className={input + ' mt-1'} value={f.whatsapp} onChange={(e) => set('whatsapp', e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" placeholder="01XXXXXXXXX" /></label>
-          <label className={lbl}>Other phone<span className={bnL}>অন্য ফোন</span>
-            <input className={input + ' mt-1'} value={f.phone2} onChange={(e) => set('phone2', e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" placeholder="optional" /></label>
+          <label className={lbl}>District *
+            <select className={input + ' mt-1'} value={DISTRICTS.includes(f.city) ? f.city : 'Dhaka'} onChange={(e) => set('city', e.target.value)}>
+              {DISTRICTS.map((x) => <option key={x} value={x} className="bg-[#0d1016]">{x}</option>)}
+            </select></label>
         </div>
-        <div className="grid grid-cols-[1fr_118px] gap-2.5 sm:grid-cols-[1fr_180px]">
-          <label className={lbl}>Full address *<span className={bnL}>পুরো ঠিকানা</span>
-            <textarea className={input + ' mt-1'} rows={2} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area, thana, district" /></label>
-          <label className={lbl}>City / District<span className={bnL}>শহর / জেলা</span>
-            <input className={input + ' mt-1'} value={f.city} onChange={(e) => set('city', e.target.value)} /></label>
-        </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          <label className={lbl}>Logo<span className={bnL}>লোগো (ঐচ্ছিক)</span>
-            <input className="mt-1 block w-full text-[11px] text-slate-300 file:mr-1.5 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:font-bold file:text-white" type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] || null)} />
-            <span className="mt-0.5 block text-[10.5px] font-normal text-slate-500">{IMG_HINT.logo}</span></label>
-          <label className={lbl}>Banner photos (up to 4)<span className={bnL}>ব্যানারের ছবি</span>
-            <input className="mt-1 block w-full text-[11px] text-slate-300 file:mr-1.5 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:font-bold file:text-white" type="file" accept="image/*" multiple onChange={(e) => setBanners(Array.from(e.target.files || []).slice(0, 4))} />
-            <span className="mt-0.5 block text-[10.5px] font-normal text-slate-500">{IMG_HINT.banner}</span></label>
-        </div>
-        <label className="flex items-start gap-2 text-[13px] text-slate-200">
-          <input type="checkbox" className="mt-1" checked={f.sample} onChange={(e) => set('sample', e.target.checked)} />
-          <span>Copy the full demo website: categories, products and banners (change later) <span className={bn}>পুরো ডেমো ওয়েবসাইট কপি হবে</span></span>
-        </label>
-        <div className="space-y-1 pt-1">
+        <label className={lbl}>Address <span className="font-normal text-slate-500">(optional)</span>
+          <input className={input + ' mt-1'} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area" /></label>
+        <label className={lbl}>Web address *
+          <span className="mt-1 flex items-center gap-1"><input className={input} value={f.slug || slugify(f.name)} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="rahim-fashion" /><span className="shrink-0 text-[12px] text-slate-400">.myrosebd.com</span></span></label>
+        <div className="space-y-1 pt-1 md:sticky md:bottom-0 md:-mx-4 md:bg-[#0d1016]/95 md:px-4 md:py-2 md:backdrop-blur">
           {msg && <p className="text-[13px] text-rose-300">{msg}</p>}
           <button type="button" disabled={busy || !d} onClick={() => void create()} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 text-[14px] font-extrabold text-black disabled:opacity-60">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} START 5-DAY FREE STORE
           </button>
+          <p className="text-center text-[11px] text-slate-500">Logo, banners, more phones and emails: add later in Settings · <a className="underline" href="/terms.html">Terms</a></p>
         </div>
-        <p className="text-[11.5px] text-slate-400">You can change everything later in STORE · WEBSITE → 09 COMPANY INFO. By starting you agree to the <a className="underline" href="/terms.html">Terms</a>.</p>
       </div>
     </div>,
   );
