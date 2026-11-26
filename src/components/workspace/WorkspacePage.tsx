@@ -413,8 +413,7 @@ type View =
   | 'writer'
   | 'customer_check'
   | 'biz_guide'
-  | 'grp_rose'
-  | 'grp_biz';
+  | 'rose_info';
 
 const TITLES: Record<View, string> = {
   hub: 'WORKSPACE',
@@ -429,8 +428,7 @@ const TITLES: Record<View, string> = {
   domain: 'MY DOMAIN',
   customer_check: 'CUSTOMER CHECK',
   biz_guide: 'START HERE · GUIDE',
-  grp_rose: 'ROSE',
-  grp_biz: 'BUSINESS',
+  rose_info: 'ROSE · BUSINESS INFO',
   tasks: TASKS.title,
   content: CONTENT.title,
   notes: NOTES.title,
@@ -482,6 +480,89 @@ const BusinessGlance: React.FC<{ onOpen: (v: View) => void }> = ({ onOpen }) => 
 };
 
 /** START HERE: what to add, in what order, and what is already done. */
+// ROSE · BUSINESS INFO: everything ROSE uses to answer customers and run the business, and what is still missing
+const RoseBusinessInfo: React.FC<{ businessId: string | null; userId: string; onOpen: (v: View) => void }> = ({ businessId, userId, onOpen }) => {
+  type Row = [View, string, string, boolean, string];
+  const [rows, setRows] = useState<Row[] | null>(null);
+  useEffect(() => {
+    let gone = false;
+    void (async () => {
+      const count = async (t: string) => {
+        if (!businessId) return 0;
+        const { count: n } = await supabase.from(t).select('id', { count: 'exact', head: true }).eq('business_id', businessId);
+        return n || 0;
+      };
+      const [{ data: b }, products, faqs, couriers, discounts, ai, channels, { count: stores }, { count: domains }] = await Promise.all([
+        businessId ? supabase.from('businesses').select('name,phone,owner_email,address,payment_methods,delivery_info,return_policy,communication_style').eq('id', businessId).maybeSingle() : Promise.resolve({ data: null }),
+        count('business_products'),
+        count('business_faqs'),
+        count('business_couriers'),
+        count('business_discount_rules'),
+        count('business_ai_settings'),
+        count('business_integrations'),
+        supabase.from('stores').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
+        supabase.from('user_domains').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+      ]);
+      const p = (b || {}) as Record<string, unknown>;
+      const has = (k: string) => {
+        const v = p[k];
+        return Array.isArray(v) ? v.length > 0 : Boolean(v && String(v).trim());
+      };
+      const miss = ['name', 'phone', 'address', 'payment_methods', 'delivery_info', 'return_policy'].filter((k) => !has(k));
+      const out: Row[] = [
+        ['biz_profile', 'SHOP DETAILS', 'Name, phone, address, payment numbers, delivery and return policy.', Boolean(b) && miss.length === 0, !b ? 'MISSING' : miss.length ? `${miss.length} EMPTY` : 'READY'],
+        ['products', 'PRODUCTS & PRICES', 'ROSE tells customers prices and stock from here.', products > 0, String(products)],
+        ['faqs', 'CUSTOMER FAQ', 'Delivery time, charge, return: ROSE replies from here.', faqs > 0, String(faqs)],
+        ['couriers', 'COURIERS', 'Courier names and charges for delivery questions.', couriers > 0, String(couriers)],
+        ['discounts', 'DISCOUNT RULES', 'How much discount ROSE may give, and when to ask you.', discounts > 0, String(discounts)],
+        ['biz_ai', 'REPLY CONTROL', 'Tone, language, what ROSE must not say.', ai > 0, ai > 0 ? 'READY' : 'SET'],
+        ['channels', 'CHAT CHANNELS', 'WhatsApp, Messenger and website chat keys so ROSE can reply there.', channels > 0, channels > 0 ? String(channels) : 'NONE'],
+        ['store', 'WEBSITE', 'Your online store: ROSE reads its orders and products.', (stores || 0) > 0, (stores || 0) > 0 ? 'READY' : 'NONE'],
+        ['domain', 'OWN DOMAIN', 'yourshop.com with DNS records.', (domains || 0) > 0, (domains || 0) > 0 ? String(domains) : 'NONE'],
+      ];
+      if (!gone) setRows(out);
+    })();
+    return () => {
+      gone = true;
+    };
+  }, [businessId, userId]);
+  if (!rows)
+    return (
+      <div className="flex items-center justify-center py-10 text-xs text-slate-500">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
+      </div>
+    );
+  const done = rows.filter((x) => x[3]).length;
+  const pct = Math.round((done / rows.length) * 100);
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-teal-500/40 bg-teal-500/[0.07] p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-extrabold tracking-wider text-teal-200">ROSE KNOWS {done}/{rows.length}</p>
+          <p className="font-mono text-sm font-bold text-teal-300">{pct}%</p>
+        </div>
+        <div className="mt-2 h-1.5 w-full bg-white/10">
+          <div className="h-full bg-gradient-to-r from-teal-400 to-cyan-400" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="mt-2 text-[10.5px] text-slate-300">ROSE answers customers, takes orders and helps you only from what is saved here. Tap a grey line to fill it.</p>
+      </div>
+      <div className="space-y-1.5">
+        {rows.map(([v, t, d, ok, val], i) => (
+          <button key={v} type="button" onClick={() => onOpen(v)} className="flex w-full items-start gap-2.5 rounded-xl border border-white/[0.08] bg-[#11151E] px-3 py-2.5 text-left">
+            {ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />}
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11.5px] font-bold text-white">{String(i + 1).padStart(2, '0')} · {t}</span>
+              <span className="block text-[10.5px] leading-snug text-slate-400">{d}</span>
+            </span>
+            <span className={`shrink-0 font-mono text-[10px] font-bold ${ok ? 'text-emerald-300' : 'text-amber-300'}`}>{val}</span>
+          </button>
+        ))}
+      </div>
+      <p className="px-1 text-[10.5px] text-slate-500">Voice, language and ROSE's character are in Settings → 03 VOICE & LANGUAGE.</p>
+    </div>
+  );
+};
+
 const BusinessGuide: React.FC<{ businessId: string | null; onOpen: (v: View) => void }> = ({ businessId, onOpen }) => {
   const [c, setC] = useState<Record<string, number> | null>(null);
   useEffect(() => {
@@ -711,15 +792,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     setView('hub');
   };
 
-  // business mode: bars sit inside two groups, 01 ROSE and 02 BUSINESS
-  const ROSE_GRP: View[] = ['biz_ai', 'writer', 'social', 'store', 'domain', 'channels'];
-  const BIZ_GRP: View[] = ['biz_profile', 'products', 'faqs', 'couriers', 'discounts', 'orders', 'customers', 'customer_check', 'approvals', 'biz_dashboard', 'expenses'];
-  const grouped = mode === 'business' && !allModes;
   const back = () => {
     if (view === 'hub') return onBack();
-    if (grouped && ROSE_GRP.includes(view) && !(siteOwner && view === 'store')) return setView('grp_rose');
-    if (grouped && BIZ_GRP.includes(view)) return setView('grp_biz');
-    if (view === 'grp_rose' || view === 'grp_biz') return setView(siteOwner ? 'rose_hub' : 'hub');
     if (siteOwner && !['store', 'rose_hub', 'rose_support', 'profile', 'viewas'].includes(view)) return setView('rose_hub');
     setView('hub');
   };
@@ -812,32 +886,29 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
         {t}
       </p>
     );
-    const business = grouped
-      ? [
-          <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
-          <SettingsBar key="grp_rose" badge="01" title="ROSE" value="AI · POSTS · CHANNELS" onClick={() => setView('grp_rose')} testId="ws-grp_rose" />,
-          <SettingsBar key="grp_biz" badge="02" title="BUSINESS" value="PROFILE · PRODUCTS · REPORTS" onClick={() => setView('grp_biz')} testId="ws-grp_biz" />,
-        ]
-      : [
-          <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
-          label('SETUP'),
-          bar('01', 'biz_profile', businessId ? 'READY' : 'SET UP'),
-          bar('02', 'products'),
-          bar('03', 'faqs'),
-          bar('04', 'couriers'),
-          bar('05', 'discounts'),
-          bar('06', 'biz_ai'),
-          label('DAILY WORK'),
-          bar('07', 'orders'),
-          bar('08', 'customers'),
-          bar('09', 'customer_check', 'COURIER HISTORY'),
-          bar('10', 'approvals'),
-          label('MONEY & REPORTS'),
-          bar('11', 'biz_dashboard'),
-          bar('12', 'expenses'),
-          label('CHANNELS'),
-          bar('13', 'channels', 'KEYS'),
-        ];
+    // one numbered list, no headings or gaps; ROSE · BUSINESS INFO at the end shows what ROSE knows about the business
+    const business = [
+      <SettingsBar key="biz_guide" badge="00" title="START HERE · GUIDE" value="SETUP" tone="accent" onClick={() => setView('biz_guide')} testId="ws-biz_guide" />,
+      ...(
+        [
+          ['biz_profile', businessId ? 'READY' : 'SET UP'],
+          ['products'],
+          ['faqs'],
+          ['couriers'],
+          ['discounts'],
+          ['biz_ai'],
+          ['orders'],
+          ['customers'],
+          ['customer_check', 'COURIER HISTORY'],
+          ['approvals'],
+          ['biz_dashboard'],
+          ['expenses'],
+          ...(allModes ? [] : [['writer'], ['social', 'YT · FB · TT · IG'], ['store', 'WEBSITE'], ['domain', 'DNS · ROSE ACCESS']]),
+          ['channels', 'KEYS'],
+          ['rose_info', 'WHAT ROSE KNOWS'],
+        ] as Array<[View, string?]>
+      ).map(([v, extra], i) => bar(String(i + 1).padStart(2, '0'), v, extra)),
+    ];
     body = (
       <div className="space-y-3">
         <TutorialStrip audience={mode || 'personal'} />
@@ -873,30 +944,6 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
             tidy(personal)
           )}
         </div>
-      </div>
-    );
-  } else if (view === 'grp_rose') {
-    body = (
-      <div className="space-y-1.5">
-        {tidy([bar('01', 'biz_ai'), bar('02', 'writer'), bar('03', 'social', 'YT · FB · TT · IG'), bar('04', 'store', 'WEBSITE'), bar('05', 'domain', 'DNS · ROSE ACCESS'), bar('06', 'channels', 'KEYS')])}
-      </div>
-    );
-  } else if (view === 'grp_biz') {
-    body = (
-      <div className="space-y-1.5">
-        {tidy([
-          bar('01', 'biz_profile', businessId ? 'READY' : 'SET UP'),
-          bar('02', 'products'),
-          bar('03', 'faqs'),
-          bar('04', 'couriers'),
-          bar('05', 'discounts'),
-          bar('06', 'orders'),
-          bar('07', 'customers'),
-          bar('08', 'customer_check', 'COURIER HISTORY'),
-          bar('09', 'approvals'),
-          bar('10', 'biz_dashboard'),
-          bar('11', 'expenses'),
-        ])}
       </div>
     );
   } else if (view === 'mode') {
@@ -944,6 +991,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     );
   else if (view === 'biz_dashboard') body = <BusinessDashboard />;
   else if (view === 'biz_guide') body = <BusinessGuide businessId={businessId} onOpen={setView} />;
+  else if (view === 'rose_info') body = <RoseBusinessInfo businessId={businessId} userId={userId} onOpen={setView} />;
   else if (bScope) {
     if (view === 'biz_ai')
       body = <SingleRowForm table="business_ai_settings" match={bScope} fields={AI_FIELDS} onSaved={refreshAi} />;
