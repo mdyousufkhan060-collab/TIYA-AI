@@ -221,20 +221,15 @@ export const Landing: React.FC = () => {
 
       {/* HERO */}
       <section id="top" className="relative overflow-hidden">
-        {/* BANNER 2560 x 1440: a computer shows all of it, a phone the middle; keep words and faces in the middle */}
-        <div className="relative mx-auto max-w-[1600px] overflow-hidden bg-[radial-gradient(ellipse_at_70%_20%,rgba(255,77,141,0.35),transparent_60%),radial-gradient(ellipse_at_20%_80%,rgba(45,212,191,0.25),transparent_55%)]">
-          <img
-            src="/banner.jpg"
-            alt="ROSE · Bangla voice AI assistant"
-            className="block aspect-[16/9] max-h-[640px] w-full object-cover md:aspect-[2560/900]"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}
-          />
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-            <p className="text-[11px] font-bold tracking-[0.35em] text-pink-200 [text-shadow:0_2px_12px_#000]">MADE IN BANGLADESH</p>
-            <p className="mt-2 text-3xl font-extrabold [text-shadow:0_2px_16px_#000] md:text-6xl">ROSE</p>
-          </div>
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black to-transparent" />
+        {/* BANNER: the whole picture on every screen (nothing is cut), a smaller file for phones */}
+        <div className="relative mx-auto max-w-[1600px] overflow-hidden">
+          <picture>
+            <source media="(max-width: 700px)" srcSet="/banner-m.jpg" />
+            <img src="/banner.jpg" alt="ROSE · your AI assistant, always here for you" width={1672} height={941} fetchPriority="high" className="block h-auto w-full" />
+          </picture>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black to-transparent md:h-16" />
         </div>
+        <div className="relative">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,rgba(255,77,141,0.25),transparent_55%),radial-gradient(ellipse_at_20%_80%,rgba(45,212,191,0.15),transparent_50%)]" />
         <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 pb-16 pt-6 md:grid-cols-2 md:gap-10 md:pt-12">
           <div>
@@ -266,6 +261,7 @@ export const Landing: React.FC = () => {
               <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black to-transparent md:hidden" />
             </div>
           </div>
+        </div>
         </div>
       </section>
 

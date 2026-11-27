@@ -1359,7 +1359,7 @@ const AdminDashboard: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: s
         </select>
       </div>
       {top}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
         {shown.map(([label, value, change, icon, color, spark, go]) => (
           <button key={label} type="button" onClick={() => onOpen(go)} className="rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm">
             <div className="flex items-center gap-2">
@@ -1461,33 +1461,14 @@ const AdminFrame: React.FC<{
 }> = ({ store, bars, current, userName, light, onTheme, onPick, onExit, extra, children }) => {
   const [open, setOpen] = useState(false);
   const pick = (k: string) => { setOpen(false); onPick(k); };
-  const initials = userName.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('') || 'R';
-  return (
-    // the admin always fills the whole screen (no dark edges on any phone), the same in ROSE, on the website and in the demos
-    <div className={`rose-adm ${light ? 'adm-light' : ''} fixed inset-0 z-[60] flex flex-col bg-[#05070B] pc:inset-y-3 pc:mx-auto pc:max-w-[760px] pc:overflow-hidden pc:rounded-[28px]`}>
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-white/10 bg-[#0B0E14] px-1.5 pb-2 pt-[max(8px,env(safe-area-inset-top))]">
-        <button type="button" aria-label="Back" onClick={onExit} className="grid h-9 w-8 place-items-center text-[22px] text-white">‹</button>
-        <button type="button" aria-label="Menu" onClick={() => setOpen(true)} className="grid h-9 w-9 place-items-center text-white"><Menu className="h-5 w-5" /></button>
-        <button type="button" aria-label={light ? 'Dark mode' : 'Light mode'} onClick={onTheme} className="grid h-9 w-9 place-items-center text-white">{light ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}</button>
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-600 text-[15px] font-black text-white">R</span>
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-[14px] font-extrabold text-white">ROSE</p>
-            <p className="truncate text-[10.5px] text-slate-400">myrosebd.com</p>
-          </div>
-        </div>
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-800 text-[11px] font-bold text-white" title={userName}>{initials}</span>
-      </div>
-      {open && (
-        <div className="fixed inset-0 z-[70] flex">
-          <div className="flex h-full w-[82%] max-w-[300px] flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-600 text-[15px] font-black text-white">R</span>
-                <div className="leading-tight"><p className="text-[14px] font-extrabold text-white">ROSE</p><p className="text-[10.5px] text-slate-400">myrosebd.com</p></div>
-              </div>
-              <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center text-white"><X className="h-5 w-5" /></button>
-            </div>
+  // computer: ☰ shows / hides the bars on the left; they stay open while you open one bar after another
+  const [sideOn, setSideOn] = useState(true);
+  const menu = () => {
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) setSideOn((v) => !v);
+    else setOpen(true);
+  };
+  const side = (
+    <>
             <p className="mb-2 truncate px-1 text-[11px] font-bold text-emerald-400">{store.name}</p>
             {bars.map(([, k, title, icon], i) => (
               <button key={k} type="button" onClick={() => pick(k)} data-testid={`store-${k}`} className={`mb-0.5 flex items-center gap-2.5 px-2 py-2 text-left text-[13px] ${current === k || (current === 'home' && k === 'dashboard') ? 'rounded-lg bg-emerald-600/15 font-bold text-emerald-400' : 'text-slate-200'}`}>
@@ -1503,12 +1484,48 @@ const AdminFrame: React.FC<{
               <p className="text-[11px] text-slate-400">Unlock more features</p>
               <span className="mt-2 block rounded-full bg-emerald-600 py-1.5 text-[12px] font-bold text-white">Go Pro →</span>
             </button>
+    </>
+  );
+  const initials = userName.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('') || 'R';
+  return (
+    // the admin always fills the whole screen (no dark edges on any phone), the same in ROSE, on the website and in the demos
+    <div className={`rose-adm ${light ? 'adm-light' : ''} fixed inset-0 z-[60] flex flex-col bg-[#05070B]`}>
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-white/10 bg-[#0B0E14] px-1.5 pb-2 pt-[max(8px,env(safe-area-inset-top))]">
+        <button type="button" aria-label="Back" onClick={onExit} className="grid h-9 w-8 place-items-center text-[22px] text-white">‹</button>
+        <button type="button" aria-label="Menu" onClick={menu} className="grid h-9 w-9 place-items-center text-white"><Menu className="h-5 w-5" /></button>
+        <button type="button" aria-label={light ? 'Dark mode' : 'Light mode'} onClick={onTheme} className="grid h-9 w-9 place-items-center text-white">{light ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}</button>
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-600 text-[15px] font-black text-white">R</span>
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-[14px] font-extrabold text-white">ROSE</p>
+            <p className="truncate text-[10.5px] text-slate-400">myrosebd.com</p>
+          </div>
+        </div>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-800 text-[11px] font-bold text-white" title={userName}>{initials}</span>
+      </div>
+      {open && (
+        <div className="fixed inset-0 z-[70] flex lg:hidden">
+          <div className="flex h-full w-[82%] max-w-[300px] flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-600 text-[15px] font-black text-white">R</span>
+                <div className="leading-tight"><p className="text-[14px] font-extrabold text-white">ROSE</p><p className="text-[10.5px] text-slate-400">myrosebd.com</p></div>
+              </div>
+              <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center text-white"><X className="h-5 w-5" /></button>
+            </div>
+            {side}
           </div>
           <button type="button" aria-label="Close menu" className="flex-1 bg-black/50" onClick={() => setOpen(false)} />
         </div>
       )}
-      <div className="adm-body min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#05070B] px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
-      <div className="grid shrink-0 grid-cols-4 border-t border-white/10 bg-[#0B0E14] pb-[max(6px,env(safe-area-inset-bottom))] pt-1.5">
+      <div className="flex min-h-0 flex-1">
+        {/* computer: the bars stay open on the left */}
+        <aside className={`${sideOn ? 'lg:flex' : ''} hidden w-[250px] shrink-0 flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>{side}</aside>
+        <div className="adm-body min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#05070B] px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:px-8 lg:py-6">
+          <div className="mx-auto w-full max-w-[1200px]">{children}</div>
+        </div>
+      </div>
+      <div className="grid shrink-0 grid-cols-4 border-t border-white/10 bg-[#0B0E14] pb-[max(6px,env(safe-area-inset-bottom))] pt-1.5 lg:hidden">
         {([['🏠', 'Home', 'home'], ['📦', 'Products', 'products'], ['🛒', 'Orders', 'orders'], ['⚙️', 'Settings', 'menu']] as Array<[string, string, string]>).map(([ic, l, k]) => (
           <button key={l} type="button" onClick={() => (k === 'menu' ? setOpen(true) : onPick(k))} className={`flex flex-col items-center text-[10.5px] font-bold ${current === k ? 'text-emerald-500' : 'text-slate-400'}`}>
             <span className="text-[17px]">{ic}</span>{l}
