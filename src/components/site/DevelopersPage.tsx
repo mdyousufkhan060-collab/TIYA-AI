@@ -183,7 +183,7 @@ export const DevelopersPage: React.FC = () => {
   return (
     <div id="dev-scroll" className="h-[100dvh] overflow-y-auto bg-black text-white" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-black/70 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+        <div className="mx-auto flex h-16 max-w-[1760px] items-center justify-between px-5 lg:px-10">
           <a href="/" className="flex items-center gap-2">
             <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[6px]" />
             <span className="text-lg font-extrabold tracking-[0.25em]">ROSE</span>
@@ -196,7 +196,7 @@ export const DevelopersPage: React.FC = () => {
 
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_20%_10%,rgba(255,77,141,0.18),transparent_50%),radial-gradient(ellipse_at_80%_90%,rgba(45,212,191,0.12),transparent_50%)]" />
 
-      <div className="relative mx-auto max-w-5xl px-4 pb-16 pt-6 sm:px-5">
+      <div className="relative mx-auto max-w-[1760px] px-4 pb-16 pt-6 sm:px-5 lg:px-10">
         {/* big banner */}
         <div className="-mx-4 -mt-6 overflow-hidden sm:mx-0 sm:mt-0 sm:rounded-[6px] sm:border sm:border-white/10 sm:shadow-[0_30px_80px_-30px_#1d4ed8]">
           <img src="/team/banner.jpg" alt="ROSE Web Developers" className="block w-full" />
@@ -205,7 +205,7 @@ export const DevelopersPage: React.FC = () => {
         <p className="mt-10 text-xs font-bold tracking-[0.3em] text-amber-300">THE TEAM BEHIND ROSE</p>
         <h1 className="mt-2 text-3xl font-extrabold md:text-4xl">Developers</h1>
 
-        <div className="mt-6 space-y-5">
+        <div className="mt-6 grid gap-5 xl:grid-cols-2">
           {!list ? (
             <p className="py-16 text-center text-sm text-slate-500">Loading…</p>
           ) : (
