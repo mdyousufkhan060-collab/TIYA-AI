@@ -711,6 +711,11 @@ function start(S, P, liveId) {
     if (useTok(hp.get('access_token'), hp.get('refresh_token'), Date.now() + (+hp.get('expires_in') || 3600) * 1000)) setTimeout(function () { toast('Signed in: ' + cust.email); }, 400);
     // after login the shop opens on its home page
     history.replaceState(null, '', authBack() + '#/');
+  } else if (!S.live && /(^#|&)access_token=/.test(location.hash)) {
+    // demo store: the real Google account chooser of the phone was used; show that Gmail here (no shop account is made)
+    var dj = jwtInfo(new URLSearchParams(location.hash.slice(1)).get('access_token')) || {}, dmd = dj.user_metadata || {};
+    if (dj.email) { cust.email = dj.email; if (dmd.full_name || dmd.name) cust.name = dmd.full_name || dmd.name; if (dmd.avatar_url || dmd.picture) cust.pic = dmd.avatar_url || dmd.picture; saveCust(); setTimeout(function () { toast('Signed in: ' + cust.email); }, 400); }
+    history.replaceState(null, '', authBack() + '#/account');
   } else if (S.live && /(^#|&)error=/.test(location.hash)) {
     var eh = new URLSearchParams(location.hash.slice(1));
     setTimeout(function () { toast(eh.get('error_description') || 'Login failed. Try again.'); }, 400);
@@ -1189,6 +1194,8 @@ function start(S, P, liveId) {
         '<div class="field"><span>Email</span><input id="aMail" type="email" autocomplete="email" placeholder="name@gmail.com"></div><button class="btn" id="aSend" onclick="sendLink()">Send login link</button></div>';
       m.hidden = false; return;
     }
+    // Google opens the phone's own Gmail chooser, the same as on real stores
+    if (mode === 'google') { location.href = SB_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(authBack()); return; }
     var titles = { google: 'Continue with Google', login: 'Log in', signup: 'Create account', forgot: 'Forgot password' };
     m.innerHTML = '<div class="mbox"><button class="mx" onclick="closeAuth()">✕</button><h3 style="margin-top:0">' + titles[mode] + '</h3>' +
       (mode === 'google' ? '<p class="small">Choose your Gmail account (demo).</p><div class="field"><span>Gmail</span><input id="aMail" type="email" placeholder="yourname@gmail.com"></div><button class="btn" onclick="doAuth(\'google\')">Continue</button>'

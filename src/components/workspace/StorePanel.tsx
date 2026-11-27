@@ -1458,7 +1458,7 @@ const AdminDashboard: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: s
 const AdminFrame: React.FC<{
   store: Store; bars: Array<[boolean, string, string, string, string, string]>; current: string; userName: string; light: boolean;
   onTheme: () => void; onPick: (k: string) => void; onExit: () => void; extra?: React.ReactNode; children: React.ReactNode;
-}> = ({ store, bars, current, userName, light, onTheme, onPick, onExit, extra, children }) => {
+}> = ({ store, bars, current, light, onTheme, onPick, onExit, extra, children }) => {
   const [open, setOpen] = useState(false);
   const pick = (k: string) => { setOpen(false); onPick(k); };
   // computer: ☰ shows / hides the bars on the left; they stay open while you open one bar after another
@@ -1484,14 +1484,14 @@ const AdminFrame: React.FC<{
               <p className="text-[11px] text-slate-400">Unlock more features</p>
               <span className="mt-2 block rounded-full bg-emerald-600 py-1.5 text-[12px] font-bold text-white">Go Pro →</span>
             </button>
+            <button type="button" onClick={() => { setOpen(false); onExit(); }} data-testid="admin-exit" className="mt-2 flex h-10 items-center justify-center gap-1.5 rounded-lg border border-white/10 text-[12px] font-bold text-slate-300">‹ Exit admin</button>
     </>
   );
-  const initials = userName.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('') || 'R';
   return (
     // the admin always fills the whole screen (no dark edges on any phone), the same in ROSE, on the website and in the demos
     <div className={`rose-adm ${light ? 'adm-light' : ''} fixed inset-0 z-[60] flex flex-col bg-[#05070B]`}>
       <div className="flex shrink-0 items-center gap-1.5 border-b border-white/10 bg-[#0B0E14] px-1.5 pb-2 pt-[max(8px,env(safe-area-inset-top))]">
-        <button type="button" aria-label="Back" onClick={onExit} className="grid h-9 w-8 place-items-center text-[22px] text-white">‹</button>
+        {/* ☰ sits at the far left; leaving the admin is the last item inside ☰ */}
         <button type="button" aria-label="Menu" onClick={menu} className="grid h-9 w-9 place-items-center text-white"><Menu className="h-5 w-5" /></button>
         <button type="button" aria-label={light ? 'Dark mode' : 'Light mode'} onClick={onTheme} className="grid h-9 w-9 place-items-center text-white">{light ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}</button>
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -1501,7 +1501,6 @@ const AdminFrame: React.FC<{
             <p className="truncate text-[10.5px] text-slate-400">myrosebd.com</p>
           </div>
         </div>
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-800 text-[11px] font-bold text-white" title={userName}>{initials}</span>
       </div>
       {open && (
         <div className="fixed inset-0 z-[70] flex lg:hidden">
@@ -1849,6 +1848,51 @@ const CouponsTab: React.FC<{ store: Store }> = ({ store }) => {
 };
 
 // ---------------------------------------------------------------- my details (WORKSPACE: second bar for website owners and staff)
+// ---------------------------------------------------------------- plans: ROSE plan + website plan (MY DETAILS and the ROSE admin support lookup)
+type RosePlan = { plan?: string; paid_until?: string | null; voice_left?: number; text_left?: number; daily_limit?: number; last_plan?: string | null } | null;
+type WebPlan = { plan: string; months?: number; starts_at?: string; ends_at?: string; trial_used?: boolean; amount?: number; products_limit?: number; staff_limit?: number; storage_gb?: number } | null;
+const dayOf = (d?: string | null) => (d ? new Date(d).toLocaleDateString('en-GB') : '—');
+const daysLeft = (d?: string | null) => (d ? Math.ceil((new Date(d).getTime() - Date.now()) / 864e5) : null);
+const PLine: React.FC<{ k: string; v?: string | number | null; tone?: string }> = ({ k, v, tone }) => (
+  <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] py-1.5 text-[12.5px] last:border-0">
+    <span className="shrink-0 text-slate-400">{k}</span>
+    <span className={`truncate text-right font-semibold ${tone || 'text-white'}`}>{v === undefined || v === null || v === '' ? '—' : v}</span>
+  </div>
+);
+const LeftLine: React.FC<{ end?: string | null }> = ({ end }) => {
+  const l = daysLeft(end);
+  return <PLine k="Days left" v={l === null ? null : l <= 0 ? 'ENDED' : `${l} days`} tone={l === null ? undefined : l <= 0 ? 'text-rose-300' : l <= 7 ? 'text-amber-300' : 'text-emerald-300'} />;
+};
+export const PlansCard: React.FC<{ rose: RosePlan; web: WebPlan }> = ({ rose, web }) => (
+  <>
+    <div className={box}>
+      <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">WEBSITE PLAN</p>
+      {web ? (
+        <>
+          <PLine k="Plan" v={`${(STORE_PLANS as any)[web.plan]?.label || web.plan}${web.months ? ` · ${web.months} month${web.months > 1 ? 's' : ''}` : ''}`} />
+          <PLine k="Started" v={dayOf(web.starts_at)} />
+          <PLine k="Ends" v={dayOf(web.ends_at)} />
+          <LeftLine end={web.ends_at} />
+          <PLine k="Paid" v={web.amount ? tk(Number(web.amount)) : 'Free trial'} />
+          <PLine k="Limits" v={`${web.products_limit ?? '—'} products · ${web.staff_limit ?? 0} staff${web.storage_gb ? ` · ${web.storage_gb} GB` : ''}`} />
+        </>
+      ) : <p className="text-[12px] text-slate-400">No website plan yet.</p>}
+    </div>
+    <div className={box}>
+      <p className="mb-1 text-[11px] font-bold tracking-wider text-fuchsia-300">ROSE PLAN</p>
+      {rose ? (
+        <>
+          <PLine k="Plan" v={rose.last_plan || (rose.plan ? rose.plan.toUpperCase() : 'FREE')} />
+          <PLine k="Ends" v={dayOf(rose.paid_until)} />
+          {rose.paid_until && <LeftLine end={rose.paid_until} />}
+          <PLine k="Voice left" v={rose.voice_left ?? 0} />
+          <PLine k="Chat left" v={rose.text_left ?? 0} />
+        </>
+      ) : <p className="text-[12px] text-slate-400">Free ROSE.</p>}
+    </div>
+  </>
+);
+
 export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
   const [me, setMe] = useState<{ email: string; name: string; pic: string } | null>(null);
   const [pwOpen, setPwOpen] = useState(false);
@@ -1858,7 +1902,9 @@ export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [msg, setMsg] = useState('');
+  const [plans, setPlans] = useState<{ rose: RosePlan; website: WebPlan } | null>(null);
   const load = useCallback(async () => {
+    void supabase.rpc('my_plans').then(({ data }) => setPlans((data as { rose: RosePlan; website: WebPlan }) || null));
     const { data: u } = await supabase.auth.getUser();
     const md = (u.user?.user_metadata || {}) as Record<string, string>;
     setMe({ email: u.user?.email || '', name: md.full_name || md.name || '', pic: md.avatar_url || md.picture || '' });
@@ -1905,6 +1951,7 @@ export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
           </button>
         )}
       </div>
+      {plans && <PlansCard rose={plans.rose} web={plans.website} />}
       {own && <CompanyTab store={own} onSaved={() => void load()} />}
       <div className={box}>
         <button type="button" onClick={() => setPwOpen(!pwOpen)} className="flex w-full items-center justify-between text-left">
@@ -1925,43 +1972,39 @@ export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
   );
 };
 
-// ---------------------------------------------------------------- ROSE admin: find a shop by its support ID, see everything, open its admin
+// ---------------------------------------------------------------- ROSE admin: find a shop by its support ID → two bars (owner details · all admin panel)
 type ShopFull = {
   ok: boolean; id: string; name: string; name_bn?: string; slug: string; owner_email: string; support_code: string; email2?: string; phone?: string; whatsapp?: string; phone2?: string;
-  address?: string; city?: string; logo?: string; logo_url?: string; published: boolean; suspended: boolean; custom_domain?: string | null; domain_ready?: boolean; subdomain_ready?: boolean;
-  template?: string; created_at?: string; last_login?: string | null;
-  access?: { plan: string; months?: number; starts_at?: string; ends_at?: string; trial_used?: boolean; amount?: number; products_limit?: number; staff_limit?: number } | null;
+  address?: string; city?: string; logo?: string; logo_url?: string; published: boolean; suspended: boolean; custom_domain?: string | null; domain_ready?: boolean;
+  created_at?: string; last_login?: string | null; access?: WebPlan;
   payments: Array<{ id: string; plan: string; months: number; amount: number; method: string; sender_number?: string; trx_id?: string; status: string; created_at: string }>;
   staff: Array<{ email: string; role: string; suspended: boolean; money_access: boolean }>;
   stats: { products: number; orders: number; customers: number; sales: number; last_order?: string | null };
 };
-const day = (d?: string | null) => (d ? new Date(d).toLocaleDateString('en-GB') : '—');
 export const AdminSupportOpen: React.FC = () => {
   const [code, setCode] = useState('');
   const [shop, setShop] = useState<ShopFull | null>(null);
+  const [rose, setRose] = useState<RosePlan>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const find = async () => {
     setBusy(true);
     setMsg('');
+    setInfoOpen(false);
     const { data, error } = await supabase.rpc('admin_store_by_code', { p_code: code });
-    setBusy(false);
-    if (error) return setMsg(error.message);
+    if (error) { setBusy(false); return setMsg(error.message); }
     const d = data as ShopFull;
-    if (!d?.ok) { setShop(null); return setMsg('No shop has this ID. Check the number and try again.'); }
+    if (!d?.ok) { setBusy(false); setShop(null); return setMsg('No shop has this ID. Check the number and try again.'); }
+    const { data: rp } = await supabase.rpc('admin_store_rose_plan', { p_store: d.id });
+    setRose((rp as RosePlan) || null);
     setShop(d);
+    setBusy(false);
   };
   if (shop && adminOpen) return <StorePanel userId="" forceStoreId={shop.id} onExit={() => setAdminOpen(false)} />;
-  const a = shop?.access;
-  const left = a?.ends_at ? Math.ceil((new Date(a.ends_at).getTime() - Date.now()) / 864e5) : null;
   const url = shop ? (shop.custom_domain && shop.domain_ready ? `https://${shop.custom_domain}` : `https://${shop.slug}.myrosebd.com`) : '';
-  const Line = ({ k, v, href }: { k: string; v?: string | number | null; href?: string }) => (
-    <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] py-1.5 text-[12.5px] last:border-0">
-      <span className="shrink-0 text-slate-400">{k}</span>
-      {href && v ? <a href={href} target="_blank" rel="noreferrer" className="truncate text-right font-semibold text-teal-300 underline">{v}</a> : <span className="truncate text-right font-semibold text-white">{v === undefined || v === null || v === '' ? '—' : v}</span>}
-    </div>
-  );
+  const wa = shop?.whatsapp ? `https://wa.me/88${shop.whatsapp.replace(/\D/g, '').replace(/^88/, '')}` : '';
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
@@ -1972,68 +2015,62 @@ export const AdminSupportOpen: React.FC = () => {
       {msg && <p className="px-1 text-[12px] text-rose-300">{msg}</p>}
       {shop && (
         <>
-          <div className={box + ' space-y-2'}>
-            <div className="flex items-center gap-3">
-              {shop.logo_url ? <img src={shop.logo_url} alt="" className="h-12 w-12 rounded-full bg-white object-cover" /> : <span className="grid h-12 w-12 place-items-center rounded-full bg-white/10 text-2xl">{shop.logo || '🛍️'}</span>}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-bold text-white">{shop.name}{shop.name_bn ? ` · ${shop.name_bn}` : ''}</p>
-                <p className="truncate text-[12px] text-slate-300">{shop.owner_email}</p>
-                <p className="font-mono text-[12px] font-bold text-teal-300">{shop.support_code}</p>
-              </div>
-              <span className={`rounded-md px-2 py-1 text-[10px] font-bold ${shop.suspended ? 'bg-rose-600 text-white' : shop.published ? 'bg-emerald-600 text-white' : 'bg-white/10 text-slate-300'}`}>{shop.suspended ? 'SUSPENDED' : shop.published ? 'LIVE' : 'DRAFT'}</span>
-            </div>
-          </div>
-          <div className={box}>
-            <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">OWNER</p>
-            <Line k="Gmail" v={shop.owner_email} href={`mailto:${shop.owner_email}`} />
-            <Line k="Gmail 2" v={shop.email2} />
-            <Line k="WhatsApp" v={shop.whatsapp} href={shop.whatsapp ? `https://wa.me/88${shop.whatsapp.replace(/\D/g, '').replace(/^88/, '')}` : undefined} />
-            <Line k="Phone" v={shop.phone} href={shop.phone ? `tel:${shop.phone}` : undefined} />
-            <Line k="Other phone" v={shop.phone2} />
-            <Line k="Address" v={[shop.address, shop.city].filter(Boolean).join(', ')} />
-            <Line k="Website" v={url.replace(/^https:\/\//, '')} href={url} />
-            <Line k="Joined" v={day(shop.created_at)} />
-            <Line k="Last login" v={day(shop.last_login)} />
-          </div>
-          <div className={box}>
-            <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">WEBSITE PLAN</p>
-            {a ? (
-              <>
-                <Line k="Plan" v={`${(STORE_PLANS as any)[a.plan]?.label || a.plan}${a.months ? ` · ${a.months} month${a.months > 1 ? 's' : ''}` : ''}`} />
-                <Line k="Started" v={day(a.starts_at)} />
-                <Line k="Ends" v={day(a.ends_at)} />
-                <div className="flex items-center justify-between py-1.5 text-[12.5px]">
-                  <span className="text-slate-400">Days left</span>
-                  <span className={`font-bold ${left === null ? 'text-white' : left <= 0 ? 'text-rose-300' : left <= 7 ? 'text-amber-300' : 'text-emerald-300'}`}>{left === null ? '—' : left <= 0 ? 'ENDED' : `${left} days`}</span>
+          {/* bar 1: the company's icon + the owner's Gmail → everything about them, plans included */}
+          <button type="button" onClick={() => setInfoOpen(!infoOpen)} data-testid="support-owner" className="flex min-h-[60px] w-full items-center gap-2.5 rounded-xl border border-[#1e293b] bg-[#11151e] px-2.5 py-2 text-left">
+            <span className="rounded-md bg-[#1e293b] px-1.5 py-[3px] font-mono text-[10px] font-bold text-teal-400">01</span>
+            {shop.logo_url ? <img src={shop.logo_url} alt="" className="h-10 w-10 shrink-0 rounded-full bg-white object-cover" /> : <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-xl">{shop.logo || '🛍️'}</span>}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-bold text-white">{shop.owner_email}</span>
+              <span className="block truncate text-[10.5px] text-slate-400">{shop.name} · <b className="font-mono text-teal-300">{shop.support_code}</b> · {shop.suspended ? 'SUSPENDED' : shop.published ? 'LIVE' : 'DRAFT'}</span>
+            </span>
+            <span className="text-[11px] font-bold text-slate-400">{infoOpen ? 'CLOSE' : 'DETAILS ›'}</span>
+          </button>
+          {infoOpen && (
+            <div className="space-y-2">
+              <div className={box}>
+                <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">OWNER</p>
+                <PLine k="Gmail" v={shop.owner_email} />
+                <PLine k="Gmail 2" v={shop.email2} />
+                <PLine k="WhatsApp" v={shop.whatsapp} />
+                <PLine k="Phone" v={shop.phone} />
+                <PLine k="Other phone" v={shop.phone2} />
+                <PLine k="Address" v={[shop.address, shop.city].filter(Boolean).join(', ')} />
+                <PLine k="Website" v={url.replace(/^https:\/\//, '')} />
+                <PLine k="Joined" v={dayOf(shop.created_at)} />
+                <PLine k="Last login" v={dayOf(shop.last_login)} />
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <a href={`mailto:${shop.owner_email}`} className={btn + ' bg-white/10'}>EMAIL</a>
+                  {shop.phone ? <a href={`tel:${shop.phone}`} className={btn + ' bg-white/10'}>CALL</a> : <span />}
+                  {wa ? <a href={wa} target="_blank" rel="noreferrer" className={btn + ' bg-white/10'}>WHATSAPP</a> : <span />}
                 </div>
-                <Line k="Paid" v={a.amount ? tk(Number(a.amount)) : 'Free trial'} />
-                <Line k="Limits" v={`${a.products_limit ?? '—'} products · ${a.staff_limit ?? 0} staff`} />
-              </>
-            ) : <p className="text-[12px] text-slate-400">No website plan yet.</p>}
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {([['PRODUCTS', shop.stats.products], ['ORDERS', shop.stats.orders], ['CUSTOMERS', shop.stats.customers], ['SALES', tk(Number(shop.stats.sales || 0))]] as Array<[string, string | number]>).map(([k, v]) => (
-              <div key={k} className={box}><p className="text-[10px] font-bold tracking-wider text-slate-400">{k}</p><p className="text-[18px] font-bold text-white">{v}</p></div>
-            ))}
-          </div>
-          {shop.staff.length > 0 && (
-            <div className={box}>
-              <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">STAFF · {shop.staff.length}</p>
-              {shop.staff.map((t) => <Line key={t.email} k={t.role.toUpperCase() + (t.suspended ? ' · SUSPENDED' : '')} v={t.email} />)}
+              </div>
+              <PlansCard rose={rose} web={shop.access || null} />
+              <div className="grid grid-cols-2 gap-2">
+                {([['PRODUCTS', shop.stats.products], ['ORDERS', shop.stats.orders], ['CUSTOMERS', shop.stats.customers], ['SALES', tk(Number(shop.stats.sales || 0))]] as Array<[string, string | number]>).map(([k, v]) => (
+                  <div key={k} className={box}><p className="text-[10px] font-bold tracking-wider text-slate-400">{k}</p><p className="text-[18px] font-bold text-white">{v}</p></div>
+                ))}
+              </div>
+              {shop.staff.length > 0 && (
+                <div className={box}>
+                  <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">STAFF · {shop.staff.length}</p>
+                  {shop.staff.map((t) => <PLine key={t.email} k={t.role.toUpperCase() + (t.suspended ? ' · SUSPENDED' : '')} v={t.email} />)}
+                </div>
+              )}
+              <div className={box}>
+                <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">PAYMENT HISTORY · {shop.payments.length}</p>
+                {shop.payments.length === 0 && <p className="text-[12px] text-slate-400">No payments yet.</p>}
+                {shop.payments.map((p) => (
+                  <div key={p.id} className="border-b border-white/[0.06] py-1.5 text-[12px] last:border-0">
+                    <div className="flex justify-between"><span className="font-semibold text-white">{(STORE_PLANS as any)[p.plan]?.label || p.plan} · {p.months} mo · {tk(Number(p.amount))}</span><span className={p.status === 'approved' ? 'text-emerald-300' : p.status === 'rejected' ? 'text-rose-300' : 'text-amber-300'}>{p.status.toUpperCase()}</span></div>
+                    <p className="text-[11px] text-slate-400">{dayOf(p.created_at)} · {p.method}{p.sender_number ? ` · ${p.sender_number}` : ''}{p.trx_id ? ` · ${p.trx_id}` : ''}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-          <div className={box}>
-            <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">PAYMENT HISTORY · {shop.payments.length}</p>
-            {shop.payments.length === 0 && <p className="text-[12px] text-slate-400">No payments yet.</p>}
-            {shop.payments.map((p) => (
-              <div key={p.id} className="border-b border-white/[0.06] py-1.5 text-[12px] last:border-0">
-                <div className="flex justify-between"><span className="font-semibold text-white">{(STORE_PLANS as any)[p.plan]?.label || p.plan} · {p.months} mo · {tk(Number(p.amount))}</span><span className={p.status === 'approved' ? 'text-emerald-300' : p.status === 'rejected' ? 'text-rose-300' : 'text-amber-300'}>{p.status.toUpperCase()}</span></div>
-                <p className="text-[11px] text-slate-400">{day(p.created_at)} · {p.method}{p.sender_number ? ` · ${p.sender_number}` : ''}{p.trx_id ? ` · ${p.trx_id}` : ''}</p>
-              </div>
-            ))}
-          </div>
-          <DemoBar n="▶" icon="🗂️" color="#14b8a6" title="ALL ADMIN BARS" value="SAME AS THE OWNER SEES" onClick={() => setAdminOpen(true)} testId="support-all-admin-bars" />
-          <button type="button" className={btn + ' w-full bg-white/10'} onClick={() => { setShop(null); setCode(''); setMsg(''); }}>CLEAR</button>
+          {/* bar 2: the owner's admin, exactly as they see it */}
+          <DemoBar n="02" icon="🗂️" color="#14b8a6" title="ALL ADMIN PANEL" value="SAME AS THE OWNER SEES" onClick={() => setAdminOpen(true)} testId="support-all-admin" />
+          <button type="button" className={btn + ' w-full bg-white/10'} onClick={() => { setShop(null); setCode(''); setMsg(''); setInfoOpen(false); }}>CLEAR</button>
         </>
       )}
     </div>

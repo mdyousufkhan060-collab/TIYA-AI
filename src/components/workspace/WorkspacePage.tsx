@@ -1003,7 +1003,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
           </span>
           <span className="text-base text-slate-500">›</span>
         </button>
-        <SettingsBar badge="02" title="MYROSEBD.COM BUSINESS" value={modeLabel} onClick={() => (onOpenRoseSettings ? onOpenRoseSettings() : setView('rose_hub'))} testId="ws-rose" />
+        <SettingsBar badge="02" iconSrc="/agents/rose.png?v=3" title="MYROSEBD.COM BUSINESS" value={modeLabel} onClick={() => (onOpenRoseSettings ? onOpenRoseSettings() : setView('rose_hub'))} testId="ws-rose" />
         <SettingsBar badge="03" title="WEBSITE ADMIN" value="STORE · ORDERS · PRODUCTS" onClick={() => setView('store')} testId="ws-site-admin" />
         {shopUrl && (
           <SettingsBar

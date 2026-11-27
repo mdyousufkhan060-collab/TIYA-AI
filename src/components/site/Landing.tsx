@@ -334,9 +334,10 @@ export const Landing: React.FC = () => {
               <div key={k} className="w-40 shrink-0 rounded-[4px] border border-white/[0.08] bg-black p-3">
                 <p className="text-2xl">{ic}</p>
                 <p className="mt-1 text-sm font-bold">{l}</p>
-                <div className="mt-2 flex gap-2 text-[11px] font-bold">
-                  <a href={`/demos/store.html?s=${k}`} className="text-teal-300">OPEN</a>
-                  <a href={`/demo-admin?s=${k}`} className="text-pink-300">ADMIN</a>
+                {/* two clear buttons with space between, so a finger never hits the wrong one (phone: one above the other) */}
+                <div className="mt-3 grid grid-cols-1 gap-2 text-[12px] font-bold pc:grid-cols-2">
+                  <a href={`/demos/store.html?s=${k}`} className="flex h-10 items-center justify-center rounded-[4px] border border-teal-400/60 bg-teal-500/10 text-teal-300">OPEN</a>
+                  <a href={`/demo-admin?s=${k}`} className="flex h-10 items-center justify-center rounded-[4px] border border-pink-400/60 bg-pink-500/10 text-pink-300">ADMIN</a>
                 </div>
               </div>
             ))}

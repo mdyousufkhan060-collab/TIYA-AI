@@ -191,6 +191,8 @@ interface SettingsBarProps {
   testId?: string;
   hideChevron?: boolean;
   tone?: 'default' | 'danger' | 'accent';
+  /** a small picture in place of the bar's icon */
+  iconSrc?: string;
 }
 
 export const SettingsBar: React.FC<SettingsBarProps> = ({
@@ -202,6 +204,7 @@ export const SettingsBar: React.FC<SettingsBarProps> = ({
   testId,
   hideChevron = false,
   tone = 'default',
+  iconSrc,
 }) => {
   const titleColor =
     tone === 'danger'
@@ -223,7 +226,7 @@ export const SettingsBar: React.FC<SettingsBarProps> = ({
         </span>
       )}
 
-      {barIcon(title)}
+      {iconSrc ? <img src={iconSrc} alt="" className="h-8 w-8 shrink-0 rounded-[9px] object-cover" /> : barIcon(title)}
 
       <span className={`min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide uppercase ${titleColor}`}>
         {title}
