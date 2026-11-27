@@ -353,9 +353,9 @@ export default function App() {
     } catch {
       /* ignore */
     }
-    // straight into WEBSITE ADMIN (no ROSE home or workspace page on the way); ‹ Exit admin goes back to WORKSPACE
-    navigateTo('settings', 'workspace', 'store');
-    navHistoryRef.current = [...navHistoryRef.current.slice(-24), { tab: 'settings', page: 'workspace', subpage: 'hub' } as typeof navStateRef.current];
+    // the shop's "Store admin" button opens the owner's WORKSPACE page (01 MY DETAILS with Gmail and ID, 02 MYROSEBD.COM BUSINESS,
+    // 03 WEBSITE ADMIN, 04 MY SHOP, 05 CUSTOMER VIEW, 06 MY STAFF), straight, with no ROSE home page on the way
+    navigateTo('settings', 'workspace', 'hub');
     window.setTimeout(() => setOpeningAdmin(false), 1200);
   }, [session?.user?.id, profileLoaded, openAfterLogin, navigateTo]);
 

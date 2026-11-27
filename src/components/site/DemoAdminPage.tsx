@@ -56,6 +56,8 @@ export default function DemoAdminPage() {
         { stores: [store], store_categories: cats, store_products: prods, store_orders: orders, site_settings: [], store_staff: [], store_reviews: [], store_coupons: [], store_expenses: [] },
         {
           is_admin: false, my_staff_stores: [], store_staff_list: [], courier_status: [], get_payment_info: { bkash: '01700000000' },
+          // Ask ROSE in the demo: the design shows at once (nothing is saved)
+          store_set_design: (x: { p_design?: Record<string, string> }) => x.p_design || {}, store_undo_design: {},
           // REPORTS: worked out from the sample orders the same way the server does it
           store_report: (a: { p_from?: string; p_to?: string }, t: Record<string, any[]>) => {
             const from = a.p_from || '0000', to = a.p_to || '9999';
