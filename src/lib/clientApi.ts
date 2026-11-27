@@ -27,9 +27,16 @@ import {
 } from './geminiRest';
 import { classifyGeminiError } from '../utils/errorClassifier';
 import { brainRecall, buildBrainTools, RECALL_HINT, runBrainTool } from './brain';
-import { getConfirmationPromptText, validatePhoneAction } from '../utils/phoneActions';
+import { extractActionFromText, getConfirmationPromptText, validatePhoneAction } from '../utils/phoneActions';
 import { validateNavigateToolArgs } from '../utils/tiyaNavigation';
 import { BENGALI_DIALECTS, DEFAULT_LIVE_MODELS, LiveModelInfo, languageCode } from '../types/tiya';
+
+// Phone actions for answers that come without tools (Groq): one JSON at the end, run by the app.
+const GROQ_ACTION_RULE =
+  '\n\nPHONE ACTIONS (no tool here): when the user asks to open an app or website, go home, scroll, read the screen, call someone ' +
+  'or message on WhatsApp / Messenger, reply with one short Bengali sentence and then put exactly ONE JSON object at the very end, ' +
+  'for example {"action":"open_app","app":"Facebook"}, {"action":"open_app","app":"scroll down"}, {"action":"call","contact":"Ma"}, ' +
+  '{"action":"whatsapp_message","contact":"Rahim","text":"..."}. Never say it is already done. No JSON when nothing is to be done on the phone.';
 
 
 const errMsg = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -341,11 +348,14 @@ async function handle(path: string, key: string, body: any): Promise<ApiResult> 
         }
       }
 
-      // Gemini not working → Groq answers instead
+      // Gemini not working or missing (Groq-only free users) → Groq answers instead. Groq has no tools here, so it
+      // writes the phone action as one JSON at the end and the app runs it (else "ফেসবুক খোলো" did nothing).
       if (groqBackup && (needsTools || ownerMode || image)) {
         try {
-          const text = await groqChat(groqBackup, system, history, message);
-          return ok({ ok: true, text, action: null, navigate: null, needsMotivation: false, model: 'groq' });
+          const raw = await groqChat(groqBackup, needsTools ? system + GROQ_ACTION_RULE : system, history, message);
+          const { cleanText, action } = needsTools ? extractActionFromText(raw) : { cleanText: raw, action: null };
+          const text = cleanText || (action ? getConfirmationPromptText(action) : raw);
+          return ok({ ok: true, text, action: action || null, navigate: null, needsMotivation: false, model: 'groq' });
         } catch (err) {
           lastErr = lastErr || err;
         }
@@ -1017,6 +1027,8 @@ export class LocalLiveSocket {
     throw lastErr || new Error('Transcription failed');
   }
 
+  private noVoiceTold = false;
+
   private async turnSpeak(text: string) {
     // Owner: tell the voice HOW to say it (soft, loving, with feeling), not just what
     const spoken = this.systemInstruction.includes('FINAL REMINDER (owner)')
@@ -1051,6 +1063,12 @@ export class LocalLiveSocket {
       if (!synth) return;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = /[\u0980-\u09FF]/.test(text) ? 'bn-BD' : languageCode(this.language);
+      // no Gemini voice and the phone has no voice for this language: tell the user once instead of staying silent
+      const all = synth.getVoices();
+      if (!this.noVoiceTold && all.length && !all.some((v) => v.lang.toLowerCase().startsWith(u.lang.slice(0, 2).toLowerCase()))) {
+        this.noVoiceTold = true;
+        this.emit({ type: 'notice', text: 'এই ফোনে বাংলা কণ্ঠ নেই, তাই আমার কথা শোনা যাচ্ছে না। Settings → Connections-এ নিজের ফ্রি Gemini key দিন, অথবা ROSE Premium নিন। ফোনের Settings → Text-to-speech থেকে Google-এর বাংলা ভয়েস নামিয়েও শুনতে পারবেন।' } as any);
+      }
       const female = synth
         .getVoices()
         .find((v) => v.lang.toLowerCase().startsWith(u.lang.slice(0, 2).toLowerCase()) && /female|woman/i.test(v.name));

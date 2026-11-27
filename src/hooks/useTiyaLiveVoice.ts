@@ -437,6 +437,8 @@ export function useTiyaLiveVoice({
           if (activeSourcesRef.current.size === 0) {
             setVoiceState('listening');
           }
+        } else if (msg.type === 'notice' && msg.text) {
+          callbacksRef.current.onAppendVoiceMessage('assistant', msg.text);
         } else if (msg.type === 'phone_action' && msg.action) {
           callbacksRef.current.onPhoneAction(msg.action);
         } else if (msg.type === 'navigate' && msg.command) {
