@@ -648,6 +648,14 @@ export async function executePhoneAction(
     }
     return { success: true, via: 'web_fallback', messageBn: action.on ? 'ROSE-এর ক্যামেরা চালু হয়েছে, এখন ROSE দেখতে পাচ্ছে।' : 'ROSE-এর ক্যামেরা বন্ধ হয়েছে।' };
   }
+  // SOCIAL POST voice: "কাল সকাল ১০টায় এটা শিডিউল দাও" → schedule the post open on the SOCIAL POST page
+  if (action.action === 'open_app' && /^schedule current post\s+/i.test(action.app.trim())) {
+    const iso = action.app.trim().replace(/^schedule current post\s+/i, '');
+    const fn = (window as any).__roseScheduleCurrent as undefined | ((iso: string) => Promise<string>);
+    if (!fn) return { success: false, via: 'web_fallback', messageBn: 'আগে Workspace › SOCIAL POST পেজে পোস্টটা তৈরি করুন, তারপর বলুন শিডিউল দিতে।' };
+    const m = await fn(iso);
+    return { success: !/বুঝিনি|first|প্রথমে|could not|পারেনি/i.test(m), via: 'android_native', messageBn: m };
+  }
   // ROSE's own website (myrosebd.com or a store link): open it as a page, also inside the Android app
   if (action.action === 'open_app') {
     const site = /^https?:\/\/[^\s]+$/i.test(action.app.trim()) && /myrosebd\.com/i.test(action.app) ? action.app.trim() : /myrosebd|rose ?(web|site)|রোজের? ?(ওয়েব|সাইট)|তোমার ওয়েবসাইট/i.test(action.app) ? 'https://www.myrosebd.com/' : '';

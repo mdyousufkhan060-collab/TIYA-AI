@@ -85,8 +85,17 @@ const GUIDES: Array<[RegExp, string]> = [
 ];
 
 /** The guide files to add to ROSE's prompt. Voice: all four. Chat: only the apps named in the recent messages. */
+/** SOCIAL POST schedule (photo / poster / video posts that ROSE posts by herself at a set time) */
+export const SCHEDULE_GUIDE = `SCHEDULED POSTS (Workspace › SOCIAL POST; the phone posts them by itself at the time):
+- "শিডিউল পোস্টগুলো দেখাও / কোন কোন পোস্ট শিডিউল আছে" → app "list scheduled posts", then read the numbered list.
+- "<date> <time>-এর পোস্টটা এখনই দিয়ে দাও" (e.g. "২৮ নভেম্বর রাত ৮টার পোস্টটা এখনই দিয়ে দাও") → app "post scheduled now <d> <mon> <HH:mm>" in English digits, 24-hour, e.g. "post scheduled now 28 nov 20:00". It is taken off the schedule and posted now on the same platforms. If he says a number from the list: "post scheduled now 2".
+- "<date> <time>-এর পোস্টটা বাদ দাও / ক্যানসেল করো" → app "remove scheduled post 28 nov 20:00" (or the number). This only cancels the schedule, nothing is deleted from Facebook etc.
+- "কাল সকাল ১০টায় এটা শিডিউল দাও" (the post he is making on the SOCIAL POST page) → app "schedule current post <YYYY-MM-DDTHH:mm>" in Bangladesh time, worked out from today's date (কাল = tomorrow, সকাল 10 = 10:00, রাত 8 = 20:00, দুপুর 2 = 14:00).
+- After each call say the result in one short line. If a post failed (phone locked, app missing, no internet), say which one and offer "এখনই আবার দেবো?".`;
+
 export function socialGuidesFor(recentText: string, mode: 'voice' | 'chat'): string {
   const picked = mode === 'voice' ? GUIDES.map((g) => g[1]) : GUIDES.filter(([re]) => re.test(recentText)).map((g) => g[1]);
-  if (!picked.length) return '';
-  return `\n\nSOCIAL MEDIA GUIDE FILES (ROSE Android app with ROSE Access; follow these exactly):\n${COMMON}\n\n${picked.join('\n\n')}`;
+  const sched = mode === 'voice' || /শিডিউল|সিডিউল|schedule|পোস্ট|post/i.test(recentText) ? `\n\n${SCHEDULE_GUIDE}` : '';
+  if (!picked.length) return sched ? `\n\nSOCIAL MEDIA:${sched}` : '';
+  return `\n\nSOCIAL MEDIA GUIDE FILES (ROSE Android app with ROSE Access; follow these exactly):\n${COMMON}\n\n${picked.join('\n\n')}${sched}`;
 }
