@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Flag, Home, Mic, Send, Square, Trash2 } from 'lucide-react';
+import { Flag, Home, Mic, MicOff, Send, Square, Trash2 } from 'lucide-react';
 import { ChatMessage, PhoneAction, TiyaSettings } from '../types/tiya';
 import { ActionConfirmCard } from './ActionConfirmCard';
 import { TiyaNeonNav } from './TiyaNeonNav';
@@ -9,6 +9,7 @@ import { MiniFace } from './MiniFace';
 import { phoneStepTitle } from '../utils/phoneActions';
 import { openQuietMic, type QuietMic } from '../lib/quietMic';
 import { premiumStt } from '../lib/premium';
+import { isVoiceMuted, onVoiceMuted, setVoiceMuted } from '../lib/voiceMute';
 
 interface ChatScreenProps {
   settings: TiyaSettings;
@@ -75,6 +76,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   const premMicRef = useRef<QuietMic | null>(null);
+  const [muted, setMuted] = useState(isVoiceMuted());
+  useEffect(() => onVoiceMuted(setMuted), []);
+  // voice switched off: the mute is cleared so the next talk starts hearing him
+  useEffect(() => {
+    if (!isVoiceOn) setVoiceMuted(false);
+  }, [isVoiceOn]);
   useEffect(() => () => premMicRef.current?.close(), []);
   const stopRecordingAndTranscribe = () => {
     // ROSE PREMIUM dictation: send the last words, then close the mic
@@ -321,6 +328,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         )}
 
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          {isVoiceOn ? (
+            // voice is on: this button is MUTE (ROSE stays on but does not hear him until he taps again)
+            <button
+              type="button"
+              onClick={() => setVoiceMuted(!muted)}
+              aria-label={muted ? 'Unmute microphone' : 'Mute microphone'}
+              data-testid="voice-mute"
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 ${
+                muted ? 'bg-rose-600 text-white ring-rose-400' : 'bg-[#06122A]/90 text-cyan-100 ring-cyan-400/40'
+              }`}
+            >
+              {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+          ) : (
           <button
             type="button"
             onClick={toggleMicInput}
@@ -333,6 +354,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           >
             {isRecordingMic ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </button>
+          )}
           <input
             type="text"
             value={input}

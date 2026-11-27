@@ -522,7 +522,9 @@ export default function App() {
     buildSystemPrompt: () => buildTiyaSystemPrompt(settings, messages, 'chat', userAge, memories, isOwner),
     getHistory: () =>
       messages
-        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        // phone-step cards ("facebook খোলা হচ্ছে…") are left out: seeing them, the model starts writing those lines
+        // instead of really calling the phone tool
+        .filter((m) => (m.role === 'user' || m.role === 'assistant') && !m.pendingAction && !/খোলা হচ্ছে…?\s*$/.test(m.text || ''))
         .map((m) => ({ role: m.role as 'user' | 'assistant', text: m.text })),
     onAppend: (role, text, action) => handleAppendVoiceMessage(role, text, action),
     onCredits: (v, t) =>

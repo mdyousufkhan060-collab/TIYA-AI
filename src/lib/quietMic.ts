@@ -4,6 +4,8 @@
  * every reply, so its "টুং / ঠাস" start sound never plays. Each finished sentence comes out as a 16 kHz WAV
  * (base64) that the ROSE server turns into text.
  */
+import { isVoiceMuted } from './voiceMute';
+
 export type QuietMic = {
   /** true = waiting for him to talk; false = ignore the mic (ROSE is thinking or speaking) */
   setListening: (on: boolean) => void;
@@ -12,7 +14,7 @@ export type QuietMic = {
   close: () => void;
 };
 
-export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?: (level: number) => void): Promise<QuietMic> {
+export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?: (level: number) => void, muteAware = false): Promise<QuietMic> {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
   });
@@ -38,7 +40,8 @@ export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?:
     const rms = Math.sqrt(sum / data.length);
     onLevel?.(Math.min(1, rms * 8));
     const ms = (data.length / rate) * 1000;
-    if (!listening) {
+    // dictation mics (onLevel not used) ignore the voice MUTE; the voice mic obeys it
+    if (!listening || (muteAware && isVoiceMuted())) {
       talking = false;
       chunks = [];
       pre = [];

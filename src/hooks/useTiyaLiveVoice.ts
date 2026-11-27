@@ -1,3 +1,4 @@
+import { isVoiceMuted } from '../lib/voiceMute';
 import { createLiveSocket } from '../lib/clientApi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChatMessage, MemoryItem, PhoneAction, TiyaSettings, VoiceState } from '../types/tiya';
@@ -371,7 +372,8 @@ export function useTiyaLiveVoice({
               setAudioLevel(Math.min(1, rms * 6));
             }
             const base64 = float32ToPcm16Base64(channelData);
-            wsRef.current.send(JSON.stringify({ type: 'audio', data: base64 }));
+            // MUTE: ROSE stays on but does not hear him
+            if (!isVoiceMuted()) wsRef.current.send(JSON.stringify({ type: 'audio', data: base64 }));
           };
         } else if (msg.type === 'input_transcript' && msg.text) {
           hasStartedAssistantBubbleRef.current = false;

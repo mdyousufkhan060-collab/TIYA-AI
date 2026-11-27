@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LanguageOption, VoiceState } from '../types/tiya';
 import { premiumChat, premiumStt, premiumTts, type PremiumChatMessage } from '../lib/premium';
 import { openQuietMic, type QuietMic } from '../lib/quietMic';
+import { isVoiceMuted } from '../lib/voiceMute';
 import { fadePcm } from '../lib/pcmFade';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -113,6 +114,12 @@ export function usePremiumVoice(opts: Options) {
 
   const listenSR = useCallback(() => {
     if (!activeRef.current) return;
+    // muted: do not start the recognizer, look again shortly
+    if (isVoiceMuted()) {
+      setState('listening');
+      window.setTimeout(listenSR, 800);
+      return;
+    }
     const w = window as any;
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SR) {
@@ -160,6 +167,7 @@ export function usePremiumVoice(opts: Options) {
   // one turn: ask the server (with the phone-action tool), show the words, run the action, speak, listen again.
   // "note" turns carry an app result (e.g. the list of buttons on the screen) so ROSE can take the next step.
   const stepsRef = useRef(0);
+  const fakeRef = useRef(0);
   const runTurn = useCallback(
     async (input: string, note: boolean) => {
       const o = optsRef.current;
@@ -202,6 +210,14 @@ export function usePremiumVoice(opts: Options) {
       const parsed = extractActionFromText(res.text || '');
       if (!action) action = parsed.action;
       const reply = (parsed.cleanText || '').replace(/`[^`]*`/g, '').replace(/\{[\s\S]*\}\s*$/, '').trim();
+      // the model wrote the phone steps as words ("facebook খোলা হচ্ছে… screen items…") instead of calling the tool:
+      // ask once more, telling it to really call the tool
+      if (!action && fakeRef.current < 1 && /খোলা হচ্ছে|screen items|tap item|scroll (down|up)|open latest post comments|reply all comments/i.test(res.text || '')) {
+        fakeRef.current += 1;
+        await runTurn('You wrote the phone steps as words, so nothing happened on the phone. Call the trigger_phone_action tool now for the first step only.', true);
+        return;
+      }
+      fakeRef.current = 0;
       if (reply || action) o.onAppend('assistant', reply, action || undefined);
       if (action) stepsRef.current += 1;
       if (!reply || action) {
@@ -302,7 +318,7 @@ export function usePremiumVoice(opts: Options) {
       if (!activeRef.current) return;
       if (r.ok && r.text) void answer(r.text);
       else listen();
-    })
+    }, undefined, true)
       .then((mic) => {
         if (!activeRef.current) {
           mic.close();
