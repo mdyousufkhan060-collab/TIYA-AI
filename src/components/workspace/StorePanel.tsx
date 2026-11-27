@@ -26,7 +26,7 @@ type Store = {
 const delByKg = (base: number, perKg: number, kg: number) => (base || 0) + (kg > 1 ? Math.ceil(kg - 1 - 1e-9) * (perKg || 0) : 0);
 type Banner = { title: string; badge: string; icon: string; bg?: string; img?: string };
 type OfferBanner = { img: string; title?: string; link?: string };
-type Cat = { id: string; name: string; icon: string; sort: number };
+type Cat = { id: string; name: string; icon: string; sort: number; banner_url?: string | null };
 type Prod = {
   id: string; name: string; category_id: string | null; price: number; old_price: number | null; stock: number; emoji: string;
   description: string; images: string[]; options_label: string; options: string[]; rx: boolean; active: boolean;
@@ -2341,7 +2341,32 @@ const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
       {cats.map((c) => (
         <div key={c.id} className={box + ' flex items-center gap-2'}>
           <span className="text-xl">{c.icon}</span>
-          <p className="flex-1 text-[12.5px] text-white">{c.name}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12.5px] text-white">{c.name}</p>
+            <div className="mt-1 flex items-center gap-2">
+              {c.banner_url && <img src={c.banner_url} alt="" className="h-8 w-16 rounded object-cover" />}
+              <label className="cursor-pointer text-[10.5px] font-bold text-teal-300">
+                {c.banner_url ? 'CHANGE BANNER' : '+ CATEGORY BANNER'}
+                <input type="file" accept="image/*" hidden onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!f) return;
+                  try {
+                    const url = await uploadImage(store.id, f, 1400);
+                    await supabase.from('store_categories').update({ banner_url: url }).eq('id', c.id);
+                    void load();
+                  } catch (err: any) {
+                    window.alert(String(err?.message || err));
+                  }
+                }} />
+              </label>
+              {c.banner_url && (
+                <button type="button" onClick={async () => { await supabase.from('store_categories').update({ banner_url: null }).eq('id', c.id); void load(); }} className="text-[10.5px] font-bold text-rose-300">
+                  REMOVE
+                </button>
+              )}
+            </div>
+          </div>
           <button type="button" aria-label="Delete" onClick={async () => { if (window.confirm(`Delete ${c.name}? Products stay without a category.`)) { await supabase.from('store_categories').delete().eq('id', c.id); void load(); } }} className="text-rose-300">
             <Trash2 className="h-4 w-4" />
           </button>
@@ -3240,7 +3265,7 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
       </div>
       <div className={box + ' space-y-2'}>
         <p className="text-[11px] font-bold tracking-wider text-teal-300">BANNERS</p>
-        <p className="text-[10.5px] text-slate-400">{IMG_HINT.banner}</p>
+        <p className="text-[10.5px] text-slate-400">{IMG_HINT.banner} Up to 8 banners. They slide by themselves every 3 seconds.</p>
         {s.banners.map((b, i) => (
           <div key={i} className="space-y-1 rounded-lg bg-black/30 p-2">
             <div className="flex gap-2">
@@ -3264,11 +3289,16 @@ const DesignTab: React.FC<{ store: Store; onSaved: () => void }> = ({ store, onS
                 }} />
               </label>
               {b.img && <button type="button" onClick={() => setBanner(i, 'img', '')} className="text-[11px] font-bold text-rose-300">REMOVE</button>}
-              <button type="button" onClick={() => set('banners', s.banners.filter((_, j) => j !== i))} className="ml-auto text-[11px] font-bold text-slate-400">DELETE</button>
+              {i > 0 && (
+                <button type="button" onClick={() => { const l = s.banners.slice(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; set('banners', l); }} className="ml-auto text-[11px] font-bold text-slate-300">
+                  ↑ UP
+                </button>
+              )}
+              <button type="button" onClick={() => set('banners', s.banners.filter((_, j) => j !== i))} className={(i > 0 ? '' : 'ml-auto ') + 'text-[11px] font-bold text-slate-400'}>DELETE</button>
             </div>
           </div>
         ))}
-        {s.banners.length < 4 && (
+        {s.banners.length < 8 && (
           <button type="button" onClick={() => set('banners', [...s.banners, { title: 'New offer', badge: 'Shop now', icon: '🎉', bg: `linear-gradient(120deg,#fef3c7,${s.color})` }])} className="text-[11px] font-bold text-teal-300">
             + ADD BANNER
           </button>

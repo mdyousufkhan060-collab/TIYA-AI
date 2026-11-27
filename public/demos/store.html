@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Demo Store · ROSE Store Builder</title>
 <meta name="robots" content="noindex" />
 <meta name="description" content="Demo online store made with ROSE Store Builder." />
@@ -314,6 +314,27 @@
   .payrow .paylogos span { min-width: 0; height: 26px; padding: 3px 7px; border-radius: 6px; flex: none; }
   .payrow .paylogos img { height: 18px; width: auto; display: block; }
   @media (max-width: 760px) { .payrow { gap: 6px; } .payrow .pl { font-size: 10px; } .payrow .paylogos { gap: 3px; } .payrow .paylogos span { height: 21px; padding: 2px 4px; border-radius: 5px; } .payrow .paylogos img { height: 13px; } }
+  /* phone fit (Nov 27): the page never slides sideways or zooms; only the product photo zooms */
+  html, body { overflow-x: hidden; max-width: 100%; }
+  body { touch-action: pan-x pan-y; }
+  .pd { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .pd > *, .gal { min-width: 0; }
+  @media (max-width: 760px) { .pd { grid-template-columns: minmax(0, 1fr); } }
+  .gthumbs { touch-action: pan-x; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; padding-bottom: 2px; }
+  .gthumbs button { scroll-snap-align: start; }
+  .gal .gmain img { cursor: zoom-in; }
+  .slider { touch-action: pan-y; }
+  .slide, .slide.on { opacity: 1; }
+  .slide { transform: translateX(100%); transition: transform .55s ease; }
+  .slide.on { transform: none; }
+  .slide.left { transform: translateX(-100%); }
+  .catban { margin: 4px 0 12px; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 6; background: #fff; border: 1px solid var(--line); }
+  .catban img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .moreload { text-align: center; padding: 14px; color: #64748b; font-size: 13px; }
+  #zoomV { position: fixed; inset: 0; z-index: 90; background: #000; touch-action: none; overflow: hidden; display: grid; place-items: center; }
+  #zoomV img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: 0 0; will-change: transform; user-select: none; -webkit-user-drag: none; }
+  #zoomV .zx { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 26px; line-height: 1; }
+  #zoomV .zn { position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; color: #fff; font: 500 13px system-ui, sans-serif; opacity: .8; }
 </style>
 </head>
 <body>
@@ -459,7 +480,7 @@ if (liveSlug || ownDomain) {
         city: r.city || 'Dhaka', phone: r.phone, email: r.email, address: r.address, licence: r.licence, nameBn: r.name_bn || '', email2: r.email2 || '', whatsapp: r.whatsapp || '', phone2: r.phone2 || '',
         pharmacy: r.template === 'medicare' && prods.some(function (p) { return p.rx; }), banners: banners,
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
-        categories: cats.map(function (c) { return [c.name, c.icon || '🏷️']; }), sectionTitle: 'Popular Products',
+        categories: cats.map(function (c) { return [c.name, c.icon || '🏷️', c.banner_url || '']; }), sectionTitle: 'Popular Products',
         note: r.note || ('Delivery: ' + r.delivery_inside + ' Tk inside Dhaka, ' + r.delivery_outside + ' Tk outside.'),
         delIn: r.delivery_inside, delOut: r.delivery_outside, delKgIn: r.delivery_kg_inside, delKgOut: r.delivery_kg_outside, payNumbers: r.pay_numbers || {}, pixels: r.pixels || {}, hideRose: !!r.hide_rose, offerBanners: (r.offer_banners || []).filter(function (b) { return b && b.img; }),
       };
@@ -487,7 +508,7 @@ function start(S, P, liveId) {
   var id = liveId || (qs.get('s') || 'foodbazaar');
   if (liveId) {
     var db = document.getElementById('demoBar'); if (db) db.style.display = 'none';
-    if (PREVIEW_TOK) { var pv = document.createElement('div'); pv.style.cssText = 'background:#f59e0b;color:#111;font:700 13px/1.4 system-ui,sans-serif;text-align:center;padding:8px 12px'; pv.textContent = 'PREVIEW · Only you see this. Customers see the store after you tap PUBLISH in admin.'; document.body.insertBefore(pv, document.body.firstChild); }
+    if (PREVIEW_TOK) { var pv = document.createElement('div'); pv.style.cssText = 'display:block;width:100%;box-sizing:border-box;background:#f59e0b;color:#111;font:700 12px/1.35 system-ui,sans-serif;text-align:center;padding:6px 10px'; pv.textContent = 'PREVIEW · Only you see this. Tap PUBLISH in admin.'; document.body.insertBefore(pv, document.body.firstChild); }
   }
   else { var al = document.getElementById('adminLink'); if (al) al.href = '/demos/admin.html?s=' + encodeURIComponent(id); }
   var root = document.documentElement;
@@ -633,7 +654,7 @@ function start(S, P, liveId) {
     var html = '<div class="slider" id="slider">' + b.map(function (x, i) {
       return '<div class="slide ' + (i ? '' : 'on') + '" style="background:' + x.bg + '"><div style="flex:1;min-width:0"><h2>' + esc(x.title) + '</h2><span class="badge">' + esc(x.badge) + '</span><div style="margin-top:14px"><a class="btn" style="width:auto;padding:10px 20px;border-radius:999px;background:color-mix(in srgb,var(--c) 75%,#000)" href="#/categories">Shop Now ' + IC.arrow + '</a></div></div>' + (x.img ? '<img class="bpic" src="' + bimg(x.img) + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="big">' + x.icon + '</div>') + '</div>';
     }).join('') + '<div class="dots">' + b.map(function (x, i) { return '<b class="' + (i ? '' : 'on') + '"></b>'; }).join('') + '</div></div>';
-    html = catTiles(true) + html;
+    html = html + catTiles(true);
     html += '<div class="trust">' + S.trust.map(function (t) { var x = t.replace(/^[^A-Za-z0-9]+/, ''), sp = x.indexOf(' '); return '<div>' + trustIcon(x) + '<span>' + esc(sp > 0 ? x.slice(0, sp) : x) + '<br>' + esc(sp > 0 ? x.slice(sp + 1) : '') + '</span></div>'; }).join('') + '</div>';
     html += '<div class="head"><h3>' + IC.bolt + esc(S.sectionTitle) + '</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(0, 8).map(card).join('') + '</div>';
     var b2 = S.banners[1] || S.banners[0], b3 = S.banners[2] || S.banners[0];
@@ -644,18 +665,56 @@ function start(S, P, liveId) {
   }
   function startSlider() {
     clearInterval(slideTimer);
-    var k = 0;
-    slideTimer = setInterval(function () {
-      var s = document.querySelectorAll('#slider .slide'), d = document.querySelectorAll('#slider .dots b');
-      if (!s.length) return clearInterval(slideTimer);
-      s[k].classList.remove('on'); d[k].classList.remove('on');
-      k = (k + 1) % s.length;
-      s[k].classList.add('on'); d[k].classList.add('on');
-    }, 3500);
+    var sl = document.getElementById('slider'); if (!sl) return;
+    var s = sl.querySelectorAll('.slide'), d = sl.querySelectorAll('.dots b'), k = 0, dir = 1;
+    if (s.length < 2) return;
+    // moves to slide n: forward comes in from the right, back comes in from the left
+    var show = function (n, fwd) {
+      if (n === k) return;
+      var cur = s[k], nx = s[n];
+      nx.style.transition = 'none'; nx.classList.remove('on'); nx.classList.toggle('left', !fwd); void nx.offsetWidth; nx.style.transition = '';
+      nx.classList.remove('left'); nx.classList.add('on');
+      cur.classList.remove('on'); cur.classList.toggle('left', fwd);
+      if (d[k]) d[k].classList.remove('on'); if (d[n]) d[n].classList.add('on');
+      k = n;
+    };
+    // every 3 s: goes right to the last banner, then back left to the first
+    var tick = function () {
+      if (!document.body.contains(sl)) return clearInterval(slideTimer);
+      if (k + dir >= s.length || k + dir < 0) dir = -dir;
+      show(k + dir, dir > 0);
+    };
+    var run = function () { clearInterval(slideTimer); slideTimer = setInterval(tick, 3000); };
+    var x0 = null, y0 = 0;
+    sl.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    sl.addEventListener('touchend', function (e) {
+      if (x0 == null) return; var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+      if (dx < 0) show((k + 1) % s.length, true); else show((k - 1 + s.length) % s.length, false);
+      run();
+    });
+    run();
   }
-  function list(title, items) {
-    return '<div class="crumb"><a href="#/">Home</a> › ' + esc(title) + '</div><div class="head"><h3>' + esc(title) + '</h3><span style="color:#64748b;font-size:13px">' + items.length + ' items</span></div>' +
-      (items.length ? '<div class="grid">' + items.map(card).join('') + '</div>' : '<div class="panel">Nothing found.</div>');
+  // long lists: 20 products first, the next 20 come by themselves while scrolling (no page numbers)
+  var MORE = { items: [], shown: 0 }, moreObs;
+  function bindMore() {
+    if (moreObs) moreObs.disconnect();
+    var m = document.getElementById('moreLoad'), g = document.getElementById('listGrid');
+    if (!m || !g || !('IntersectionObserver' in window)) return;
+    moreObs = new IntersectionObserver(function (en) {
+      if (!en[0].isIntersecting) return;
+      var next = MORE.items.slice(MORE.shown, MORE.shown + 20);
+      MORE.shown += next.length;
+      g.insertAdjacentHTML('beforeend', next.map(card).join(''));
+      if (MORE.shown >= MORE.items.length) { moreObs.disconnect(); m.remove(); }
+    }, { rootMargin: '600px 0px' });
+    moreObs.observe(m);
+  }
+  function list(title, items, ban) {
+    MORE = { items: items, shown: Math.min(20, items.length) };
+    return '<div class="crumb"><a href="#/">Home</a> › ' + esc(title) + '</div>' + (ban ? '<div class="catban"><img src="' + esc(ban) + '" alt="' + esc(title) + '"></div>' : '') +
+      '<div class="head"><h3>' + esc(title) + '</h3><span style="color:#64748b;font-size:13px">' + items.length + ' items</span></div>' +
+      (items.length ? '<div class="grid" id="listGrid">' + items.slice(0, 20).map(card).join('') + '</div>' + (items.length > 20 ? '<div class="moreload" id="moreLoad">Loading more…</div>' : '') : '<div class="panel">Nothing found.</div>');
   }
   // ---------------- language (customer can switch English / বাংলা) ----------------
   var T = {
@@ -871,6 +930,54 @@ function start(S, P, liveId) {
       tabs + reviewsBox(p) +
       (rel.length ? '<div class="head"><h3>' + t('youMay') + '</h3><a href="#/all">See All →</a></div><div class="grid">' + rel.map(card).join('') + '</div>' : '');
   }
+  // full-screen photo: two fingers zoom only the photo, one finger moves it, double tap zooms, swipe for the next photo
+  function openZoom(list, at) {
+    var o = document.createElement('div'); o.id = 'zoomV';
+    o.innerHTML = '<img alt=""><button class="zx" aria-label="Close">×</button><div class="zn"></div>';
+    document.body.appendChild(o);
+    var im = o.querySelector('img'), zn = o.querySelector('.zn'), sc = 1, tx = 0, ty = 0, pts = {}, g = null, lastTap = 0, sw = null;
+    var put = function () { im.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')'; };
+    var load = function (i) { at = (i + list.length) % list.length; im.src = list[at]; sc = 1; tx = ty = 0; put(); zn.textContent = list.length > 1 ? (at + 1) + ' / ' + list.length : ''; };
+    var close = function () { o.remove(); history.state && history.state.zoom && history.back(); window.removeEventListener('popstate', pop); };
+    var pop = function () { if (document.body.contains(o)) { o.remove(); window.removeEventListener('popstate', pop); } };
+    history.pushState({ zoom: 1 }, ''); window.addEventListener('popstate', pop);
+    o.querySelector('.zx').onclick = function (e) { e.stopPropagation(); close(); };
+    var clamp = function () { if (sc <= 1) { sc = 1; tx = 0; ty = 0; } };
+    var two = function () { var k = Object.keys(pts); if (k.length < 2) return null; var a = pts[k[0]], b = pts[k[1]]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    o.addEventListener('pointerdown', function (e) {
+      if (e.target.classList.contains('zx')) return;
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var t = two();
+      if (t) { g = { d: t.d, sc: sc, tx: tx, ty: ty, x: t.x, y: t.y }; sw = null; }
+      else { g = { px: e.clientX, py: e.clientY, tx: tx, ty: ty }; sw = sc === 1 ? { x: e.clientX, y: e.clientY } : null; }
+    });
+    o.addEventListener('pointermove', function (e) {
+      if (!pts[e.pointerId] || !g) return;
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var t = two();
+      if (t && g.d) {
+        var ns = Math.min(5, Math.max(1, g.sc * t.d / g.d));
+        // keep the point between the fingers under the fingers
+        var L = im.offsetLeft, T = im.offsetTop;
+        tx = t.x - L - (g.x - L - g.tx) * ns / g.sc; ty = t.y - T - (g.y - T - g.ty) * ns / g.sc; sc = ns; put();
+      } else if (!t && sc > 1 && g.px != null) { tx = g.tx + e.clientX - g.px; ty = g.ty + e.clientY - g.py; put(); }
+    });
+    var up = function (e) {
+      var wasTwo = Object.keys(pts).length > 1;
+      delete pts[e.pointerId];
+      if (!wasTwo && sw && list.length > 1) { var dx = e.clientX - sw.x; if (Math.abs(dx) > 50) { load(at + (dx < 0 ? 1 : -1)); sw = null; return; } }
+      if (!wasTwo && Math.abs(e.clientX - (sw ? sw.x : e.clientX)) < 8) {
+        var now = Date.now();
+        if (now - lastTap < 300) { if (sc > 1) { sc = 1; tx = ty = 0; } else { sc = 2.5; tx = (e.clientX - im.offsetLeft) * -1.5; ty = (e.clientY - im.offsetTop) * -1.5; } put(); lastTap = 0; }
+        else lastTap = now;
+      }
+      clamp(); put();
+      g = Object.keys(pts).length ? g : null;
+    };
+    o.addEventListener('pointerup', up); o.addEventListener('pointercancel', up);
+    // the photo sits in the middle; the transform is measured from its own top-left corner
+    load(at);
+  }
   function bindProduct(pid) {
     var pp = P[pid], q = 1, opt = pp.opts && pp.opts.length ? pp.opts[0] : S.options ? S.options.values[0] : '';
     var qv = document.getElementById('qv');
@@ -883,6 +990,12 @@ function start(S, P, liveId) {
     showBar('<div class="bbp">' + (pp.img ? '<img src="' + esc(pp.img) + '" alt="">' : '<span>' + pp.e + '</span>') + '<div><b>' + esc(pp.name) + '</b><span>' + tk(pp.price) + '</span></div></div><button class="btn alt" id="bbAdd">' + IC.cart + t('addCart') + '</button><button class="btn" id="bbBuy">' + t('orderNow') + '</button>');
     document.getElementById('bbAdd').onclick = add; document.getElementById('bbBuy').onclick = buy;
     var th = document.getElementById('gThumbs'), gm = document.getElementById('gMain');
+    if (gm) gm.addEventListener('click', function (e) {
+      if (e.target.tagName !== 'IMG') return;
+      var list = th ? [].map.call(th.querySelectorAll('img'), function (x) { return x.src; }) : [e.target.src];
+      var at = Math.max(0, list.indexOf(e.target.src));
+      openZoom(list.length ? list : [e.target.src], at);
+    });
     if (th) th.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(th.children, function (x) { x.classList.remove('on'); }); b.classList.add('on'); var im = b.querySelector('img'); var main = gm.querySelector('img'); if (im && main) { main.src = im.src; main.style.objectPosition = im.style.objectPosition; } };
     var tb = document.querySelector('.ptab');
     if (tb) tb.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(tb.children, function (x) { x.classList.toggle('on', x === b); }); [].forEach.call(document.querySelectorAll('.pane'), function (x) { x.hidden = x.dataset.pane !== b.dataset.tab; }); };
@@ -1284,7 +1397,7 @@ function start(S, P, liveId) {
     var ft = document.querySelector('footer'); if (ft) ft.style.display = h === '/' || h === '' ? '' : 'none';
     if (h === '/' || h === '') html = home();
     else if (h === '/categories') html = '<div class="head"><h3>All categories</h3></div>' + catTiles(false);
-    else if (h.indexOf('/c/') === 0) { var cat = h.slice(3); html = list(cat, P.filter(function (p) { return p.cat === cat; })); }
+    else if (h.indexOf('/c/') === 0) { var cat = h.slice(3), cb = (S.categories.filter(function (c) { return c[0] === cat; })[0] || [])[2]; html = list(cat, P.filter(function (p) { return p.cat === cat; }), cb); }
     else if (h === '/all') html = list('All products', P);
     else if (h.indexOf('/p/') === 0) { var p = P[+h.slice(3)]; html = p ? product(p) : list('Not found', []); if (p) productSeo(p); }
     else if (h.indexOf('/s/') === 0) {
@@ -1309,10 +1422,12 @@ function start(S, P, liveId) {
     window.scrollTo(0, 0);
     renderNav();
     if (h === '/' || h === '') startSlider();
+    bindMore();
     if (h.indexOf('/p/') === 0 && P[+h.slice(3)]) bindProduct(+h.slice(3));
     if (h === '/checkout' && st.cart.length) bindCheckout();
   };
   window.toast = toast;
+  document.addEventListener('gesturestart', function (e) { if (!document.getElementById('zoomV')) e.preventDefault(); });
   document.getElementById('searchForm').onsubmit = function (e) { e.preventDefault(); var q = document.getElementById('q').value.trim(); if (q) location.hash = '#/s/' + encodeURIComponent(q); };
   window.addEventListener('hashchange', route);
 
