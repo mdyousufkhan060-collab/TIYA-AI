@@ -209,7 +209,11 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
 
   const active = isAdmin || (access && new Date(access.ends_at) > new Date()) || Object.keys(roles).length > 0;
 
-  if (loading) return <p className="px-1 text-xs text-slate-400">Loading…</p>;
+  if (loading) return (
+    <div className={`rose-adm ${light ? 'adm-light' : ''} fixed inset-0 z-[60] grid place-items-center bg-[#05070B]`}>
+      <Loader2 className="h-7 w-7 animate-spin text-emerald-500" />
+    </div>
+  );
 
   // ---------- no access: demos, free trial, plans ----------
   if (!active) {
@@ -301,7 +305,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
   const header = (
     <div className={box + ' space-y-2'}>
       <div className="flex items-center gap-2">
-        <span className="text-2xl">{store.logo}</span>
+        {store.logo_url ? <img src={store.logo_url} alt="" className="h-10 w-10 shrink-0 rounded-lg bg-white object-contain" /> : <span className="text-2xl">{store.logo}</span>}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-white">{store.name}</p>
           <a href={url} target="_blank" rel="noreferrer" className="block truncate text-[11px] text-teal-300 underline">{url.replace(/^https?:\/\//, '')}</a>
@@ -1487,29 +1491,36 @@ const AdminFrame: React.FC<{
             <button type="button" onClick={() => { setOpen(false); onExit(); }} data-testid="admin-exit" className="mt-2 flex h-10 items-center justify-center gap-1.5 rounded-lg border border-white/10 text-[12px] font-bold text-slate-300">‹ Exit admin</button>
     </>
   );
+  const site = (store as Store & { custom_domain?: string | null; domain_ready?: boolean; subdomain_ready?: boolean });
+  const addr = site.custom_domain && site.domain_ready ? site.custom_domain : `${store.slug}.myrosebd.com`;
+  const brand = (
+    <>
+      {store.logo_url
+        ? <img src={store.logo_url} alt="" className="h-9 w-9 shrink-0 rounded-lg bg-white object-contain" />
+        : <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/10 text-[20px]">{store.logo || '🛍️'}</span>}
+      <div className="min-w-0 leading-tight">
+        <p className="truncate text-[14px] font-extrabold text-white">{store.name}</p>
+        <p className="truncate text-[10.5px] text-slate-400">{addr}</p>
+      </div>
+    </>
+  );
   return (
     // the admin always fills the whole screen (no dark edges on any phone), the same in ROSE, on the website and in the demos
     <div className={`rose-adm ${light ? 'adm-light' : ''} fixed inset-0 z-[60] flex flex-col bg-[#05070B]`}>
       <div className="flex shrink-0 items-center gap-1.5 border-b border-white/10 bg-[#0B0E14] px-1.5 pb-2 pt-[max(8px,env(safe-area-inset-top))]">
         {/* ☰ sits at the far left; leaving the admin is the last item inside ☰ */}
         <button type="button" aria-label="Menu" onClick={menu} className="grid h-9 w-9 place-items-center text-white"><Menu className="h-5 w-5" /></button>
-        <button type="button" aria-label={light ? 'Dark mode' : 'Light mode'} onClick={onTheme} className="grid h-9 w-9 place-items-center text-white">{light ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}</button>
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-600 text-[15px] font-black text-white">R</span>
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-[14px] font-extrabold text-white">ROSE</p>
-            <p className="truncate text-[10.5px] text-slate-400">myrosebd.com</p>
-          </div>
+          {brand}
         </div>
+        {/* order everywhere: ☰ · the shop's logo · the shop's name · then the extra buttons on the right */}
+        <button type="button" aria-label={light ? 'Dark mode' : 'Light mode'} onClick={onTheme} className="grid h-9 w-9 shrink-0 place-items-center text-white">{light ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}</button>
       </div>
       {open && (
         <div className="fixed inset-0 z-[70] flex lg:hidden">
           <div className="flex h-full w-[82%] max-w-[300px] flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5">
             <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-600 text-[15px] font-black text-white">R</span>
-                <div className="leading-tight"><p className="text-[14px] font-extrabold text-white">ROSE</p><p className="text-[10.5px] text-slate-400">myrosebd.com</p></div>
-              </div>
+              <div className="flex min-w-0 items-center gap-1.5">{brand}</div>
               <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center text-white"><X className="h-5 w-5" /></button>
             </div>
             {side}

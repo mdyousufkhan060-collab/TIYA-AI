@@ -337,6 +337,13 @@ export default function App() {
       return null;
     }
   });
+  // while the store admin is on its way, a plain admin-coloured screen covers ROSE's home
+  const [openingAdmin, setOpeningAdmin] = useState(() => openAfterLogin === 'store');
+  useEffect(() => {
+    if (!openingAdmin) return;
+    const t = window.setTimeout(() => setOpeningAdmin(false), 8000);
+    return () => window.clearTimeout(t);
+  }, [openingAdmin]);
   useEffect(() => {
     // wait until the sign-in and the profile are ready, so nothing opens home on top of it afterwards
     if (!session?.user?.id || !profileLoaded || openAfterLogin !== 'store') return;
@@ -346,7 +353,10 @@ export default function App() {
     } catch {
       /* ignore */
     }
-    navigateTo('settings', 'workspace', 'hub');
+    // straight into WEBSITE ADMIN (no ROSE home or workspace page on the way); ‹ Exit admin goes back to WORKSPACE
+    navigateTo('settings', 'workspace', 'store');
+    navHistoryRef.current = [...navHistoryRef.current.slice(-24), { tab: 'settings', page: 'workspace', subpage: 'hub' } as typeof navStateRef.current];
+    window.setTimeout(() => setOpeningAdmin(false), 1200);
   }, [session?.user?.id, profileLoaded, openAfterLogin, navigateTo]);
 
   // the full-screen WEBSITE ADMIN asks to close (its ‹ button on the dashboard)
@@ -1974,6 +1984,11 @@ export default function App() {
           : 'flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] pc:p-3'
       } ${settings.reduceMotion ? 'reduce-motion' : ''}`}
     >
+      {openingAdmin && session?.user && (
+        <div className="fixed inset-0 z-[55] grid place-items-center bg-[#f3f5f9]" aria-label="Opening store admin">
+          <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-600 border-t-transparent" />
+        </div>
+      )}
       {desktopMode && session?.user && (
         <>
           <DesktopTopBar
