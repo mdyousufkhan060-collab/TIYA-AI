@@ -184,7 +184,7 @@ export function usePremiumVoice(opts: Options) {
           ...history,
           { role: 'user', content: note ? `[App result, not his words] ${input}` : input },
         ],
-        { forVoice: true, maxTokens: 400, tools: [phoneActionToolDeclaration()] },
+        { forVoice: true, maxTokens: 300, tools: [phoneActionToolDeclaration()] },
       );
       if (!activeRef.current) return;
       if (typeof res.voiceLeft === 'number' || typeof res.textLeft === 'number') {
@@ -204,8 +204,9 @@ export function usePremiumVoice(opts: Options) {
       const reply = (parsed.cleanText || '').replace(/`[^`]*`/g, '').replace(/\{[\s\S]*\}\s*$/, '').trim();
       if (reply || action) o.onAppend('assistant', reply, action || undefined);
       if (action) stepsRef.current += 1;
-      if (!reply) {
-        // nothing to say: wait for the action result (it comes back through feedback) or listen
+      if (!reply || action) {
+        // a phone step is running: no voice for the in-between lines (much faster); the words stay in the
+        // chat, and ROSE speaks once the job is done. Without an action: listen again.
         if (!action && activeRef.current) listen();
         return;
       }
@@ -282,7 +283,7 @@ export function usePremiumVoice(opts: Options) {
         pendingRef.current = false;
         void runTurn(text, true);
       };
-      window.setTimeout(go, 700);
+      window.setTimeout(go, 350);
     },
     [runTurn],
   );

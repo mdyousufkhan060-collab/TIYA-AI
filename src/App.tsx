@@ -93,6 +93,17 @@ function makeId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** A long phone-action result (a screen with 30+ buttons) becomes one short line in the chat. */
+function shortActionNote(text: string): string {
+  const t = String(text || '').trim();
+  if (t.length <= 140) return t;
+  const items = (t.match(/(?:^|\s)\d+\.\s/g) || []).length;
+  const app = (t.match(/app:\s*([\w.]+)/) || [])[1] || '';
+  const name = /facebook/i.test(app) ? 'Facebook' : /youtube/i.test(app) ? 'YouTube' : /instagram/i.test(app) ? 'Instagram' : /tiktok|musically/i.test(app) ? 'TikTok' : app;
+  const first = t.split(/app:|\s\d+\.\s/)[0].trim().slice(0, 80);
+  return [first, name && `${name}-এর স্ক্রিন দেখলাম`, items ? `${items}টা বাটন` : ''].filter(Boolean).join(' · ');
+}
+
 export default function App() {
   const [settings, setSettings] = useState<TiyaSettings>(() => loadSettings());
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadChats());
@@ -1040,7 +1051,8 @@ export default function App() {
             ? {
                 ...m,
                 actionStatus: result.success ? 'executed' : 'failed',
-                actionNote: result.messageBn,
+                // the full screen list goes only to ROSE; the chat shows one short line
+                actionNote: shortActionNote(result.messageBn),
               }
             : m,
         ),
