@@ -2376,19 +2376,51 @@ const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
   useEffect(() => {
     void load();
   }, [load]);
-  const add = async () => {
-    if (!name.trim()) return;
-    await supabase.from('store_categories').insert({ store_id: store.id, name: name.trim(), icon: icon || '🏷️', sort: cats.length });
-    setName('');
+  const [pick, setPick] = useState(false);
+  const [ready, setReady] = useState<Array<[string, string]>>([]);
+  useEffect(() => {
+    void loadDemos().then((d) => {
+      const own = ((d[store.template] as any)?.categories || []) as Array<[string, string]>;
+      const more: Array<[string, string]> = [
+        ['Panjabi', '👘'], ['Saree', '🥻'], ['Three Piece', '👗'], ['Ladies Tops', '👚'], ['Kids Wear', '🧸'], ['Trousers', '👖'], ['Shorts', '🩳'],
+        ['Jackets', '🧥'], ['Sweaters', '🧥'], ['Shoes', '👟'], ['Sandals', '👡'], ['Bags', '👜'], ['Watches', '⌚'], ['Caps', '🧢'], ['Sunglasses', '🕶️'],
+        ['Accessories', '💍'], ['Beauty', '💄'], ['Gadgets', '📱'], ['Home & Living', '🏠'], ['Gifts', '🎁'], ['Offers', '🔥'], ['New Arrivals', '🆕'],
+      ];
+      const all = [...own, ...Object.values(d).flatMap((x: any) => (x?.categories || []) as Array<[string, string]>), ...more];
+      const seen = new Set<string>();
+      setReady(all.filter(([n]) => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }));
+    });
+  }, [store.template]);
+  const addOne = async (nm: string, ic: string) => {
+    await supabase.from('store_categories').insert({ store_id: store.id, name: nm.trim(), icon: ic || iconFor(nm), sort: cats.length });
     void load();
+  };
+  // + with a name: adds it; + with the box empty: opens the ready list to choose from
+  const add = async () => {
+    if (!name.trim()) return setPick((v) => !v);
+    await addOne(name, icon || '🏷️');
+    setName('');
   };
   return (
     <div className="space-y-2">
       <div className={box + ' flex gap-2'}>
         <IconPick value={icon} onPick={setIcon} />
         <input className={input} value={name} onChange={(e) => { setName(e.target.value); setIcon(iconFor(e.target.value)); }} placeholder="New category" />
-        <button type="button" onClick={() => void add()} className={btn}><Plus className="h-4 w-4" /></button>
+        <button type="button" onClick={() => void add()} className={btn} aria-label="Add category"><Plus className="h-4 w-4" /></button>
       </div>
+      {pick && (
+        <div className={box}>
+          <p className="mb-1.5 text-[10.5px] font-bold tracking-wider text-teal-300">TAP TO ADD A READY CATEGORY</p>
+          <div className="flex flex-wrap gap-1.5">
+            {ready.filter(([n]) => !cats.some((c) => c.name.toLowerCase() === n.toLowerCase())).map(([n, ic]) => (
+              <button key={n} type="button" onClick={() => void addOne(n, ic)} className="flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white">
+                <span>{ic}</span>{n}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[10.5px] text-slate-400">Or write your own name in the box and tap +.</p>
+        </div>
+      )}
       {cats.map((c) => (
         <div key={c.id} className={box + ' flex items-center gap-2'}>
           <IconPick value={c.icon} onPick={async (v) => { await supabase.from('store_categories').update({ icon: v }).eq('id', c.id); void load(); }} />
