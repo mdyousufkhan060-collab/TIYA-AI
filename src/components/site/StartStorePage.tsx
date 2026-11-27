@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
+import { BuyPlan, LIFETIME_TERMS, RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
+import { STORE_DURATIONS, STORE_PLANS, storePrice, tk, type StorePlanId } from '../../utils/storePlans';
 
 /**
  * myrosebd.com/start?d=foodbazaar — take a demo store as your own:
@@ -40,6 +41,17 @@ export default function StartStorePage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [done, setDone] = useState<{ url: string; ends: string } | null>(null);
+  // plan chosen here: 5-day free trial, a monthly plan (3-24 months) or the one-time LIFETIME website
+  const [choice, setChoice] = useState<'trial' | 'monthly' | 'lifetime'>(qs.get('plan') === 'lifetime' ? 'lifetime' : 'trial');
+  const [tier, setTier] = useState<StorePlanId>('pro');
+  const [months, setMonths] = useState(12);
+  const [lifePrice, setLifePrice] = useState(26000);
+  const [needPay, setNeedPay] = useState(false);
+  useEffect(() => {
+    void supabase.from('store_plan_prices').select('plan,monthly').eq('plan', 'lifetime').maybeSingle().then(({ data }) => {
+      if (data && (data as { monthly: number }).monthly) setLifePrice(Number((data as { monthly: number }).monthly));
+    });
+  }, []);
 
   useEffect(() => {
     document.title = 'Get your store · ROSE';
@@ -90,6 +102,7 @@ export default function StartStorePage() {
         const { error } = await supabase.rpc('start_website_trial');
         if (error) throw new Error(error.message);
       } else if (a.ends_at && new Date(a.ends_at) < new Date()) {
+        if (choice !== 'trial') { setNeedPay(true); throw new Error('Your free trial was used before. Pay for the plan below first, then tap START again.'); }
         throw new Error('Your free trial or plan has ended. Buy a plan in the app: myrosebd.com/app → Settings → WORKSPACE → STORE · WEBSITE.');
       }
       const { data: st, error } = await supabase
@@ -137,7 +150,7 @@ export default function StartStorePage() {
 
   const shell = (body: React.ReactNode, sub = true) => (
     <div className="min-h-[100dvh] bg-[#07090D] px-4 py-3 text-white md:px-8 md:py-3">
-      <div className="mx-auto max-w-5xl space-y-2.5 md:space-y-3">
+      <div className="mx-auto max-w-[1500px] space-y-2.5 md:space-y-3">
         <a href="/demos" className="text-[12px] font-bold text-teal-300">‹ All designs</a>
         <h1 className="text-xl font-extrabold md:flex md:items-baseline md:gap-3 md:text-2xl">Get your own store {sub && <span className="block text-[13px] font-semibold text-slate-400 md:text-[15px]">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span>}</h1>
         {body}
@@ -148,17 +161,76 @@ export default function StartStorePage() {
 
   if (!ready) return shell(<Loader2 className="h-6 w-6 animate-spin text-teal-300" />);
 
+  const photo = (x: Demo) => {
+    const p = (x.products || []).find((q) => q[6]);
+    const u = p ? String(p[6]) : '';
+    return !u ? '' : /^https?:/.test(u) ? u : `https://images.unsplash.com/${u}?w=480&q=60&auto=format&fit=crop`;
+  };
+  // bigger design cards with a photo of what that shop sells (2 per row on phones and computers)
   const designs = (
-    <div className="grid grid-cols-3 gap-1.5 md:grid-cols-2">
+    <div className="grid grid-cols-2 gap-2">
       {Object.entries(demos).map(([k, x]) => (
-        <button key={k} type="button" onClick={() => { setKey(k); localStorage.setItem(KEY, k); }} className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left ${key === k ? 'border-teal-400 bg-teal-500/10' : 'border-white/10 bg-white/[0.03]'}`}>
-          <span className="text-xl">{x.logo}</span>
-          <span className="min-w-0">
-            <span className="block truncate text-[12px] font-bold">{x.name}</span>
-            <span className="block truncate text-[10px] text-slate-400">{x.type}</span>
+        <button key={k} type="button" onClick={() => { setKey(k); localStorage.setItem(KEY, k); }} className={`overflow-hidden rounded-xl border text-left transition ${key === k ? 'border-teal-400 ring-2 ring-teal-400/40' : 'border-white/10 hover:border-white/30'}`}>
+          <span className="relative block h-24 bg-white/5 md:h-28">
+            {photo(x) ? <img src={photo(x)} alt="" loading="lazy" className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-4xl">{x.logo}</span>}
+            {key === k && <span className="absolute right-1.5 top-1.5 rounded-full bg-teal-500 px-2 py-0.5 text-[10px] font-bold text-white">CHOSEN</span>}
+          </span>
+          <span className="flex items-center gap-2 bg-[#0d1016] px-2.5 py-2">
+            <span className="text-xl">{x.logo}</span>
+            <span className="min-w-0">
+              <span className="block truncate text-[13px] font-bold">{x.name}</span>
+              <span className="block truncate text-[11px] text-slate-400">{x.type}</span>
+            </span>
           </span>
         </button>
       ))}
+    </div>
+  );
+
+  const planPrice = choice === 'lifetime' ? lifePrice : choice === 'monthly' ? storePrice(tier, months) : 0;
+  const plans = (
+    <div className="space-y-2">
+      <p className={lbl}>Choose a plan</p>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {([
+          ['trial', '5-day free trial', '0 Tk · pay later'],
+          ['monthly', 'Monthly plan', `from ${tk(STORE_PLANS.starter.monthly)} / month`],
+          ['lifetime', 'Lifetime website', `${tk(lifePrice)} once`],
+        ] as Array<['trial' | 'monthly' | 'lifetime', string, string]>).map(([k, t, sub]) => (
+          <button key={k} type="button" onClick={() => setChoice(k)} className={`rounded-xl border p-3 text-left ${choice === k ? (k === 'lifetime' ? 'border-amber-400 bg-amber-500/10' : 'border-teal-400 bg-teal-500/10') : 'border-white/10 bg-black/30'}`}>
+            <span className="block text-[13.5px] font-extrabold">{t}</span>
+            <span className={`block text-[12px] ${k === 'lifetime' ? 'text-amber-300' : 'text-teal-300'}`}>{sub}</span>
+          </button>
+        ))}
+      </div>
+      {choice === 'monthly' && (
+        <div className="space-y-2 rounded-xl border border-white/10 bg-black/20 p-3">
+          <div className="grid grid-cols-3 gap-1.5">
+            {(['starter', 'pro', 'business'] as StorePlanId[]).map((p) => (
+              <button key={p} type="button" onClick={() => setTier(p)} className={`rounded-lg border px-2 py-2 text-center ${tier === p ? 'border-teal-400 bg-teal-500/10' : 'border-white/10'}`}>
+                <span className="block text-[12px] font-bold">{STORE_PLANS[p].label}</span>
+                <span className="block text-[11px] text-slate-400">{tk(STORE_PLANS[p].monthly)}/mo</span>
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-5 gap-1">
+            {STORE_DURATIONS.map((x) => (
+              <button key={x.months} type="button" onClick={() => setMonths(x.months)} className={`rounded-lg border py-1.5 text-center ${months === x.months ? 'border-teal-400 bg-teal-500/10' : 'border-white/10'}`}>
+                <span className="block text-[12.5px] font-bold">{x.months} mo</span>
+                <span className="block text-[10px] text-amber-300">{x.off ? `-${x.off}%` : ' '}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-right text-[14px] font-extrabold text-amber-300">{STORE_PLANS[tier].label} · {months} months = {tk(planPrice)}</p>
+        </div>
+      )}
+      {choice === 'lifetime' && (
+        <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">
+          <p className="text-[13px] font-extrabold text-amber-200">Lifetime website · {tk(lifePrice)} one-time</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-amber-50/90"><b>Terms:</b> {LIFETIME_TERMS}</p>
+        </div>
+      )}
+      {needPay && choice !== 'trial' && <BuyPlan startPlan={choice === 'lifetime' ? 'lifetime' : tier} startMonths={months} />}
     </div>
   );
 
@@ -168,6 +240,13 @@ export default function StartStorePage() {
         <p className="text-lg font-extrabold text-emerald-300">Your store is live! 🎉</p>
         <a href={done.url} target="_blank" rel="noreferrer" className="block break-all text-[15px] font-bold text-white underline">{done.url.replace(/^https?:\/\//, '')}</a>
         {done.ends && <p className="text-[13px] text-slate-200">Free until {new Date(done.ends).toLocaleDateString('en-GB')}. After that choose 3, 6, 9, 12 or 24 months to keep it open.</p>}
+        {choice !== 'trial' && (
+          <div className="space-y-2 rounded-xl border border-amber-400/40 bg-black/30 p-3">
+            <p className="text-[14px] font-extrabold text-amber-300">Now pay for your {choice === 'lifetime' ? 'LIFETIME website' : `${STORE_PLANS[tier].label} plan (${months} months)`}: {tk(planPrice)}</p>
+            <p className="text-[12px] text-slate-300">Your store is already open with the 5-day trial. When the payment is checked, your plan starts by itself.</p>
+            <BuyPlan startPlan={choice === 'lifetime' ? 'lifetime' : tier} startMonths={months} />
+          </div>
+        )}
         <a href={done.url} target="_blank" rel="noreferrer" className="flex h-11 items-center justify-center rounded-xl bg-white text-[13px] font-bold text-black">OPEN MY STORE</a>
         <a href="/app" className="flex h-11 items-center justify-center rounded-xl bg-teal-600 text-[13px] font-bold">MANAGE: PRODUCTS · ORDERS · PLAN</a>
         <p className="text-[12px] text-slate-300">To change the name, phone, address, logo or banners later: myrosebd.com/app → sign in with this Gmail → Settings → WORKSPACE → MY DETAILS (name, phone, address) and WEBSITE ADMIN → HOMEPAGE & DESIGN (logo, banners). Or on your shop: Account → Store admin.</p>
@@ -199,8 +278,9 @@ export default function StartStorePage() {
     );
 
   return shell(
-    <div className="grid gap-3 md:grid-cols-[280px_1fr] md:items-start md:gap-4">
+    <div className="grid gap-4 md:grid-cols-[minmax(320px,420px)_1fr] md:items-start md:gap-6 xl:grid-cols-[520px_1fr]">
       <div className="space-y-2 md:sticky md:top-4 md:mt-12">
+        <p className={lbl}>Choose a design</p>
         {designs}
         {d && (
           <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="block text-center text-[12px] text-teal-300 underline">
@@ -209,7 +289,7 @@ export default function StartStorePage() {
         )}
       </div>
       <div className="space-y-2">
-      <p className="text-center text-[17px] font-extrabold text-teal-300 md:text-[22px]">নিজের অনলাইন দোকান খুলুন <span className="text-amber-300">· ৫ দিন ফ্রি</span></p>
+      <p className="text-center text-[17px] font-extrabold text-teal-300 md:text-[24px]">নিজের অনলাইন দোকান খুলুন <span className="text-amber-300">· ৫ দিন ফ্রি</span></p>
       <div
         className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:p-4"
         onFocusCapture={(e) => {
@@ -236,10 +316,11 @@ export default function StartStorePage() {
           <input className={input + ' mt-1'} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area" /></label>
         <label className={lbl}>Web address *
           <span className="mt-1 flex items-center gap-1"><input className={input} value={f.slug || slugify(f.name)} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="rahim-fashion" /><span className="shrink-0 text-[12px] text-slate-400">.myrosebd.com</span></span></label>
+        {plans}
         <div className="space-y-1 pt-1 md:sticky md:bottom-0 md:-mx-4 md:bg-[#0d1016]/95 md:px-4 md:py-2 md:backdrop-blur">
           {msg && <p className="text-[13px] text-rose-300">{msg}</p>}
           <button type="button" disabled={busy || !d} onClick={() => void create()} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 text-[14px] font-extrabold text-black disabled:opacity-60">
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} START 5-DAY FREE STORE
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} {choice === 'trial' ? 'START 5-DAY FREE STORE' : `START STORE · THEN PAY ${tk(planPrice)}`}
           </button>
           <p className="text-center text-[11px] text-slate-500">Logo, banners, more phones and emails: add later in Settings · <a className="underline" href="/terms.html">Terms</a></p>
         </div>

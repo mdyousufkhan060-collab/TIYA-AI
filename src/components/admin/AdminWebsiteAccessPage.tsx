@@ -132,9 +132,9 @@ const PlanPrices: React.FC = () => {
       <p className="text-[11px] font-bold tracking-wider text-teal-300">STORE PLAN PRICES</p>
       {rows.map((r, i) => (
         <div key={r.plan} className="space-y-1 rounded-lg bg-black/30 p-2">
-          <p className="text-[12px] font-bold text-white">{r.plan.toUpperCase()}</p>
+          <p className="text-[12px] font-bold text-white">{r.plan === 'lifetime' ? 'LIFETIME WEBSITE (one-time)' : r.plan.toUpperCase()}</p>
           <div className="grid grid-cols-3 gap-1 text-[10px] text-slate-400">
-            <label>Tk / month{num(i, 'monthly', r.monthly)}</label>
+            <label>{r.plan === 'lifetime' ? 'Tk once' : 'Tk / month'}{num(i, 'monthly', r.monthly)}</label>
             <label>Stores{num(i, 'stores', r.stores)}</label>
             <label>Products{num(i, 'products', r.products)}</label>
             <label>Photos GB{num(i, 'storage_gb', r.storage_gb)}</label>

@@ -511,11 +511,15 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
 // ---------------------------------------------------------------- buy / renew a plan (bKash · Nagad · Rocket)
 type PriceRow = { plan: StorePlanId; monthly: number; stores: number; products: number; storage_gb: number; staff: number; own_domain: boolean };
 const DISC: Record<number, number> = { 3: 0, 6: 5, 9: 10, 12: 15, 24: 25 };
-const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void }> = ({ current, onPaid }) => {
+/** Terms of the one-time LIFETIME website (also shown on myrosebd.com/start) */
+export const LIFETIME_TERMS =
+  'One payment, the website is yours for life on myrosebd.com (1 store, PRO features). A small yearly hosting and maintenance charge applies, agreed with ROSE before payment. Domain fee is separate. ROSE app plans (voice and chat credits) are not included.';
+export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPlan?: string; startMonths?: number }> = ({ current, onPaid, startPlan, startMonths }) => {
   const [prices, setPrices] = useState<PriceRow[]>([]);
+  const [lifePrice, setLifePrice] = useState(0);
   const [pay, setPay] = useState<{ bkash?: string; nagad?: string; rocket?: string }>({});
-  const [plan, setPlan] = useState<StorePlanId>('starter');
-  const [months, setMonths] = useState(3);
+  const [plan, setPlan] = useState<StorePlanId | 'lifetime'>((startPlan as StorePlanId) || 'starter');
+  const [months, setMonths] = useState(startMonths || 3);
   const [method, setMethod] = useState<'bKash' | 'Nagad' | 'Rocket'>('bKash');
   const [sender, setSender] = useState('');
   const [trx, setTrx] = useState('');
@@ -528,19 +532,22 @@ const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void }> = ({ current,
   }, []);
   useEffect(() => {
     void supabase.from('store_plan_prices').select('*').order('sort').then(({ data }) => {
-      const rows = (data as PriceRow[]) || [];
+      const all = (data as Array<PriceRow & { plan: string }>) || [];
+      setLifePrice(Number(all.find((r) => r.plan === 'lifetime')?.monthly || 0));
+      const rows = all.filter((r) => r.plan !== 'lifetime') as PriceRow[];
       setPrices(rows.length ? rows : (['starter', 'pro', 'business'] as StorePlanId[]).map((k) => ({ plan: k, monthly: STORE_PLANS[k].monthly, stores: STORE_PLANS[k].stores, products: STORE_PLANS[k].products, storage_gb: STORE_PLANS[k].storageGb, staff: STORE_PLANS[k].staff, own_domain: STORE_PLANS[k].ownDomain })));
     });
     void supabase.rpc('get_payment_info').then(({ data }) => setPay((data as typeof pay) || {}));
     void loadMine();
   }, [loadMine]);
+  const life = plan === 'lifetime';
   const row = prices.find((p) => p.plan === plan);
-  const total = row ? Math.round((row.monthly * months * (100 - (DISC[months] || 0))) / 100) : 0;
+  const total = life ? lifePrice : row ? Math.round((row.monthly * months * (100 - (DISC[months] || 0))) / 100) : 0;
   const number = method === 'bKash' ? pay.bkash : method === 'Nagad' ? pay.nagad : pay.rocket;
   const send = async () => {
     setBusy(true);
     setMsg('');
-    const { data, error } = await supabase.rpc('submit_store_payment', { p_plan: plan, p_months: months, p_method: method, p_sender: sender, p_trx: trx });
+    const { data, error } = await supabase.rpc('submit_store_payment', { p_plan: plan, p_months: life ? 0 : months, p_method: method, p_sender: sender, p_trx: trx });
     setBusy(false);
     const r = data as { ok: boolean; message: string; auto?: boolean } | null;
     setMsg(error ? error.message : r?.message || '');
@@ -566,17 +573,26 @@ const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void }> = ({ current,
             </span>
           </button>
         ))}
-        <p className="pt-1 text-[11px] font-bold tracking-wider text-teal-300">2 · HOW LONG</p>
-        <div className="grid grid-cols-5 gap-1">
+        {lifePrice > 0 && (
+          <button type="button" onClick={() => setPlan('lifetime')} className={`w-full border p-2 text-left ${life ? 'border-amber-400 bg-amber-500/10' : 'border-white/10 bg-black/30'}`}>
+            <span className="flex items-center gap-2">
+              <span className="flex-1 text-[13px] font-bold text-white">LIFETIME WEBSITE · ONE-TIME</span>
+              <span className="text-[13px] font-bold text-amber-300">{tk(lifePrice)} once</span>
+            </span>
+            <span className="block text-[11px] leading-snug text-slate-400">{LIFETIME_TERMS}</span>
+          </button>
+        )}
+        {!life && <p className="pt-1 text-[11px] font-bold tracking-wider text-teal-300">2 · HOW LONG</p>}
+        {!life && <div className="grid grid-cols-5 gap-1">
           {STORE_DURATIONS.map((d) => (
             <button key={d.months} type="button" onClick={() => setMonths(d.months)} className={`border py-1.5 text-center ${months === d.months ? 'border-teal-400 bg-teal-500/10' : 'border-white/10 bg-black/30'}`}>
               <span className="block text-[12.5px] font-bold text-white">{d.months}m</span>
               <span className="block text-[9.5px] text-amber-300">{d.off ? `-${d.off}%` : ' '}</span>
             </button>
           ))}
-        </div>
+        </div>}
         <div className="flex items-center border border-amber-400/40 bg-amber-500/10 p-2">
-          <span className="flex-1 text-[12px] text-amber-100">{STORE_PLANS[plan]?.label} · {months} months</span>
+          <span className="flex-1 text-[12px] text-amber-100">{life ? 'LIFETIME WEBSITE · one-time' : `${STORE_PLANS[plan as StorePlanId]?.label} · ${months} months`}</span>
           <span className="text-[17px] font-extrabold text-amber-300">{tk(total)}</span>
         </div>
       </div>
