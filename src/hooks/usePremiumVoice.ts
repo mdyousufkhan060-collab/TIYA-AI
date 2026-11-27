@@ -146,7 +146,17 @@ export function usePremiumVoice(opts: Options) {
         .map((h) => ({ role: h.role, content: h.text }));
       const res = await premiumChat(
         [
-          { role: 'system', content: o.buildSystemPrompt() + '\n\nVOICE MODE: reply in 1-3 short spoken sentences, no lists, no markdown, no JSON.' },
+          {
+            role: 'system',
+            content:
+              o.buildSystemPrompt() +
+              '\n\nVOICE MODE: reply in 1-3 short spoken sentences, no lists, no markdown.' +
+              '\nPHONE ACTIONS IN VOICE MODE: you have no tool here. When he asks to open an app or website, go home, scroll, read the screen, ' +
+              'call someone or message on WhatsApp / Messenger, say one short Bengali sentence and then put exactly ONE JSON object at the very end, ' +
+              'the same values you would give trigger_phone_action, for example {"action":"open_app","app":"Facebook"}, {"action":"open_app","app":"scroll down"}, ' +
+              '{"action":"call","contact":"Ma"}, {"action":"whatsapp_message","contact":"Rahim","text":"..."}. The app runs it; never say it is already done. ' +
+              'No JSON when there is nothing to do on the phone.',
+          },
           ...history,
           { role: 'user', content: heard },
         ],
@@ -160,8 +170,13 @@ export function usePremiumVoice(opts: Options) {
         fail(res.message || 'উত্তর পাওয়া যায়নি।');
         return;
       }
-      const reply = res.text.replace(/\{[\s\S]*\}\s*$/, '').trim() || res.text;
-      o.onAppend('assistant', reply);
+      // the JSON action (if any) goes to the app, which runs it; only the words are spoken
+      const reply = res.text.replace(/\{[\s\S]*\}\s*$/, '').trim();
+      o.onAppend('assistant', res.text);
+      if (!reply) {
+        if (activeRef.current) listen();
+        return;
+      }
       setState('speaking');
       const tts = await premiumTts(reply, o.voiceName);
       if (!activeRef.current) return;
