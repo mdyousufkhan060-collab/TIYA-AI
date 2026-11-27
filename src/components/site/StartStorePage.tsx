@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { BuyPlan, lifetimeTerms, RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
-import { STORE_DURATIONS, STORE_PLANS, storePrice, tk, type StorePlanId } from '../../utils/storePlans';
+import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
+import { livePrice, useLiveStorePrices } from '../../utils/liveStorePrices';
 
 /**
  * myrosebd.com/start?d=foodbazaar — take a demo store as your own:
@@ -45,13 +46,9 @@ export default function StartStorePage() {
   const [choice, setChoice] = useState<'trial' | 'monthly' | 'lifetime'>(qs.get('plan') === 'lifetime' ? 'lifetime' : 'trial');
   const [tier, setTier] = useState<StorePlanId>('pro');
   const [months, setMonths] = useState(12);
-  const [lifePrice, setLifePrice] = useState(26000);
+  const live = useLiveStorePrices();
+  const lifePrice = live.lifetime;
   const [needPay, setNeedPay] = useState(false);
-  useEffect(() => {
-    void supabase.from('store_plan_prices').select('plan,monthly').eq('plan', 'lifetime').maybeSingle().then(({ data }) => {
-      if (data && (data as { monthly: number }).monthly) setLifePrice(Number((data as { monthly: number }).monthly));
-    });
-  }, []);
 
   useEffect(() => {
     document.title = 'Get your store · ROSE';
@@ -187,14 +184,14 @@ export default function StartStorePage() {
     </div>
   );
 
-  const planPrice = choice === 'lifetime' ? lifePrice : choice === 'monthly' ? storePrice(tier, months) : 0;
+  const planPrice = choice === 'lifetime' ? lifePrice : choice === 'monthly' ? livePrice(live[tier], months) : 0;
   const plans = (
     <div className="space-y-2">
       <p className={lbl}>Choose a plan</p>
       <div className="grid gap-2 sm:grid-cols-3">
         {([
           ['trial', '5-day free trial', '0 Tk · pay later'],
-          ['monthly', 'Monthly plan', `from ${tk(STORE_PLANS.starter.monthly)} / month`],
+          ['monthly', 'Monthly plan', `from ${tk(live.starter)} / month`],
           ['lifetime', 'Lifetime website', `${tk(lifePrice)} once`],
         ] as Array<['trial' | 'monthly' | 'lifetime', string, string]>).map(([k, t, sub]) => (
           <button key={k} type="button" onClick={() => setChoice(k)} className={`rounded-xl border p-3 text-left ${choice === k ? (k === 'lifetime' ? 'border-amber-400 bg-amber-500/10' : 'border-teal-400 bg-teal-500/10') : 'border-white/10 bg-black/30'}`}>
@@ -209,7 +206,7 @@ export default function StartStorePage() {
             {(['starter', 'pro', 'business'] as StorePlanId[]).map((p) => (
               <button key={p} type="button" onClick={() => setTier(p)} className={`rounded-lg border px-2 py-2 text-center ${tier === p ? 'border-teal-400 bg-teal-500/10' : 'border-white/10'}`}>
                 <span className="block text-[12px] font-bold">{STORE_PLANS[p].label}</span>
-                <span className="block text-[11px] text-slate-400">{tk(STORE_PLANS[p].monthly)}/mo</span>
+                <span className="block text-[11px] text-slate-400">{tk(live[p])}/mo</span>
               </button>
             ))}
           </div>

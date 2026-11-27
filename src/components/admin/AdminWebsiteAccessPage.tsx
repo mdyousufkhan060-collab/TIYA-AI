@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { STORE_PLANS, storePrice, tk, type StorePlanId } from '../../utils/storePlans';
+import { livePrice, useLiveStorePrices } from '../../utils/liveStorePrices';
+import { STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 
 /**
  * Admin > 21 WEBSITE ACCESS: give the Store Builder to anyone by Gmail
@@ -206,7 +207,8 @@ export const AdminWebsiteAccessPage: React.FC = () => {
   const accessOf = (e: string) => rows.find((r) => r.email.toLowerCase() === e);
   const storesOf = (e: string) => stores.filter((s) => (s.owner_email || '').toLowerCase() === e);
   const hideOf = (e: string) => (e in flags ? flags[e] : storesOf(e).some((s) => s.hide_rose));
-  const price = gPlan === 'trial' ? 0 : storePrice(gPlan, gMonths || 1) * (gMonths ? 1 : 0);
+  const live = useLiveStorePrices();
+  const price = gPlan === 'trial' ? 0 : livePrice(live[gPlan] ?? 0, gMonths || 1) * (gMonths ? 1 : 0);
 
   const openRow = (e: string) => {
     if (open === e) return setOpen('');
