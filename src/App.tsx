@@ -1954,8 +1954,8 @@ export default function App() {
   const [desktopTab, setDesktopTab] = useState<DesktopTab>('dashboard');
   const [writerInbox, setWriterInbox] = useState<string | null>(null);
   const [adminView, setAdminView] = useState<string>('dashboard');
-  // PC shows the same bars as the phone (one ROSE everywhere, just wider), so the separate PC dashboard is off
-  const PC_DASHBOARD = false;
+  // PC (wide window) shows the PC dashboard he designed; phones and small windows keep the mobile app (Nov 27)
+  const PC_DASHBOARD = true;
   const desktopMode =
     PC_DASHBOARD &&
     isWide &&
