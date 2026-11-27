@@ -318,27 +318,36 @@ export default function App() {
 
   // Store admin link from a shop page (/app?open=store): kept through login, then the website owner's 6-bar page opens
   // (MY DETAILS · MYROSEBD.COM BUSINESS · WEBSITE ADMIN · MY SHOP · CUSTOMER VIEW · MY STAFF)
+  // Kept in this tab AND on this device for 15 minutes, and also sent through Google's return address,
+  // so a sign-in that comes back in another tab or after a reload still opens the store admin.
   const [openAfterLogin] = useState<string | null>(() => {
     try {
       const v = new URLSearchParams(window.location.search).get('open');
       if (v === 'store') {
         window.sessionStorage.setItem('rose_open', v);
+        window.localStorage.setItem('rose_open', JSON.stringify({ v, t: Date.now() }));
         window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+        return v;
       }
-      return window.sessionStorage.getItem('rose_open');
+      if (window.sessionStorage.getItem('rose_open') === 'store') return 'store';
+      const saved = JSON.parse(window.localStorage.getItem('rose_open') || 'null');
+      if (saved?.v === 'store' && Date.now() - Number(saved.t || 0) < 15 * 60 * 1000) return 'store';
+      return null;
     } catch {
       return null;
     }
   });
   useEffect(() => {
-    if (!session?.user?.id || openAfterLogin !== 'store') return;
+    // wait until the sign-in and the profile are ready, so nothing opens home on top of it afterwards
+    if (!session?.user?.id || !profileLoaded || openAfterLogin !== 'store') return;
     try {
       window.sessionStorage.removeItem('rose_open');
+      window.localStorage.removeItem('rose_open');
     } catch {
       /* ignore */
     }
     navigateTo('settings', 'workspace', 'hub');
-  }, [session?.user?.id, openAfterLogin, navigateTo]);
+  }, [session?.user?.id, profileLoaded, openAfterLogin, navigateTo]);
 
   const handleNavigateCommand = useCallback(
     (cmd: NavigationCommand) => {
@@ -1955,7 +1964,7 @@ export default function App() {
       className={`${
         desktopMode
           ? 'relative isolate grid h-[100dvh] w-full grid-cols-[minmax(0,1fr)_380px] grid-rows-[auto_minmax(0,1fr)] gap-3 bg-[#07060F] p-3'
-          : 'flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] min-[481px]:p-3'
+          : 'flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] pc:p-3'
       } ${settings.reduceMotion ? 'reduce-motion' : ''}`}
     >
       {desktopMode && session?.user && (
@@ -2052,7 +2061,7 @@ export default function App() {
         </>
       )}
       {/* Portrait Phone Container */}
-      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 min-[481px]:h-[min(calc(100dvh-24px),900px)] min-[481px]:max-w-[420px] lg:!max-w-[760px] min-[481px]:rounded-[28px] min-[481px]:border min-[481px]:border-white/[0.12] min-[481px]:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' || desktopTab === 'admin' ? 'col-start-1 row-start-2 ml-[342px] !w-auto min-[481px]:!h-full min-[481px]:!max-w-none min-[481px]:!rounded-[10px]' : 'hidden') : ''}`}>
+      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 pc:h-[min(calc(100dvh-24px),900px)] pc:max-w-[420px] pc:lg:!max-w-[760px] pc:rounded-[28px] pc:border pc:border-white/[0.12] pc:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' || desktopTab === 'admin' ? 'col-start-1 row-start-2 ml-[342px] !w-auto pc:!h-full pc:!max-w-none pc:!rounded-[10px]' : 'hidden') : ''}`}>
         {!authReady ? (
           <div className="flex flex-1 items-center justify-center text-xs text-slate-500 dark:text-slate-400">
             Loading ROSE...

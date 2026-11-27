@@ -562,7 +562,7 @@ async function videoCommand(app: string, bridge: NativeBridge): Promise<ActionEx
     if (edit[2]) videoPack.caption = videoPack.description = edit[2];
     return { success: true, via: 'android_native', messageBn: `ঠিক আছে। Title: ${videoPack.title}\nCaption: ${videoPack.caption}` };
   }
-  const pub = a.match(/^publish video (\d+) (?:to|on) (.+)$/i);
+  const pub = a.match(/^publish video (\d+) (?:to|on) (.+?)(?:\s+(?:schedule|at)\s+(\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}))?$/i);
   if (pub) {
     const index = Number(pub[1]);
     if (!videoPack || videoPack.index !== index) return { success: false, via: 'android_native', messageBn: `আগে ${index} নম্বর ভিডিওটা দেখে লেখা বানাতে হবে।` };
@@ -579,6 +579,7 @@ async function videoCommand(app: string, bridge: NativeBridge): Promise<ActionEx
           platform,
           title: platform === 'youtube' ? videoPack.title : '',
           caption: `${platform === 'youtube' ? videoPack.description : videoPack.caption}${tags ? `\n\n${tags}` : ''}`,
+          schedule: platform === 'youtube' && pub[3] ? pub[3].replace(/ (\d):/, ' 0$1:') : '',
         },
         90000,
       );

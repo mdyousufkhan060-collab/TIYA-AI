@@ -450,7 +450,7 @@ if (liveSlug || ownDomain) {
       var P = prods.map(function (p, i) {
         return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', e: p.emoji || '📦', img: fullImg((p.images || [])[0], 600), imgs: (p.images || []).map(function (u) { return fullImg(u, 900); }),
           price: +p.price, old: +(p.old_price || p.price), rx: p.rx, desc: p.description || '', short: p.short_description || '', long: p.description || '', specs: p.specs || {}, stock: p.stock, optLabel: p.options_label, opts: p.options || [],
-          rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 0, of: !!p.on_offer, kg: +p.weight_kg || 0 };
+          rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 0, of: !!p.on_offer, kg: +p.weight_kg || 0, sku: p.sku || '', seo: p.seo || {} };
       });
       if (P.some(function (p) { return p.cat === 'Others'; }) && !S.categories.some(function (c) { return c[0] === 'Others'; })) S.categories.push(['Others', '🏷️']);
       start(S, P, r.slug);
@@ -1223,6 +1223,22 @@ function start(S, P, liveId) {
     terms: ['Terms', 'Store terms and conditions.'],
   };
 
+  // Google: each product sets its own title, description and Product data (price, stock) while it is open
+  var baseTitle = document.title, mdEl = document.querySelector('meta[name="description"]'), baseDesc = mdEl ? mdEl.getAttribute('content') : '';
+  function productSeo(p) {
+    if (!S.live) return;
+    var sd = p.seo || {};
+    document.title = sd.title || (p.name + ' | ' + S.name);
+    if (mdEl) mdEl.setAttribute('content', sd.description || (p.short || p.name + ' · ' + S.name));
+    var ld = document.getElementById('roseLd') || document.head.appendChild(Object.assign(document.createElement('script'), { id: 'roseLd', type: 'application/ld+json' }));
+    ld.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: p.name, sku: p.sku || undefined, image: p.imgs && p.imgs.length ? p.imgs : (p.img ? [p.img] : undefined),
+      description: sd.description || p.short || p.desc || p.name, brand: { '@type': 'Brand', name: sd.brand || S.name }, keywords: (sd.tags || []).join(', ') || undefined,
+      offers: { '@type': 'Offer', priceCurrency: 'BDT', price: p.price, availability: 'https://schema.org/' + (p.stock > 0 ? 'InStock' : 'OutOfStock'), url: location.origin + '/?p=' + (sd.slug || p.uuid) } });
+    var im = document.querySelector('.gal img'); if (im && sd.alt) im.setAttribute('alt', sd.alt);
+  }
+  window.addEventListener('hashchange', function () { if (S.live && !/^#\/p\//.test(location.hash)) { document.title = baseTitle; if (mdEl) mdEl.setAttribute('content', baseDesc); var l = document.getElementById('roseLd'); if (l) l.remove(); } });
+  // links like shop.myrosebd.com/?p=green-cotton-hoodie open that product (Google and the Facebook catalog use these)
+  (function () { try { var ps = new URLSearchParams(location.search).get('p'); if (!ps) return; var hit = P.filter(function (x) { return (x.seo && x.seo.slug) === ps || x.uuid === ps; })[0]; if (hit && !/^#\/p\//.test(location.hash)) location.hash = '#/p/' + hit.id; } catch (e) {} })();
   window.route = function () {
     var h = decodeURIComponent((location.hash || '#/').slice(1));
     var v = document.getElementById('view'), html;
@@ -1231,7 +1247,7 @@ function start(S, P, liveId) {
     else if (h === '/categories') html = '<div class="head"><h3>All categories</h3></div>' + catTiles(false);
     else if (h.indexOf('/c/') === 0) { var cat = h.slice(3); html = list(cat, P.filter(function (p) { return p.cat === cat; })); }
     else if (h === '/all') html = list('All products', P);
-    else if (h.indexOf('/p/') === 0) { var p = P[+h.slice(3)]; html = p ? product(p) : list('Not found', []); }
+    else if (h.indexOf('/p/') === 0) { var p = P[+h.slice(3)]; html = p ? product(p) : list('Not found', []); if (p) productSeo(p); }
     else if (h.indexOf('/s/') === 0) {
       var q = h.slice(3).toLowerCase(), ph = window.__photoHits; window.__photoHits = null;
       var words = q.split(/\s+/).filter(function (w) { return w.length > 1; });

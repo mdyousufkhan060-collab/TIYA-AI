@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronRight, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { loadSettings } from '../../utils/storage';
 import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { AdminBrandPage } from '../admin/AdminBrandPage';
@@ -30,6 +31,7 @@ type Prod = {
   id: string; name: string; category_id: string | null; price: number; old_price: number | null; stock: number; emoji: string;
   description: string; images: string[]; options_label: string; options: string[]; rx: boolean; active: boolean;
   short_description: string; specs: Record<string, string>; cost_price?: number; on_offer?: boolean; sort?: number; weight_kg?: number | string;
+  sku?: string; seo?: Record<string, any>;
 };
 type Order = {
   id: string; order_no: number; customer_name: string; phone: string; address: string; area: string;
@@ -1905,7 +1907,63 @@ const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
 };
 
 // ---------------------------------------------------------------- products
-const emptyProd = (): Partial<Prod> => ({ name: '', price: 0, old_price: null, stock: 10, emoji: '📦', description: '', images: [], options_label: 'Size', options: [], rx: false, active: true, category_id: null, short_description: '', specs: {} });
+type Seo = { title?: string; description?: string; slug?: string; tags?: string[]; alt?: string; catalog?: boolean; brand?: string; condition?: string; ptype?: string; catalog_image?: string };
+const emptyProd = (): Partial<Prod> => ({ name: '', price: 0, old_price: null, stock: 10, emoji: '📦', description: '', images: [], options_label: 'Size', options: [], rx: false, active: true, category_id: null, short_description: '', specs: {}, sku: '', seo: {} });
+const imgUrl = (u: string, w: number) => (u.startsWith('http') ? u : `https://images.unsplash.com/${u}?w=${w}&q=60&auto=format&fit=crop`);
+const stockOf = (p: Partial<Prod>) => (Number(p.stock) <= 0 ? 'out' : Number(p.stock) <= 5 ? 'low' : 'in');
+const STOCK_CHIP: Record<string, [string, string]> = {
+  in: ['In stock', 'bg-emerald-500/15 text-emerald-300'],
+  low: ['Low stock', 'bg-amber-500/15 text-amber-300'],
+  out: ['Out of stock', 'bg-rose-500/15 text-rose-300'],
+};
+const card = 'rounded-xl border border-white/[0.08] bg-[#11151E] p-3 space-y-2';
+const cap = 'text-[10.5px] font-bold tracking-wider text-slate-300';
+const autoSku = (name: string) => (name.replace(/[^A-Za-z0-9 ]/g, '').trim().split(/\s+/).map((w) => w.slice(0, 3)).join('').toUpperCase().slice(0, 6) || 'PRD') + '-' + String(Math.floor(100 + Math.random() * 900));
+
+/** SEO words without AI: from the name, category, options, price and shop */
+function seoFromProduct(p: Partial<Prod>, store: Store, catName: string): Seo {
+  const name = (p.name || '').trim();
+  const opts = (p.options || []).filter(Boolean);
+  const optTxt = opts.length > 1 ? `, ${opts[0]} to ${opts[opts.length - 1]}` : opts.length ? `, ${opts[0]}` : '';
+  const tail = ` | ${store.name}`;
+  const title = (name + optTxt).slice(0, 60 - tail.length) + tail;
+  const lead = (p.short_description || p.description || name).replace(/\s+/g, ' ').trim();
+  const description = `${lead.slice(0, 80)}. Price ${tk(Number(p.price) || 0)}. Cash on delivery all over Bangladesh. Order from ${store.name}.`.slice(0, 160);
+  const words = `${name} ${catName}`.toLowerCase().split(/[^a-z0-9ঀ-৿]+/).filter((w) => w.length > 2);
+  const tags = Array.from(new Set([name.toLowerCase(), catName.toLowerCase(), ...words, `${catName.toLowerCase()} bangladesh`])).filter(Boolean).slice(0, 8);
+  return { title, description, slug: slugify(name), tags, alt: `${name} - ${store.name}`, brand: p.seo?.brand || store.name, condition: p.seo?.condition || 'new', ptype: p.seo?.ptype || catName };
+}
+
+/** A square 1080 picture for Facebook / Instagram: the main photo, the price and the shop name */
+async function catalogPicture(store: Store, p: Partial<Prod>): Promise<string> {
+  const src = (p.images || []).filter(Boolean)[0];
+  if (!src) throw new Error('Add a photo first.');
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.crossOrigin = 'anonymous';
+    i.onload = () => res(i);
+    i.onerror = () => rej(new Error('Could not read the photo.'));
+    i.src = imgUrl(src, 1200);
+  });
+  const c = document.createElement('canvas');
+  c.width = 1080;
+  c.height = 1080;
+  const x = c.getContext('2d')!;
+  x.fillStyle = '#ffffff';
+  x.fillRect(0, 0, 1080, 1080);
+  const k = Math.max(1080 / img.width, 1080 / img.height);
+  x.drawImage(img, (1080 - img.width * k) / 2, (1080 - img.height * k) / 2, img.width * k, img.height * k);
+  x.fillStyle = 'rgba(0,0,0,0.62)';
+  x.fillRect(0, 900, 1080, 180);
+  x.fillStyle = '#ffffff';
+  x.font = 'bold 64px sans-serif';
+  x.fillText(`৳${Number(p.price) || 0}`, 48, 1000);
+  x.font = '36px sans-serif';
+  x.fillText(store.name.slice(0, 40), 48, 1052);
+  const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/jpeg', 0.9));
+  if (!blob) throw new Error('Could not make the picture.');
+  return uploadImage(store.id, new File([blob], 'catalog.jpg', { type: 'image/jpeg' }), 1080);
+}
 
 const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; canDelete?: boolean }> = ({ store, limit, canEdit = true, canDelete = true }) => {
   const [prods, setProds] = useState<Prod[]>([]);
@@ -1914,6 +1972,11 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
   const [msg, setMsg] = useState('');
   const [uploading, setUploading] = useState(false);
   const [optIn, setOptIn] = useState('');
+  const [tagIn, setTagIn] = useState('');
+  const [seoBusy, setSeoBusy] = useState('');
+  const [q, setQ] = useState('');
+  const [fCat, setFCat] = useState('');
+  const [fSt, setFSt] = useState('');
   const kind = kindOf(store.template);
   const load = useCallback(async () => {
     const [p, c] = await Promise.all([
@@ -1926,17 +1989,21 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
   useEffect(() => {
     void load();
   }, [load]);
+  const catName = (id?: string | null) => cats.find((c) => c.id === id)?.name || 'Others';
 
   const save = async () => {
     if (!edit) return;
     if (!edit.name?.trim() || !(Number(edit.price) > 0)) return setMsg('Name and price are needed.');
     if (!edit.id && prods.length >= limit) return setMsg(`Your plan allows ${limit} products.`);
+    const seo: Seo = { ...(edit.seo || {}) };
+    if (!seo.slug) seo.slug = slugify(edit.name);
     const row = {
       store_id: store.id, name: edit.name.trim(), category_id: edit.category_id || null, price: Number(edit.price),
       old_price: edit.old_price ? Number(edit.old_price) : null, stock: Number(edit.stock) || 0, emoji: edit.emoji || '📦',
       description: edit.description || '', images: (edit.images || []).filter(Boolean),
       options_label: (edit.options || []).filter(Boolean).length ? edit.options_label || 'Size' : '', options: (edit.options || []).filter(Boolean), rx: Boolean(edit.rx), active: edit.active !== false,
       short_description: (edit.short_description || '').slice(0, 160), specs: edit.specs || {}, cost_price: Number(edit.cost_price) || 0, on_offer: Boolean(edit.on_offer), weight_kg: Math.min(1000, Number(edit.weight_kg) || 0),
+      sku: (edit.sku || '').trim() || autoSku(edit.name), seo,
       updated_at: new Date().toISOString(),
     };
     const { error } = edit.id ? await supabase.from('store_products').update(row).eq('id', edit.id) : await supabase.from('store_products').insert({ ...row, sort: prods.length });
@@ -1946,44 +2013,86 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
     void load();
   };
 
+  const toggleActive = async (p: Prod) => {
+    if (!canEdit) return;
+    await supabase.from('store_products').update({ active: !p.active, updated_at: new Date().toISOString() }).eq('id', p.id);
+    void load();
+  };
+  const remove = async (p: Partial<Prod>) => {
+    if (!p.id || !window.confirm(`Delete ${p.name}?`)) return;
+    await supabase.from('store_products').delete().eq('id', p.id);
+    setEdit(null);
+    void load();
+  };
+
   if (edit) {
     const set = (k: keyof Prod, v: unknown) => setEdit((e) => ({ ...(e || {}), [k]: v }));
+    const seo: Seo = edit.seo || {};
+    const setSeo = (k: keyof Seo, v: unknown) => setEdit((e) => ({ ...(e || {}), seo: { ...((e?.seo as Seo) || {}), [k]: v } }));
+    const autoSeo = async () => {
+      if (!edit.name?.trim()) return setMsg('Write the product name first.');
+      setSeoBusy('seo');
+      setMsg('');
+      const base = seoFromProduct(edit, store, catName(edit.category_id));
+      let ai: Partial<Seo> = {};
+      try {
+        const s = loadSettings();
+        if (s.apiKey?.trim()) {
+          const res = await fetch('/api/gemini/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-gemini-api-key': s.apiKey.trim() },
+            body: JSON.stringify({
+              message: `Shop: ${store.name} (${store.city || 'Bangladesh'}). Product: ${edit.name}. Category: ${catName(edit.category_id)}. Price: ${edit.price} BDT. Options: ${(edit.options || []).join(', ')}. About: ${edit.short_description || ''} ${(edit.description || '').slice(0, 400)}`,
+              history: [],
+              systemInstruction:
+                'You are an SEO expert for Bangladeshi online shops. Return ONLY JSON {"title":"","description":"","tags":[],"alt":""}. title: max 60 characters, main keyword first, ends with " | <shop name>". description: max 160 characters with the main keyword, price, cash on delivery and a call to action. tags: 6-8 search phrases people in Bangladesh type, in English and Bengali. alt: one short line describing the main photo. Never promise ranking.',
+            }),
+          });
+          const j = await res.json();
+          const m = String(j?.text || '').match(/\{[\s\S]*\}/);
+          if (m) ai = JSON.parse(m[0]);
+        }
+      } catch {
+        ai = {};
+      }
+      setEdit((e) => ({
+        ...(e || {}),
+        seo: {
+          ...((e?.seo as Seo) || {}), ...base,
+          ...(ai.title ? { title: String(ai.title).slice(0, 60) } : {}),
+          ...(ai.description ? { description: String(ai.description).slice(0, 160) } : {}),
+          ...(Array.isArray(ai.tags) && ai.tags.length ? { tags: ai.tags.map(String).slice(0, 8) } : {}),
+          ...(ai.alt ? { alt: String(ai.alt).slice(0, 120) } : {}),
+          slug: (e?.seo as Seo)?.slug || base.slug,
+        },
+      }));
+      setSeoBusy('');
+    };
+    const makeCatalogPic = async () => {
+      setSeoBusy('pic');
+      setMsg('');
+      try {
+        setSeo('catalog_image', await catalogPicture(store, edit));
+      } catch (err: any) {
+        setMsg(String(err?.message || err));
+      } finally {
+        setSeoBusy('');
+      }
+    };
+    const host = store.custom_domain && store.domain_ready ? store.custom_domain : `${store.slug}.myrosebd.com`;
     return (
-      <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">{edit.id ? 'EDIT PRODUCT' : 'ADD PRODUCT'}</p>
-        <div className="flex gap-2">
-          <input className={input + ' w-14 text-center'} value={edit.emoji || ''} onChange={(e) => set('emoji', e.target.value)} aria-label="Icon" />
-          <input className={input} value={edit.name || ''} onChange={(e) => set('name', e.target.value)} placeholder="Product name" />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <p className="text-[13px] font-bold tracking-wider text-teal-300">{edit.id ? 'EDIT PRODUCT' : 'ADD PRODUCT'}</p>
+          <button type="button" onClick={() => setEdit(null)} className="text-[11px] font-bold text-slate-300">← BACK TO PRODUCTS</button>
         </div>
-        <select className={input} value={edit.category_id || ''} onChange={(e) => set('category_id', e.target.value || null)}>
-          <option value="">No category</option>
-          {cats.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-        </select>
-        <div className="grid grid-cols-3 gap-2">
-          <input className={input} value={edit.price ?? ''} onChange={(e) => set('price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="Price" inputMode="decimal" />
-          <input className={input} value={edit.old_price ?? ''} onChange={(e) => set('old_price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="Old price" inputMode="decimal" />
-          <input className={input} value={edit.stock ?? ''} onChange={(e) => set('stock', e.target.value.replace(/[^\d]/g, ''))} placeholder="Stock" inputMode="numeric" />
-        </div>
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-2">
-          <p className="text-[10.5px] font-bold tracking-wider text-amber-300">⚖️ WEIGHT FOR ONE PIECE (KG) · THE COURIER CHARGE COMES FROM THIS</p>
-          <input className={input + ' mt-1'} value={edit.weight_kg ?? ''} onChange={(e) => set('weight_kg', e.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 0.5 = 500 g" inputMode="decimal" />
-          <div className="mt-1 flex flex-wrap gap-1">
-            {([['250 g', 0.25], ['500 g', 0.5], ['1 kg', 1], ['2 kg', 2], ['5 kg', 5], ['10 kg', 10]] as Array<[string, number]>).map(([l, v]) => (
-              <button key={l} type="button" className="rounded-md bg-white/10 px-2 py-1 text-[11px] text-slate-200" onClick={() => set('weight_kg', String(v))}>{l}</button>
-            ))}
-          </div>
-          <p className="mt-1 text-[10px] text-slate-400">Weigh it with the box. If an option has a weight in it (5kg, 1 L), the store uses that option's weight.</p>
-        </div>
-        <label className="block text-[10.5px] text-slate-400">
-          Purchase price (your cost, customers never see it) · for profit reports
-          <input className={input + ' mt-1'} value={edit.cost_price ?? ''} onChange={(e) => set('cost_price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 300" inputMode="decimal" />
-        </label>
-        <div className="space-y-1">
-          <p className="text-[10.5px] text-slate-400">Photos · up to 8 · ★ = main photo</p>
+
+        <div className={card}>
+          <p className={cap}>PRODUCT IMAGES * <span className="font-normal text-slate-500">· up to 8 · ★ = main photo</span></p>
           <div className="flex flex-wrap gap-2">
             {(edit.images || []).filter(Boolean).map((u, i) => (
               <div key={u + i} className={`relative h-16 w-16 overflow-hidden rounded-lg border-2 ${i ? 'border-white/10' : 'border-teal-400'}`}>
-                <img src={u.startsWith('http') ? u : `https://images.unsplash.com/${u}?w=160&q=60&auto=format&fit=crop`} alt="" className="h-full w-full object-cover" />
+                <img src={imgUrl(u, 160)} alt="" className="h-full w-full object-cover" />
                 {i > 0 && <button type="button" aria-label="Main photo" onClick={() => { const l = (edit.images || []).filter(Boolean); set('images', [l[i], ...l.filter((_, j) => j !== i)]); }} className="absolute left-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[11px] text-black">★</button>}
                 <button type="button" aria-label="Remove photo" onClick={() => set('images', (edit.images || []).filter((_, j) => j !== i))} className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] text-white">✕</button>
                 {i === 0 && <span className="absolute inset-x-0 bottom-0 bg-teal-500 text-center text-[8px] font-bold text-black">MAIN</span>}
@@ -1991,8 +2100,8 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
             ))}
           </div>
           {(edit.images || []).filter(Boolean).length < 8 && (
-            <label className={btn + ' w-full cursor-pointer bg-white/10'}>
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} ADD PHOTOS (GALLERY / CAMERA)
+            <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-white/20 py-4 text-[11px] font-bold text-slate-300">
+              {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />} ADD PHOTOS (GALLERY / CAMERA)
               <input type="file" accept="image/*" multiple hidden onChange={async (e) => {
                 const room = 8 - (edit.images || []).filter(Boolean).length;
                 const files = Array.from(e.target.files || []).slice(0, room);
@@ -2012,9 +2121,59 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
               }} />
             </label>
           )}
+          <p className="text-[10.5px] text-slate-400">{IMG_HINT.product}</p>
         </div>
-        <p className="px-1 text-[10.5px] text-slate-400">{IMG_HINT.product}</p>
-        <div className="space-y-2 rounded-lg border border-teal-900 bg-teal-950/30 p-2">
+
+        <div className={card}>
+          <p className={cap}>PRODUCT NAME *</p>
+          <div className="flex gap-2">
+            <input className={input + ' w-14 text-center'} value={edit.emoji || ''} onChange={(e) => set('emoji', e.target.value)} aria-label="Icon" />
+            <input className={input} value={edit.name || ''} onChange={(e) => set('name', e.target.value)} placeholder="Enter product name…" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-[10.5px] text-slate-400">SKU
+              <input className={input + ' mt-1'} value={edit.sku || ''} onChange={(e) => set('sku', e.target.value.toUpperCase().slice(0, 24))} placeholder="Auto" />
+            </label>
+            <label className="block text-[10.5px] text-slate-400">Category *
+              <select className={input + ' mt-1'} value={edit.category_id || ''} onChange={(e) => set('category_id', e.target.value || null)}>
+                <option value="">No category</option>
+                {cats.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div className={card}>
+          <p className={cap}>PRICE AND STOCK</p>
+          <div className="grid grid-cols-3 gap-2">
+            <label className="block text-[10.5px] text-slate-400">Regular price *<input className={input + ' mt-1'} value={edit.price ?? ''} onChange={(e) => set('price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="৳" inputMode="decimal" /></label>
+            <label className="block text-[10.5px] text-slate-400">Old price<input className={input + ' mt-1'} value={edit.old_price ?? ''} onChange={(e) => set('old_price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="optional" inputMode="decimal" /></label>
+            <label className="block text-[10.5px] text-slate-400">Stock *<input className={input + ' mt-1'} value={edit.stock ?? ''} onChange={(e) => set('stock', e.target.value.replace(/[^\d]/g, ''))} placeholder="0" inputMode="numeric" /></label>
+          </div>
+          <label className="block text-[10.5px] text-slate-400">
+            Purchase price (your cost, customers never see it) · for profit reports
+            <input className={input + ' mt-1'} value={edit.cost_price ?? ''} onChange={(e) => set('cost_price', e.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 300" inputMode="decimal" />
+          </label>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={edit.active !== false} onChange={(e) => set('active', e.target.checked)} /> Show in store</label>
+            <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={Boolean(edit.on_offer)} onChange={(e) => set('on_offer', e.target.checked)} /> Show in OFFERS page</label>
+            <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={Boolean(edit.rx)} onChange={(e) => set('rx', e.target.checked)} /> Needs prescription (pharmacy)</label>
+          </div>
+          <p className="text-[10px] text-slate-500">A product with an old price shows in OFFERS by itself.</p>
+        </div>
+
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3">
+          <p className="text-[10.5px] font-bold tracking-wider text-amber-300">⚖️ WEIGHT FOR ONE PIECE (KG) · THE COURIER CHARGE COMES FROM THIS</p>
+          <input className={input + ' mt-1'} value={edit.weight_kg ?? ''} onChange={(e) => set('weight_kg', e.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 0.5 = 500 g" inputMode="decimal" />
+          <div className="mt-1 flex flex-wrap gap-1">
+            {([['250 g', 0.25], ['500 g', 0.5], ['1 kg', 1], ['2 kg', 2], ['5 kg', 5], ['10 kg', 10]] as Array<[string, number]>).map(([l, v]) => (
+              <button key={l} type="button" className="rounded-md bg-white/10 px-2 py-1 text-[11px] text-slate-200" onClick={() => set('weight_kg', String(v))}>{l}</button>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] text-slate-400">Weigh it with the box. If an option has a weight in it (5kg, 1 L), the store uses that option's weight.</p>
+        </div>
+
+        <div className="space-y-2 rounded-xl border border-teal-900 bg-teal-950/30 p-3">
           <p className="text-[10.5px] font-bold tracking-wider text-teal-300">OPTIONS (optional) · e.g. {optOf(kind).labels.join(', ')}</p>
           <div className="grid grid-cols-2 gap-2">
             <select className={input} value={edit.options_label || optOf(kind).labels[0]} onChange={(e) => set('options_label', e.target.value)}>
@@ -2045,26 +2204,100 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
             ))}
           </div>
         </div>
+
         {kind && (
-          <div className="space-y-1.5 rounded-lg border border-blue-900 bg-blue-950/30 p-2">
+          <div className="space-y-1.5 rounded-xl border border-blue-900 bg-blue-950/30 p-3">
             <p className="text-[10.5px] font-bold tracking-wider text-blue-300">PRODUCT INFO · shows in the "{kind.tabs[1][1]}" tab</p>
             {kind.specs.map((f) => (
               <input key={f[0]} className={input} value={(edit.specs || {})[f[0]] || ''} onChange={(e) => set('specs', { ...(edit.specs || {}), [f[0]]: e.target.value })} placeholder={`${f[1]} · e.g. ${f[3]}`} />
             ))}
           </div>
         )}
-        <textarea className={input} rows={2} maxLength={160} value={edit.short_description || ''} onChange={(e) => set('short_description', e.target.value)} placeholder="Short description · next to the price (max 160)" />
-        <p className="-mt-1 text-right text-[10px] text-slate-500">{(edit.short_description || '').length} / 160</p>
-        <textarea className={input} rows={5} value={edit.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Long description · material, size chart, care, delivery, return (helps Google)" />
-        <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={edit.active !== false} onChange={(e) => set('active', e.target.checked)} /> Show in store</label>
-        <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={Boolean(edit.rx)} onChange={(e) => set('rx', e.target.checked)} /> Needs prescription (pharmacy)</label>
-        <label className="flex items-center gap-2 text-[12px] text-slate-300"><input type="checkbox" checked={Boolean(edit.on_offer)} onChange={(e) => set('on_offer', e.target.checked)} /> Show in OFFERS page (a product with an old price shows there by itself)</label>
+
+        <div className={card}>
+          <p className={cap}>SHORT DESCRIPTION</p>
+          <textarea className={input} rows={2} maxLength={160} value={edit.short_description || ''} onChange={(e) => set('short_description', e.target.value)} placeholder="Next to the price (max 160)" />
+          <p className="-mt-1 text-right text-[10px] text-slate-500">{(edit.short_description || '').length} / 160</p>
+          <p className={cap}>FULL DESCRIPTION</p>
+          <textarea className={input} rows={5} value={edit.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Material, size chart, care, delivery, return (helps Google)" />
+        </div>
+
+        <button type="button" disabled={seoBusy === 'seo'} onClick={() => void autoSeo()} className={btn + ' w-full bg-indigo-600'}>
+          {seoBusy === 'seo' ? <Loader2 className="h-4 w-4 animate-spin" /> : '✨'} AUTO SEO WITH ROSE
+        </button>
+        <div className={card}>
+          <p className={cap}>SEO · GOOGLE SEARCH</p>
+          <label className="block text-[10.5px] text-slate-400">Meta title <span className="float-right">{(seo.title || '').length} / 60</span>
+            <input className={input + ' mt-1'} maxLength={60} value={seo.title || ''} onChange={(e) => setSeo('title', e.target.value)} placeholder={`${edit.name || 'Product name'} | ${store.name}`} />
+          </label>
+          <label className="block text-[10.5px] text-slate-400">Meta description <span className="float-right">{(seo.description || '').length} / 160</span>
+            <textarea className={input + ' mt-1'} rows={3} maxLength={160} value={seo.description || ''} onChange={(e) => setSeo('description', e.target.value)} placeholder="What it is, price, cash on delivery, order now" />
+          </label>
+          <label className="block text-[10.5px] text-slate-400">Page link
+            <div className="mt-1 flex items-center rounded-lg border border-white/10 bg-black/30 px-3 text-sm"><span className="shrink-0 text-slate-500">{host}/?p=</span><input className="min-w-0 flex-1 bg-transparent py-2 text-white outline-none" value={seo.slug || ''} onChange={(e) => setSeo('slug', slugify(e.target.value))} placeholder={slugify(edit.name || 'product-name')} /></div>
+          </label>
+          <div>
+            <p className="text-[10.5px] text-slate-400">Search tags</p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-lg border border-white/10 bg-black/30 p-1.5">
+              {(seo.tags || []).map((t, i) => (
+                <span key={t + i} className="flex items-center gap-1 rounded-md bg-indigo-500/20 py-0.5 pl-2 pr-0.5 text-[12px] text-indigo-200">
+                  {t}<button type="button" aria-label={`Remove ${t}`} onClick={() => setSeo('tags', (seo.tags || []).filter((_, j) => j !== i))} className="flex h-5 w-5 items-center justify-center text-[10px]">✕</button>
+                </span>
+              ))}
+              <input className="min-w-[110px] flex-1 bg-transparent px-1 py-1 text-[12.5px] text-white outline-none" value={tagIn} onChange={(e) => setTagIn(e.target.value)} placeholder="Write, then Enter" onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                const add = tagIn.split(',').map((x) => x.trim()).filter((x) => x && !(seo.tags || []).includes(x));
+                if (add.length) setSeo('tags', [...(seo.tags || []), ...add].slice(0, 12));
+                setTagIn('');
+              }} />
+            </div>
+          </div>
+          <label className="block text-[10.5px] text-slate-400">Image alt text
+            <input className={input + ' mt-1'} value={seo.alt || ''} onChange={(e) => setSeo('alt', e.target.value.slice(0, 120))} placeholder="Green cotton hoodie, front view" />
+          </label>
+          <div className="rounded-lg bg-white p-2.5">
+            <p className="text-[10px] text-slate-500">Google preview</p>
+            <p className="truncate text-[11.5px] text-slate-600">{host} › {seo.slug || slugify(edit.name || 'product')}</p>
+            <p className="truncate text-[14.5px] text-[#1a0dab]">{seo.title || `${edit.name || 'Product name'} | ${store.name}`}</p>
+            <p className="line-clamp-2 text-[11.5px] text-slate-600">{tk(Number(edit.price) || 0)} · {stockOf(edit) === 'out' ? 'Out of stock' : 'In stock'} · {seo.description || edit.short_description || 'Write a meta description or press AUTO SEO WITH ROSE.'}</p>
+          </div>
+        </div>
+
+        <div className={card}>
+          <div className="flex items-center justify-between">
+            <p className={cap}>META CATALOG · FACEBOOK / INSTAGRAM SHOP</p>
+            <label className="flex items-center gap-1.5 text-[11px] text-slate-300"><input type="checkbox" checked={seo.catalog !== false} onChange={(e) => setSeo('catalog', e.target.checked)} /> In catalog</label>
+          </div>
+          {seo.catalog !== false && (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block text-[10.5px] text-slate-400">Brand<input className={input + ' mt-1'} value={seo.brand ?? store.name} onChange={(e) => setSeo('brand', e.target.value)} /></label>
+                <label className="block text-[10.5px] text-slate-400">Condition
+                  <select className={input + ' mt-1'} value={seo.condition || 'new'} onChange={(e) => setSeo('condition', e.target.value)}>
+                    <option value="new">New</option><option value="refurbished">Refurbished</option><option value="used">Used</option>
+                  </select>
+                </label>
+                <label className="block text-[10.5px] text-slate-400">Availability<input className={input + ' mt-1 text-slate-400'} readOnly value={stockOf(edit) === 'out' ? 'Out of stock (from stock)' : 'In stock (from stock)'} /></label>
+                <label className="block text-[10.5px] text-slate-400">Product type<input className={input + ' mt-1'} value={seo.ptype ?? catName(edit.category_id)} onChange={(e) => setSeo('ptype', e.target.value)} placeholder="Apparel > Hoodies" /></label>
+              </div>
+              <p className="text-[10.5px] text-slate-400">Catalog picture (1080 × 1080, square)</p>
+              <div className="flex items-center gap-2">
+                {seo.catalog_image ? <img src={seo.catalog_image} alt="" className="h-20 w-20 rounded-lg object-cover" /> : <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-white/20 text-[10px] text-slate-500">none</div>}
+                <button type="button" disabled={seoBusy === 'pic'} onClick={() => void makeCatalogPic()} className={btn + ' flex-1 bg-white/10'}>
+                  {seoBusy === 'pic' ? <Loader2 className="h-4 w-4 animate-spin" /> : '🖼️'} MAKE FROM MAIN PHOTO
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => setEdit(null)} className={btn + ' bg-white/10'}>CANCEL</button>
           <button type="button" onClick={() => void save()} className={btn}>SAVE</button>
         </div>
         {edit.id && canDelete && (
-          <button type="button" onClick={async () => { if (window.confirm('Delete this product?')) { await supabase.from('store_products').delete().eq('id', edit.id!); setEdit(null); void load(); } }} className="w-full text-[11px] font-bold text-rose-300">
+          <button type="button" onClick={() => void remove(edit)} className="w-full text-[11px] font-bold text-rose-300">
             DELETE PRODUCT
           </button>
         )}
@@ -2073,6 +2306,17 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
     );
   }
 
+  const ql = q.trim().toLowerCase();
+  const shown = prods.filter((p) =>
+    (!ql || `${p.name} ${p.sku || ''}`.toLowerCase().includes(ql)) &&
+    (!fCat || (fCat === 'none' ? !p.category_id : p.category_id === fCat)) &&
+    (!fSt || (fSt === 'hidden' ? !p.active : fSt === 'active' ? p.active : stockOf(p) === fSt)));
+  const stats: Array<[string, number, string]> = [
+    ['TOTAL PRODUCTS', prods.length, 'text-white'],
+    ['ACTIVE', prods.filter((p) => p.active).length, 'text-emerald-300'],
+    ['OUT OF STOCK', prods.filter((p) => stockOf(p) === 'out').length, 'text-rose-300'],
+    ['CATEGORIES', cats.length, 'text-sky-300'],
+  ];
   return (
     <div className="space-y-2">
       {canEdit ? (
@@ -2082,17 +2326,65 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
       ) : (
         <p className="px-1 text-[11.5px] font-bold text-amber-300">View only · prices and stock to tell customers</p>
       )}
-      <p className="px-1 text-[11px] text-slate-400">{prods.length} / {limit > 10000 ? 'unlimited' : limit} products. Tip: tell ROSE "add a product" by voice (coming next).</p>
-      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
-      {prods.map((p) => (
-        <button key={p.id} type="button" onClick={() => { if (!canEdit) return; setMsg(''); setEdit(p); }} className={box + ' flex w-full items-center gap-2 text-left'}>
-          {p.images?.[0] ? <img src={p.images[0].startsWith('http') ? p.images[0] : `https://images.unsplash.com/${p.images[0]}?w=120&q=60&auto=format&fit=crop`} alt="" className="h-10 w-10 rounded-lg object-cover" /> : <span className="text-2xl">{p.emoji}</span>}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[12.5px] font-semibold text-white">{p.name}</p>
-            <p className="text-[11px] text-slate-400">{tk(Number(p.price))}{p.old_price ? ` (was ${tk(Number(p.old_price))})` : ''} · stock {p.stock}{Number(p.weight_kg) > 0 ? ` · ⚖️ ${kgText(Number(p.weight_kg))}` : ''}{p.active ? '' : ' · HIDDEN'}</p>
+      <div className="grid grid-cols-2 gap-2">
+        {stats.map(([l, n, c]) => (
+          <div key={l} className="rounded-xl border border-white/[0.08] bg-[#11151E] px-3 py-2">
+            <p className="text-[10px] font-bold tracking-wider text-slate-400">{l}</p>
+            <p className={`text-[20px] font-bold ${c}`}>{n}</p>
           </div>
-        </button>
-      ))}
+        ))}
+      </div>
+      <input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, SKU…" />
+      <div className="grid grid-cols-2 gap-2">
+        <select className={input} value={fCat} onChange={(e) => setFCat(e.target.value)}>
+          <option value="">All category</option>
+          {cats.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+          <option value="none">No category</option>
+        </select>
+        <select className={input} value={fSt} onChange={(e) => setFSt(e.target.value)}>
+          <option value="">All status</option>
+          <option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option>
+          <option value="active">Shown in store</option><option value="hidden">Hidden</option>
+        </select>
+      </div>
+      <p className="px-1 text-[11px] text-slate-400">{prods.length} / {limit > 10000 ? 'unlimited' : limit} products{shown.length !== prods.length ? ` · showing ${shown.length}` : ''}. Tip: tell ROSE "add a product" by voice (coming next).</p>
+      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
+      {shown.map((p) => {
+        const [lbl, cls] = STOCK_CHIP[stockOf(p)];
+        return (
+          <div key={p.id} className={box + ' flex items-center gap-2.5'}>
+            <button type="button" onClick={() => { if (!canEdit) return; setMsg(''); setEdit(p); }} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+              {p.images?.[0] ? <img src={imgUrl(p.images[0], 120)} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" /> : <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white/5 text-2xl">{p.emoji}</span>}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold text-white">{p.name}</p>
+                <p className="truncate text-[10.5px] text-slate-500">{p.sku ? `SKU ${p.sku} · ` : ''}{catName(p.category_id)}{(p.options || []).length ? ` · ${(p.options || []).slice(0, 5).join(' ')}` : ''}{Number(p.weight_kg) > 0 ? ` · ⚖️ ${kgText(Number(p.weight_kg))}` : ''}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${cls}`}>{lbl} · {p.stock}</span>
+                  <span className="text-[12.5px] font-bold text-white">{tk(Number(p.price))}</span>
+                  {p.old_price ? <s className="text-[10.5px] text-slate-500">{tk(Number(p.old_price))}</s> : null}
+                </div>
+              </div>
+            </button>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <button type="button" role="switch" aria-checked={p.active} aria-label={p.active ? 'Shown in store' : 'Hidden'} disabled={!canEdit} onClick={() => void toggleActive(p)} className={`relative h-5 w-9 rounded-full transition ${p.active ? 'bg-emerald-500' : 'bg-white/15'}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${p.active ? 'left-[18px]' : 'left-0.5'}`} />
+              </button>
+              <div className="flex gap-2">
+                {canEdit && <button type="button" aria-label="Edit" onClick={() => { setMsg(''); setEdit(p); }} className="text-[13px] text-slate-200">✏️</button>}
+                {canDelete && <button type="button" aria-label="Delete" onClick={() => void remove(p)} className="text-rose-300"><Trash2 className="h-4 w-4" /></button>}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {prods.length > 0 && (
+        <div className={box + ' space-y-1'}>
+          <p className="text-[10.5px] font-bold tracking-wider text-slate-300">META CATALOG LINK · FACEBOOK / INSTAGRAM SHOP</p>
+          <p className="break-all text-[11px] text-sky-300">{`https://ukgwipazzjstjkdfaozg.supabase.co/functions/v1/rose-catalog?store=${store.slug}`}</p>
+          <button type="button" onClick={() => { void navigator.clipboard?.writeText(`https://ukgwipazzjstjkdfaozg.supabase.co/functions/v1/rose-catalog?store=${store.slug}`); setMsg('Catalog link copied.'); }} className={btn + ' w-full bg-white/10'}>COPY CATALOG LINK</button>
+          <p className="text-[10px] text-slate-500">Facebook Commerce Manager → Catalog → Data sources → Data feed → Scheduled feed: paste this link, every day. The store must be published.</p>
+        </div>
+      )}
     </div>
   );
 };

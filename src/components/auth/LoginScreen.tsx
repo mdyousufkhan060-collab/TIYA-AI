@@ -6,6 +6,17 @@ import { ForgotPasswordFlow } from './ForgotPasswordFlow';
 
 type AuthTab = 'signin' | 'signup';
 
+/** The person came from a shop's STORE ADMIN link: keep that through Google's return address */
+function storeIntent(): boolean {
+  try {
+    if (window.sessionStorage.getItem('rose_open') === 'store') return true;
+    const saved = JSON.parse(window.localStorage.getItem('rose_open') || 'null');
+    return saved?.v === 'store' && Date.now() - Number(saved.t || 0) < 15 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
 export const LoginScreen: React.FC = () => {
   const [tab, setTab] = useState<AuthTab>('signin');
   const [name, setName] = useState('');
@@ -30,7 +41,7 @@ export const LoginScreen: React.FC = () => {
         options: {
           // ROSE Android app: Google sign-in runs in Chrome and comes back through com.myrosebd.rose://auth
           // Chrome shows a small ROSE page with an OPEN ROSE APP button (Chrome only opens the app after a tap)
-          redirectTo: (window as any).TiyaNative ? 'https://www.myrosebd.com/app-return.html' : `${window.location.origin}/app`,
+          redirectTo: (window as any).TiyaNative ? 'https://www.myrosebd.com/app-return.html' : `${window.location.origin}/app${storeIntent() ? '?open=store' : ''}`,
         },
       });
       if (error) {

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
+/* the framed phone look is only for computers with a mouse; every phone (any width, any Chrome zoom) gets the full screen */
+@custom-variant pc (@media (min-width: 481px) and (hover: hover) and (pointer: fine));
 
 @layer base {
   :root {
