@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronRight, ExternalLink, Loader2, Menu, Moon, Plus, Sun, Trash2, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { loadSettings } from '../../utils/storage';
+import { WEBSITE_DESIGN_GUIDE, WEBSITE_RULES } from '../../utils/websiteGuides';
 import { SettingsBar } from '../settings/SettingsShell';
 import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { AdminBrandPage } from '../admin/AdminBrandPage';
@@ -277,7 +278,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
             [c('orders'), 'orders', 'ORDERS', '🧾', '#7c3aed', ''],
             [c('products') || c('productsView'), 'products', 'PRODUCTS', '📦', '#0d9488', ''],
             [c('categories'), 'categories', 'CATEGORIES', '🗂️', '#ca8a04', ''],
-            [c('design'), 'design', 'HOMEPAGE & DESIGN', '🎨', '#db2777', 'BANNERS'],
+            [c('design'), 'design', 'HOMEPAGE, BANNERS & DESIGN', '🎨', '#db2777', 'BANNERS'],
             [c('customers'), 'customers', 'CUSTOMERS', '👥', '#2563eb', ''],
             [c('coupons'), 'offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', ''],
             [c('reviews'), 'reviews', 'REVIEWS', '⭐', '#eab308', ''],
@@ -1459,6 +1460,96 @@ const AdminDashboard: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: s
 };
 
 /** The admin frame: logo, ☰ menu with the bars (closes by itself after choosing), light / dark switch, bottom bar on phones */
+/**
+ * ASK ROSE (top of every shop admin menu): the owner writes what look they want, ROSE answers with a new design
+ * (colours, shapes, theme) for THIS shop only. PREVIEW opens the shop with it (not saved), APPLY saves it through
+ * store_set_design (server keeps only safe look values, only for the owner's own shop), UNDO goes back one step.
+ */
+type DesignMsg = { me: boolean; text: string; design?: Record<string, string> | null };
+const AskRosePanel: React.FC<{ store: Store; onClose: () => void }> = ({ store, onClose }) => {
+  const [design, setDesign] = useState<Record<string, string>>(((store as any).design as Record<string, string>) || {});
+  const [msgs, setMsgs] = useState<DesignMsg[]>([{ me: false, text: 'আপনার ওয়েবসাইটের রং, বাটন বা থিম কেমন চান লিখুন। যেমন: "বাটন লাল আর গোল করো", "বার্থডে থিম দাও"। শুধু এই দোকানটাই বদলাবে।' }]);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState('');
+  const base = `${window.location.origin}/shop/${store.slug}`;
+  const b64 = (d: Record<string, string>) => btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  const send = async () => {
+    const q = text.trim();
+    if (!q || busy) return;
+    setText('');
+    setMsgs((m) => [...m, { me: true, text: q }]);
+    setBusy('ROSE is thinking…');
+    try {
+      const s = loadSettings();
+      const res = await fetch('/api/gemini/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-gemini-api-key': s.apiKey?.trim() || '' },
+        body: JSON.stringify({
+          message: `Shop: ${store.name}. Main colour now: ${store.color}. Design now: ${JSON.stringify(design)}.\nOwner asks: ${q}`,
+          history: msgs.slice(1).slice(-6).map((m) => ({ role: m.me ? 'user' : 'assistant', text: m.text })),
+          systemInstruction: `You are ROSE, the design helper inside the admin of the shop "${store.name}".\n${WEBSITE_RULES}\n\n${WEBSITE_DESIGN_GUIDE}`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok || !data.text) throw new Error(data.detail || data.error || 'ROSE could not answer now. Try again.');
+      const m = String(data.text).match(/\{[\s\S]*\}/);
+      const j = m ? JSON.parse(m[0]) : null;
+      setMsgs((x) => [...x, { me: false, text: String(j?.reply || data.text).slice(0, 600), design: j?.design && typeof j.design === 'object' ? j.design : null }]);
+    } catch (e: any) {
+      setMsgs((x) => [...x, { me: false, text: String(e?.message || e) }]);
+    } finally {
+      setBusy('');
+    }
+  };
+  const apply = async (d: Record<string, string>) => {
+    setBusy('Saving…');
+    const { data, error } = await supabase.rpc('store_set_design', { p_store: store.id, p_design: d });
+    setBusy('');
+    if (error) return setMsgs((x) => [...x, { me: false, text: error.message === 'Not allowed' ? 'এই দোকানের ডিজাইন বদলানোর অনুমতি আপনার নেই।' : error.message }]);
+    setDesign((data as Record<string, string>) || {});
+    setMsgs((x) => [...x, { me: false, text: 'হয়ে গেছে, আপনার ওয়েবসাইটে নতুন ডিজাইন বসে গেছে। আগেরটা চাইলে UNDO চাপুন।' }]);
+  };
+  const undo = async () => {
+    setBusy('Going back…');
+    const { data, error } = await supabase.rpc('store_undo_design', { p_store: store.id });
+    setBusy('');
+    if (error) return setMsgs((x) => [...x, { me: false, text: error.message }]);
+    setDesign((data as Record<string, string>) || {});
+    setMsgs((x) => [...x, { me: false, text: 'আগের ডিজাইনে ফিরিয়ে দিলাম।' }]);
+  };
+  return (
+    <div className="fixed inset-0 z-[80] flex flex-col bg-[#05070B]">
+      <div className="flex shrink-0 items-center gap-2 bg-emerald-600 px-2 pb-2 pt-[max(8px,env(safe-area-inset-top))] text-white">
+        <img src="/agents/rose.png?v=3" alt="ROSE" className="h-9 w-9 rounded-full border-2 border-white/70 object-cover" />
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="truncate text-[14px] font-extrabold">ROSE · {store.name}</p>
+          <p className="truncate text-[10.5px] text-emerald-50/90">Changes only this website's look</p>
+        </div>
+        <button type="button" onClick={() => void undo()} className="rounded-lg bg-white/15 px-2.5 py-1.5 text-[11px] font-bold">UNDO</button>
+        <button type="button" aria-label="Close" onClick={onClose} className="grid h-9 w-9 place-items-center"><X className="h-5 w-5" /></button>
+      </div>
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+        {msgs.map((m, i) => (
+          <div key={i} className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${m.me ? 'ml-auto bg-emerald-600 text-white' : 'bg-white/[0.06] text-slate-100'}`}>
+            {m.text}
+            {m.design && (
+              <div className="mt-2 flex gap-1.5">
+                <a href={`${base}?design=${encodeURIComponent(b64(m.design))}`} target="_blank" rel="noreferrer" className="rounded-lg border border-emerald-400/60 px-2.5 py-1 text-[11px] font-bold text-emerald-300">PREVIEW</a>
+                <button type="button" onClick={() => void apply(m.design as Record<string, string>)} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white">APPLY</button>
+              </div>
+            )}
+          </div>
+        ))}
+        {busy && <p className="flex items-center gap-2 text-[12px] text-emerald-300"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {busy}</p>}
+      </div>
+      <div className="flex shrink-0 gap-2 border-t border-white/10 p-2 pb-[max(8px,env(safe-area-inset-bottom))]">
+        <input className={input} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void send(); }} placeholder="Tell ROSE what to change…" />
+        <button type="button" onClick={() => void send()} disabled={Boolean(busy)} className={btn}>SEND</button>
+      </div>
+    </div>
+  );
+};
+
 const AdminFrame: React.FC<{
   store: Store; bars: Array<[boolean, string, string, string, string, string]>; current: string; userName: string; light: boolean;
   onTheme: () => void; onPick: (k: string) => void; onExit: () => void; extra?: React.ReactNode; children: React.ReactNode;
@@ -1471,6 +1562,18 @@ const AdminFrame: React.FC<{
     if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) setSideOn((v) => !v);
     else setOpen(true);
   };
+  const [roseOpen, setRoseOpen] = useState(false);
+  // ☰ menu top: ROSE button in ROSE's colour, opens Ask ROSE (changes only this shop's look)
+  const askRose = (
+    <button type="button" onClick={() => { setOpen(false); setRoseOpen(true); }} data-testid="ask-rose" className="mr-1 flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-emerald-600 px-2 py-1.5 text-left text-white">
+      <img src="/agents/rose.png?v=3" alt="ROSE" className="h-9 w-9 shrink-0 rounded-full border-2 border-white/70 object-cover" />
+      <span className="min-w-0 leading-tight">
+        <span className="block truncate text-[14px] font-extrabold">Ask ROSE</span>
+        <span className="block truncate text-[10.5px] text-emerald-50/90">Change my website design</span>
+      </span>
+      <ChevronRight className="ml-auto h-4 w-4 shrink-0" />
+    </button>
+  );
   const side = (
     <>
             <p className="mb-2 truncate px-1 text-[11px] font-bold text-emerald-400">{store.name}</p>
@@ -1521,20 +1624,18 @@ const AdminFrame: React.FC<{
           <div className="flex h-full w-[82%] max-w-[300px] flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5">
             <div className="mb-2 flex items-center justify-between">
               {/* ☰ menu top: ROSE's own logo and name (the top bar keeps the shop's logo and name) */}
-              <div className="flex min-w-0 items-center gap-1.5">
-                <img src="/agents/rose.png?v=3" alt="ROSE" className="h-9 w-9 shrink-0 rounded-full object-cover" />
-                <div className="min-w-0 leading-tight"><p className="truncate text-[14px] font-extrabold text-white">ROSE</p><p className="truncate text-[10.5px] text-slate-400">myrosebd.com</p></div>
-              </div>
-              <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center text-white"><X className="h-5 w-5" /></button>
+              {askRose}
+              <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center text-white"><X className="h-5 w-5" /></button>
             </div>
             {side}
           </div>
           <button type="button" aria-label="Close menu" className="flex-1 bg-black/50" onClick={() => setOpen(false)} />
         </div>
       )}
+      {roseOpen && <AskRosePanel store={store} onClose={() => setRoseOpen(false)} />}
       <div className="flex min-h-0 flex-1">
         {/* computer: the bars stay open on the left */}
-        <aside className={`${sideOn ? 'lg:flex' : ''} hidden w-[250px] shrink-0 flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>{side}</aside>
+        <aside className={`${sideOn ? 'lg:flex' : ''} hidden w-[250px] shrink-0 flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}><div className="mb-2 flex">{askRose}</div>{side}</aside>
         <div className="adm-body min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#05070B] px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:px-8 lg:py-6">
           <div className="mx-auto w-full max-w-[1200px]">{children}</div>
         </div>

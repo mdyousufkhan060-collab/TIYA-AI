@@ -512,6 +512,7 @@ if (liveSlug || ownDomain) {
         city: r.city || 'Dhaka', phone: r.phone, email: r.email, address: r.address, licence: r.licence, nameBn: r.name_bn || '', email2: r.email2 || '', whatsapp: r.whatsapp || '', phone2: r.phone2 || '',
         pharmacy: r.template === 'medicare' && prods.some(function (p) { return p.rx; }), banners: banners,
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
+        design: r.design || {},
         categories: cats.map(function (c) { return [c.name, c.icon || '🏷️', c.banner_url || '']; }), sectionTitle: 'Popular Products',
         note: r.note || ('Delivery: ' + r.delivery_inside + ' Tk inside Dhaka, ' + r.delivery_outside + ' Tk outside.'),
         delIn: r.delivery_inside, delOut: r.delivery_outside, delKgIn: r.delivery_kg_inside, delKgOut: r.delivery_kg_outside, payNumbers: r.pay_numbers || {}, pixels: r.pixels || {}, hideRose: !!r.hide_rose, offerBanners: (r.offer_banners || []).filter(function (b) { return b && b.img; }),
@@ -540,6 +541,36 @@ if (liveSlug || ownDomain) {
   }), '');
 }
 
+// ROSE design: only safe values (colours, a few shapes, themes) change this one store's look
+var THEMES = {
+  birthday: { bg: '#fff1f7', ribbon: '🎈 🎉 🎂 🎁 🎈' }, eid: { bg: '#f0fdf4', ribbon: '🌙 ✨ Eid Mubarak ✨ 🌙' }, ramadan: { bg: '#f5f3ff', ribbon: '🌙 Ramadan Kareem 🌙' },
+  winter: { bg: '#eff6ff', ribbon: '❄️ Winter collection ❄️' }, valentine: { bg: '#fff1f2', ribbon: '❤️ 💝 ❤️' }, pohela: { bg: '#fff7ed', ribbon: '🌼 শুভ নববর্ষ 🌼' },
+  victory: { bg: '#f0fdf4', ribbon: '🇧🇩 Victory Day 🇧🇩' }, sale: { bg: '#fefce8', ribbon: '🔥 BIG SALE 🔥' }, wedding: { bg: '#fffbeb', ribbon: '💍 ✨ 💐' },
+};
+function applyDesign(d, preview) {
+  d = d || {};
+  var hex = function (v) { return /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v || '') ? v : ''; };
+  var th = THEMES[d.theme] || null;
+  var R = { square: '4px', soft: '10px', round: '16px', pill: '999px' }[d.radius] || '';
+  var F = { rounded: '"Nunito","Varela Round",system-ui,sans-serif', serif: 'Georgia,"Times New Roman",serif', bold: '"Arial Black",system-ui,sans-serif' }[d.font] || '';
+  var c = [];
+  if (hex(d.btn)) c.push('.btn,.pill{background:' + d.btn + '!important}');
+  if (hex(d.btn_text)) c.push('.btn{color:' + d.btn_text + '!important}');
+  if (R) c.push('.btn{border-radius:' + R + '!important}.card{border-radius:' + (d.radius === 'pill' ? '22px' : R) + '!important}');
+  var bg = hex(d.bg) || (th && th.bg); if (bg) c.push('html,body{background:' + bg + '!important}');
+  if (hex(d.card)) c.push('.card,.panel{background:' + d.card + '!important}');
+  if (hex(d.header)) c.push('header.top{background:' + d.header + '!important}');
+  if (hex(d.price)) c.push('.price b{color:' + d.price + '!important}');
+  if (hex(d.ink)) c.push('body{color:' + d.ink + '}');
+  if (hex(d.accent)) document.documentElement.style.setProperty('--c', d.accent);
+  if (F) c.push('body{font-family:' + F + '}');
+  var st = document.getElementById('roseDesign'); if (!st) { st = document.createElement('style'); st.id = 'roseDesign'; document.head.appendChild(st); }
+  st.textContent = c.join('\n');
+  var rib = String(d.ribbon || (th && th.ribbon) || '').replace(/[<>{}]/g, '').slice(0, 80);
+  var old = document.getElementById('roseRibbon'); if (old) old.remove();
+  if (rib) { var rb = document.createElement('div'); rb.id = 'roseRibbon'; rb.style.cssText = 'text-align:center;padding:6px 10px;font:600 13px/1.4 system-ui,sans-serif;background:' + (hex(d.btn) || 'var(--c)') + ';color:' + (hex(d.btn_text) || '#fff'); rb.textContent = rib; var hd = document.querySelector('header.top'); if (hd) hd.parentNode.insertBefore(rb, hd); }
+  if (preview) { var pb = document.createElement('div'); pb.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:95;background:#111;color:#fff;font:600 12px system-ui;padding:6px 12px;border-radius:999px'; pb.textContent = 'ROSE design preview · not saved yet'; document.body.appendChild(pb); }
+}
 function start(S, P, liveId) {
   var id = liveId || (qs.get('s') || 'foodbazaar');
   if (liveId) {
@@ -550,6 +581,10 @@ function start(S, P, liveId) {
   var root = document.documentElement;
   root.style.setProperty('--c', S.color);
   root.style.setProperty('--a', S.accent);
+  // the owner's own look (made with ROSE): ?design=… shows a preview only, nothing is saved
+  var dz = S.design || {};
+  try { var dq = qs.get('design'); if (dq) dz = JSON.parse(decodeURIComponent(escape(atob(dq)))); } catch (e) {}
+  applyDesign(dz, !!qs.get('design'));
   document.title = S.live ? ((S.seo && S.seo.title) || (S.name + (S.tagline ? ' · ' + S.tagline : ''))) : S.name + ' · ' + S.tagline + ' (Demo)';
   (function () { var md = document.querySelector('meta[name="description"]'); if (md) md.setAttribute('content', S.live ? ((S.seo && S.seo.description) || (S.name + ': ' + (S.tagline || 'online shop') + '. Home delivery, ' + (S.city || 'Bangladesh') + '.')) : 'Demo online store made with ROSE Store Builder.'); })();
 
