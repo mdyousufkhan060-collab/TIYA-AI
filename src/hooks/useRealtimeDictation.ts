@@ -951,6 +951,10 @@ export function useRealtimeDictation({
 
       if (geminiKey) {
         await startGeminiLiveTranscribe(sessionId);
+      } else if (groqKey) {
+        // Groq key: record and let Groq Whisper write it. The phone's speech recognizer is not used here,
+        // because on Android it plays a start beep every time it starts.
+        await startBatchRecorderFallback(sessionId);
       } else if (startWebSpeechFallback(sessionId)) {
         return;
       } else {
