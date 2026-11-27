@@ -182,7 +182,12 @@ function toB64(buf: ArrayBuffer): string {
 /** Hands the media to the phone in pieces; the phone keeps it in Pictures/ROSE or Movies/ROSE */
 async function sendMedia(blob: Blob, name: string, onPct?: (p: number) => void): Promise<string> {
   const b = await native({ action: 'media_begin', name });
-  if (!b?.id) throw new Error('The phone could not take the file.');
+  if (!b?.id)
+    throw new Error(
+      b?.via === 'unsupported'
+        ? 'এই ROSE অ্যাপটা পুরনো। Android Studio-তে Update Project করে আবার Run ▶ দিন, তারপর POST চাপুন।'
+        : 'The phone could not take the file.',
+    );
   const CH = 384 * 1024;
   for (let o = 0; o < blob.size; o += CH) {
     const r = await native({ action: 'media_chunk', id: b.id, b64: toB64(await blob.slice(o, o + CH).arrayBuffer()) });
@@ -354,16 +359,19 @@ export const SocialPostPanel: React.FC = () => {
     return '';
   };
 
-  const pack = (uri: string, m: { blob: Blob } | null, ms: number, id?: string): Sched => ({
+  const pack = (uri: string, m: { blob: Blob } | null, ms: number, id?: string, only?: Platform[]): Sched => {
+    const use = only ? list.filter((p) => only.includes(p.id)) : list;
+    return {
     id: id || `p${Date.now()}`,
     at: ms,
     kind: m || uri ? kind : 'text',
     uri: uri || undefined,
     mime: m ? m.blob.type || (kind === 'video' ? 'video/mp4' : 'image/png') : kind === 'video' ? 'video/mp4' : 'image/png',
-    platforms: list.map((p) => p.id),
-    texts: Object.fromEntries(list.map((p) => [p.id, { title: p.hasTitle ? drafts[p.id].title.trim() : '', caption: drafts[p.id].caption.trim() }])),
+    platforms: use.map((p) => p.id),
+    texts: Object.fromEntries(use.map((p) => [p.id, { title: p.hasTitle ? drafts[p.id].title.trim() : '', caption: drafts[p.id].caption.trim() }])),
     about: about.trim(),
-  });
+    };
+  };
 
   const upload = async () => {
     const m = await media();
@@ -373,14 +381,20 @@ export const SocialPostPanel: React.FC = () => {
     return { uri, m };
   };
 
-  const postNow = async () => {
+  /** POST: a future time in the box → schedule it, otherwise post now (only = one platform's own POST button) */
+  const go = (only?: Platform[]) => {
+    const ms = at ? new Date(at).getTime() : 0;
+    return ms > Date.now() + 60000 ? schedule(only) : postNow(only);
+  };
+
+  const postNow = async (only?: Platform[]) => {
     const bad = check();
     if (bad) return setMsg(bad);
     if (!isPhone) return setMsg('POST NOW works in the ROSE Android app. Here use the POST button under each platform.');
     try {
       const { uri, m } = await upload();
-      setWorking(`ROSE is posting on ${list.map((p) => p.label).join(', ')}…`);
-      const it = pack(uri, m, Date.now());
+      const it = pack(uri, m, Date.now(), undefined, only);
+      setWorking(`ROSE is posting on ${it.platforms.map((p) => p.toUpperCase()).join(', ')}…`);
       const r = await native({ action: 'post_media', uri: it.uri || '', mime: it.mime, platforms: it.platforms, texts: it.texts }, 8 * 60000);
       setMsg(String(r?.message || 'Done.'));
     } catch (e: any) {
@@ -390,7 +404,7 @@ export const SocialPostPanel: React.FC = () => {
     }
   };
 
-  const schedule = async () => {
+  const schedule = async (only?: Platform[]) => {
     const bad = check();
     if (bad) return setMsg(bad);
     if (!isPhone) return setMsg('SCHEDULE works in the ROSE Android app, because the phone does the posting.');
@@ -399,7 +413,7 @@ export const SocialPostPanel: React.FC = () => {
     try {
       const { uri, m } = await upload();
       setWorking('Saving the schedule…');
-      const r = await native({ action: 'schedule_post', post: pack(uri, m, ms, editId || undefined) });
+      const r = await native({ action: 'schedule_post', post: pack(uri, m, ms, editId || undefined, only) });
       setMsg(String(r?.message || (r?.success ? 'Scheduled.' : 'Could not schedule.')));
       if (r?.success) {
         setEditId('');
@@ -473,6 +487,12 @@ export const SocialPostPanel: React.FC = () => {
   });
 
   const post = async (p: (typeof PLATFORMS)[number]) => {
+    // ROSE Android app: ROSE posts it herself (or schedules it if a time is set)
+    if (isPhone) {
+      await go([p.id]);
+      setDone((d) => ({ ...d, [p.id]: true }));
+      return;
+    }
     const t = textFor(p);
     if (kind === 'poster' && tpl >= 0) {
       const m = await media();
@@ -688,11 +708,11 @@ export const SocialPostPanel: React.FC = () => {
       <div className="space-y-2 rounded-xl border border-teal-400/25 bg-teal-500/[0.05] p-3">
         <button
           type="button"
-          onClick={() => void postNow()}
+          onClick={() => void go()}
           disabled={Boolean(working)}
           className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 text-xs font-bold text-white disabled:opacity-60"
         >
-          <Send className="h-4 w-4" /> POST NOW
+          <Send className="h-4 w-4" /> {at && new Date(at).getTime() > Date.now() + 60000 ? `POST AT ${when(new Date(at).getTime()).toUpperCase()}` : 'POST NOW'}
         </button>
         <div className="flex gap-1.5">
           <input
@@ -701,6 +721,11 @@ export const SocialPostPanel: React.FC = () => {
             onChange={(e) => setAt(e.target.value)}
             className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-2 text-sm text-white [color-scheme:dark]"
           />
+          {at && (
+            <button type="button" onClick={() => setAt('')} className="h-11 shrink-0 rounded-xl border border-white/10 px-2.5 text-[11px] font-bold text-slate-300">
+              ✕
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void schedule()}
