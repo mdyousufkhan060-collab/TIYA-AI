@@ -32,6 +32,17 @@ import {
   Plus,
   ExternalLink,
   MessageCircle,
+  Search,
+  BarChart3,
+  FolderOpen,
+  BookOpen,
+  Workflow,
+  HelpCircle,
+  Wand2,
+  Zap,
+  Star,
+  ChevronRight,
+  Bot,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { loadProfilesByEmail, loadProfilesById } from '../admin/UserAvatar';
@@ -119,6 +130,7 @@ const VoiceOrb: React.FC<{ on: boolean; state: string; onClick: () => void }> = 
 // ---------- top bar ----------
 export const DesktopTopBar: React.FC<{
   onMenu: () => void;
+  onSearch: (q: string) => void;
   unread: number;
   onBell: () => void;
   voiceOn: boolean;
@@ -128,21 +140,41 @@ export const DesktopTopBar: React.FC<{
   email?: string | null;
   avatar?: string | null;
   onSignOut: () => void;
-}> = ({ onMenu, unread, onBell, voiceOn, voiceState = 'idle', onVoice, onMicSettings, email, avatar, onSignOut }) => {
+}> = ({ onSearch, unread, onBell, voiceOn, voiceState = 'idle', onVoice, onMicSettings, email, avatar, onSignOut }) => {
   const [camOpen, setCamOpen] = useState(false);
-  const round = 'flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-slate-200 hover:border-white/35';
+  const [q, setQ] = useState('');
+  const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    const key = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchRef.current?.focus(); } };
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    window.addEventListener('keydown', key);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); window.removeEventListener('keydown', key); };
+  }, []);
+  const round = 'flex h-10 w-10 items-center justify-center rounded-full border border-sky-400/20 bg-[#0A1430] text-slate-200 hover:border-sky-300/60';
   return (
-    // order everywhere: ☰ · logo · name · then the extra buttons on the right
-    <header className="col-span-3 flex h-14 items-center gap-2 rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]/90 px-2">
-      <button type="button" aria-label="Menu" onClick={onMenu} className="flex h-10 w-10 items-center justify-center rounded-[8px] text-white hover:bg-white/[0.06]">
-        <Menu className="h-5 w-5" />
-      </button>
-      <img src="/agents/rose.png?v=3" alt="ROSE" className="h-9 w-9 rounded-full border-2 border-fuchsia-400/70 object-cover" />
-      <div className="leading-tight">
-        <p className="text-sm font-extrabold tracking-[0.25em] text-white">ROSE</p>
-        <p className="text-[10px] text-slate-400">myrosebd.com</p>
-      </div>
-      <div className="ml-auto flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/25 py-1 pl-1 pr-1">
+    <header className="col-start-2 col-span-2 row-start-1 flex h-14 items-center gap-3">
+      <label className="flex h-11 w-full max-w-[640px] items-center gap-3 rounded-[12px] border border-sky-400/30 bg-[#0A1430]/90 px-4 shadow-[0_0_24px_-12px_#38bdf8]">
+        <Search className="h-5 w-5 text-sky-300" />
+        <input
+          ref={searchRef}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && q.trim()) { onSearch(q.trim()); setQ(''); } }}
+          placeholder="Search anything…"
+          className="h-full min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-slate-400 focus:outline-none"
+        />
+        <span className="hidden shrink-0 items-center gap-1 text-[11px] text-slate-300 xl:flex">
+          <kbd className="rounded-[6px] border border-white/20 px-1.5 py-0.5">Ctrl</kbd>+<kbd className="rounded-[6px] border border-white/20 px-1.5 py-0.5">K</kbd>
+        </span>
+      </label>
+      <div className="ml-auto flex items-center gap-2">
+        <span className={`flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold ${online ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-300' : 'border-rose-400/50 bg-rose-500/10 text-rose-300'}`}>
+          <span className={`h-2.5 w-2.5 rounded-full ${online ? 'bg-emerald-400' : 'bg-rose-400'}`} /> {online ? 'Online' : 'Offline'}
+        </span>
         <VoiceOrb on={voiceOn} state={voiceState} onClick={onVoice} />
         <button type="button" onClick={onMicSettings} title="Microphone" className={round}>
           {voiceOn ? <Mic className="h-4 w-4 text-fuchsia-300" /> : <MicOff className="h-4 w-4" />}
@@ -151,21 +183,16 @@ export const DesktopTopBar: React.FC<{
           {camOpen ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
         </button>
         <button type="button" onClick={onBell} title="Notifications" className={`relative ${round}`}>
-          <Bell className="h-4 w-4" />
+          <Bell className="h-5 w-5" />
           {unread > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
-              {unread}
-            </span>
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{unread}</span>
           )}
         </button>
-        <span className="mx-0.5 h-6 w-px bg-white/10" />
-        <span title={email || ''} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-400 p-[2px]">
+        <span title={email || ''} className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-sky-400/40 p-[1px]">
           {avatar ? (
             <img src={avatar} alt="" referrerPolicy="no-referrer" className="h-full w-full rounded-full object-cover" />
           ) : (
-            <span className="flex h-full w-full items-center justify-center rounded-full bg-[#0D0B1A] text-[11px] font-bold text-white">
-              {(email || '?')[0].toUpperCase()}
-            </span>
+            <span className="flex h-full w-full items-center justify-center rounded-full bg-[#0A1430] text-[12px] font-bold text-white">{(email || '?')[0].toUpperCase()}</span>
           )}
         </span>
         <button type="button" onClick={onSignOut} title="Sign out" className={`${round} hover:border-rose-400/60 hover:text-rose-300`}>
@@ -177,35 +204,63 @@ export const DesktopTopBar: React.FC<{
   );
 };
 
-// ---------- left menu (PC). The same bars as the phone open from here ----------
-export type DesktopNav = 'dashboard' | 'team' | 'bars' | 'website' | 'writer' | 'admin';
-export const DesktopSideNav: React.FC<{ active: DesktopNav; isAdmin: boolean; onPick: (k: DesktopNav) => void; onSignOut: () => void }> = ({ active, isAdmin, onPick, onSignOut }) => {
-  const items: Array<[DesktopNav, string, React.ReactNode]> = [
-    ['dashboard', 'Dashboard', <LayoutDashboard key="d" className="h-4 w-4" />],
-    ['team', 'Team & Tasks', <ListChecks key="t" className="h-4 w-4" />],
-    ['bars', 'ROSE bars', <Settings key="b" className="h-4 w-4" />],
-    ['website', 'Website admin', <Store key="w" className="h-4 w-4" />],
-    ['writer', 'Writer', <FileText key="r" className="h-4 w-4" />],
-  ];
-  if (isAdmin) items.push(['admin', 'Admin panel', <Crown key="a" className="h-4 w-4" />]);
+// ---------- left menu (PC, his design). The same bars as the phone open from here ----------
+export type DesktopNav = 'dashboard' | 'chat' | 'tools' | 'analytics' | 'projects' | 'knowledge' | 'automation' | 'website' | 'settings' | 'subscription' | 'help' | 'admin';
+export const DESKTOP_NAV_ITEMS: Array<[DesktopNav, string]> = [
+  ['dashboard', 'Dashboard'], ['chat', 'Chat Assistant'], ['tools', 'AI Tools'], ['analytics', 'Analytics'], ['projects', 'Projects'],
+  ['knowledge', 'Knowledge Base'], ['automation', 'Automation'], ['website', 'Website Admin'], ['settings', 'Settings'], ['subscription', 'Subscription'], ['help', 'Help & Support'], ['admin', 'Admin Panel'],
+];
+const NAV_ICON: Record<DesktopNav, React.ReactNode> = {
+  dashboard: <LayoutDashboard className="h-5 w-5" />, chat: <MessageCircle className="h-5 w-5" />, tools: <Bot className="h-5 w-5" />, analytics: <BarChart3 className="h-5 w-5" />,
+  projects: <FolderOpen className="h-5 w-5" />, knowledge: <BookOpen className="h-5 w-5" />, automation: <Workflow className="h-5 w-5" />, website: <Store className="h-5 w-5" />,
+  settings: <Settings className="h-5 w-5" />, subscription: <Crown className="h-5 w-5" />, help: <HelpCircle className="h-5 w-5" />, admin: <Crown className="h-5 w-5" />,
+};
+export const DesktopSideNav: React.FC<{ active: DesktopNav; isAdmin: boolean; open: boolean; onToggle: () => void; onPick: (k: DesktopNav) => void; onSignOut: () => void }> = ({ active, isAdmin, open, onToggle, onPick }) => {
+  const items = DESKTOP_NAV_ITEMS.filter(([k]) => k !== 'admin' || isAdmin);
   return (
-    <aside className="col-start-1 row-start-2 flex min-h-0 w-[210px] flex-col gap-1 overflow-y-auto rounded-[10px] border border-white/[0.08] bg-[#0D0B1A] p-2.5">
-      <p className="px-2 pb-1 pt-1 text-[10px] font-bold tracking-[0.2em] text-slate-500">MENU</p>
-      {items.map(([k, label, icon]) => (
-        <button
-          key={k}
-          type="button"
-          onClick={() => onPick(k)}
-          className={`flex h-10 items-center gap-2.5 rounded-[8px] px-3 text-left text-[13px] font-semibold ${
-            active === k ? (k === 'admin' ? 'bg-amber-300/15 text-amber-200' : 'bg-violet-600/20 text-white') : 'text-slate-300 hover:bg-white/[0.05]'
-          }`}
-        >
-          {icon} {label}
+    <aside className={`col-start-1 row-span-2 row-start-1 flex min-h-0 flex-col overflow-y-auto rounded-[14px] border border-sky-400/20 bg-[#060E26] ${open ? 'w-[232px] p-3' : 'w-[68px] items-center p-2'} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
+      {/* ☰ · logo · name */}
+      <div className={`mb-4 flex items-center gap-2 ${open ? '' : 'flex-col'}`}>
+        <button type="button" aria-label="Menu" onClick={onToggle} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-slate-200 hover:bg-white/[0.06]">
+          <Menu className="h-5 w-5" />
         </button>
-      ))}
-      <button type="button" onClick={onSignOut} className="mt-auto flex h-10 items-center gap-2.5 rounded-[8px] px-3 text-left text-[13px] font-semibold text-slate-400 hover:bg-white/[0.05] hover:text-rose-300">
-        <LogOut className="h-4 w-4" /> Sign out
-      </button>
+        <img src="/agents/rose.png?v=3" alt="ROSE" className="h-11 w-11 shrink-0 rounded-full border-2 border-sky-400/60 object-cover shadow-[0_0_18px_-4px_#38bdf8]" />
+        {open && (
+          <div className="min-w-0 leading-tight">
+            <p className="text-[19px] font-extrabold text-white">ROSE AI</p>
+            <p className="truncate text-[11px] text-slate-300">Your Intelligent AI Agent</p>
+          </div>
+        )}
+      </div>
+      <nav className="flex flex-col gap-1">
+        {items.map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            title={label}
+            onClick={() => onPick(k)}
+            className={`flex h-11 items-center gap-3 rounded-[10px] text-left text-[14px] font-semibold transition-colors ${open ? 'px-3.5' : 'w-11 justify-center'} ${
+              active === k
+                ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-[0_0_22px_-6px_#38bdf8]'
+                : k === 'admin' ? 'text-amber-200 hover:bg-amber-300/10' : 'text-slate-200 hover:bg-white/[0.06]'
+            }`}
+          >
+            <span className="shrink-0">{NAV_ICON[k]}</span>
+            {open && <span className="min-w-0 flex-1 truncate">{label}</span>}
+            {open && k === 'tools' && <ChevronRight className="h-4 w-4 text-slate-400" />}
+          </button>
+        ))}
+      </nav>
+      {open && !isAdmin && (
+        <div className="mt-auto rounded-[14px] border border-sky-400/40 bg-[#0A1640] p-4 text-center shadow-[0_0_28px_-12px_#38bdf8]">
+          <Crown className="mx-auto h-7 w-7 text-amber-300" />
+          <p className="mt-1 text-[16px] font-extrabold text-white">Upgrade to Pro</p>
+          <p className="mt-1 text-[12px] leading-snug text-slate-300">Unlock more powerful features with ROSE AI.</p>
+          <button type="button" onClick={() => onPick('subscription')} className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 px-6 text-sm font-bold text-white">
+            Go Pro <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </aside>
   );
 };
@@ -445,11 +500,74 @@ const ago = (iso: string) => {
   return new Date(iso).toLocaleDateString('en-GB');
 };
 
-// ---------- dashboard ----------
-type RecentOrder = { id: string; order_no: number | string; customer_name: string; total: number; status: string; created_at: string };
-const STATUS_TONE: Record<string, string> = { new: 'text-sky-300', confirmed: 'text-violet-300', shipped: 'text-amber-300', delivered: 'text-emerald-300', cancelled: 'text-rose-300', returned: 'text-rose-300' };
-export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOpenTeam: () => void; onAction?: (k: 'product' | 'orders' | 'shop' | 'bars') => void }> = ({ userId, isAdmin, onOpenTeam, onAction }) => {
-  const { tiles, series, seriesName, tasks } = useDashboardData(userId, isAdmin);
+// ---------- dashboard (his design: banner · 4 numbers · analytics + quick tools · recent activity + system status · team) ----------
+type QuickKey = 'chat' | 'writer' | 'product' | 'voice' | 'team';
+const panel = 'rounded-[14px] border border-sky-400/20 bg-[#081233]/90';
+const MultiLine: React.FC<{ labels: string[]; lines: Array<{ name: string; color: string; values: number[] }> }> = ({ labels, lines }) => {
+  const W = 620, H = 210, pl = 34, pr = 12, pt = 14, pb = 26;
+  const max = Math.max(1, ...lines.flatMap((l) => l.values));
+  const x = (i: number) => pl + (i * (W - pl - pr)) / Math.max(1, labels.length - 1);
+  const y = (v: number) => H - pb - (v / max) * (H - pt - pb);
+  const step = Math.max(1, Math.ceil(labels.length / 6));
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full">
+      {[0, 0.5, 1].map((f) => (
+        <g key={f}>
+          <line x1={pl} x2={W - pr} y1={pt + f * (H - pt - pb)} y2={pt + f * (H - pt - pb)} stroke="rgba(148,197,255,0.10)" />
+          <text x={pl - 6} y={pt + f * (H - pt - pb) + 4} textAnchor="end" fontSize="10" fill="#94a3b8">{Math.round(max * (1 - f))}</text>
+        </g>
+      ))}
+      {lines.map((l) => {
+        const d = l.values.map((v, i) => `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join(' ');
+        return (
+          <g key={l.name}>
+            <path d={`${d} L${x(l.values.length - 1)},${H - pb} L${pl},${H - pb} Z`} fill={l.color} opacity="0.12" />
+            <path d={d} fill="none" stroke={l.color} strokeWidth="2.5" strokeLinejoin="round" />
+          </g>
+        );
+      })}
+      {labels.map((lb, i) => (i % step === 0 || i === labels.length - 1) && (
+        <text key={i} x={x(i)} y={H - 6} textAnchor="middle" fontSize="10.5" fill="#cbd5e1">{lb}</text>
+      ))}
+    </svg>
+  );
+};
+const Ring: React.FC<{ ok: boolean | null; label: string }> = ({ ok, label }) => {
+  const c = ok === null ? '#64748b' : ok ? '#34d399' : '#f87171';
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <span className="relative flex h-16 w-16 items-center justify-center rounded-full" style={{ background: `conic-gradient(${c} ${ok ? 360 : ok === null ? 120 : 60}deg, rgba(255,255,255,0.08) 0)` }}>
+        <span className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#081233] text-[11px] font-extrabold" style={{ color: c }}>{ok === null ? '…' : ok ? 'OK' : 'OFF'}</span>
+      </span>
+      <span className="text-[12px] text-slate-200">{label}</span>
+    </div>
+  );
+};
+export const DesktopDashboard: React.FC<{
+  userId: string; isAdmin: boolean; userName?: string; chatCount?: number; hasAiKey?: boolean;
+  onOpenTeam: () => void; onAction?: (k: 'product' | 'orders' | 'shop' | 'bars') => void; onQuick?: (k: QuickKey) => void;
+}> = ({ userId, isAdmin, userName, chatCount = 0, hasAiKey, onOpenTeam, onAction, onQuick }) => {
+  const { tiles, tasks, feed } = useDashboardData(userId, isAdmin);
+  const [range, setRange] = useState<7 | 30>(30);
+  const [orders, setOrders] = useState<Array<{ created_at: string; total: number }>>([]);
+  const [db, setDb] = useState<boolean | null>(null);
+  const [mic, setMic] = useState<boolean | null>(null);
+  const [net, setNet] = useState<boolean>(typeof navigator === 'undefined' ? true : navigator.onLine);
+  useEffect(() => {
+    void supabase.from('agent_tasks').select('id', { head: true, count: 'exact' }).eq('user_id', userId).then(({ error }) => setDb(!error));
+    void (navigator as any).permissions?.query({ name: 'microphone' }).then((p: any) => setMic(p.state !== 'denied')).catch(() => setMic(null));
+    const up = () => setNet(true); const down = () => setNet(false);
+    window.addEventListener('online', up); window.addEventListener('offline', down);
+    void (async () => {
+      const [{ data: own }, { data: staff }] = await Promise.all([supabase.from('stores').select('id').eq('owner_id', userId), supabase.rpc('my_staff_stores')]);
+      const ids = [...((own as Array<{ id: string }>) || []).map((x) => x.id), ...((staff as Array<{ store_id: string }>) || []).map((x) => x.store_id)];
+      if (!ids.length) return;
+      const since = new Date(Date.now() - 31 * 864e5).toISOString();
+      const { data } = await supabase.from('store_orders').select('created_at,total').in('store_id', ids).gte('created_at', since).limit(5000);
+      setOrders((data as Array<{ created_at: string; total: number }>) || []);
+    })();
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, [userId]);
   const agentStats = useMemo(
     () =>
       AGENTS.map((a) => {
@@ -460,73 +578,155 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
       }),
     [tasks],
   );
-  const card = 'rounded-[10px] border border-white/[0.08] bg-[#120F22]';
-  const quick: Array<['product' | 'orders' | 'shop' | 'bars', string, React.ReactNode]> = [
-    ['product', 'Add product', <Plus key="p" className="h-4 w-4" />],
-    ['orders', 'See orders', <ShoppingCart key="o" className="h-4 w-4" />],
-    ['shop', 'Open my shop', <ExternalLink key="s" className="h-4 w-4" />],
-    ['bars', 'ROSE bars', <Settings key="b" className="h-4 w-4" />],
+  const doneAll = tasks.filter((t) => t.status === 'done').length;
+  const success = tasks.length ? Math.round((doneAll / tasks.length) * 100) : 0;
+  const ordersTile = tiles?.find((t) => /order/i.test(t.label) && /total/i.test(t.label))?.value ?? String(orders.length);
+  const chart = useMemo(() => {
+    const days = Array.from({ length: range }, (_, i) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (range - 1 - i)); return d; });
+    const key = (d: Date | string) => new Date(d).toDateString();
+    const count = (arr: Array<{ created_at: string }>) => days.map((d) => arr.filter((x) => key(x.created_at) === key(d)).length);
+    return {
+      labels: days.map((d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })),
+      lines: [
+        { name: 'Tasks', color: '#c084fc', values: count(tasks as unknown as Array<{ created_at: string }>) },
+        { name: 'Orders', color: '#38bdf8', values: count(orders) },
+      ],
+    };
+  }, [range, tasks, orders]);
+  const stat = (label: string, value: string, icon: React.ReactNode, grad: string, line: string) => (
+    <div className={`${panel} relative overflow-hidden p-4`}>
+      <div className="flex items-center gap-3">
+        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] bg-gradient-to-br ${grad} text-white shadow-lg`}>{icon}</span>
+        <span className="min-w-0">
+          <span className="block text-[13px] text-slate-300">{label}</span>
+          <span className="block text-[26px] font-extrabold leading-tight text-white">{value}</span>
+        </span>
+      </div>
+      <svg viewBox="0 0 120 24" className="absolute bottom-1 right-2 h-6 w-28 opacity-80"><path d="M0 20 Q15 18 25 14 T50 15 T75 8 T100 10 T120 4" fill="none" stroke={line} strokeWidth="2" /></svg>
+    </div>
+  );
+  const quick: Array<[QuickKey, string, React.ReactNode, string]> = [
+    ['chat', 'New Chat', <Send key="c" className="h-4 w-4" />, 'from-blue-600 to-sky-500'],
+    ['writer', 'Create Document', <FolderOpen key="w" className="h-4 w-4" />, 'from-violet-600 to-fuchsia-500'],
+    ['product', 'Add Product', <Plus key="p" className="h-4 w-4" />, 'from-emerald-600 to-teal-500'],
+    ['team', 'Team Task', <Bot key="t" className="h-4 w-4" />, 'from-orange-500 to-amber-500'],
+    ['voice', 'Voice Assistant', <Mic key="v" className="h-4 w-4" />, 'from-purple-600 to-indigo-500'],
   ];
+  const quickGo = (k: QuickKey) => {
+    if (onQuick) return onQuick(k);
+    if (k === 'product') onAction?.('product');
+    else if (k === 'team') onOpenTeam();
+  };
   return (
-    <div className="tiya-scroll flex h-full min-h-0 flex-col gap-3 overflow-y-auto">
-      {/* numbers */}
-      {tiles === null ? (
-        <div className="flex h-20 items-center justify-center text-xs text-slate-500">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* banner */}
+      <section className={`${panel} relative flex min-h-[190px] shrink-0 overflow-hidden`}>
+        <img src="/tiya-home.jpg?v=3" alt="ROSE" className="absolute inset-y-0 left-0 h-full w-[46%] object-cover object-[center_28%]" />
+        <span className="pointer-events-none absolute inset-y-0 left-[30%] w-[22%] bg-gradient-to-r from-transparent to-[#081233]" />
+        <p className="absolute bottom-5 left-6 text-[26px] italic leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'cursive' }}>Smarter AI.<br />Better Tomorrow.</p>
+        <div className="relative ml-auto flex w-[50%] flex-col justify-center gap-1.5 p-6">
+          <p className="text-[22px] font-extrabold text-white">Hello, {(userName || 'there').toUpperCase()}! 👋</p>
+          <p className="text-[15px] font-semibold text-slate-100">Welcome back to your AI Dashboard</p>
+          <p className="text-[13px] text-slate-300">Let's make something amazing together.</p>
+          <button type="button" onClick={() => quickGo('chat')} className="mt-3 inline-flex h-11 w-fit items-center gap-2 rounded-full border border-sky-300/60 bg-[#0A1640] px-6 text-sm font-bold text-white shadow-[0_0_24px_-6px_#38bdf8] hover:bg-sky-500/20">
+            <Send className="h-4 w-4" /> Start Chat
+          </button>
         </div>
-      ) : tiles.length === 0 ? (
-        <div className={`${card} p-4 text-sm text-slate-300`}>Set up your shop or Business Profile (ROSE bars → WORKSPACE) to see sales, orders and customers here.</div>
-      ) : (
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
-          {tiles.map((t) => (
-            <div key={t.label} className={`${card} flex items-center gap-3 p-3.5`}>
-              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br ${t.grad} text-white`}>{t.icon}</span>
-              <span className="min-w-0">
-                <span className="block truncate text-[11px] text-slate-400">{t.label}</span>
-                <span className="block truncate text-xl font-extrabold text-white">{t.value}</span>
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* the one big chart */}
-      <section className={`${card} flex min-h-[260px] flex-col p-4`}>
-        <h3 className="flex items-center gap-2 text-sm font-bold text-white">
-          <LayoutDashboard className="h-4 w-4 text-violet-400" /> Sales overview
-          <span className="ml-auto text-[10.5px] font-normal text-slate-400">{seriesName}</span>
-        </h3>
-        <div className="mt-2 min-h-[200px] flex-1">{series.length > 0 && <AreaChart data={series} />}</div>
       </section>
 
-      {/* quick actions */}
-      <section className={`${card} p-4`}>
-          <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-white">
-            <MessageCircle className="h-4 w-4 text-fuchsia-400" /> Quick actions
-          </h3>
-          <div className="grid grid-cols-4 gap-2">
-            {quick.map(([k, label, icon]) => (
-              <button key={k} type="button" onClick={() => onAction?.(k)} className="flex h-16 flex-col items-center justify-center gap-1 rounded-[8px] border border-white/[0.08] bg-black/20 text-[12px] font-semibold text-slate-200 hover:border-violet-400/50">
-                {icon} {label}
+      {/* 4 numbers */}
+      <div className="grid shrink-0 grid-cols-4 gap-3">
+        {stat('Total Chats', String(chatCount), <MessageCircle className="h-6 w-6" />, 'from-blue-600 to-sky-400', '#38bdf8')}
+        {stat('AI Tasks', String(tasks.length), <Zap className="h-6 w-6" />, 'from-violet-600 to-fuchsia-500', '#c084fc')}
+        {stat('Orders', String(ordersTile), <CheckCircle2 className="h-6 w-6" />, 'from-emerald-600 to-green-400', '#34d399')}
+        {stat('Success Rate', `${success}%`, <Star className="h-6 w-6" />, 'from-orange-500 to-amber-400', '#fbbf24')}
+      </div>
+
+      {/* analytics + quick tools */}
+      <div className="grid shrink-0 grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)] gap-3">
+        <section className={`${panel} flex min-h-[290px] flex-col p-4`}>
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-sky-400" />
+            <h3 className="text-[16px] font-bold text-white">Analytics Overview</h3>
+            <select value={range} onChange={(e) => setRange(Number(e.target.value) as 7 | 30)} className="ml-auto h-9 rounded-[10px] border border-sky-400/30 bg-[#0A1430] px-3 text-sm text-white">
+              <option value={7}>Last 7 Days</option>
+              <option value={30}>Last 30 Days</option>
+            </select>
+          </div>
+          <div className="mt-1 flex justify-center gap-5 text-[12px] text-slate-200">
+            {chart.lines.map((l) => <span key={l.name} className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: l.color }} />{l.name}</span>)}
+          </div>
+          <div className="mt-1 min-h-[210px] flex-1"><MultiLine labels={chart.labels} lines={chart.lines} /></div>
+        </section>
+        <section className={`${panel} p-4`}>
+          <h3 className="mb-3 flex items-center gap-2 text-[16px] font-bold text-white"><Wand2 className="h-5 w-5 text-sky-400" /> Quick Tools</h3>
+          <div className="space-y-2">
+            {quick.map(([k, label, icon, grad]) => (
+              <button key={k} type="button" onClick={() => quickGo(k)} className="flex h-11 w-full items-center gap-3 rounded-[10px] border border-sky-400/15 bg-[#0A1430] pr-3 text-left text-[14px] font-semibold text-white hover:border-sky-300/50">
+                <span className={`flex h-11 w-12 shrink-0 items-center justify-center rounded-l-[10px] bg-gradient-to-br ${grad}`}>{icon}</span>
+                <span className="flex-1">{label}</span>
+                <ChevronRight className="h-4 w-4 text-slate-300" />
               </button>
             ))}
           </div>
-          <p className="mt-3 text-[11px] leading-relaxed text-slate-500">Or just tell ROSE on the right, by voice or typing.</p>
         </section>
-      {/* team status (compact) */}
-      <section className="shrink-0 rounded-[10px] border border-white/[0.08] bg-[#120F22] px-3 py-2.5">
+      </div>
+
+      {/* recent activity + system status */}
+      <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-3">
+        <section className={`${panel} p-4`}>
+          <div className="mb-2 flex items-center gap-2">
+            <Activity className="h-5 w-5 text-sky-400" />
+            <h3 className="text-[16px] font-bold text-white">Recent Activity</h3>
+            <button type="button" onClick={onOpenTeam} className="ml-auto text-[13px] font-semibold text-sky-300">View All →</button>
+          </div>
+          {feed.length === 0 ? (
+            <p className="py-6 text-center text-xs text-slate-400">New work, logins and orders show here.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {feed.slice(0, 4).map((f) => (
+                <div key={f.id} className="flex items-center gap-2.5 text-[13px]">
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${f.state === 'failed' ? 'bg-rose-500' : f.state === 'working' ? 'bg-amber-500' : 'bg-emerald-500'} text-white`}>
+                    {f.state === 'failed' ? <XCircle className="h-3.5 w-3.5" /> : f.state === 'working' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-slate-100"><b style={{ color: f.color }}>{f.who}</b> {f.text}</span>
+                  <span className="shrink-0 text-[11px] text-slate-400">{ago(f.at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+        <section className={`${panel} p-4`}>
+          <div className="mb-3 flex items-center gap-2">
+            <Activity className="h-5 w-5 text-sky-400" />
+            <h3 className="text-[16px] font-bold text-white">System Status</h3>
+            {(() => { const all = net && db !== false && hasAiKey !== false && mic !== false; return (
+              <span className={`ml-2 rounded-full px-3 py-1 text-[11px] font-semibold ${all ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>{all ? 'All Systems Operational' : 'Check the red ones'}</span>
+            ); })()}
+          </div>
+          <div className="flex justify-around">
+            <Ring ok={net} label="Internet" />
+            <Ring ok={db} label="Database" />
+            <Ring ok={hasAiKey ?? null} label="AI" />
+            <Ring ok={mic} label="Microphone" />
+          </div>
+        </section>
+      </div>
+
+      {/* team: ROSE, MIRA, ARIN, ZAYAN, NAIRA */}
+      <section className={`${panel} shrink-0 px-3 py-2.5`}>
         <div className="grid grid-cols-5 gap-2">
           {agentStats.map(({ a, total, working, pct }) => (
             <button
               key={a.id}
               type="button"
               onClick={onOpenTeam}
-              className="flex items-center gap-2 rounded-[8px] border border-white/[0.08] bg-black/20 px-2 py-1.5 text-left hover:border-white/25"
+              className="flex items-center gap-2 rounded-[10px] border border-sky-400/15 bg-[#0A1430] px-2 py-1.5 text-left hover:border-sky-300/50"
               style={working ? { borderColor: a.color, boxShadow: `0 0 18px -8px ${a.color}` } : undefined}
             >
               <span className="relative shrink-0">
                 <img src={a.photo} alt={a.name} className="h-9 w-9 rounded-full border-2 object-cover" style={{ borderColor: a.color }} />
-                <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#120F22] ${working ? 'animate-pulse bg-amber-300' : 'bg-emerald-400'}`} />
+                <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#081233] ${working ? 'animate-pulse bg-amber-300' : 'bg-emerald-400'}`} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-1">
@@ -571,6 +771,12 @@ export const DesktopRosePanel: React.FC<{
   const [reportOpen, setReportOpen] = useState(false);
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    const f = () => inputRef.current?.focus();
+    window.addEventListener('rose-focus-chat', f);
+    return () => window.removeEventListener('rose-focus-chat', f);
+  }, []);
   const recent = messages.slice(-60);
   const voiceOn = ['connecting', 'listening', 'thinking', 'speaking'].includes(voiceState);
 
@@ -688,6 +894,7 @@ export const DesktopRosePanel: React.FC<{
           <Flag className="h-4 w-4" />
         </button>
         <input
+          ref={inputRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}

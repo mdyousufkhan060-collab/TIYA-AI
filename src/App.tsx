@@ -81,7 +81,7 @@ import {
 } from './components/settings/AboutLookPhonePages';
 import { PrivacyControlsPage } from './components/settings/DeveloperPrivacyPages';
 import { WorkspacePage } from './components/workspace/WorkspacePage';
-import { DesktopDashboard, DesktopRosePanel, DesktopSideNav, DesktopTab, DesktopTeam, DesktopTopBar } from './components/desktop/DesktopHub';
+import { DESKTOP_NAV_ITEMS, DesktopDashboard, DesktopNav, DesktopRosePanel, DesktopSideNav, DesktopTab, DesktopTeam, DesktopTopBar } from './components/desktop/DesktopHub';
 import { WriterPanel } from './components/desktop/WriterPanel';
 import { agentById, parseAgentCommand, runAgentTask } from './lib/agents';
 import { clearModeContext, refreshModeContext, refreshParcelsContext } from './utils/modeContext';
@@ -1978,11 +1978,41 @@ export default function App() {
 
   const isInSettingsSubpage = activeTab === 'settings' && settingsPage !== 'hub';
 
+  // PC left menu → the same pages as the phone
+  const pcActive: DesktopNav =
+    desktopTab === 'admin' ? 'admin' : desktopTab === 'writer' ? 'projects' : desktopTab === 'team' ? 'tools'
+      : desktopTab === 'app' ? (settingsPage === 'workspace' ? (settingsSubpage === 'rose_support' ? 'help' : settingsSubpage === 'store' ? 'website' : 'automation') : settingsPage === 'chats_memory' ? 'knowledge' : settingsPage === 'premium' ? 'subscription' : 'settings')
+      : 'dashboard';
+  const pickPc = (k: DesktopNav) => {
+    setShowMotivationScreen(false);
+    if (k === 'admin' || (k === 'analytics' && isAdmin)) {
+      setDesktopTab('admin');
+      setShowAdminScreen(true);
+      return;
+    }
+    setShowAdminScreen(false);
+    if (k === 'dashboard') setDesktopTab('dashboard');
+    else if (k === 'chat') {
+      setDesktopTab('dashboard');
+      window.dispatchEvent(new Event('rose-focus-chat'));
+    } else if (k === 'projects') setDesktopTab('writer');
+    else if (k === 'tools') setDesktopTab('team');
+    else {
+      setDesktopTab('app');
+      if (k === 'website' || k === 'analytics') navigateTo('settings', 'workspace', 'store');
+      else if (k === 'automation') navigateTo('settings', 'workspace', 'hub');
+      else if (k === 'help') navigateTo('settings', 'workspace', 'rose_support');
+      else if (k === 'knowledge') navigateTo('settings', 'chats_memory', null);
+      else if (k === 'subscription') navigateTo('settings', 'premium', null);
+      else navigateTo('settings', 'hub', null);
+    }
+  };
+
   return (
     <div
       className={`${
         desktopMode
-          ? 'relative isolate grid h-[100dvh] w-full grid-cols-[auto_minmax(0,1fr)_380px] grid-rows-[auto_minmax(0,1fr)] gap-3 bg-[#07060F] p-3'
+          ? 'relative isolate grid h-[100dvh] w-full grid-cols-[auto_minmax(0,1fr)_380px] grid-rows-[auto_minmax(0,1fr)] gap-3 bg-[#030A1E] p-3'
           : 'flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] pc:p-3'
       } ${settings.reduceMotion ? 'reduce-motion' : ''}`}
     >
@@ -1995,6 +2025,12 @@ export default function App() {
         <>
           <DesktopTopBar
             onMenu={() => setPcMenu((v) => !v)}
+            onSearch={(q) => {
+              // a menu name opens that page; anything else goes to ROSE as a question
+              const hit = DESKTOP_NAV_ITEMS.find(([k, label]) => (k !== 'admin' || isAdmin) && label.toLowerCase().includes(q.toLowerCase()));
+              if (hit) pickPc(hit[0]);
+              else void handleSendChat(q);
+            }}
             unread={unreadNotifications}
             onBell={() => {
               setDesktopTab('app');
@@ -2012,34 +2048,14 @@ export default function App() {
             avatar={(session.user.user_metadata as any)?.avatar_url || null}
             onSignOut={handleSignOut}
           />
-          {pcMenu ? (
-            <DesktopSideNav
-              active={desktopTab === 'admin' ? 'admin' : desktopTab === 'writer' ? 'writer' : desktopTab === 'team' ? 'team' : desktopTab === 'app' ? (settingsPage === 'workspace' ? 'website' : 'bars') : 'dashboard'}
-              isAdmin={isAdmin}
-              onSignOut={handleSignOut}
-              onPick={(k) => {
-                setShowMotivationScreen(false);
-                if (k === 'admin') {
-                  setDesktopTab('admin');
-                  setShowAdminScreen(true);
-                  return;
-                }
-                setShowAdminScreen(false);
-                if (k === 'dashboard') setDesktopTab('dashboard');
-                else if (k === 'writer') setDesktopTab('writer');
-                else if (k === 'team') setDesktopTab('team');
-                else if (k === 'website') {
-                  setDesktopTab('app');
-                  navigateTo('settings', 'workspace', 'store');
-                } else {
-                  setDesktopTab('app');
-                  navigateTo('settings', 'hub', null);
-                }
-              }}
-            />
-          ) : (
-            <span className="col-start-1 row-start-2" />
-          )}
+          <DesktopSideNav
+            open={pcMenu}
+            onToggle={() => setPcMenu((v) => !v)}
+            active={pcActive}
+            isAdmin={isAdmin}
+            onSignOut={handleSignOut}
+            onPick={pickPc}
+          />
           {desktopTab === 'admin' && (
             <div className="col-start-2 row-start-2 flex min-h-0 w-[330px] flex-col overflow-hidden rounded-[10px] border border-amber-300/20 bg-[#0D0B1A]">
               <AdminScreen
@@ -2090,6 +2106,16 @@ export default function App() {
                 <DesktopDashboard
                   userId={session.user.id}
                   isAdmin={isAdmin}
+                  userName={settings.yourName || profile?.full_name || (session.user.user_metadata as any)?.full_name || ''}
+                  chatCount={chatSessionCount}
+                  hasAiKey={hasOwnVoiceKey || isProfilePremium(profile) || isAdmin}
+                  onQuick={(k) => {
+                    if (k === 'chat') window.dispatchEvent(new Event('rose-focus-chat'));
+                    else if (k === 'writer') setDesktopTab('writer');
+                    else if (k === 'team') setDesktopTab('team');
+                    else if (k === 'voice') toggleVoice();
+                    else pickPc('website');
+                  }}
                   onOpenTeam={() => setDesktopTab('team')}
                   onAction={(k) => {
                     setShowAdminScreen(false);
