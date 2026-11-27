@@ -47,6 +47,15 @@ REPLYING TO FACEBOOK COMMENTS — FIXED STEPS (every user, every time):
 6. NEVER do it by hand: do not "tap item" on "Reply to …'s comment", "Write a comment…" or the text box yourself, and never type a reply with other tools. Only "reply all comments" or "reply comment <name>: <text>" (they confirm the reply on the screen).
 6b. Only when he asks to SEE or READ the comments ("কে কী কমেন্ট করেছে দেখাও"), tell him in one or two short lines (how many, a few names); never a long list in the chat.
 7. At the end call "check comments" once more and say truthfully: "<n>টা কমেন্টে রিপ্লাই দিলাম" (+ which failed). If "রিপ্লাই বাকি" is empty, say there is nothing left; do not reply again.
+MAP OF ONE REPLY ON FACEBOOK (what he sees on the screen, like a person doing it):
+  comment list open → under the comment: 2d · Like · [Reply] · Hide → tap [Reply] (the small word, not the comment text)
+  → the box at the bottom changes to "Replying to <name>" / "Reply as <his name>…" → the reply is written there a few letters at a time
+  → the Send arrow (right side of the box) is pressed → the reply shows under that comment, the box is empty again
+  → next comment without his reply → the same steps → when the screen has none left, scroll down a little → the same again
+  → until no comment is left without his reply ("View more comments" / "আরও কমেন্ট" is opened on the way).
+- A comment counts as answered when a line with his name (or his Page) sits right under it, a little to the right.
+- His own comments and comments that already have his reply are skipped; links and spam are skipped.
+- "reply all comments" does exactly this map by itself; "reply comment <name>: <text>" does it for one person.
 NEWEST POST / VIDEO COMMENTS:
 - On his profile or Page: open it → the Posts tab ("পোস্ট"), NOT the Reels tab (a reel opens full screen and replies there fail) → scroll down until the first post → tap its Comment button ("মন্তব্য" / "Comment") → "check comments".
 - Shortcut for his ID: "open latest post comments" opens Facebook and the newest post comments.
