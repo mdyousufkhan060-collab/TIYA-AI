@@ -261,11 +261,30 @@ export function usePremiumVoice(opts: Options) {
     [fail],
   );
 
+  /** A short line said aloud while a phone job runs (it does not start listening afterwards) */
+  const speakLine = useCallback(async (line: string) => {
+    const o = optsRef.current;
+    o.onAppend('assistant', line);
+    try {
+      const tts = await premiumTts(line, o.voiceName);
+      if (!activeRef.current || !tts.ok || !tts.audio) return;
+      const url = pcmToWavUrl(tts.audio);
+      const a = new Audio(url);
+      a.volume = Math.max(0, Math.min(1, o.volume ?? 1));
+      a.playbackRate = Math.max(0.75, Math.min(1.35, o.speechSpeed || 1));
+      a.onended = () => URL.revokeObjectURL(url);
+      await a.play();
+    } catch {
+      /* the job goes on without the voice */
+    }
+  }, []);
+
   const pendingRef = useRef(false);
   // FIXED RECIPES: jobs that always go the same way run step by step inside the phone, without asking the AI
   // what to tap (fast and the same for every user). Facebook comment replies: open the newest post's comments,
   // then the phone answers every comment without his reply, live, one by one.
   const recipeRef = useRef<{ steps: string[]; at: number } | null>(null);
+  const lastRecipeAt = useRef(0);
   const runRecipeStep = useCallback(() => {
     const r = recipeRef.current;
     if (!r || r.at >= r.steps.length) return false;
@@ -283,15 +302,26 @@ export function usePremiumVoice(opts: Options) {
       optsRef.current.onAppend('user', heard);
       stepsRef.current = 0;
       const t = heard.toLowerCase();
-      if (/ফেসবুক|facebook|ফেবু/.test(t) && /কমেন্ট|comment|মন্তব্য/.test(t) && /রিপ্লাই|reply|উত্তর|জবাব/.test(t)) {
+      // comment replies: any "reply to the comments" request (Facebook is the default, no need to say it), and a
+      // correction right after one ("that's someone else's video", "wrong place", "my post") starts it again
+      // from his own profile
+      const otherApp = /ইউটিউব|youtube|ইনস্টা|instagram|টিকটক|tiktok|হোয়াটসঅ্যাপ|whatsapp|মেসেঞ্জার|messenger/.test(t);
+      const asksReplies =
+        /কমেন্ট|comment|মন্তব্য/.test(t) && /রিপ্লাই|reply|উত্তর|জবাব|দাও|দেও|করো|কর\b/.test(t);
+      const corrects =
+        Date.now() - lastRecipeAt.current < 5 * 60 * 1000 &&
+        /আরেকজন|অন্যের|অন্য কার|ভুল|আমার (পোস্ট|ভিডিও|প্রোফাইল)|এটা না|ওটা না|wrong|someone else/.test(t);
+      if (!otherApp && (asksReplies || corrects)) {
+        lastRecipeAt.current = Date.now();
         recipeRef.current = { steps: ['open latest post comments', 'reply all comments'], at: 0 };
+        void speakLine('ঠিক আছে, আপনার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।');
         runRecipeStep();
         return;
       }
       recipeRef.current = null;
       await runTurn(heard, false);
     },
-    [runTurn, runRecipeStep],
+    [runTurn, runRecipeStep, speakLine],
   );
 
   /** The app ran a phone action: give ROSE the result so she can say it or take the next step (max 12 steps). */
