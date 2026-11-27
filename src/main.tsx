@@ -10,6 +10,7 @@ installClientApi();
 const Landing = lazy(() => import('./components/site/Landing'));
 const DevelopersPage = lazy(() => import('./components/site/DevelopersPage'));
 const StartStorePage = lazy(() => import('./components/site/StartStorePage'));
+const DemoAdminPage = lazy(() => import('./components/site/DemoAdminPage'));
 
 /**
  * myrosebd.com shows the public website; the app lives at /app.
@@ -31,6 +32,8 @@ function shouldOpenApp(): boolean {
 }
 
 const isDevelopersPage = window.location.pathname.startsWith('/developers');
+/** The demo shops' admin: the same WEBSITE ADMIN as real shops, on sample data */
+const isDemoAdmin = window.location.pathname.startsWith('/demo-admin');
 /** Store sign-up from a demo: /start, or a Google login coming back while a store sign-up is open. */
 const isStartPage = (() => {
   try {
@@ -45,7 +48,11 @@ const isStartPage = (() => {
 })();
 
 createRoot(document.getElementById('root')!).render(
-  isStartPage ? (
+  isDemoAdmin ? (
+    <Suspense fallback={<div style={{ background: '#05070B', height: '100dvh' }} />}>
+      <DemoAdminPage />
+    </Suspense>
+  ) : isStartPage ? (
     <Suspense fallback={<div style={{ background: '#07090D', height: '100dvh' }} />}>
       <StartStorePage />
     </Suspense>

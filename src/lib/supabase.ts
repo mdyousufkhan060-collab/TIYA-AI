@@ -37,10 +37,20 @@ export function getAuthRedirectUrl(): string {
   return resolveAuthRedirectUrl();
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+const realSupabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
 });
+
+/** The demo admin page puts sample data in window.__roseDemoDb; everywhere else this is the real Supabase. */
+export const supabase = new Proxy(realSupabase, {
+  get(target, key) {
+    const demo = typeof window !== 'undefined' ? (window as any).__roseDemoDb : null;
+    const src = demo && key in demo ? demo : target;
+    const v = (src as any)[key];
+    return typeof v === 'function' ? v.bind(src) : v;
+  },
+}) as typeof realSupabase;
