@@ -65,7 +65,7 @@ export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?:
     spokeFor += ms;
     quietFor = loud ? 0 : quietFor + ms;
     // he stopped for a moment (or talked very long): that is one sentence
-    if (quietFor > 1100 || spokeFor > 15000) {
+    if (quietFor > 800 || spokeFor > 15000) {
       const parts = chunks;
       talking = false;
       chunks = [];

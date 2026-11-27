@@ -66,6 +66,12 @@ interface Options {
   onCredits?: (voiceLeft: number | null, textLeft: number | null) => void;
 }
 
+/** Splits a reply into its first sentence and the rest (the first one is spoken while the rest is still being made) */
+function splitFirst(text: string): string[] {
+  const m = text.match(/^([\s\S]{12,160}?[।!?.](?:\s|$))([\s\S]{8,})$/);
+  return m ? [m[1].trim(), m[2].trim()] : [text];
+}
+
 /** The post he means: "দুই নম্বর ভিডিও", "২য় পোস্ট", "দ্বিতীয়", "second video", "post 3" → 2, 2, 2, 2, 3 (null = not said) */
 function postNumber(t: string): number | null {
   const bn = '০১২৩৪৫৬৭৮৯';
@@ -247,35 +253,41 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       setState('speaking');
-      const tts = await premiumTts(reply, o.voiceName);
-      if (!activeRef.current) return;
+      // faster start: the first sentence is made into voice on its own (short = quick) while the rest is made at
+      // the same time, then they play one after the other
+      const parts = splitFirst(reply);
+      const jobs = parts.map((p) => premiumTts(p, o.voiceName));
       const next = () => {
         audioRef.current = null;
         // an action is running: its result restarts the talk; otherwise listen for him
         if (activeRef.current && !pendingRef.current) listen();
       };
-      if (tts.ok && tts.audio) {
+      const play = async (i: number): Promise<void> => {
+        if (!activeRef.current) return;
+        if (i >= jobs.length) {
+          next();
+          return;
+        }
+        const tts = await jobs[i];
+        if (!activeRef.current) return;
+        if (!tts.ok || !tts.audio) {
+          await play(i + 1);
+          return;
+        }
         const url = pcmToWavUrl(tts.audio);
         const a = new Audio(url);
         audioRef.current = a;
         a.volume = Math.max(0, Math.min(1, o.volume ?? 1));
         a.playbackRate = Math.max(0.75, Math.min(1.35, o.speechSpeed || 1));
-        a.onended = () => {
-          URL.revokeObjectURL(url);
-          next();
-        };
-        a.onerror = () => {
-          URL.revokeObjectURL(url);
-          next();
-        };
-        try {
-          await a.play();
-        } catch {
-          next();
-        }
-      } else {
-        next();
-      }
+        await new Promise<void>((done) => {
+          a.onended = () => done();
+          a.onerror = () => done();
+          a.play().catch(() => done());
+        });
+        URL.revokeObjectURL(url);
+        await play(i + 1);
+      };
+      await play(0);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [fail],
@@ -292,8 +304,13 @@ export function usePremiumVoice(opts: Options) {
       const a = new Audio(url);
       a.volume = Math.max(0, Math.min(1, o.volume ?? 1));
       a.playbackRate = Math.max(0.75, Math.min(1.35, o.speechSpeed || 1));
-      a.onended = () => URL.revokeObjectURL(url);
-      await a.play();
+      audioRef.current = a;
+      await new Promise<void>((done) => {
+        a.onended = () => done();
+        a.onerror = () => done();
+        a.play().catch(() => done());
+      });
+      URL.revokeObjectURL(url);
     } catch {
       /* the job goes on without the voice */
     }
@@ -379,6 +396,14 @@ export function usePremiumVoice(opts: Options) {
           return;
         }
         recipeRef.current = null;
+        // a step of the fixed job failed: say what happened and stop — no guessing taps on other people's posts
+        if (!ok) {
+          const why = text.replace(/^.*?(FAILED|ERROR)[:\s-]*/i, '').split('\n')[0].slice(0, 160).trim();
+          void speakLine(why || 'কাজটা শেষ করতে পারিনি।').then(() => {
+            if (activeRef.current) window.setTimeout(() => listen(), 300);
+          });
+          return;
+        }
       }
       pendingRef.current = true;
       micRef.current?.setListening(false);
@@ -401,7 +426,7 @@ export function usePremiumVoice(opts: Options) {
       };
       window.setTimeout(go, 350);
     },
-    [runTurn, runRecipeStep],
+    [runTurn, runRecipeStep, speakLine, listen],
   );
 
   const start = useCallback(() => {
