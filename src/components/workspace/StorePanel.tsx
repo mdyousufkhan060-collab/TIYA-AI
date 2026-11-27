@@ -9,6 +9,7 @@ import { AdminBrandPage } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
 import { DomainAccess } from './DomainAccess';
 import { AddOrderForm } from './AddOrderForm';
+import { CategoryEditor } from './CategoryEditor';
 import { INVOICE_SIZES, PRINT_CSS, invoiceDims, kgText, invoicePreviewHTML, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
@@ -28,7 +29,12 @@ type Store = {
 const delByKg = (base: number, perKg: number, kg: number) => (base || 0) + (kg > 1 ? Math.ceil(kg - 1 - 1e-9) * (perKg || 0) : 0);
 type Banner = { title: string; badge: string; icon: string; bg?: string; img?: string };
 type OfferBanner = { img: string; title?: string; link?: string };
-type Cat = { id: string; name: string; icon: string; sort: number; banner_url?: string | null };
+type Cat = { id: string; name: string; icon: string; sort: number; banner_url?: string | null; parent_id?: string | null; description?: string; logo_url?: string | null };
+// main categories first, each followed by its subcategories (Clothing, Clothing › Shirt …)
+export function catTree(cats: Cat[]): Array<{ c: Cat; sub: boolean; label: string }> {
+  const top = cats.filter((c) => !c.parent_id || !cats.some((x) => x.id === c.parent_id));
+  return top.flatMap((t) => [{ c: t, sub: false, label: t.name }, ...cats.filter((x) => x.parent_id === t.id).map((x) => ({ c: x, sub: true, label: `${t.name} › ${x.name}` }))]);
+}
 type Prod = {
   id: string; name: string; category_id: string | null; price: number; old_price: number | null; stock: number; emoji: string;
   description: string; images: string[]; options_label: string; options: string[]; rx: boolean; active: boolean;
@@ -2544,8 +2550,6 @@ const IconPick: React.FC<{ value: string; onPick: (v: string) => void }> = ({ va
 // ---------------------------------------------------------------- categories
 const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
   const [cats, setCats] = useState<Cat[]>([]);
-  const [name, setName] = useState('');
-  const [icon, setIcon] = useState('🏷️');
   const load = useCallback(async () => {
     const { data } = await supabase.from('store_categories').select('*').eq('store_id', store.id).order('sort');
     setCats((data as Cat[]) || []);
@@ -2553,7 +2557,6 @@ const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
   useEffect(() => {
     void load();
   }, [load]);
-  const [pick, setPick] = useState(false);
   const [ready, setReady] = useState<Array<[string, string]>>([]);
   useEffect(() => {
     void loadDemos().then((d) => {
@@ -2568,68 +2571,55 @@ const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
       setReady(all.filter(([n]) => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }));
     });
   }, [store.template]);
-  const addOne = async (nm: string, ic: string) => {
-    await supabase.from('store_categories').insert({ store_id: store.id, name: nm.trim(), icon: ic || iconFor(nm), sort: cats.length });
+  const [page, setPage] = useState<{ edit: Cat | null; parent: string | null } | null>(null);
+  const [msg, setMsg] = useState('');
+  if (page)
+    return (
+      <CategoryEditor
+        storeId={store.id}
+        cats={cats}
+        edit={page.edit}
+        parentId={page.parent}
+        ready={ready.filter(([n]) => !cats.some((c) => c.name.toLowerCase() === n.toLowerCase()))}
+        IconPick={IconPick}
+        iconFor={iconFor}
+        upload={uploadImage}
+        onClose={(saved) => { setPage(null); if (saved) { setMsg('Category saved.'); void load(); } }}
+      />
+    );
+  const del = async (c: Cat) => {
+    const subs = cats.filter((x) => x.parent_id === c.id).length;
+    if (!window.confirm(`Delete ${c.name}? Products stay without a category.${subs ? ` Its ${subs} subcategories become main categories.` : ''}`)) return;
+    await supabase.from('store_categories').delete().eq('id', c.id);
     void load();
   };
-  // + with a name: adds it; + with the box empty: opens the ready list to choose from
-  const add = async () => {
-    if (!name.trim()) return setPick((v) => !v);
-    await addOne(name, icon || '🏷️');
-    setName('');
-  };
+  const row = (c: Cat, sub: boolean) => (
+    <div key={c.id} className={sub ? 'ml-6 flex items-center gap-2 border-l-2 border-teal-500/60 py-1.5 pl-2.5' : 'flex items-center gap-2'}>
+      <span className={`grid shrink-0 place-items-center overflow-hidden rounded-lg border border-white/10 ${sub ? 'h-9 w-9 text-lg' : 'h-12 w-12 text-2xl'}`}>
+        {c.logo_url ? <img src={c.logo_url} alt="" className="h-full w-full object-cover" /> : c.icon || '🏷️'}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className={`truncate text-white ${sub ? 'text-[12.5px]' : 'text-[13.5px] font-bold'}`}>{c.name}</p>
+        {c.description ? <p className="truncate text-[10.5px] text-slate-400">{c.description}</p> : null}
+        {!sub && <p className="text-[10.5px] text-slate-500">{cats.filter((x) => x.parent_id === c.id).length} subcategories{c.banner_url ? ' · banner' : ''}</p>}
+      </div>
+      <button type="button" onClick={() => { setMsg(''); setPage({ edit: c, parent: null }); }} className="text-[10.5px] font-bold text-teal-300">EDIT</button>
+      <button type="button" aria-label="Delete" onClick={() => void del(c)} className="text-rose-300"><Trash2 className="h-4 w-4" /></button>
+    </div>
+  );
+  const tops = cats.filter((c) => !c.parent_id || !cats.some((x) => x.id === c.parent_id));
   return (
     <div className="space-y-2">
-      <div className={box + ' flex gap-2'}>
-        <IconPick value={icon} onPick={setIcon} />
-        <input className={input} value={name} onChange={(e) => { setName(e.target.value); setIcon(iconFor(e.target.value)); }} placeholder="New category" />
-        <button type="button" onClick={() => void add()} className={btn} aria-label="Add category"><Plus className="h-4 w-4" /></button>
-      </div>
-      {pick && (
-        <div className={box}>
-          <p className="mb-1.5 text-[10.5px] font-bold tracking-wider text-teal-300">TAP TO ADD A READY CATEGORY</p>
-          <div className="flex flex-wrap gap-1.5">
-            {ready.filter(([n]) => !cats.some((c) => c.name.toLowerCase() === n.toLowerCase())).map(([n, ic]) => (
-              <button key={n} type="button" onClick={() => void addOne(n, ic)} className="flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white">
-                <span>{ic}</span>{n}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1.5 text-[10.5px] text-slate-400">Or write your own name in the box and tap +.</p>
-        </div>
-      )}
-      {cats.map((c) => (
-        <div key={c.id} className={box + ' flex items-center gap-2'}>
-          <IconPick value={c.icon} onPick={async (v) => { await supabase.from('store_categories').update({ icon: v }).eq('id', c.id); void load(); }} />
-          <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] text-white">{c.name}</p>
-            <div className="mt-1 flex items-center gap-2">
-              {c.banner_url && <img src={c.banner_url} alt="" className="h-8 w-16 rounded object-cover" />}
-              <label className="cursor-pointer text-[10.5px] font-bold text-teal-300">
-                {c.banner_url ? 'CHANGE BANNER' : '+ CATEGORY BANNER'}
-                <input type="file" accept="image/*" hidden onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = '';
-                  if (!f) return;
-                  try {
-                    const url = await uploadImage(store.id, f, 1400);
-                    await supabase.from('store_categories').update({ banner_url: url }).eq('id', c.id);
-                    void load();
-                  } catch (err: any) {
-                    window.alert(String(err?.message || err));
-                  }
-                }} />
-              </label>
-              {c.banner_url && (
-                <button type="button" onClick={async () => { await supabase.from('store_categories').update({ banner_url: null }).eq('id', c.id); void load(); }} className="text-[10.5px] font-bold text-rose-300">
-                  REMOVE
-                </button>
-              )}
-            </div>
-          </div>
-          <button type="button" aria-label="Delete" onClick={async () => { if (window.confirm(`Delete ${c.name}? Products stay without a category.`)) { await supabase.from('store_categories').delete().eq('id', c.id); void load(); } }} className="text-rose-300">
-            <Trash2 className="h-4 w-4" />
-          </button>
+      <button type="button" onClick={() => { setMsg(''); setPage({ edit: null, parent: null }); }} data-testid="store-add-category" className={btn + ' w-full'}>
+        <Plus className="h-4 w-4" /> ADD CATEGORY
+      </button>
+      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
+      {!cats.length && <p className="px-1 text-[12px] text-slate-400">No categories yet. Tap ADD CATEGORY.</p>}
+      {tops.map((t) => (
+        <div key={t.id} className={box + ' space-y-1'}>
+          {row(t, false)}
+          {cats.filter((x) => x.parent_id === t.id).map((x) => row(x, true))}
+          <button type="button" onClick={() => { setMsg(''); setPage({ edit: null, parent: t.id }); }} className="ml-6 pt-1 text-[10.5px] font-bold text-teal-300">+ ADD SUBCATEGORY</button>
         </div>
       ))}
     </div>
@@ -2894,7 +2884,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
                 }}
               >
                 <option value="">No category</option>
-                {cats.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                {catTree(cats).map(({ c, label }) => <option key={c.id} value={c.id}>{c.icon} {label}</option>)}
                 <option value="__new">+ New category…</option>
               </select>
             </label>

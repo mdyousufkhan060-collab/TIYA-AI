@@ -60,6 +60,12 @@
   .cats.wrapall { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); overflow: visible; }
   .cat { flex: 1 0 92px; max-width: 150px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 8px 4px 9px; text-align: center; font-size: 12.5px; font-weight: 500; line-height: 1.2; box-shadow: 0 2px 6px rgba(15,23,42,.05); display: flex; flex-direction: column; align-items: center; gap: 5px; }
   .cats.wrapall .cat { max-width: none; }
+  .catdesc { margin: -4px 0 10px; color: #64748b; font-size: 13.5px; line-height: 1.5; }
+  .subchips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 0 12px; padding: 2px; }
+  .subchips::-webkit-scrollbar { display: none; }
+  .subchips a { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; color: inherit; text-decoration: none; border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 500; }
+  .subchips a img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+  .subchips a.on { background: var(--c); border-color: var(--c); color: #fff; }
   .cat .ci { width: 62px; height: 62px; border-radius: 12px; overflow: hidden; display: grid; place-items: center; font-size: 36px; }
   .cat .ci img { width: 100%; height: 100%; object-fit: cover; }
   .cat.more .ci { background: color-mix(in srgb, var(--c) 10%, #fff); }
@@ -519,8 +525,13 @@ if (liveSlug || ownDomain) {
     var r = st[0];
     if (!r) return sb('rpc/store_status', ownDomain ? { p_domain: ownDomain } : { p_slug: liveSlug }).then(function (x) { throw new Error(x === 'paused' ? 'This store is paused right now. The owner can renew the plan at myrosebd.com.' : 'This store is not open yet.'); }, function () { throw new Error('This store is not open yet.'); });
     return Promise.all([sb('store_categories?select=*&store_id=eq.' + r.id + '&order=sort', null, PREVIEW_TOK), sb('store_products?select=*&store_id=eq.' + r.id + '&active=eq.true&order=sort', null, PREVIEW_TOK)]).then(function (x) {
-      var cats = x[0], prods = x[1], byId = {};
-      cats.forEach(function (c) { byId[c.id] = c.name; });
+      var cats = x[0], prods = x[1], byId = {}, subOf = {}, idx = {};
+      cats.forEach(function (c) { idx[c.id] = c; });
+      // subcategories (Clothing › Shirt): products of a subcategory belong to the main category too
+      var tops = cats.filter(function (c) { return !c.parent_id || !idx[c.parent_id]; });
+      cats.forEach(function (c) { var t = c.parent_id && idx[c.parent_id]; byId[c.id] = t ? t.name : c.name; if (t) subOf[c.id] = c.name; });
+      var subs = {}, cdesc = {};
+      tops.forEach(function (t) { cdesc[t.name] = t.description || ''; subs[t.name] = cats.filter(function (c) { return c.parent_id === t.id; }).map(function (c) { cdesc[t.name + '/' + c.name] = c.description || ''; return [c.name, c.icon || '🏷️', c.banner_url || '', c.logo_url || '']; }); });
       var banners = (r.banners && r.banners.length ? r.banners : [{ title: r.name, badge: r.tagline || 'Shop now', icon: r.logo }]).map(function (b) {
         return { title: b.title, badge: b.badge, icon: b.icon || r.logo, img: b.img || '', bg: b.bg || 'linear-gradient(120deg,#ffffff,' + r.color + ')' };
       });
@@ -531,12 +542,12 @@ if (liveSlug || ownDomain) {
         pharmacy: r.template === 'medicare' && prods.some(function (p) { return p.rx; }), banners: banners,
         trust: r.trust && r.trust.length ? r.trust : ['🚚 Home delivery', '✅ Quality products', '💬 Live chat', '💳 Easy payment'],
         design: r.design || {},
-        categories: cats.map(function (c) { return [c.name, c.icon || '🏷️', c.banner_url || '']; }), sectionTitle: 'Popular Products',
+        categories: tops.map(function (c) { return [c.name, c.icon || '🏷️', c.banner_url || '', c.logo_url || '']; }), subs: subs, catDesc: cdesc, sectionTitle: 'Popular Products',
         note: r.note || ('Delivery: ' + r.delivery_inside + ' Tk inside Dhaka, ' + r.delivery_outside + ' Tk outside.'),
         delIn: r.delivery_inside, delOut: r.delivery_outside, delKgIn: r.delivery_kg_inside, delKgOut: r.delivery_kg_outside, payNumbers: r.pay_numbers || {}, pixels: r.pixels || {}, hideRose: !!r.hide_rose, offerBanners: (r.offer_banners || []).filter(function (b) { return b && b.img; }),
       };
       var P = prods.map(function (p, i) {
-        return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', e: p.emoji || '📦', img: fullImg((p.images || [])[0], 600), imgs: (p.images || []).map(function (u) { return fullImg(u, 900); }),
+        return { id: i, uuid: p.id, name: p.name, cat: byId[p.category_id] || 'Others', sub: subOf[p.category_id] || '', e: p.emoji || '📦', img: fullImg((p.images || [])[0], 600), imgs: (p.images || []).map(function (u) { return fullImg(u, 900); }),
           price: +p.price, old: +(p.old_price || p.price), rx: p.rx, desc: p.description || '', short: p.short_description || '', long: p.description || '', specs: p.specs || {}, stock: p.stock, optLabel: p.options_label, opts: p.options || [],
           rating: (4 + ((i * 7) % 10) / 10).toFixed(1), sold: 0, of: !!p.on_offer, kg: +p.weight_kg || 0, sku: p.sku || '', seo: p.seo || {} };
       });
@@ -735,7 +746,7 @@ function start(S, P, liveId) {
   function catTiles(withMore) {
     return '<div class="cats' + (withMore ? '' : ' wrapall') + '">' + S.categories.map(function (c) {
       var first = P.filter(function (p) { return p.cat === c[0] && p.img; })[0];
-      return '<a class="cat" href="#/c/' + encodeURIComponent(c[0]) + '"><span class="ci">' + (first ? '<img src="' + esc(first.img) + '" alt="" loading="lazy" onerror="this.parentNode.textContent=\'' + c[1] + '\'">' : c[1]) + '</span>' + esc(c[0]) + '</a>';
+      return '<a class="cat" href="#/c/' + encodeURIComponent(c[0]) + '"><span class="ci">' + (c[3] || first ? '<img src="' + esc(c[3] || first.img) + '" alt="" loading="lazy" onerror="this.parentNode.textContent=\'' + c[1] + '\'">' : c[1]) + '</span>' + esc(c[0]) + '</a>';
     }).join('') + (withMore ? '<a class="cat more" href="#/categories"><span class="ci">' + IC.more + '</span>More</a>' : '') + '</div>';
   }
   var slideTimer;
@@ -797,10 +808,10 @@ function start(S, P, liveId) {
     }, { rootMargin: '600px 0px' });
     moreObs.observe(m);
   }
-  function list(title, items, ban) {
+  function list(title, items, ban, extra) {
     MORE = { items: items, shown: Math.min(20, items.length) };
     return '<div class="crumb"><a href="#/">Home</a> › ' + esc(title) + '</div>' + (ban ? '<div class="catban"><img src="' + esc(ban) + '" alt="' + esc(title) + '"></div>' : '') +
-      '<div class="head"><h3>' + esc(title) + '</h3><span style="color:#64748b;font-size:13px">' + items.length + ' items</span></div>' +
+      '<div class="head"><h3>' + esc(title) + '</h3><span style="color:#64748b;font-size:13px">' + items.length + ' items</span></div>' + (extra || '') +
       (items.length ? '<div class="grid" id="listGrid">' + items.slice(0, 20).map(card).join('') + '</div>' + (items.length > 20 ? '<div class="moreload" id="moreLoad">Loading more…</div>' : '') : '<div class="panel">Nothing found.</div>');
   }
   // ---------------- language (customer can switch English / বাংলা) ----------------
@@ -1003,7 +1014,7 @@ function start(S, P, liveId) {
     };
     var tabs = '<div class="panel" id="ptabs" style="margin-top:14px"><div class="ptab" style="grid-template-columns:repeat(' + KT.length + ',1fr)">' + KT.map(function (x, i) { return '<button data-tab="' + x[0] + '" class="' + (i ? '' : 'on') + '">' + (LANG === 'bn' ? x[2] : x[1]) + '</button>'; }).join('') + '</div>' +
       KT.map(function (x, i) { return '<div data-pane="' + x[0] + '" class="pane"' + (i ? ' hidden' : '') + '>' + pane(x[0]) + '</div>'; }).join('') + '</div>';
-    return '<div class="crumb"><a href="#/">' + t('home') + '</a> › <a href="#/c/' + encodeURIComponent(p.cat) + '">' + esc(p.cat) + '</a> › ' + esc(p.name) + '</div>' +
+    return '<div class="crumb"><a href="#/">' + t('home') + '</a> › <a href="#/c/' + encodeURIComponent(p.cat) + '">' + esc(p.cat) + '</a> › ' + (p.sub ? '<a href="#/c/' + encodeURIComponent(p.cat + '/' + p.sub) + '">' + esc(p.sub) + '</a> › ' : '') + esc(p.name) + '</div>' +
       '<div class="pd"><div class="gal">' + gallery(p) + '</div>' +
       '<div class="panel info"><h1 class="pt">' + esc(p.name) + '</h1>' +
       '<div class="small" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' + (avg ? stars(Math.round(avg)) + ' <b>' + avg + '</b> <a href="#" onclick="document.getElementById(\'revBox\').scrollIntoView({behavior:\'smooth\'});return false" style="color:var(--c)">(' + R.length + ' reviews)</a>' : '') + (p.sold ? ' · ' + p.sold + ' sold' : '') + '</div>' +
@@ -1484,7 +1495,12 @@ function start(S, P, liveId) {
     var ft = document.querySelector('footer'); if (ft) ft.style.display = h === '/' || h === '' ? '' : 'none';
     if (h === '/' || h === '') html = home();
     else if (h === '/categories') html = '<div class="head"><h3>All categories</h3></div>' + catTiles(false);
-    else if (h.indexOf('/c/') === 0) { var cat = h.slice(3), cb = (S.categories.filter(function (c) { return c[0] === cat; })[0] || [])[2]; html = list(cat, P.filter(function (p) { return p.cat === cat; }), cb); }
+    else if (h.indexOf('/c/') === 0) {
+      var cp = h.slice(3).split('/'), cat = cp[0], sc = cp.slice(1).join('/'), subl = (S.subs || {})[cat] || [], so = subl.filter(function (x) { return x[0] === sc; })[0];
+      var cb = so && so[2] ? so[2] : (S.categories.filter(function (c) { return c[0] === cat; })[0] || [])[2], ds = (S.catDesc || {})[sc ? cat + '/' + sc : cat];
+      var chips = (ds ? '<p class="catdesc">' + esc(ds) + '</p>' : '') + (subl.length ? '<div class="subchips"><a class="' + (sc ? '' : 'on') + '" href="#/c/' + encodeURIComponent(cat) + '">All</a>' + subl.map(function (x) { return '<a class="' + (x[0] === sc ? 'on' : '') + '" href="#/c/' + encodeURIComponent(cat + '/' + x[0]) + '">' + (x[3] ? '<img src="' + esc(x[3]) + '" alt="">' : x[1] + ' ') + esc(x[0]) + '</a>'; }).join('') + '</div>' : '');
+      html = list(sc ? cat + ' › ' + sc : cat, P.filter(function (p) { return p.cat === cat && (!sc || p.sub === sc); }), cb, chips);
+    }
     else if (h === '/all') html = list('All products', P);
     else if (h.indexOf('/p/') === 0) { var p = P[+h.slice(3)]; html = p ? product(p) : list('Not found', []); if (p) productSeo(p); }
     else if (h.indexOf('/s/') === 0) {
