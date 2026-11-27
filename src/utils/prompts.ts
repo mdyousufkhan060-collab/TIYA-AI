@@ -1,3 +1,4 @@
+import { socialGuidesFor } from './socialGuides';
 import { getTiyaMode, getTiyaModeContext, getTiyaParcelsContext, ROSE_SKILLS_BLOCK } from './modeContext';
 import { TEAM_PROMPT_BLOCK } from '../lib/agents';
 import { getRoseGuide } from './roseGuides';
@@ -290,6 +291,10 @@ export function buildTiyaSystemPrompt(
   if (memoryBlock) {
     lines.push(`\n${memoryBlock}`);
   }
+  // social media guide files (Facebook / YouTube / Instagram / TikTok): the ones he is talking about, all four in voice
+  const socialText = recentMessages.slice(-8).map((m) => m.text || '').join(' ');
+  const social = socialGuidesFor(socialText, mode);
+  if (social) lines.push(social);
 
   // Owner / admin: the partner persona goes LAST so it wins over every rule above
   // (all the task rules still apply, only the way of talking changes).
