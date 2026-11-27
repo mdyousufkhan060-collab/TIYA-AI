@@ -178,10 +178,11 @@ export const DesktopTopBar: React.FC<{
 };
 
 // ---------- left menu (PC). The same bars as the phone open from here ----------
-export type DesktopNav = 'dashboard' | 'bars' | 'website' | 'writer' | 'admin';
+export type DesktopNav = 'dashboard' | 'team' | 'bars' | 'website' | 'writer' | 'admin';
 export const DesktopSideNav: React.FC<{ active: DesktopNav; isAdmin: boolean; onPick: (k: DesktopNav) => void; onSignOut: () => void }> = ({ active, isAdmin, onPick, onSignOut }) => {
   const items: Array<[DesktopNav, string, React.ReactNode]> = [
     ['dashboard', 'Dashboard', <LayoutDashboard key="d" className="h-4 w-4" />],
+    ['team', 'Team & Tasks', <ListChecks key="t" className="h-4 w-4" />],
     ['bars', 'ROSE bars', <Settings key="b" className="h-4 w-4" />],
     ['website', 'Website admin', <Store key="w" className="h-4 w-4" />],
     ['writer', 'Writer', <FileText key="r" className="h-4 w-4" />],
@@ -447,23 +448,18 @@ const ago = (iso: string) => {
 // ---------- dashboard ----------
 type RecentOrder = { id: string; order_no: number | string; customer_name: string; total: number; status: string; created_at: string };
 const STATUS_TONE: Record<string, string> = { new: 'text-sky-300', confirmed: 'text-violet-300', shipped: 'text-amber-300', delivered: 'text-emerald-300', cancelled: 'text-rose-300', returned: 'text-rose-300' };
-export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOpenTeam: () => void; onAction?: (k: 'product' | 'orders' | 'shop' | 'bars') => void }> = ({ userId, isAdmin, onAction }) => {
-  const { tiles, series, seriesName } = useDashboardData(userId, isAdmin);
-  const [orders, setOrders] = useState<RecentOrder[] | null>(null);
-  useEffect(() => {
-    let gone = false;
-    void (async () => {
-      const [{ data: own }, { data: staff }] = await Promise.all([
-        supabase.from('stores').select('id').eq('owner_id', userId),
-        supabase.rpc('my_staff_stores'),
-      ]);
-      const ids = [...((own as Array<{ id: string }>) || []).map((x) => x.id), ...((staff as Array<{ store_id: string }>) || []).map((x) => x.store_id)];
-      if (!ids.length) { if (!gone) setOrders([]); return; }
-      const { data } = await supabase.from('store_orders').select('id,order_no,customer_name,total,status,created_at').in('store_id', ids).order('created_at', { ascending: false }).limit(6);
-      if (!gone) setOrders((data as RecentOrder[]) || []);
-    })();
-    return () => { gone = true; };
-  }, [userId]);
+export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOpenTeam: () => void; onAction?: (k: 'product' | 'orders' | 'shop' | 'bars') => void }> = ({ userId, isAdmin, onOpenTeam, onAction }) => {
+  const { tiles, series, seriesName, tasks } = useDashboardData(userId, isAdmin);
+  const agentStats = useMemo(
+    () =>
+      AGENTS.map((a) => {
+        const mine = tasks.filter((t) => t.agent === a.id);
+        const done = mine.filter((t) => t.status === 'done').length;
+        const working = mine.filter((t) => t.status === 'working' || t.status === 'queued').length;
+        return { a, total: mine.length, done, working, pct: mine.length ? Math.round((done / mine.length) * 100) : 0 };
+      }),
+    [tasks],
+  );
   const card = 'rounded-[10px] border border-white/[0.08] bg-[#120F22]';
   const quick: Array<['product' | 'orders' | 'shop' | 'bars', string, React.ReactNode]> = [
     ['product', 'Add product', <Plus key="p" className="h-4 w-4" />],
@@ -503,43 +499,12 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
         <div className="mt-2 min-h-[200px] flex-1">{series.length > 0 && <AreaChart data={series} />}</div>
       </section>
 
-      {/* recent orders + quick actions */}
-      <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-3">
-        <section className={`${card} p-4`}>
-          <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-white">
-            <Package className="h-4 w-4 text-sky-400" /> Recent orders
-            <button type="button" onClick={() => onAction?.('orders')} className="ml-auto text-[11px] font-bold text-violet-300">View all →</button>
-          </h3>
-          {orders === null ? (
-            <p className="py-6 text-center text-xs text-slate-500">Loading…</p>
-          ) : orders.length === 0 ? (
-            <p className="py-6 text-center text-xs text-slate-500">No orders yet. New website orders show here.</p>
-          ) : (
-            <table className="w-full text-left text-[12.5px]">
-              <thead>
-                <tr className="text-[10.5px] tracking-wider text-slate-500">
-                  <th className="py-1.5 font-semibold">ORDER</th><th className="font-semibold">CUSTOMER</th><th className="font-semibold">TOTAL</th><th className="font-semibold">STATUS</th><th className="text-right font-semibold">WHEN</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id} className="border-t border-white/[0.06] text-slate-200">
-                    <td className="py-2 font-mono text-[11.5px]">#{o.order_no}</td>
-                    <td className="max-w-[160px] truncate">{o.customer_name || '—'}</td>
-                    <td>{Math.round(Number(o.total) || 0).toLocaleString('en-US')} Tk</td>
-                    <td className={`text-[11px] font-bold uppercase ${STATUS_TONE[o.status] || 'text-slate-300'}`}>{o.status}</td>
-                    <td className="text-right text-[11px] text-slate-500">{ago(o.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-        <section className={`${card} p-4`}>
+      {/* quick actions */}
+      <section className={`${card} p-4`}>
           <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-white">
             <MessageCircle className="h-4 w-4 text-fuchsia-400" /> Quick actions
           </h3>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {quick.map(([k, label, icon]) => (
               <button key={k} type="button" onClick={() => onAction?.(k)} className="flex h-16 flex-col items-center justify-center gap-1 rounded-[8px] border border-white/[0.08] bg-black/20 text-[12px] font-semibold text-slate-200 hover:border-violet-400/50">
                 {icon} {label}
@@ -548,7 +513,35 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-slate-500">Or just tell ROSE on the right, by voice or typing.</p>
         </section>
-      </div>
+      {/* team status (compact) */}
+      <section className="shrink-0 rounded-[10px] border border-white/[0.08] bg-[#120F22] px-3 py-2.5">
+        <div className="grid grid-cols-5 gap-2">
+          {agentStats.map(({ a, total, working, pct }) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={onOpenTeam}
+              className="flex items-center gap-2 rounded-[8px] border border-white/[0.08] bg-black/20 px-2 py-1.5 text-left hover:border-white/25"
+              style={working ? { borderColor: a.color, boxShadow: `0 0 18px -8px ${a.color}` } : undefined}
+            >
+              <span className="relative shrink-0">
+                <img src={a.photo} alt={a.name} className="h-9 w-9 rounded-full border-2 object-cover" style={{ borderColor: a.color }} />
+                <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#120F22] ${working ? 'animate-pulse bg-amber-300' : 'bg-emerald-400'}`} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between gap-1">
+                  <span className="truncate text-[11px] font-extrabold tracking-wider text-white">{a.name}</span>
+                  <span className="text-[9.5px] text-slate-400">{total}</span>
+                </span>
+                <span className="block truncate text-[9.5px] text-slate-400">{working ? 'Working…' : a.role}</span>
+                <span className="mt-1 block h-1 overflow-hidden rounded-full bg-white/10">
+                  <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: a.color }} />
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

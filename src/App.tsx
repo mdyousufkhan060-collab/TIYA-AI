@@ -2014,7 +2014,7 @@ export default function App() {
           />
           {pcMenu ? (
             <DesktopSideNav
-              active={desktopTab === 'admin' ? 'admin' : desktopTab === 'writer' ? 'writer' : desktopTab === 'app' ? (settingsPage === 'workspace' ? 'website' : 'bars') : 'dashboard'}
+              active={desktopTab === 'admin' ? 'admin' : desktopTab === 'writer' ? 'writer' : desktopTab === 'team' ? 'team' : desktopTab === 'app' ? (settingsPage === 'workspace' ? 'website' : 'bars') : 'dashboard'}
               isAdmin={isAdmin}
               onSignOut={handleSignOut}
               onPick={(k) => {
@@ -2027,6 +2027,7 @@ export default function App() {
                 setShowAdminScreen(false);
                 if (k === 'dashboard') setDesktopTab('dashboard');
                 else if (k === 'writer') setDesktopTab('writer');
+                else if (k === 'team') setDesktopTab('team');
                 else if (k === 'website') {
                   setDesktopTab('app');
                   navigateTo('settings', 'workspace', 'store');

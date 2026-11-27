@@ -1991,7 +1991,7 @@ export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
 type ShopFull = {
   ok: boolean; id: string; name: string; name_bn?: string; slug: string; owner_email: string; support_code: string; email2?: string; phone?: string; whatsapp?: string; phone2?: string;
   address?: string; city?: string; logo?: string; logo_url?: string; published: boolean; suspended: boolean; custom_domain?: string | null; domain_ready?: boolean;
-  created_at?: string; last_login?: string | null; access?: WebPlan;
+  created_at?: string; last_login?: string | null; access?: WebPlan; hide_rose?: boolean;
   payments: Array<{ id: string; plan: string; months: number; amount: number; method: string; sender_number?: string; trx_id?: string; status: string; created_at: string }>;
   staff: Array<{ email: string; role: string; suspended: boolean; money_access: boolean }>;
   stats: { products: number; orders: number; customers: number; sales: number; last_order?: string | null };
@@ -2016,6 +2016,29 @@ export const AdminSupportOpen: React.FC = () => {
     setRose((rp as RosePlan) || null);
     setShop(d);
     setBusy(false);
+  };
+  const giveLifetime = async () => {
+    if (!shop) return;
+    if (!window.confirm(`Give a LIFETIME website plan to ${shop.owner_email}? Their website never expires.`)) return;
+    const planId = (shop.access?.plan && shop.access.plan !== 'trial' ? shop.access.plan : 'business') as StorePlanId;
+    const p = STORE_PLANS[planId];
+    setBusy(true);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from('website_access').upsert({
+      email: (shop.access as { email?: string } | null)?.email || shop.owner_email, plan: planId, months: 0, stores_limit: p.stores, products_limit: p.products, storage_gb: p.storageGb, staff_limit: p.staff,
+      starts_at: shop.access?.starts_at || new Date().toISOString(), ends_at: '2099-12-31T23:59:59Z', trial_used: true, note: 'LIFETIME (given by ROSE admin)',
+      granted_by: u.user?.id ?? null, updated_at: new Date().toISOString(),
+    });
+    setBusy(false);
+    if (error) return setMsg(error.message);
+    setMsg(`Lifetime ${p.label} plan given to ${shop.owner_email}.`);
+    void find();
+  };
+  const setFooter = async (show: boolean) => {
+    if (!shop) return;
+    setShop({ ...shop, hide_rose: !show });
+    const { error } = await supabase.rpc('admin_set_hide_rose', { p_email: shop.owner_email, p_hide: !show });
+    setMsg(error ? error.message : show ? 'ROSE footer bar is ON for this website.' : 'ROSE footer bar is OFF for this website.');
   };
   if (shop && adminOpen) return <StorePanel userId="" forceStoreId={shop.id} onExit={() => setAdminOpen(false)} />;
   const url = shop ? (shop.custom_domain && shop.domain_ready ? `https://${shop.custom_domain}` : `https://${shop.slug}.myrosebd.com`) : '';
@@ -2060,6 +2083,22 @@ export const AdminSupportOpen: React.FC = () => {
                 </div>
               </div>
               <PlansCard rose={rose} web={shop.access || null} />
+              {/* ROSE admin only: lifetime website plan, and the "Made with ROSE" footer bar on this customer's website */}
+              <div className={box + ' space-y-2'}>
+                <p className="text-[11px] font-bold tracking-wider text-teal-300">ADMIN CONTROLS</p>
+                <button type="button" disabled={busy} className={btn + ' w-full bg-amber-500 text-black'} onClick={() => void giveLifetime()}>
+                  {shop.access?.ends_at && new Date(shop.access.ends_at).getFullYear() >= 2099 ? 'LIFETIME · ACTIVE' : 'GIVE LIFETIME WEBSITE PLAN'}
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] font-bold text-white">ROSE footer bar</span>
+                    <span className="block text-[10.5px] text-slate-400">"Made with ROSE" at the bottom of this website</span>
+                  </span>
+                  <button type="button" role="switch" aria-checked={!shop.hide_rose} aria-label="ROSE footer bar" onClick={() => void setFooter(!!shop.hide_rose)} className={`relative h-6 w-11 shrink-0 rounded-full ${!shop.hide_rose ? 'bg-teal-500' : 'bg-slate-600'}`}>
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${!shop.hide_rose ? 'left-[22px]' : 'left-0.5'}`} />
+                  </button>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 {([['PRODUCTS', shop.stats.products], ['ORDERS', shop.stats.orders], ['CUSTOMERS', shop.stats.customers], ['SALES', tk(Number(shop.stats.sales || 0))]] as Array<[string, string | number]>).map(([k, v]) => (
                   <div key={k} className={box}><p className="text-[10px] font-bold tracking-wider text-slate-400">{k}</p><p className="text-[18px] font-bold text-white">{v}</p></div>
