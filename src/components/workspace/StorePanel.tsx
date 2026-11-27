@@ -1269,7 +1269,7 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void; part?: 'deliver
 // ---------------------------------------------------------------- dashboard (today at a glance)
 // ---------------------------------------------------------------- new dashboard (light, like the reference picture)
 type DashOrder = { order_no: number; customer_name: string; total: number; status: string; created_at: string; phone: string; items: Array<{ name: string }> };
-const RANGES: Array<[string, number]> = [['7D', 7], ['30D', 30], ['3M', 90], ['1Y', 365]];
+const DASH_RANGES: Array<[string, number]> = [['7D', 7], ['30D', 30], ['3M', 90], ['1Y', 365]];
 const ORDER_CHIP: Record<string, string> = {
   new: 'bg-amber-100 text-amber-700', confirmed: 'bg-sky-100 text-sky-700', packed: 'bg-indigo-100 text-indigo-700', shipped: 'bg-blue-100 text-blue-700',
   delivered: 'bg-emerald-100 text-emerald-700', cancelled: 'bg-rose-100 text-rose-700', returned: 'bg-slate-200 text-slate-700',
@@ -1354,7 +1354,7 @@ const AdminDashboard: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: s
           <p className="text-[12.5px] text-slate-500">Welcome back! Here's what is happening with your website.</p>
         </div>
         <select value={range} onChange={(e) => setRange(Number(e.target.value))} className="rounded-none border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-700">
-          {RANGES.map(([l, d]) => <option key={l} value={d}>Last {l === '7D' ? '7 days' : l === '30D' ? '30 days' : l === '3M' ? '3 months' : 'year'}</option>)}
+          {DASH_RANGES.map(([l, d]) => <option key={l} value={d}>Last {l === '7D' ? '7 days' : l === '30D' ? '30 days' : l === '3M' ? '3 months' : 'year'}</option>)}
         </select>
       </div>
       {top}
@@ -1376,7 +1376,7 @@ const AdminDashboard: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: s
           <div className="flex items-center justify-between">
             <p className="text-[15px] font-extrabold text-slate-900">📊 Sales Overview</p>
             <div className="flex gap-1">
-              {RANGES.map(([l, d]) => (
+              {DASH_RANGES.map(([l, d]) => (
                 <button key={l} type="button" onClick={() => setRange(d)} className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${range === d ? 'bg-emerald-600 text-white' : 'border border-slate-200 text-slate-600'}`}>{l}</button>
               ))}
             </div>
