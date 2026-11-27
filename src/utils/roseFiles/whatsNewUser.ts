@@ -1,0 +1,2 @@
+/** ROSE file: What is new (users). One topic per file, so changing one never breaks another. */
+export const WHATS_NEW_USER = `WHAT IS NEW: buy or renew a store plan inside STORE · WEBSITE (bKash / Nagad / Rocket + TrxID); add staff to your store by Gmail; ROSE SUPPORT card at the top of Settings to call or WhatsApp ROSE; install ROSE on your PC or phone from the browser; policies at myrosebd.com/policies.html.`;
