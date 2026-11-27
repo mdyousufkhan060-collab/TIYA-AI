@@ -347,7 +347,7 @@ export function usePremiumVoice(opts: Options) {
       const asksReplies =
         /কমেন্ট|কমেন|comment|মন্তব্য/.test(t) &&
         /রিপ্লাই|রিফ্লাই|রিপলাই|রিপ্লে|reply|উত্তর|জবাব|দাও|দেও|দিয়া|দিয়ে|করো|করে দ/.test(t) &&
-        !/পড়ে শোনাও|পড়ো|শোনাও|দেখাও|কয়টা|কতগুলো|read|show/.test(t);
+        (/রিপ্লাই|রিফ্লাই|রিপলাই|reply/.test(t) || !/পড়ে শোনাও|পড়ো|শোনাও|দেখাও|কয়টা|কতগুলো|read|show/.test(t));
       const corrects =
         Date.now() - lastRecipeAt.current < 5 * 60 * 1000 &&
         /আরেকজন|অন্যের|অন্য কার|ভুল|আমার (পোস্ট|ভিডিও|প্রোফাইল)|এটা না|ওটা না|wrong|someone else/.test(t);

@@ -1046,6 +1046,15 @@ export default function App() {
         },
       );
       if (action.action === 'courier_dispatch') void refreshParcelsContext(true);
+      // the phone's step-by-step trace (what Facebook showed at each step) goes to the debug log, not the chat
+      const tr = /TRACE<<([\s\S]*?)>>TRACE/.exec(result.messageBn || '');
+      if (tr) {
+        result.messageBn = result.messageBn.replace(tr[0], '').trim();
+        void supabase
+          .from('rose_phone_trace')
+          .insert({ step: String((action as { app?: string }).app || action.action).slice(0, 120), trace: tr[1].slice(0, 8000) })
+          .then(() => undefined, () => undefined);
+      }
 
       updateMessages((prev) =>
         prev.map((m) =>
