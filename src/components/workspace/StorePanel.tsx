@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronRight, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, ExternalLink, Loader2, Menu, Moon, Plus, Sun, Trash2, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { loadSettings } from '../../utils/storage';
 import { SettingsBar } from '../settings/SettingsShell';
@@ -146,6 +146,14 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
   const [demos, setDemos] = useState<Record<string, Demo>>({});
   const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create' | 'viewas'>(startTab || 'home');
   const [roles, setRoles] = useState<Record<string, string>>({});
+  // WEBSITE ADMIN look: light by default, the ☀️/🌙 button switches (kept on this device)
+  const [light, setLight] = useState(() => { try { return localStorage.getItem('rose_admin_theme') !== 'dark'; } catch { return true; } });
+  const flipTheme = () => setLight((v) => { try { localStorage.setItem('rose_admin_theme', v ? 'dark' : 'light'); } catch { /* ignore */ } return !v; });
+  const [userName, setUserName] = useState('');
+  const [addSignal, setAddSignal] = useState(0);
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => { const u = data?.user; setUserName(String(u?.user_metadata?.full_name || u?.user_metadata?.name || u?.email || '')); });
+  }, []);
   // owner can look at the admin the way a staff role sees it (nothing opens or saves in this view)
   const [previewRole, setPreviewRole] = useState('');
   // MY STAFF (WORKSPACE): the owner's staff list, and the one being looked at
@@ -333,6 +341,15 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
     </div>
   );
 
+  const frame = (content: React.ReactNode) => (
+    <AdminFrame
+      store={store} bars={barsFor(myRole)} current={tab} userName={userName} light={light} onTheme={flipTheme}
+      onPick={(k) => setTab((k === 'dashboard' ? 'home' : k) as typeof tab)}
+      extra={can('owner') && !forceStoreId && stores.length < limit ? <button type="button" onClick={() => setTab('create')} data-testid="store-new" className="mt-1 flex items-center gap-2.5 px-2 py-2 text-left text-[13px] font-bold text-emerald-400">＋ NEW STORE</button> : null}
+    >
+      {content}
+    </AdminFrame>
+  );
   if (tab !== 'home') {
     const back = (
       previewRole ? (
@@ -350,10 +367,10 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
         </button>
       )
     );
-    return (
+    return frame(
       <div className="space-y-3">
         {back}
-        {tab === 'dashboard' && <DashboardTab store={store} seeOrders={can('orders') || can('money')} onOpen={(t) => setTab(t as typeof tab)} />}
+        {tab === 'dashboard' && <AdminDashboard store={store} seeOrders={can('orders') || can('money')} onOpen={(t) => setTab(t as typeof tab)} onAdd={() => { setAddSignal((n) => n + 1); setTab('products'); }} top={null} />}
         {tab === 'customers' && <CustomersTab store={store} />}
         {tab === 'viewas' && realRole !== 'owner' && <p className="px-1 text-[12px] text-amber-300">Only the shop owner can see this.</p>}
         {tab === 'viewas' && realRole === 'owner' && !staffSel && (
@@ -444,7 +461,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
         {tab === 'print' && <DeliveryTab store={store} part="print" onSaved={() => void load()} />}
         {tab === 'seo' && <SeoTab store={store} onSaved={() => void load()} />}
         {tab === 'orders' && <OrdersTab store={store} readOnly={!can('ordersWrite')} />}
-        {tab === 'products' && <ProductsTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} canEdit={can('products')} canDelete={myRole === 'owner'} />}
+        {tab === 'products' && <ProductsTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} canEdit={can('products')} canDelete={myRole === 'owner'} addSignal={addSignal} />}
         {tab === 'categories' && <CategoriesTab store={store} />}
         {tab === 'design' && <DesignTab store={store} onSaved={() => void load()} />}
         {tab === 'delivery' && <DeliveryTab store={store} part="delivery" onSaved={() => void load()} />}
@@ -462,7 +479,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
     );
   }
 
-  return (
+  return frame(
     <div className="space-y-3">
       {stores.length > 1 && (
         <select className={input} value={store.id} onChange={(e) => setStore(stores.find((s) => s.id === e.target.value) || null)}>
@@ -480,12 +497,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
       ) : (
         myRole !== 'owner' && <p className="px-1 text-[11px] font-bold text-amber-300">You are STAFF here · role: {myRole.toUpperCase()}</p>
       )}
-      <div>
-        {barsFor(myRole).map(([, k, title, icon, color, value], i) => (
-            <DemoBar key={k} n={i + 1} icon={icon} color={color} title={title} value={value} onClick={() => setTab(k as typeof tab)} testId={`store-${k}`} />
-          ))}
-        {can('owner') && !forceStoreId && stores.length < limit && <SettingsBar badge="+" title="NEW STORE" onClick={() => setTab('create')} testId="store-new" />}
-      </div>
+      <AdminDashboard store={store} seeOrders={can('orders') || can('money')} onOpen={(t) => setTab(t as typeof tab)} onAdd={() => { setAddSignal((n) => n + 1); setTab('products'); }} top={null} />
     </div>
   );
 };
@@ -1255,6 +1267,255 @@ const DeliveryTab: React.FC<{ store: Store; onSaved: () => void; part?: 'deliver
 
 
 // ---------------------------------------------------------------- dashboard (today at a glance)
+// ---------------------------------------------------------------- new dashboard (light, like the reference picture)
+type DashOrder = { order_no: number; customer_name: string; total: number; status: string; created_at: string; phone: string; items: Array<{ name: string }> };
+const RANGES: Array<[string, number]> = [['7D', 7], ['30D', 30], ['3M', 90], ['1Y', 365]];
+const ORDER_CHIP: Record<string, string> = {
+  new: 'bg-amber-100 text-amber-700', confirmed: 'bg-sky-100 text-sky-700', packed: 'bg-indigo-100 text-indigo-700', shipped: 'bg-blue-100 text-blue-700',
+  delivered: 'bg-emerald-100 text-emerald-700', cancelled: 'bg-rose-100 text-rose-700', returned: 'bg-slate-200 text-slate-700',
+};
+const ago = (iso: string) => {
+  const m = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  return m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
+};
+const Spark: React.FC<{ v: number[]; color: string }> = ({ v, color }) => {
+  const max = Math.max(1, ...v);
+  const pts = v.map((y, i) => `${(i / Math.max(1, v.length - 1)) * 100},${28 - (y / max) * 24}`).join(' ');
+  return (
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="mt-1 h-8 w-full">
+      <polygon points={`0,30 ${pts} 100,30`} fill={color} opacity="0.12" />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+};
+
+const AdminDashboard: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: string) => void; onAdd: () => void; top: React.ReactNode }> = ({ store, seeOrders, onOpen, onAdd, top }) => {
+  const [range, setRange] = useState(30);
+  const [orders, setOrders] = useState<DashOrder[] | null>(null);
+  const [prods, setProds] = useState<Array<{ name: string; stock: number; active: boolean; created_at?: string }>>([]);
+  const [dbOk, setDbOk] = useState<boolean | null>(null);
+  const [hover, setHover] = useState<number | null>(null);
+  useEffect(() => {
+    void (async () => {
+      const since = new Date(Date.now() - 2 * 365 * 864e5).toISOString();
+      const [o, p] = await Promise.all([
+        seeOrders ? supabase.from('store_orders').select('order_no,customer_name,total,status,created_at,phone,items').eq('store_id', store.id).gte('created_at', since).order('created_at', { ascending: false }).limit(5000) : Promise.resolve({ data: [], error: null }),
+        supabase.from('store_products').select('name,stock,active,created_at').eq('store_id', store.id).limit(5000),
+      ]);
+      setDbOk(!o.error && !p.error);
+      setOrders(((o.data as DashOrder[]) || []));
+      setProds((p.data as typeof prods) || []);
+    })();
+  }, [store.id, seeOrders]);
+  if (!orders) return <p className="px-1 text-xs text-slate-500">Loading…</p>;
+
+  const now = Date.now();
+  const inRange = (o: DashOrder, from: number, to: number) => { const t = new Date(o.created_at).getTime(); return t >= from && t < to; };
+  const live = orders.filter((o) => o.status !== 'cancelled');
+  const cur = live.filter((o) => inRange(o, now - range * 864e5, now + 1));
+  const prev = live.filter((o) => inRange(o, now - 2 * range * 864e5, now - range * 864e5));
+  const sum = (l: DashOrder[]) => l.reduce((a, o) => a + Number(o.total || 0), 0);
+  const people = (l: DashOrder[]) => new Set(l.map((o) => o.phone || o.customer_name)).size;
+  const pct = (a: number, b: number) => (b ? Math.round(((a - b) / b) * 100) : a ? 100 : 0);
+  // buckets for the charts: days for 7D / 30D, weeks for 3M, months for 1Y
+  const nb = range === 7 ? 7 : range === 30 ? 30 : range === 90 ? 13 : 12;
+  const span = (range * 864e5) / nb;
+  const buckets = Array.from({ length: nb }, (_, i) => {
+    const from = now - range * 864e5 + i * span;
+    const l = cur.filter((o) => inRange(o, from, from + span));
+    return { from, n: l.length, tk: sum(l), c: people(l) };
+  });
+  const prodOn = prods.filter((x) => x.active);
+  const stats: Array<[string, string, number, string, string, number[], string]> = [
+    ['Total Orders', String(cur.length), pct(cur.length, prev.length), '🛒', '#16a34a', buckets.map((b) => b.n), 'orders'],
+    ['Total Revenue', tk(sum(cur)), pct(sum(cur), sum(prev)), '🛍️', '#2563eb', buckets.map((b) => b.tk), 'reports'],
+    ['Total Customers', String(people(cur)), pct(people(cur), people(prev)), '👥', '#ea580c', buckets.map((b) => b.c), 'customers'],
+    ['Total Products', String(prodOn.length), 0, '📦', '#9333ea', buckets.map((_, i) => prodOn.filter((x) => !x.created_at || new Date(x.created_at).getTime() <= buckets[i].from + span).length), 'products'],
+  ];
+  const shown = seeOrders ? stats : stats.slice(3);
+  const max = Math.max(1, ...buckets.map((b) => b.tk));
+  const W = 600, H = 200;
+  const xy = buckets.map((b, i) => [(i / Math.max(1, nb - 1)) * W, H - 14 - (b.tk / max) * (H - 34)]);
+  const line = xy.map((p) => p.join(',')).join(' ');
+  const fmtDay = (t: number) => new Date(t).toLocaleDateString('en-GB', range === 365 ? { month: 'short' } : { day: 'numeric', month: 'short' });
+  const hv = hover != null ? buckets[hover] : null;
+  const low = prodOn.filter((x) => Number(x.stock) <= 3).slice(0, 5);
+  const payOn = Object.values(store.pay_numbers || {}).some((x) => String(x || '').trim());
+  const status: Array<[string, string, string, boolean]> = [
+    ['🌐', 'Website', store.suspended ? 'Suspended' : store.published ? 'Running' : 'Draft', store.published && !store.suspended],
+    ['🗄️', 'Database', dbOk ? 'Connected' : 'Check again', Boolean(dbOk)],
+    ['💳', 'Payments', payOn ? 'Active' : 'Cash on delivery', true],
+  ];
+  return (
+    <div className="space-y-3">
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <h2 className="text-[22px] font-extrabold text-slate-900">Dashboard 👋</h2>
+          <p className="text-[12.5px] text-slate-500">Welcome back! Here's what is happening with your website.</p>
+        </div>
+        <select value={range} onChange={(e) => setRange(Number(e.target.value))} className="rounded-none border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-700">
+          {RANGES.map(([l, d]) => <option key={l} value={d}>Last {l === '7D' ? '7 days' : l === '30D' ? '30 days' : l === '3M' ? '3 months' : 'year'}</option>)}
+        </select>
+      </div>
+      {top}
+      <div className="grid grid-cols-2 gap-2.5">
+        {shown.map(([label, value, change, icon, color, spark, go]) => (
+          <button key={label} type="button" onClick={() => onOpen(go)} className="rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg" style={{ background: `${color}1f` }}>{icon}</span>
+              <span className="text-[11.5px] text-slate-500">{label}</span>
+            </div>
+            <p className="mt-1.5 text-[19px] font-extrabold text-slate-900">{value}</p>
+            {label !== 'Total Products' && <p className={`text-[11px] font-bold ${change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{change >= 0 ? '↑' : '↓'} {Math.abs(change)}%</p>}
+            <Spark v={spark} color={color} />
+          </button>
+        ))}
+      </div>
+      {seeOrders && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-[15px] font-extrabold text-slate-900">📊 Sales Overview</p>
+            <div className="flex gap-1">
+              {RANGES.map(([l, d]) => (
+                <button key={l} type="button" onClick={() => setRange(d)} className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${range === d ? 'bg-emerald-600 text-white' : 'border border-slate-200 text-slate-600'}`}>{l}</button>
+              ))}
+            </div>
+          </div>
+          <div className="relative mt-2">
+            {hv && <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600 shadow">{fmtDay(hv.from)} · <b className="text-slate-900">{tk(hv.tk)}</b> · {hv.n} orders</div>}
+            <svg viewBox={`0 0 ${W} ${H}`} className="h-44 w-full" onMouseLeave={() => setHover(null)}>
+              {[0.25, 0.5, 0.75].map((g) => <line key={g} x1="0" x2={W} y1={H * g} y2={H * g} stroke="#e2e8f0" strokeDasharray="4 4" />)}
+              <polygon points={`0,${H} ${line} ${W},${H}`} fill="#16a34a" opacity="0.12" />
+              <polyline points={line} fill="none" stroke="#16a34a" strokeWidth="2.5" />
+              {xy.map(([x, y], i) => (
+                <g key={i} onMouseEnter={() => setHover(i)} onClick={() => setHover(i)}>
+                  <rect x={x - W / nb / 2} y="0" width={W / nb} height={H} fill="transparent" />
+                  {hover === i && <><line x1={x} x2={x} y1="0" y2={H} stroke="#16a34a" strokeDasharray="3 3" /><circle cx={x} cy={y} r="5" fill="#fff" stroke="#16a34a" strokeWidth="2.5" /></>}
+                </g>
+              ))}
+            </svg>
+            <div className="flex justify-between text-[10px] text-slate-500">
+              {[0, Math.floor(nb / 3), Math.floor((2 * nb) / 3), nb - 1].map((i) => <span key={i}>{fmtDay(buckets[i].from)}</span>)}
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <p className="mb-2 text-[15px] font-extrabold text-slate-900">Quick Actions</p>
+        <div className="grid grid-cols-2 gap-2">
+          {([['➕', 'Add Product', onAdd, true], ['</>', 'Edit Website', () => onOpen('design'), false], ['🛍️', 'View Orders', () => onOpen('orders'), false], ['📊', 'View Reports', () => onOpen('reports'), false]] as Array<[string, string, () => void, boolean]>).map(([ic, l, fn, main]) => (
+            <button key={l} type="button" onClick={fn} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-[13px] font-bold ${main ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-800'}`}>
+              <span className={`grid h-7 w-7 place-items-center rounded-lg text-[13px] ${main ? 'bg-emerald-600 text-white' : 'text-slate-700'}`}>{ic}</span>{l}
+            </button>
+          ))}
+        </div>
+      </div>
+      {seeOrders && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-[15px] font-extrabold text-slate-900">Recent Orders</p>
+            <button type="button" onClick={() => onOpen('orders')} className="text-[12px] font-bold text-emerald-600">View All →</button>
+          </div>
+          {orders.length === 0 && <p className="py-3 text-[12px] text-slate-500">No orders yet. They show here as soon as a customer orders.</p>}
+          {orders.slice(0, 5).map((o) => (
+            <button key={o.order_no} type="button" onClick={() => onOpen('orders')} className="flex w-full items-center gap-2 border-b border-slate-100 py-2 text-left last:border-0">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-bold text-slate-900">{o.items?.[0]?.name || o.customer_name}{(o.items?.length || 0) > 1 ? ` +${o.items.length - 1}` : ''}</p>
+                <p className="text-[11px] text-slate-500">#ORD-{o.order_no} · {o.customer_name}</p>
+              </div>
+              <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold capitalize ${ORDER_CHIP[o.status] || 'bg-slate-100 text-slate-700'}`}>{o.status}</span>
+              <span className="w-16 text-right text-[12.5px] font-bold text-slate-900">{tk(Number(o.total))}</span>
+              <span className="w-12 text-right text-[10.5px] text-slate-500">{ago(o.created_at)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="mb-1 flex items-center justify-between">
+          <p className="text-[15px] font-extrabold text-slate-900">System Status</p>
+          <span className="text-[11px] font-bold text-emerald-600">● {status.every((s) => s[3]) ? 'All Systems Online' : 'Check below'}</span>
+        </div>
+        {status.map(([ic, l, v, ok]) => (
+          <div key={l} className="flex items-center gap-2.5 border-b border-slate-100 py-2 last:border-0">
+            <span className="text-[16px]">{ic}</span>
+            <span className="flex-1 text-[13px] font-bold text-slate-800">{l}</span>
+            <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${ok ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{v}</span>
+          </div>
+        ))}
+      </div>
+      {low.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <p className="mb-1 text-[13px] font-extrabold text-amber-800">Low stock (3 or less)</p>
+          {low.map((x) => <p key={x.name} className="flex justify-between text-[12px] text-amber-900"><span className="truncate">{x.name}</span><b>{x.stock}</b></p>)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** The admin frame: logo, ☰ menu with the bars (closes by itself after choosing), light / dark switch, bottom bar on phones */
+const AdminFrame: React.FC<{
+  store: Store; bars: Array<[boolean, string, string, string, string, string]>; current: string; userName: string; light: boolean;
+  onTheme: () => void; onPick: (k: string) => void; extra?: React.ReactNode; children: React.ReactNode;
+}> = ({ store, bars, current, userName, light, onTheme, onPick, extra, children }) => {
+  const [open, setOpen] = useState(false);
+  const pick = (k: string) => { setOpen(false); onPick(k); };
+  const initials = userName.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('') || 'R';
+  return (
+    <div className={`rose-adm ${light ? 'adm-light' : ''} -mx-1`}>
+      <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-white/10 bg-[#0B0E14] px-2 py-2">
+        <button type="button" aria-label="Menu" onClick={() => setOpen(true)} className="grid h-9 w-9 place-items-center text-white"><Menu className="h-5 w-5" /></button>
+        <button type="button" aria-label={light ? 'Dark mode' : 'Light mode'} onClick={onTheme} className="grid h-9 w-9 place-items-center text-white">{light ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}</button>
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-600 text-[15px] font-black text-white">R</span>
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-[14px] font-extrabold text-white">ROSE</p>
+            <p className="truncate text-[10.5px] text-slate-400">myrosebd.com</p>
+          </div>
+        </div>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-800 text-[11px] font-bold text-white" title={userName}>{initials}</span>
+      </div>
+      {open && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex h-full w-[82%] max-w-[300px] flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-600 text-[15px] font-black text-white">R</span>
+                <div className="leading-tight"><p className="text-[14px] font-extrabold text-white">ROSE</p><p className="text-[10.5px] text-slate-400">myrosebd.com</p></div>
+              </div>
+              <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center text-white"><X className="h-5 w-5" /></button>
+            </div>
+            <p className="mb-2 truncate px-1 text-[11px] font-bold text-emerald-400">{store.name}</p>
+            {bars.map(([, k, title, icon], i) => (
+              <button key={k} type="button" onClick={() => pick(k)} data-testid={`store-${k}`} className={`mb-0.5 flex items-center gap-2.5 px-2 py-2 text-left text-[13px] ${current === k || (current === 'home' && k === 'dashboard') ? 'rounded-lg bg-emerald-600/15 font-bold text-emerald-400' : 'text-slate-200'}`}>
+                <span className="w-6 font-mono text-[10.5px] text-slate-500">{String(i + 1).padStart(2, '0')}</span>
+                <span className="text-[15px]">{icon}</span>
+                <span className="truncate">{title.charAt(0) + title.slice(1).toLowerCase().replace(/(^|\s|&)(\w)/g, (m) => m.toUpperCase())}</span>
+              </button>
+            ))}
+            {extra}
+            <button type="button" onClick={() => pick('plan')} className="mt-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center">
+              <p className="text-[18px]">👑</p>
+              <p className="text-[13px] font-extrabold text-white">Upgrade to Pro</p>
+              <p className="text-[11px] text-slate-400">Unlock more features</p>
+              <span className="mt-2 block rounded-full bg-emerald-600 py-1.5 text-[12px] font-bold text-white">Go Pro →</span>
+            </button>
+          </div>
+          <button type="button" aria-label="Close menu" className="flex-1 bg-black/50" onClick={() => setOpen(false)} />
+        </div>
+      )}
+      <div className="adm-body min-h-[60vh] bg-[#05070B] px-2 py-3">{children}</div>
+      <div className="sticky bottom-0 z-30 grid grid-cols-4 border-t border-white/10 bg-[#0B0E14] py-1.5">
+        {([['🏠', 'Home', 'home'], ['📦', 'Products', 'products'], ['🛒', 'Orders', 'orders'], ['⚙️', 'Settings', 'menu']] as Array<[string, string, string]>).map(([ic, l, k]) => (
+          <button key={l} type="button" onClick={() => (k === 'menu' ? setOpen(true) : onPick(k))} className={`flex flex-col items-center text-[10.5px] font-bold ${current === k ? 'text-emerald-500' : 'text-slate-400'}`}>
+            <span className="text-[17px]">{ic}</span>{l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const DashboardTab: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: string) => void }> = ({ store, seeOrders, onOpen }) => {
   const [d, setD] = useState<{ today: number; todayTk: number; month: number; monthTk: number; fresh: number; prods: number; low: Array<{ name: string; stock: number }> } | null>(null);
   useEffect(() => {
@@ -1916,8 +2177,8 @@ const STOCK_CHIP: Record<string, [string, string]> = {
   low: ['Low stock', 'bg-amber-500/15 text-amber-300'],
   out: ['Out of stock', 'bg-rose-500/15 text-rose-300'],
 };
-const card = 'rounded-xl border border-white/[0.08] bg-[#11151E] p-3 space-y-2';
-const cap = 'text-[10.5px] font-bold tracking-wider text-slate-300';
+const card = 'adm-sec space-y-2 border-b border-white/[0.08] px-1 py-4';
+const cap = 'adm-title text-[14px] font-extrabold tracking-wide text-white';
 const autoSku = (name: string) => (name.replace(/[^A-Za-z0-9 ]/g, '').trim().split(/\s+/).map((w) => w.slice(0, 3)).join('').toUpperCase().slice(0, 6) || 'PRD') + '-' + String(Math.floor(100 + Math.random() * 900));
 
 /** SEO words without AI: from the name, category, options, price and shop */
@@ -1965,7 +2226,7 @@ async function catalogPicture(store: Store, p: Partial<Prod>): Promise<string> {
   return uploadImage(store.id, new File([blob], 'catalog.jpg', { type: 'image/jpeg' }), 1080);
 }
 
-const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; canDelete?: boolean }> = ({ store, limit, canEdit = true, canDelete = true }) => {
+const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; canDelete?: boolean; addSignal?: number }> = ({ store, limit, canEdit = true, canDelete = true, addSignal = 0 }) => {
   const [prods, setProds] = useState<Prod[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
   const [edit, setEdit] = useState<Partial<Prod> | null>(null);
@@ -1990,6 +2251,11 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
     void load();
   }, [load]);
   const catName = (id?: string | null) => cats.find((c) => c.id === id)?.name || 'Others';
+  // "Add Product" from the dashboard opens the empty form at once
+  useEffect(() => {
+    if (addSignal && canEdit) { setMsg(''); setEdit({ ...emptyProd(), options_label: optOf(kind).labels[0] }); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addSignal]);
 
   const save = async () => {
     if (!edit) return;
@@ -2162,8 +2428,8 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
           <p className="text-[10px] text-slate-500">A product with an old price shows in OFFERS by itself.</p>
         </div>
 
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3">
-          <p className="text-[10.5px] font-bold tracking-wider text-amber-300">⚖️ WEIGHT FOR ONE PIECE (KG) · THE COURIER CHARGE COMES FROM THIS</p>
+        <div className={card}>
+          <p className={cap}>⚖️ WEIGHT FOR ONE PIECE (KG) · THE COURIER CHARGE COMES FROM THIS</p>
           <input className={input + ' mt-1'} value={edit.weight_kg ?? ''} onChange={(e) => set('weight_kg', e.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 0.5 = 500 g" inputMode="decimal" />
           <div className="mt-1 flex flex-wrap gap-1">
             {([['250 g', 0.25], ['500 g', 0.5], ['1 kg', 1], ['2 kg', 2], ['5 kg', 5], ['10 kg', 10]] as Array<[string, number]>).map(([l, v]) => (
@@ -2173,8 +2439,8 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
           <p className="mt-1 text-[10px] text-slate-400">Weigh it with the box. If an option has a weight in it (5kg, 1 L), the store uses that option's weight.</p>
         </div>
 
-        <div className="space-y-2 rounded-xl border border-teal-900 bg-teal-950/30 p-3">
-          <p className="text-[10.5px] font-bold tracking-wider text-teal-300">OPTIONS (optional) · e.g. {optOf(kind).labels.join(', ')}</p>
+        <div className={card}>
+          <p className={cap}>OPTIONS (optional) · e.g. {optOf(kind).labels.join(', ')}</p>
           <div className="grid grid-cols-2 gap-2">
             <select className={input} value={edit.options_label || optOf(kind).labels[0]} onChange={(e) => set('options_label', e.target.value)}>
               {[...optOf(kind).labels, ...(edit.options_label && !optOf(kind).labels.includes(edit.options_label) ? [edit.options_label] : [])].map((x) => <option key={x}>{x}</option>)}
@@ -2206,8 +2472,8 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
         </div>
 
         {kind && (
-          <div className="space-y-1.5 rounded-xl border border-blue-900 bg-blue-950/30 p-3">
-            <p className="text-[10.5px] font-bold tracking-wider text-blue-300">PRODUCT INFO · shows in the "{kind.tabs[1][1]}" tab</p>
+          <div className={card}>
+            <p className={cap}>PRODUCT INFO · shows in the "{kind.tabs[1][1]}" tab</p>
             {kind.specs.map((f) => (
               <input key={f[0]} className={input} value={(edit.specs || {})[f[0]] || ''} onChange={(e) => set('specs', { ...(edit.specs || {}), [f[0]]: e.target.value })} placeholder={`${f[1]} · e.g. ${f[3]}`} />
             ))}

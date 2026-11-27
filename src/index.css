@@ -118,3 +118,42 @@
   padding-top: 0.9rem !important;
   border-radius: 0 !important;
 }
+
+/* ---------- WEBSITE ADMIN (store admin) ---------- */
+/* fill-in boxes have square corners, like a professional shop admin */
+.rose-adm input, .rose-adm select, .rose-adm textarea { border-radius: 0 !important; }
+.rose-adm .adm-sec:last-of-type { border-bottom: 0; }
+
+/* light look (default): the dark classes of the admin pages turn light */
+.adm-light .bg-\[\#0B0E14\], .adm-light .bg-\[\#11151E\], .adm-light .bg-\[\#11151e\] { background-color: #ffffff !important; }
+.adm-light .bg-\[\#05070B\], .adm-light .adm-body { background-color: #f4f6f9 !important; }
+.adm-light .bg-black\/30, .adm-light .bg-black\/20 { background-color: #ffffff !important; }
+.adm-light .bg-white\/10, .adm-light .bg-white\/5, .adm-light .bg-white\/\[0\.03\], .adm-light .bg-\[\#1e293b\], .adm-light .bg-slate-800 { background-color: #eef2f6 !important; }
+.adm-light .border-white\/10, .adm-light .border-white\/\[0\.08\], .adm-light .border-white\/\[0\.12\], .adm-light .border-white\/20, .adm-light .border-\[\#1e293b\] { border-color: #dfe4ea !important; }
+.adm-light .text-white:not([class*="bg-teal-6"]):not([class*="bg-emerald-6"]):not([class*="bg-rose-6"]):not([class*="bg-indigo-6"]):not([class*="bg-sky-"]):not([class*="bg-blue-6"]):not([class*="bg-amber-"]):not([class*="bg-red-"]):not([class*="bg-slate-8"]) { color: #0f172a !important; }
+.adm-light .adm-title { color: #0b1220 !important; }
+.adm-light .text-slate-100, .adm-light .text-slate-200 { color: #1e293b !important; }
+.adm-light .text-slate-300 { color: #334155 !important; }
+.adm-light .text-slate-400, .adm-light .text-slate-500 { color: #64748b !important; }
+.adm-light .text-slate-600 { color: #94a3b8 !important; }
+.adm-light .text-teal-200, .adm-light .text-teal-300, .adm-light .text-teal-400 { color: #0f766e !important; }
+.adm-light .text-emerald-300, .adm-light .text-emerald-400 { color: #047857 !important; }
+.adm-light .text-amber-300 { color: #b45309 !important; }
+.adm-light .text-rose-200, .adm-light .text-rose-300 { color: #be123c !important; }
+.adm-light .text-sky-200, .adm-light .text-sky-300 { color: #0369a1 !important; }
+.adm-light .text-blue-300 { color: #1d4ed8 !important; }
+.adm-light .text-indigo-200 { color: #4338ca !important; }
+.adm-light input, .adm-light select, .adm-light textarea { background-color: #ffffff !important; color: #0f172a !important; border-color: #cbd5e1 !important; }
+.adm-light input::placeholder, .adm-light textarea::placeholder { color: #94a3b8 !important; }
+.adm-light .rounded-xl.border { box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
+
+/* dark look: the light dashboard cards turn dark */
+.rose-adm:not(.adm-light) .bg-white { background-color: #11151E !important; }
+.rose-adm:not(.adm-light) .border-slate-200, .rose-adm:not(.adm-light) .border-slate-100 { border-color: rgba(255, 255, 255, 0.08) !important; }
+.rose-adm:not(.adm-light) .text-slate-900, .rose-adm:not(.adm-light) .text-slate-800 { color: #f1f5f9 !important; }
+.rose-adm:not(.adm-light) .text-slate-700, .rose-adm:not(.adm-light) .text-slate-600 { color: #cbd5e1 !important; }
+.rose-adm:not(.adm-light) .text-slate-500 { color: #94a3b8 !important; }
+.rose-adm:not(.adm-light) .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.12) !important; }
+.rose-adm:not(.adm-light) .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1) !important; }
+.rose-adm:not(.adm-light) .border-emerald-200, .rose-adm:not(.adm-light) .border-amber-200 { border-color: rgba(255, 255, 255, 0.12) !important; }
+.rose-adm:not(.adm-light) .text-amber-800, .rose-adm:not(.adm-light) .text-amber-900 { color: #fcd34d !important; }
