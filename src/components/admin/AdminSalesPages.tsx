@@ -165,7 +165,7 @@ interface Plan {
 export const AdminPlansPage: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [pay, setPay] = useState({ bkash_number: '', nagad_number: '', rocket_number: '', payment_note: '', free_daily_limit: 20 });
-  const [ai, setAi] = useState({ text_engine: 'gemini', text_model: 'gemini-3.5-flash-lite', voice_model: 'gemini-3.5-flash-lite', tts_model: 'gemini-2.5-flash-preview-tts', rate_text_bdt: 0.06, rate_voice_bdt: 0.55 });
+  const [ai, setAi] = useState({ text_engine: 'gemini', text_model: 'gemini-3.5-flash-lite', voice_model: 'gemini-3.5-flash-lite', tts_model: 'gemini-3.8-flash-lite-tts', rate_text_bdt: 0.06, rate_voice_bdt: 0.55 });
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -187,7 +187,7 @@ export const AdminPlansPage: React.FC = () => {
         text_engine: (s as any).text_engine || 'gemini',
         text_model: (s as any).text_model || 'gemini-3.5-flash-lite',
         voice_model: (s as any).voice_model || 'gemini-3.5-flash-lite',
-        tts_model: (s as any).tts_model || 'gemini-2.5-flash-preview-tts',
+        tts_model: (s as any).tts_model || 'gemini-3.8-flash-lite-tts',
         rate_text_bdt: Number((s as any).rate_text_bdt ?? 0.06),
         rate_voice_bdt: Number((s as any).rate_voice_bdt ?? 0.55),
       });

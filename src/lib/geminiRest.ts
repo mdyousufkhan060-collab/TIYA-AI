@@ -105,8 +105,10 @@ export async function pickTtsModels(key: string, preferred?: string): Promise<st
   const tts = models.filter((m) => /tts/i.test(m.id)).map((m) => m.id);
   tts.sort((a, b) => (/flash/.test(b) ? 1 : 0) - (/flash/.test(a) ? 1 : 0));
   const pref = String(preferred || '').trim();
-  const known = ['gemini-2.5-flash-preview-tts', 'gemini-2.5-pro-preview-tts'];
-  return Array.from(new Set([...(pref && tts.includes(pref) ? [pref] : []), ...tts, ...(tts.length ? [] : known)])).slice(0, 3);
+  const known = ['gemini-3.8-flash-lite-tts', 'gemini-2.5-flash-preview-tts'];
+  // fast, stable TTS first (3.8 Flash-Lite), then the rest
+  const fast = ['gemini-3.8-flash-lite-tts', 'gemini-3.8-flash-tts'].filter((m) => tts.includes(m));
+  return Array.from(new Set([...(pref && tts.includes(pref) ? [pref] : []), ...fast, ...tts, ...(tts.length ? [] : known)])).slice(0, 3);
 }
 
 export async function pickLiveModels(key: string, preferred: string[]): Promise<string[]> {
@@ -168,7 +170,27 @@ export function responseCalls(res: any): Array<{ name: string; args: any }> {
 export function responseAudio(res: any): { data: string; mimeType: string } | null {
   const parts = res?.candidates?.[0]?.content?.parts || [];
   const p = parts.find((x: any) => x.inlineData?.data);
-  return p ? { data: p.inlineData.data, mimeType: p.inlineData.mimeType || 'audio/pcm;rate=24000' } : null;
+  if (!p) return null;
+  const pcm = wavToPcm(String(p.inlineData.data));
+  return pcm ? { data: pcm, mimeType: 'audio/pcm;rate=24000' } : { data: p.inlineData.data, mimeType: p.inlineData.mimeType || 'audio/pcm;rate=24000' };
+}
+
+/** Newer TTS models (3.8) answer with a WAV file; ROSE plays raw 24 kHz PCM, so the WAV header is taken off. */
+export function wavToPcm(b64: string): string | null {
+  if (!b64.startsWith('UklGR')) return null; // "RIFF"
+  try {
+    const bin = atob(b64);
+    for (let i = 12; i + 8 <= bin.length; ) {
+      const id = bin.slice(i, i + 4);
+      const size = bin.charCodeAt(i + 4) | (bin.charCodeAt(i + 5) << 8) | (bin.charCodeAt(i + 6) << 16) | (bin.charCodeAt(i + 7) << 24);
+      if (id === 'data') return btoa(bin.slice(i + 8, size > 0 && i + 8 + size <= bin.length ? i + 8 + size : bin.length));
+      if (size <= 0) return null;
+      i += 8 + size + (size & 1);
+    }
+  } catch {
+    /* not a WAV */
+  }
+  return null;
 }
 
 /** Retryable = try the next model (wrong/retired model, overload, quota). Bad key = stop. */

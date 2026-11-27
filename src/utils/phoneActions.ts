@@ -386,7 +386,8 @@ export function extractActionFromText(text: string): {
     }
   }
 
-  const inlineRegex = /(\{"action"\s*:\s*"[a-z_]+"[^}]*\})/i;
+  // { "action": "open_app", ... } with or without spaces (models write it both ways)
+  const inlineRegex = /(\{\s*"action"\s*:\s*"[a-z_]+"[^}]*\})/i;
   const inlineMatch = text.match(inlineRegex);
   if (inlineMatch) {
     try {
