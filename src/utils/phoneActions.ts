@@ -162,8 +162,7 @@ export function requiresConfirmation(action: PhoneAction): boolean {
     action.action === 'whatsapp_message' ||
     action.action === 'messenger_message' ||
     action.action === 'messenger_call' ||
-    action.action === 'courier_dispatch' ||
-    (action.action === 'open_app' && /^publish video/i.test(action.app))
+    action.action === 'courier_dispatch'
   );
 }
 
@@ -517,8 +516,16 @@ const PLATFORMS: Array<[RegExp, string]> = [
 /** Gallery videos -> words -> YouTube / Facebook / TikTok / Instagram (ROSE Android app) */
 async function videoCommand(app: string, bridge: NativeBridge): Promise<ActionExecutionResult | null> {
   const a = app.trim();
+  const del = a.match(/^delete videos\s*(except|keep|all except)?\s*([\d,\s]+|all)$/i);
+  if (del) {
+    const keep = Boolean(del[1]);
+    const numbers = /all/i.test(del[2]) ? [] : (del[2].match(/\d+/g) || []).map(Number);
+    if (!keep && !numbers.length) return { success: false, via: 'android_native', messageBn: 'কোন নম্বরের ভিডিও মুছবো বলুন।' };
+    const r = await nativeCall(bridge, { action: 'delete_videos', numbers, keep: keep || /all/i.test(del[2]) }, 30000);
+    return { success: Boolean(r?.success), via: 'android_native', messageBn: String(r?.message || 'ভিডিও মোছা গেল না।') };
+  }
   if (/^(list|show|count) (gallery )?videos|^gallery videos/i.test(a)) {
-    const r = await nativeCall(bridge, { action: 'list_videos' });
+    const r = await nativeCall(bridge, { action: 'list_videos', full: /full|all|details|সব/i.test(a) });
     return { success: Boolean(r?.success), via: 'android_native', messageBn: String(r?.message || 'ভিডিওর তালিকা পাওয়া যায়নি।') };
   }
   const prep = a.match(/^(prepare|describe|check) video (\d+)\s*(?::\s*(.*))?$/i);
@@ -545,8 +552,7 @@ async function videoCommand(app: string, bridge: NativeBridge): Promise<ActionEx
       success: true,
       via: 'android_native',
       messageBn:
-        `ভিডিও ${index}: ${j.summary || ''}\nTitle: ${videoPack.title}\nDescription: ${videoPack.description}\nCaption: ${videoPack.caption}\nHashtags: ${hashtags.join(' ')}\n` +
-        'Read these to him and ask where to publish (YouTube, Facebook, TikTok, Instagram or all) or what to change.',
+        `ভিডিও ${index}: ${j.summary || ''}\nTitle: ${videoPack.title}\nCaption: ${videoPack.caption}\nHashtags: ${hashtags.join(' ')}`,
     };
   }
   const edit = a.match(/^video words:\s*(.*?)\s*\|\|\s*(.*)$/i);
