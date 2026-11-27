@@ -1481,15 +1481,15 @@ const RoseDesignGuide: React.FC<{ onPick: (t: string) => void }> = ({ onPick }) 
   const [rules, setRules] = useState(false);
   return (
     <div className="space-y-2">
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
         <p className="text-[10.5px] font-bold tracking-wider text-emerald-300">TAP AN IDEA</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {ROSE_IDEAS.map((t) => (
-            <button key={t} type="button" onClick={() => onPick(t)} className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-1 text-[11.5px] text-emerald-100">{t}</button>
+            <button key={t} type="button" onClick={() => onPick(t)} className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-300">{t}</button>
           ))}
         </div>
       </div>
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04]">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03]">
         <button type="button" onClick={() => setRules((v) => !v)} className="flex w-full items-center justify-between px-3 py-2.5 text-left">
           <span className="text-[12.5px] font-bold text-white">📜 Rules for shop owners</span>
           <span className="text-[11px] font-bold text-emerald-300">{rules ? 'HIDE' : 'READ'}</span>
@@ -1573,7 +1573,7 @@ const AskRosePanel: React.FC<{ store: Store; onClose: () => void }> = ({ store, 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
         <RoseDesignGuide onPick={(t) => setText(t)} />
         {msgs.map((m, i) => (
-          <div key={i} className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${m.me ? 'ml-auto bg-emerald-600 text-white' : 'bg-white/[0.06] text-slate-100'}`}>
+          <div key={i} className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${m.me ? 'ml-auto bg-emerald-600 text-white' : 'bg-white/10 text-slate-100'}`}>
             {m.text}
             {m.design && (
               <div className="mt-2 flex gap-1.5">
