@@ -2313,6 +2313,57 @@ const StaffTab: React.FC<{ store: Store; limit: number }> = ({ store, limit }) =
 };
 
 
+// ---------------------------------------------------------------- icons
+// ready icons for products and categories (tap to choose; no keyboard stickers needed)
+const ICON_SET: Array<[string, string[]]> = [
+  ['Clothes', ['👕', '👔', '👗', '👚', '🧥', '👖', '🩳', '🧣', '🧤', '🧦', '👘', '🥻', '🩱', '👙', '🎽', '🧢']],
+  ['Shoes & bags', ['👟', '👞', '👠', '👡', '🥿', '👢', '👜', '👛', '🎒', '💼', '🧳', '👓', '🕶️', '⌚', '💍', '💄']],
+  ['Food', ['🍔', '🍕', '🍗', '🍛', '🍜', '🍰', '🍩', '🍪', '🥤', '☕', '🍎', '🥦', '🐟', '🥩', '🍚', '🥚']],
+  ['Home & tech', ['🛋️', '🛏️', '🪑', '🍳', '🧹', '💡', '📱', '💻', '🎧', '📷', '🔌', '🖨️', '🎮', '🧸', '📚', '✏️']],
+  ['Health & more', ['💊', '🩺', '🧴', '🧼', '🪥', '🌿', '🌸', '🎁', '🏷️', '📦', '⭐', '🔥', '🆕', '💯', '🛒', '🛍️']],
+];
+/** guesses an icon from a category or product name */
+export function iconFor(name: string): string {
+  const n = (name || '').toLowerCase();
+  const map: Array<[RegExp, string]> = [
+    [/polo/, '👕'], [/t-?shirt|tee/, '👕'], [/shirt|শার্ট/, '👔'], [/hood|sweat|jacket|coat/, '🧥'], [/jean|pant|trouser|প্যান্ট/, '👖'],
+    [/short/, '🩳'], [/dress|frock|gown/, '👗'], [/saree|sari|শাড়ি/, '🥻'], [/panjabi|kurta|পাঞ্জাবি/, '👘'], [/top|blouse|kameez/, '👚'],
+    [/shoe|sneaker|জুতা/, '👟'], [/sandal|slipper/, '👡'], [/bag|ব্যাগ/, '👜'], [/watch|ঘড়ি/, '⌚'], [/cap|hat/, '🧢'], [/glass/, '🕶️'],
+    [/burger/, '🍔'], [/pizza/, '🍕'], [/chicken/, '🍗'], [/biryani|rice|ভাত/, '🍛'], [/cake|sweet|মিষ্টি/, '🍰'], [/drink|juice/, '🥤'], [/tea|coffee/, '☕'],
+    [/fruit|ফল/, '🍎'], [/vegetable|সবজি/, '🥦'], [/fish|মাছ/, '🐟'], [/meat|মাংস/, '🥩'], [/egg|ডিম/, '🥚'],
+    [/sofa|furniture/, '🛋️'], [/bed/, '🛏️'], [/chair/, '🪑'], [/kitchen/, '🍳'], [/phone|mobile/, '📱'], [/laptop|computer/, '💻'], [/headphone|earphone/, '🎧'],
+    [/medicine|ওষুধ|tablet/, '💊'], [/beauty|cosmetic|makeup/, '💄'], [/soap|wash/, '🧼'], [/toy|kid|baby/, '🧸'], [/book|বই/, '📚'], [/gift|উপহার/, '🎁'],
+  ];
+  for (const [re, ic] of map) if (re.test(n)) return ic;
+  return '🏷️';
+}
+const IconPick: React.FC<{ value: string; onPick: (v: string) => void }> = ({ value, onPick }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative shrink-0">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Choose icon" className={input + ' flex h-full w-14 items-center justify-center text-xl'}>
+        {value || '🏷️'}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-40 mt-1 w-[288px] max-w-[85vw] rounded-xl border border-white/15 bg-[#0B0F17] p-2 shadow-2xl">
+          {ICON_SET.map(([g, list]) => (
+            <div key={g} className="mb-1.5">
+              <p className="px-1 text-[10px] font-bold tracking-wider text-slate-400">{g.toUpperCase()}</p>
+              <div className="grid grid-cols-8 gap-0.5">
+                {list.map((ic) => (
+                  <button key={ic} type="button" onClick={() => { onPick(ic); setOpen(false); }} className={`flex h-8 items-center justify-center rounded-md text-lg ${ic === value ? 'bg-teal-500/25' : 'hover:bg-white/10'}`}>
+                    {ic}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ---------------------------------------------------------------- categories
 const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
   const [cats, setCats] = useState<Cat[]>([]);
@@ -2334,13 +2385,13 @@ const CategoriesTab: React.FC<{ store: Store }> = ({ store }) => {
   return (
     <div className="space-y-2">
       <div className={box + ' flex gap-2'}>
-        <input className={input + ' w-14 text-center'} value={icon} onChange={(e) => setIcon(e.target.value)} aria-label="Icon" />
-        <input className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="New category" />
+        <IconPick value={icon} onPick={setIcon} />
+        <input className={input} value={name} onChange={(e) => { setName(e.target.value); setIcon(iconFor(e.target.value)); }} placeholder="New category" />
         <button type="button" onClick={() => void add()} className={btn}><Plus className="h-4 w-4" /></button>
       </div>
       {cats.map((c) => (
         <div key={c.id} className={box + ' flex items-center gap-2'}>
-          <span className="text-xl">{c.icon}</span>
+          <IconPick value={c.icon} onPick={async (v) => { await supabase.from('store_categories').update({ icon: v }).eq('id', c.id); void load(); }} />
           <div className="min-w-0 flex-1">
             <p className="text-[12.5px] text-white">{c.name}</p>
             <div className="mt-1 flex items-center gap-2">
@@ -2447,6 +2498,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
   const [q, setQ] = useState('');
   const [fCat, setFCat] = useState('');
   const [fSt, setFSt] = useState('');
+  const [pubLive, setPubLive] = useState(store.published);
   const kind = kindOf(store.template);
   const load = useCallback(async () => {
     const [p, c] = await Promise.all([
@@ -2602,7 +2654,7 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
         <div className={card}>
           <p className={cap}>PRODUCT NAME *</p>
           <div className="flex gap-2">
-            <input className={input + ' w-14 text-center'} value={edit.emoji || ''} onChange={(e) => set('emoji', e.target.value)} aria-label="Icon" />
+            <IconPick value={edit.emoji || ''} onPick={(v) => set('emoji', v)} />
             <input className={input} value={edit.name || ''} onChange={(e) => set('name', e.target.value)} placeholder="Enter product name…" />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -2610,9 +2662,31 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
               <input className={input + ' mt-1'} value={edit.sku || ''} onChange={(e) => set('sku', e.target.value.toUpperCase().slice(0, 24))} placeholder="Auto" />
             </label>
             <label className="block text-[10.5px] text-slate-400">Category *
-              <select className={input + ' mt-1'} value={edit.category_id || ''} onChange={(e) => set('category_id', e.target.value || null)}>
+              <select
+                className={input + ' mt-1'}
+                value={edit.category_id || ''}
+                onChange={async (e) => {
+                  const v = e.target.value;
+                  if (v === '__new') {
+                    const nm = (window.prompt('New category name') || '').trim();
+                    if (!nm) return;
+                    const { data } = await supabase.from('store_categories').insert({ store_id: store.id, name: nm, icon: iconFor(nm), sort: cats.length }).select('*').single();
+                    if (data) {
+                      setCats((c) => [...c, data as Cat]);
+                      set('category_id', (data as Cat).id);
+                      set('emoji', (data as Cat).icon);
+                    }
+                    return;
+                  }
+                  set('category_id', v || null);
+                  // the product takes its category's icon (can still be changed)
+                  const c = cats.find((x) => x.id === v);
+                  if (c?.icon) set('emoji', c.icon);
+                }}
+              >
                 <option value="">No category</option>
                 {cats.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                <option value="__new">+ New category…</option>
               </select>
             </label>
           </div>
@@ -2794,6 +2868,25 @@ const ProductsTab: React.FC<{ store: Store; limit: number; canEdit?: boolean; ca
   ];
   return (
     <div className="space-y-2">
+      {!pubLive && canEdit && (
+        <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">
+          <p className="text-[12px] font-bold text-amber-200">Your store is not published yet</p>
+          <p className="mt-0.5 text-[11px] text-amber-100/80">Saved products show only to you (PREVIEW). Customers see them after you publish.</p>
+          <button
+            type="button"
+            onClick={async () => {
+              const { error } = await supabase.from('stores').update({ published: true, updated_at: new Date().toISOString() }).eq('id', store.id);
+              if (error) return setMsg(error.message);
+              setPubLive(true);
+              if (!store.subdomain_ready) void supabase.functions.invoke('store-subdomain', { body: { store_id: store.id } });
+              setMsg('Store published. Every saved product is now live for customers.');
+            }}
+            className={btn + ' mt-2 w-full'}
+          >
+            PUBLISH STORE NOW
+          </button>
+        </div>
+      )}
       {canEdit ? (
         <button type="button" onClick={() => { setMsg(''); setEdit({ ...emptyProd(), options_label: optOf(kind).labels[0] }); }} className={btn + ' w-full'}>
           <Plus className="h-4 w-4" /> ADD PRODUCT
