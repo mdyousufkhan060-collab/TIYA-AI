@@ -10,6 +10,7 @@ import { StoreChatTab } from './RoseChatInbox';
 import { DomainAccess } from './DomainAccess';
 import { AddOrderForm } from './AddOrderForm';
 import { CategoryEditor } from './CategoryEditor';
+import { AddCustomerForm, type CustRow } from './AddCustomerForm';
 import { INVOICE_SIZES, PRINT_CSS, invoiceDims, kgText, invoicePreviewHTML, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
@@ -1786,38 +1787,60 @@ const DashboardTab: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: str
 
 // ---------------------------------------------------------------- customers (from the orders)
 const CustomersTab: React.FC<{ store: Store }> = ({ store }) => {
-  const [rows, setRows] = useState<Array<{ name: string; phone: string; email: string; district: string; n: number; spent: number; last: string }> | null>(null);
+  type Row = { name: string; phone: string; email: string; district: string; n: number; spent: number; last: string; manual?: CustRow };
+  const [rows, setRows] = useState<Row[] | null>(null);
   const [q, setQ] = useState('');
-  useEffect(() => {
-    void supabase.from('store_orders').select('customer_name,phone,email,district,total,status,created_at').eq('store_id', store.id).order('created_at', { ascending: false }).limit(5000).then(({ data }) => {
-      const m = new Map<string, { name: string; phone: string; email: string; district: string; n: number; spent: number; last: string }>();
-      ((data as Array<{ customer_name: string; phone: string; email: string; district: string; total: number; status: string; created_at: string }>) || []).forEach((o) => {
-        const k = o.phone || o.email || o.customer_name;
-        const c = m.get(k) || { name: o.customer_name, phone: o.phone, email: o.email || '', district: o.district || '', n: 0, spent: 0, last: o.created_at };
-        c.n += 1;
-        if (o.status !== 'cancelled' && o.status !== 'returned') c.spent += Number(o.total || 0);
-        m.set(k, c);
-      });
-      setRows([...m.values()]);
+  const [page, setPage] = useState<{ edit: CustRow | null } | null>(null);
+  const [msg, setMsg] = useState('');
+  const load = useCallback(async () => {
+    const [{ data }, { data: man }] = await Promise.all([
+      supabase.from('store_orders').select('customer_name,phone,email,district,total,status,created_at').eq('store_id', store.id).order('created_at', { ascending: false }).limit(5000),
+      supabase.from('store_customers').select('*').eq('store_id', store.id).order('created_at', { ascending: false }).limit(5000),
+    ]);
+    const m = new Map<string, Row>();
+    // customers added by hand come first; their orders (same phone or email) are counted with them
+    ((man as CustRow[]) || []).forEach((c) => m.set(c.phone || c.email || c.id, { name: c.name, phone: c.phone, email: c.email, district: c.district, n: 0, spent: 0, last: c.created_at, manual: c }));
+    ((data as Array<{ customer_name: string; phone: string; email: string; district: string; total: number; status: string; created_at: string }>) || []).forEach((o) => {
+      const k = o.phone || o.email || o.customer_name;
+      const c = m.get(k) || { name: o.customer_name, phone: o.phone, email: o.email || '', district: o.district || '', n: 0, spent: 0, last: o.created_at };
+      if (c.n === 0 && c.manual) c.last = o.created_at;
+      c.n += 1;
+      if (o.status !== 'cancelled' && o.status !== 'returned') c.spent += Number(o.total || 0);
+      m.set(k, c);
     });
+    setRows([...m.values()]);
   }, [store.id]);
+  useEffect(() => { void load(); }, [load]);
+  if (page)
+    return <AddCustomerForm store={store} edit={page.edit} onClose={(saved) => { setPage(null); if (saved) { setMsg('Customer saved.'); void load(); } }} />;
   if (!rows) return <p className="px-1 text-xs text-slate-400">Loading…</p>;
   const f = q.trim().toLowerCase();
   const list = f ? rows.filter((c) => `${c.name} ${c.phone} ${c.email} ${c.district}`.toLowerCase().includes(f)) : rows;
   return (
     <div className="space-y-2">
+      <button type="button" onClick={() => { setMsg(''); setPage({ edit: null }); }} data-testid="store-add-customer" className={btn + ' w-full'}>
+        <Plus className="h-4 w-4" /> ADD CUSTOMER
+      </button>
+      {msg && <p className="px-1 text-[12px] text-teal-200">{msg}</p>}
       <input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${rows.length} customers: name, phone, district`} />
-      {list.length === 0 && <p className="px-1 text-[12px] text-slate-400">No customers yet. Everyone who orders comes here by themselves.</p>}
+      {list.length === 0 && <p className="px-1 text-[12px] text-slate-400">No customers yet. Everyone who orders comes here by themselves, or tap ADD CUSTOMER.</p>}
       {list.slice(0, 300).map((c) => (
-        <div key={c.phone + c.name} className={box + ' flex items-center gap-2'}>
+        <div key={(c.manual?.id || '') + c.phone + c.name} className={box + ' flex items-center gap-2'}>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-bold text-white">{c.name}</p>
-            <p className="truncate text-[11px] text-slate-400">{c.phone}{c.district ? ` · ${c.district}` : ''} · last {new Date(c.last).toLocaleDateString('en-GB')}</p>
+            <p className="truncate text-[11px] text-slate-400">{c.phone || c.email}{c.district ? ` · ${c.district}` : ''} · last {new Date(c.last).toLocaleDateString('en-GB')}</p>
+            {c.manual && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                <span className="rounded bg-teal-500/15 px-1.5 py-0.5 text-[10px] font-bold text-teal-300">Added by admin</span>
+                {c.manual.user_id && <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold text-sky-300">Login made</span>}
+              </div>
+            )}
           </div>
           <div className="text-right">
             <p className="text-[12px] font-bold text-teal-300">{tk(c.spent)}</p>
-            <p className="text-[10.5px] text-slate-400">{c.n} order{c.n > 1 ? 's' : ''}</p>
+            <p className="text-[10.5px] text-slate-400">{c.n} order{c.n === 1 ? '' : 's'}</p>
           </div>
+          {c.manual && <button type="button" onClick={() => { setMsg(''); setPage({ edit: c.manual || null }); }} className="text-[10.5px] font-bold text-teal-300">EDIT</button>}
           {c.phone && <a href={`https://wa.me/88${c.phone}`} target="_blank" rel="noreferrer" className="rounded-md bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white">WA</a>}
         </div>
       ))}

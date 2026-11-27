@@ -53,7 +53,7 @@ export default function DemoAdminPage() {
         };
       });
       (window as any).__roseDemoDb = makeDemoDb(
-        { stores: [store], store_categories: cats, store_products: prods, store_orders: orders, site_settings: [], store_staff: [], store_reviews: [], store_coupons: [], store_expenses: [] },
+        { stores: [store], store_categories: cats, store_customers: [], store_products: prods, store_orders: orders, site_settings: [], store_staff: [], store_reviews: [], store_coupons: [], store_expenses: [] },
         {
           is_admin: false, my_staff_stores: [], store_staff_list: [], courier_status: [], get_payment_info: { bkash: '01700000000' },
           // Ask ROSE in the demo: the design shows at once (nothing is saved)
