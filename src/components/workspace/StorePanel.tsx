@@ -137,7 +137,7 @@ export const slugify = (t: string) =>
 /** Names that cannot become yourshop.myrosebd.com (site pages, mail, demo stores). */
 export const RESERVED_SLUGS = ['www', 'app', 'api', 'admin', 'mail', 'webmail', 'shop', 'demos', 'demo', 'autodiscover', 'autoconfig', 'ftp', 'cpanel', 'ns1', 'ns2', 'rose', 'help', 'support', 'blog', 'foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare', 'printpack'];
 
-export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; startTab?: 'viewas' }> = ({ userId, forceStoreId, startTab }) => {
+export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; startTab?: 'viewas'; onExit?: () => void }> = ({ userId, forceStoreId, startTab, onExit }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [access, setAccess] = useState<Access>(null);
@@ -345,7 +345,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
     <AdminFrame
       store={store} bars={barsFor(myRole)} current={tab} userName={userName} light={light} onTheme={flipTheme}
       onPick={(k) => setTab((k === 'dashboard' ? 'home' : k) as typeof tab)}
-      onExit={() => { if (tab !== 'home') { setPreviewRole(''); setTab('home'); } else window.dispatchEvent(new Event('rose-admin-exit')); }}
+      onExit={() => { if (tab !== 'home') { setPreviewRole(''); setTab('home'); } else if (onExit) onExit(); else window.dispatchEvent(new Event('rose-admin-exit')); }}
       extra={can('owner') && !forceStoreId && stores.length < limit ? <button type="button" onClick={() => setTab('create')} data-testid="store-new" className="mt-1 flex items-center gap-2.5 px-2 py-2 text-left text-[13px] font-bold text-emerald-400">＋ NEW STORE</button> : null}
     >
       {content}
@@ -1925,44 +1925,117 @@ export const SiteProfile: React.FC<{ userId: string }> = ({ userId }) => {
   );
 };
 
-// ---------------------------------------------------------------- ROSE admin: open any shop by its support ID (server allows admin only)
+// ---------------------------------------------------------------- ROSE admin: find a shop by its support ID, see everything, open its admin
+type ShopFull = {
+  ok: boolean; id: string; name: string; name_bn?: string; slug: string; owner_email: string; support_code: string; email2?: string; phone?: string; whatsapp?: string; phone2?: string;
+  address?: string; city?: string; logo?: string; logo_url?: string; published: boolean; suspended: boolean; custom_domain?: string | null; domain_ready?: boolean; subdomain_ready?: boolean;
+  template?: string; created_at?: string; last_login?: string | null;
+  access?: { plan: string; months?: number; starts_at?: string; ends_at?: string; trial_used?: boolean; amount?: number; products_limit?: number; staff_limit?: number } | null;
+  payments: Array<{ id: string; plan: string; months: number; amount: number; method: string; sender_number?: string; trx_id?: string; status: string; created_at: string }>;
+  staff: Array<{ email: string; role: string; suspended: boolean; money_access: boolean }>;
+  stats: { products: number; orders: number; customers: number; sales: number; last_order?: string | null };
+};
+const day = (d?: string | null) => (d ? new Date(d).toLocaleDateString('en-GB') : '—');
 export const AdminSupportOpen: React.FC = () => {
   const [code, setCode] = useState('');
-  const [shop, setShop] = useState<{ id: string; name: string; slug: string; owner_email: string; support_code: string } | null>(null);
+  const [shop, setShop] = useState<ShopFull | null>(null);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
-  const open = async () => {
+  const find = async () => {
     setBusy(true);
     setMsg('');
     const { data, error } = await supabase.rpc('admin_store_by_code', { p_code: code });
     setBusy(false);
     if (error) return setMsg(error.message);
-    const d = data as { ok: boolean; id: string; name: string; slug: string; owner_email: string; support_code: string };
-    if (!d?.ok) return setMsg('No shop has this ID. Check the number and try again.');
+    const d = data as ShopFull;
+    if (!d?.ok) { setShop(null); return setMsg('No shop has this ID. Check the number and try again.'); }
     setShop(d);
   };
-  if (shop)
-    return (
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-bold text-white">{shop.name} · {shop.support_code}</p>
-            <p className="truncate text-[11px] text-amber-200">Owner {shop.owner_email} · you are working as ROSE admin</p>
-          </div>
-          <button type="button" className={btn + ' bg-white/10'} onClick={() => { setShop(null); setCode(''); }}>CLOSE</button>
-        </div>
-        <StorePanel userId="" forceStoreId={shop.id} />
-      </div>
-    );
+  if (shop && adminOpen) return <StorePanel userId="" forceStoreId={shop.id} onExit={() => setAdminOpen(false)} />;
+  const a = shop?.access;
+  const left = a?.ends_at ? Math.ceil((new Date(a.ends_at).getTime() - Date.now()) / 864e5) : null;
+  const url = shop ? (shop.custom_domain && shop.domain_ready ? `https://${shop.custom_domain}` : `https://${shop.slug}.myrosebd.com`) : '';
+  const Line = ({ k, v, href }: { k: string; v?: string | number | null; href?: string }) => (
+    <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] py-1.5 text-[12.5px] last:border-0">
+      <span className="shrink-0 text-slate-400">{k}</span>
+      {href && v ? <a href={href} target="_blank" rel="noreferrer" className="truncate text-right font-semibold text-teal-300 underline">{v}</a> : <span className="truncate text-right font-semibold text-white">{v === undefined || v === null || v === '' ? '—' : v}</span>}
+    </div>
+  );
   return (
     <div className="space-y-2">
-      <div className={box + ' space-y-2'}>
-        <p className="text-[11px] font-bold tracking-wider text-teal-300">OPEN A SHOP BY SUPPORT ID</p>
-        <p className="text-[11.5px] text-slate-400">The owner finds the ID under their Gmail in WORKSPACE. Only ROSE admin can open a shop with it.</p>
-        <input className={input + ' font-mono uppercase tracking-wider'} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="RS-123456" onKeyDown={(e) => { if (e.key === 'Enter') void open(); }} />
-        <button type="button" disabled={busy || code.replace(/\D/g, '').length < 6} className={btn + ' w-full'} onClick={() => void open()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} OPEN SHOP</button>
-        {msg && <p className="text-[12px] text-rose-300">{msg}</p>}
+      <div className="flex gap-2">
+        <input className={input + ' font-mono uppercase tracking-wider'} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Search support ID · RS-123456" onKeyDown={(e) => { if (e.key === 'Enter') void find(); }} />
+        <button type="button" disabled={busy || code.replace(/\D/g, '').length < 6} className={btn + ' shrink-0'} onClick={() => void find()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'SEARCH'}</button>
       </div>
+      {!shop && <p className="px-1 text-[11.5px] text-slate-400">The owner finds the ID under their Gmail in WORKSPACE (MY DETAILS). Only ROSE admin can see a shop with it.</p>}
+      {msg && <p className="px-1 text-[12px] text-rose-300">{msg}</p>}
+      {shop && (
+        <>
+          <div className={box + ' space-y-2'}>
+            <div className="flex items-center gap-3">
+              {shop.logo_url ? <img src={shop.logo_url} alt="" className="h-12 w-12 rounded-full bg-white object-cover" /> : <span className="grid h-12 w-12 place-items-center rounded-full bg-white/10 text-2xl">{shop.logo || '🛍️'}</span>}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-bold text-white">{shop.name}{shop.name_bn ? ` · ${shop.name_bn}` : ''}</p>
+                <p className="truncate text-[12px] text-slate-300">{shop.owner_email}</p>
+                <p className="font-mono text-[12px] font-bold text-teal-300">{shop.support_code}</p>
+              </div>
+              <span className={`rounded-md px-2 py-1 text-[10px] font-bold ${shop.suspended ? 'bg-rose-600 text-white' : shop.published ? 'bg-emerald-600 text-white' : 'bg-white/10 text-slate-300'}`}>{shop.suspended ? 'SUSPENDED' : shop.published ? 'LIVE' : 'DRAFT'}</span>
+            </div>
+          </div>
+          <div className={box}>
+            <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">OWNER</p>
+            <Line k="Gmail" v={shop.owner_email} href={`mailto:${shop.owner_email}`} />
+            <Line k="Gmail 2" v={shop.email2} />
+            <Line k="WhatsApp" v={shop.whatsapp} href={shop.whatsapp ? `https://wa.me/88${shop.whatsapp.replace(/\D/g, '').replace(/^88/, '')}` : undefined} />
+            <Line k="Phone" v={shop.phone} href={shop.phone ? `tel:${shop.phone}` : undefined} />
+            <Line k="Other phone" v={shop.phone2} />
+            <Line k="Address" v={[shop.address, shop.city].filter(Boolean).join(', ')} />
+            <Line k="Website" v={url.replace(/^https:\/\//, '')} href={url} />
+            <Line k="Joined" v={day(shop.created_at)} />
+            <Line k="Last login" v={day(shop.last_login)} />
+          </div>
+          <div className={box}>
+            <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">WEBSITE PLAN</p>
+            {a ? (
+              <>
+                <Line k="Plan" v={`${(STORE_PLANS as any)[a.plan]?.label || a.plan}${a.months ? ` · ${a.months} month${a.months > 1 ? 's' : ''}` : ''}`} />
+                <Line k="Started" v={day(a.starts_at)} />
+                <Line k="Ends" v={day(a.ends_at)} />
+                <div className="flex items-center justify-between py-1.5 text-[12.5px]">
+                  <span className="text-slate-400">Days left</span>
+                  <span className={`font-bold ${left === null ? 'text-white' : left <= 0 ? 'text-rose-300' : left <= 7 ? 'text-amber-300' : 'text-emerald-300'}`}>{left === null ? '—' : left <= 0 ? 'ENDED' : `${left} days`}</span>
+                </div>
+                <Line k="Paid" v={a.amount ? tk(Number(a.amount)) : 'Free trial'} />
+                <Line k="Limits" v={`${a.products_limit ?? '—'} products · ${a.staff_limit ?? 0} staff`} />
+              </>
+            ) : <p className="text-[12px] text-slate-400">No website plan yet.</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {([['PRODUCTS', shop.stats.products], ['ORDERS', shop.stats.orders], ['CUSTOMERS', shop.stats.customers], ['SALES', tk(Number(shop.stats.sales || 0))]] as Array<[string, string | number]>).map(([k, v]) => (
+              <div key={k} className={box}><p className="text-[10px] font-bold tracking-wider text-slate-400">{k}</p><p className="text-[18px] font-bold text-white">{v}</p></div>
+            ))}
+          </div>
+          {shop.staff.length > 0 && (
+            <div className={box}>
+              <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">STAFF · {shop.staff.length}</p>
+              {shop.staff.map((t) => <Line key={t.email} k={t.role.toUpperCase() + (t.suspended ? ' · SUSPENDED' : '')} v={t.email} />)}
+            </div>
+          )}
+          <div className={box}>
+            <p className="mb-1 text-[11px] font-bold tracking-wider text-teal-300">PAYMENT HISTORY · {shop.payments.length}</p>
+            {shop.payments.length === 0 && <p className="text-[12px] text-slate-400">No payments yet.</p>}
+            {shop.payments.map((p) => (
+              <div key={p.id} className="border-b border-white/[0.06] py-1.5 text-[12px] last:border-0">
+                <div className="flex justify-between"><span className="font-semibold text-white">{(STORE_PLANS as any)[p.plan]?.label || p.plan} · {p.months} mo · {tk(Number(p.amount))}</span><span className={p.status === 'approved' ? 'text-emerald-300' : p.status === 'rejected' ? 'text-rose-300' : 'text-amber-300'}>{p.status.toUpperCase()}</span></div>
+                <p className="text-[11px] text-slate-400">{day(p.created_at)} · {p.method}{p.sender_number ? ` · ${p.sender_number}` : ''}{p.trx_id ? ` · ${p.trx_id}` : ''}</p>
+              </div>
+            ))}
+          </div>
+          <DemoBar n="▶" icon="🗂️" color="#14b8a6" title="ALL ADMIN BARS" value="SAME AS THE OWNER SEES" onClick={() => setAdminOpen(true)} testId="support-all-admin-bars" />
+          <button type="button" className={btn + ' w-full bg-white/10'} onClick={() => { setShop(null); setCode(''); setMsg(''); }}>CLEAR</button>
+        </>
+      )}
     </div>
   );
 };

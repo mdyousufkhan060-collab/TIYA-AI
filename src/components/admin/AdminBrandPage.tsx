@@ -11,7 +11,7 @@ export const AdminBrandCard: React.FC<{ onOpen: () => void }> = ({ onOpen }) => 
     data-testid="admin-brand-card"
     className="mb-3 flex min-h-[84px] w-full items-center gap-3 border-2 border-teal-400/60 bg-gradient-to-r from-teal-500/20 via-sky-500/10 to-fuchsia-500/15 px-3 py-3 text-left shadow-[0_0_24px_rgba(45,212,191,0.15)]"
   >
-    <img src={C.photo} alt="ROSE" className="h-14 w-14 shrink-0 rounded-full border-2 border-teal-400 object-cover object-[center_30%]" />
+    <img src="/team/devs-square.jpg" alt="ROSE developers" className="h-14 w-14 shrink-0 rounded-full border-2 border-teal-400 object-cover object-top" />
     <span className="min-w-0 flex-1">
       <span className="block text-[11px] font-bold tracking-[0.18em] text-teal-300">ADMIN · ROSE</span>
       <span className="block text-[20px] font-extrabold tracking-wide text-white">MYROSEBD.COM</span>
@@ -46,10 +46,10 @@ const Row: React.FC<{ icon: React.ReactNode; label: string; value: string; href?
 /** myrosebd.com page: admin details and the numbers/emails people use to contact ROSE. */
 export const AdminBrandPage: React.FC = () => (
   <div className="space-y-2">
-    <div className="flex flex-col items-center gap-2 border border-teal-500/30 bg-gradient-to-b from-teal-500/15 to-transparent p-4 text-center">
-      <img src={C.photo} alt="ROSE" className="h-20 w-20 rounded-full border-2 border-teal-400 object-cover object-[center_30%]" />
-      <p className="text-lg font-bold tracking-wide text-white">{C.brand}</p>
-      <a href={C.url} target="_blank" rel="noreferrer" className="text-[13px] text-teal-300 underline">{C.site}</a>
+    {/* the developers' banner (full picture, nothing cut), then the site link */}
+    <div className="overflow-hidden border border-teal-500/30">
+      <img src="/team/banner.jpg" alt="ROSE web developers" className="block h-auto w-full" />
+      <a href={C.url} target="_blank" rel="noreferrer" className="block py-2 text-center text-[13px] text-teal-300 underline">{C.site}</a>
     </div>
     <p className="px-1 pt-1 text-[11px] font-bold tracking-wider text-slate-400">ADMIN</p>
     <Row icon={<span className="text-sm font-bold">MY</span>} label="NAME" value={C.admin} extra={<span className="text-[10px] text-slate-400">{C.role}</span>} />
@@ -150,7 +150,7 @@ export const AdminSiteSwitchesPage: React.FC = () => {
 /** ROSE SUPPORT card for users (Settings top) and store owners (store admin top). */
 export const RoseSupportCard: React.FC<{ onOpen: () => void; open?: boolean }> = ({ onOpen, open }) => (
   <button type="button" onClick={onOpen} data-testid="rose-support-card" className="flex min-h-[72px] w-full items-center gap-3 border border-teal-400/50 bg-gradient-to-r from-teal-500/15 to-fuchsia-500/10 p-3 text-left">
-    <img src={C.photo} alt="ROSE" className="h-12 w-12 shrink-0 rounded-full border-2 border-teal-400 object-cover object-[center_30%]" />
+    <img src="/team/devs-square.jpg" alt="ROSE developers" className="h-12 w-12 shrink-0 rounded-full border-2 border-teal-400 object-cover object-top" />
     <span className="min-w-0 flex-1">
       <span className="block text-[10.5px] font-bold tracking-[0.16em] text-teal-300">ROSE SUPPORT</span>
       <span className="block text-[16px] font-extrabold text-white">MYROSEBD.COM</span>
