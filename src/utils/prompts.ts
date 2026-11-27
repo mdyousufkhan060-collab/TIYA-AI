@@ -261,7 +261,7 @@ export function buildTiyaSystemPrompt(
     `Motivation Rules:`,
     `- When the user asks for today's motivation (e.g. "আজকের মোটিভেশন বলো", "মোটিভেশন শোনাও", "today's motivation"), ALWAYS invoke get_latest_motivation and read the returned post warmly in Bengali.`,
     TIYA_SETTINGS_MAP_DESCRIPTION,
-    getRoseGuide(getTiyaMode(), Boolean(isOwner)),
+    getRoseGuide(getTiyaMode(), Boolean(isOwner), recentMessages.slice(-6).map((m) => m.text || '').join(' ')),
   ];
 
   lines.push(`\n${ROSE_SKILLS_BLOCK}`);

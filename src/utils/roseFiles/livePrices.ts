@@ -9,11 +9,11 @@ export type LivePrices = { premium: PremiumRow[]; store: Record<string, number> 
 
 const DEFAULTS: LivePrices = {
   premium: [
-    { name: 'Basic', price: 199, months: 1, text: 1000, voice: 100 },
-    { name: 'Pro', price: 499, months: 1, text: 3000, voice: 300 },
-    { name: 'Premium', price: 999, months: 1, text: 8000, voice: 600 },
-    { name: 'Text Pack', price: 49, months: 1, text: 500, voice: 0 },
-    { name: 'Voice Pack', price: 99, months: 1, text: 0, voice: 100 },
+    { name: 'Basic', price: 249, months: 1, text: 500, voice: 80 },
+    { name: 'Pro', price: 599, months: 1, text: 1200, voice: 200 },
+    { name: 'Premium', price: 1199, months: 1, text: 2500, voice: 400 },
+    { name: 'Text Pack', price: 79, months: 1, text: 250, voice: 0 },
+    { name: 'Voice Pack', price: 99, months: 1, text: 0, voice: 90 },
   ],
   store: { starter: 999, pro: 1999, business: 3999, lifetime: 26000 },
 };
