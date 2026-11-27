@@ -130,7 +130,6 @@ export const DesktopTopBar: React.FC<{
   const [camOpen, setCamOpen] = useState(false);
   const tabs: Array<[DesktopTab, string, React.ReactNode]> = [
     ['dashboard', 'Dashboard', <LayoutDashboard key="d" className="h-4 w-4" />],
-    ['team', 'Team & Tasks', <ListChecks key="t" className="h-4 w-4" />],
     ['writer', 'Writer', <FileText key="w" className="h-4 w-4" />],
     ['app', 'Settings', <Settings key="a" className="h-4 w-4" />],
   ];
@@ -441,16 +440,6 @@ const ago = (iso: string) => {
 export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOpenTeam: () => void }> = ({ userId, isAdmin, onOpenTeam }) => {
   const { tiles, series, seriesName, tasks, feed } = useDashboardData(userId, isAdmin);
 
-  const agentStats = useMemo(
-    () =>
-      AGENTS.map((a) => {
-        const mine = tasks.filter((t) => t.agent === a.id);
-        const done = mine.filter((t) => t.status === 'done').length;
-        const working = mine.filter((t) => t.status === 'working' || t.status === 'queued').length;
-        return { a, total: mine.length, done, working, pct: mine.length ? Math.round((done / mine.length) * 100) : 0 };
-      }),
-    [tasks],
-  );
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -529,35 +518,6 @@ export const DesktopDashboard: React.FC<{ userId: string; isAdmin: boolean; onOp
         </section>
       </div>
 
-      {/* team status (compact) */}
-      <section className="shrink-0 rounded-[10px] border border-white/[0.08] bg-[#120F22] px-3 py-2.5">
-        <div className="grid grid-cols-5 gap-2">
-          {agentStats.map(({ a, total, working, pct }) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={onOpenTeam}
-              className="flex items-center gap-2 rounded-[8px] border border-white/[0.08] bg-black/20 px-2 py-1.5 text-left hover:border-white/25"
-              style={working ? { borderColor: a.color, boxShadow: `0 0 18px -8px ${a.color}` } : undefined}
-            >
-              <span className="relative shrink-0">
-                <img src={a.photo} alt={a.name} className="h-9 w-9 rounded-full border-2 object-cover" style={{ borderColor: a.color }} />
-                <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#120F22] ${working ? 'animate-pulse bg-amber-300' : 'bg-emerald-400'}`} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between gap-1">
-                  <span className="truncate text-[11px] font-extrabold tracking-wider text-white">{a.name}</span>
-                  <span className="text-[9.5px] text-slate-400">{total}</span>
-                </span>
-                <span className="block truncate text-[9.5px] text-slate-400">{working ? 'Working…' : a.role}</span>
-                <span className="mt-1 block h-1 overflow-hidden rounded-full bg-white/10">
-                  <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: a.color }} />
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
     </div>
   );
 };
