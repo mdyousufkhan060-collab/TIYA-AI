@@ -3,7 +3,7 @@ export const ROSE_CONTACT = {
   brand: 'ROSE',
   site: 'myrosebd.com',
   url: 'https://www.myrosebd.com',
-  admin: 'MD Yousuf Khan',
+  admin: 'MD YOUSUF KHAN',
   role: 'Founder & Admin',
   phones: ['01719188777', '01777885978'],
   emails: ['md.yousuf.khan060@gmail.com', 'info@myrosebd.com'],

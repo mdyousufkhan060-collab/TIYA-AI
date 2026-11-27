@@ -112,7 +112,7 @@ const DevSection: React.FC<{ d: Developer; accent: string }> = ({ d, accent }) =
           <p className="text-[10px] font-bold tracking-[0.3em]" style={{ color: accent }}>
             {(d.title || 'Web Developer').toUpperCase()}
           </p>
-          <h2 className="mt-1 truncate text-2xl font-extrabold text-white sm:text-3xl">{d.full_name}</h2>
+          <h2 className="mt-1 truncate text-2xl font-extrabold text-white sm:text-3xl">{(d.full_name || '').toUpperCase()}</h2>
           {d.skills && <p className="mt-1 text-xs text-slate-400">{d.skills}</p>}
         </div>
       </div>

@@ -32,7 +32,7 @@ export function useDeveloperProfile(): DevProfile | null {
       .select('*')
       .eq('id', 1)
       .maybeSingle()
-      .then(({ data }) => setP((data as DevProfile) || { full_name: 'MD Yousuf Khan' }));
+      .then(({ data }) => setP((data as DevProfile) || { full_name: 'MD YOUSUF KHAN' }));
   }, []);
   return p;
 }
@@ -74,7 +74,7 @@ export const DeveloperDetails: React.FC<{ p: DevProfile; dark?: boolean }> = ({ 
         />
         <div className="min-w-0">
           <p className="text-[10px] font-bold tracking-[0.3em] text-pink-300">DEVELOPER</p>
-          <p className="truncate text-xl font-extrabold text-white">{p.full_name || 'MD Yousuf Khan'}</p>
+          <p className="truncate text-xl font-extrabold text-white">{(p.full_name || 'MD YOUSUF KHAN').toUpperCase()}</p>
           {p.title && <p className="text-xs text-slate-400">{p.title}</p>}
         </div>
       </div>

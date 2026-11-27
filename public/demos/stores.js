@@ -264,4 +264,4 @@ window.ROSE_LOGO = function (key, h, bare) {
 };
 
 // ROSE / myrosebd.com contact (shown in every store and on the demos page)
-window.ROSE_CONTACT = { phones: ['01719188777', '01777885978'], emails: ['md.yousuf.khan060@gmail.com', 'info@myrosebd.com'], admin: 'MD Yousuf Khan', site: 'myrosebd.com' };
+window.ROSE_CONTACT = { phones: ['01719188777', '01777885978'], emails: ['md.yousuf.khan060@gmail.com', 'info@myrosebd.com'], admin: 'MD YOUSUF KHAN', site: 'myrosebd.com' };

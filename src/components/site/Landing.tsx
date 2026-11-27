@@ -500,7 +500,7 @@ export const Landing: React.FC = () => {
           <img src="/team/devs-round.jpg" alt="ROSE developers" className="h-20 w-20 rounded-full border-2 border-pink-400/60 object-cover shadow-[0_0_30px_-8px_#FF4D8D]" />
           <div>
             <p className="text-xs font-bold tracking-[0.3em] text-pink-300">THE DEVELOPERS</p>
-            <h3 className="mt-1 text-xl font-extrabold">{(devs || []).map((d) => d.full_name).join(' · ') || 'MD Yousuf Khan'}</h3>
+            <h3 className="mt-1 text-xl font-extrabold">{(devs || []).map((d) => (d.full_name || '').toUpperCase()).join(' · ') || 'MD YOUSUF KHAN'}</h3>
             <p className="mt-1 text-sm text-slate-400">Web Developers · Made in Bangladesh</p>
           </div>
           <span className="inline-flex h-11 items-center justify-center rounded-[4px] border border-pink-400/60 px-5 text-xs font-bold tracking-widest text-pink-200 group-hover:bg-pink-500/10">
@@ -546,7 +546,7 @@ export const Landing: React.FC = () => {
               <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[6px]" />
               <span className="text-lg font-extrabold tracking-[0.25em] text-white">ROSE</span>
             </div>
-            <p className="mt-3 leading-relaxed">ROSE · {devs?.[0]?.full_name || 'MD Yousuf Khan'}<br />373/2 Modhubag, Moghbazar, Dhaka, Bangladesh</p>
+            <p className="mt-3 leading-relaxed">ROSE · {(devs?.[0]?.full_name || 'MD YOUSUF KHAN').toUpperCase()}<br />373/2 Modhubag, Moghbazar, Dhaka, Bangladesh</p>
             <p className="mt-2">md.yousuf.khan060@gmail.com · info@myrosebd.com</p>
           </div>
           <div>
