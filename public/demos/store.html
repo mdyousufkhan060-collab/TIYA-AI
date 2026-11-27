@@ -352,10 +352,10 @@
 <script src="/demos/print.js"></script>
 <script>
 var SB_URL = 'https://ukgwipazzjstjkdfaozg.supabase.co', SB_KEY = 'sb_publishable_CRMgURG899vqIqUIsADWgw_p90ZliES';
-function sb(path, body) {
+function sb(path, body, tok) {
   return fetch(SB_URL + '/rest/v1/' + path, {
     method: body ? 'POST' : 'GET',
-    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + (tok || SB_KEY), 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.message || 'Error'); return j; }); });
 }
@@ -419,6 +419,12 @@ function loadUpazilas() {
 }
 var fullImg = function (u, w) { return !u ? '' : /^https?:/.test(u) ? u : window.ROSE_IMG(u, w); };
 var qs = new URLSearchParams(location.search);
+function ownerSignIn() {
+  try { var t = JSON.parse(localStorage.getItem('rose_shop_tok')); if (t && t.at && t.exp > Date.now()) return t.at; } catch (e) {}
+  try { var a = JSON.parse(localStorage.getItem('sb-ukgwipazzjstjkdfaozg-auth-token')); if (a && a.access_token && (!a.expires_at || a.expires_at * 1000 > Date.now())) return a.access_token; } catch (e) {}
+  return '';
+}
+var PREVIEW_TOK = '';
 // Store address: yourshop.myrosebd.com (subdomain), /shop/yourshop, or ?store=yourshop
 var hostSub = ((location.hostname.match(/^([a-z0-9-]+)\.myrosebd\.com$/) || [])[1]) || '';
 if (hostSub === 'www') hostSub = '';
@@ -430,8 +436,18 @@ if (liveSlug || ownDomain) {
   if (!document.querySelector('#view h1')) document.getElementById('view').innerHTML = '<div class="panel" style="text-align:center;padding:40px">Loading…</div>';
   sb(ownDomain ? 'stores?select=*&custom_domain=eq.' + encodeURIComponent(ownDomain) : 'stores?select=*&slug=eq.' + encodeURIComponent(liveSlug)).then(function (st) {
     var r = st[0];
+    if (!r && ownerSignIn()) {
+      var ot = ownerSignIn();
+      return sb(ownDomain ? 'stores?select=*&custom_domain=eq.' + encodeURIComponent(ownDomain) : 'stores?select=*&slug=eq.' + encodeURIComponent(liveSlug), null, ot).then(function (s2) {
+        if (s2 && s2[0]) { PREVIEW_TOK = ot; return [s2[0]]; }
+        return [];
+      }, function () { return []; });
+    }
+    return st;
+  }).then(function (st) {
+    var r = st[0];
     if (!r) return sb('rpc/store_status', ownDomain ? { p_domain: ownDomain } : { p_slug: liveSlug }).then(function (x) { throw new Error(x === 'paused' ? 'This store is paused right now. The owner can renew the plan at myrosebd.com.' : 'This store is not open yet.'); }, function () { throw new Error('This store is not open yet.'); });
-    return Promise.all([sb('store_categories?select=*&store_id=eq.' + r.id + '&order=sort'), sb('store_products?select=*&store_id=eq.' + r.id + '&active=eq.true&order=sort')]).then(function (x) {
+    return Promise.all([sb('store_categories?select=*&store_id=eq.' + r.id + '&order=sort', null, PREVIEW_TOK), sb('store_products?select=*&store_id=eq.' + r.id + '&active=eq.true&order=sort', null, PREVIEW_TOK)]).then(function (x) {
       var cats = x[0], prods = x[1], byId = {};
       cats.forEach(function (c) { byId[c.id] = c.name; });
       var banners = (r.banners && r.banners.length ? r.banners : [{ title: r.name, badge: r.tagline || 'Shop now', icon: r.logo }]).map(function (b) {
@@ -456,6 +472,7 @@ if (liveSlug || ownDomain) {
       start(S, P, r.slug);
     });
   }).catch(function (e) {
+    var dbar = document.getElementById('demoBar'); if (dbar) dbar.style.display = 'none';
     document.getElementById('view').innerHTML = '<div class="panel" style="text-align:center;padding:40px">🛍️<h3>' + (e.message || 'Store not found') + '</h3><a class="btn" style="display:inline-block;width:auto;padding:10px 18px" href="https://www.myrosebd.com/demos">See demo stores</a></div>';
   });
 } else {
@@ -468,7 +485,10 @@ if (liveSlug || ownDomain) {
 
 function start(S, P, liveId) {
   var id = liveId || (qs.get('s') || 'foodbazaar');
-  if (liveId) { var db = document.getElementById('demoBar'); if (db) db.style.display = 'none'; }
+  if (liveId) {
+    var db = document.getElementById('demoBar'); if (db) db.style.display = 'none';
+    if (PREVIEW_TOK) { var pv = document.createElement('div'); pv.style.cssText = 'background:#f59e0b;color:#111;font:700 13px/1.4 system-ui,sans-serif;text-align:center;padding:8px 12px'; pv.textContent = 'PREVIEW · Only you see this. Customers see the store after you tap PUBLISH in admin.'; document.body.insertBefore(pv, document.body.firstChild); }
+  }
   else { var al = document.getElementById('adminLink'); if (al) al.href = '/demos/admin.html?s=' + encodeURIComponent(id); }
   var root = document.documentElement;
   root.style.setProperty('--c', S.color);
@@ -714,6 +734,10 @@ function start(S, P, liveId) {
   } else if (!S.live && /(^#|&)access_token=/.test(location.hash)) {
     // demo store: the real Google account chooser of the phone was used; show that Gmail here (no shop account is made)
     var dj = jwtInfo(new URLSearchParams(location.hash.slice(1)).get('access_token')) || {}, dmd = dj.user_metadata || {};
+    var dhp = new URLSearchParams(location.hash.slice(1));
+    try { sessionStorage.setItem('rose_demo_tok', JSON.stringify({ at: dhp.get('access_token'), rt: dhp.get('refresh_token'), exp: Date.now() + (+dhp.get('expires_in') || 3600) * 1000 })); } catch (e) {}
+    delete cust.myShop;
+    if (dj.sub) sb('stores?select=name,slug&owner_id=eq.' + dj.sub + '&limit=1', null, dhp.get('access_token')).then(function (ms) { if (ms && ms[0]) { cust.myShop = ms[0]; saveCust(); if (/^#\/account/.test(location.hash)) route(); } }, function () {});
     if (dj.email) { cust.email = dj.email; if (dmd.full_name || dmd.name) cust.name = dmd.full_name || dmd.name; if (dmd.avatar_url || dmd.picture) cust.pic = dmd.avatar_url || dmd.picture; saveCust(); setTimeout(function () { toast('Signed in: ' + cust.email); }, 400); }
     history.replaceState(null, '', authBack() + '#/account');
   } else if (S.live && /(^#|&)error=/.test(location.hash)) {
@@ -752,6 +776,13 @@ function start(S, P, liveId) {
     }).catch(function () {});
   }
   // owner / staff: open WEBSITE ADMIN with the same sign-in (no second Google login)
+  // demo store: a ROSE store owner signed in with Google opens their own WEBSITE ADMIN (same sign-in)
+  window.goMyAdmin = function () {
+    var url = 'https://www.myrosebd.com/app?open=store', t = null;
+    try { t = JSON.parse(sessionStorage.getItem('rose_demo_tok')); } catch (e) {}
+    if (t && t.at && t.rt && t.exp > Date.now()) url += '#access_token=' + encodeURIComponent(t.at) + '&refresh_token=' + encodeURIComponent(t.rt) + '&expires_in=' + Math.max(60, Math.round((t.exp - Date.now()) / 1000)) + '&expires_at=' + Math.round(t.exp / 1000) + '&token_type=bearer&type=magiclink';
+    window.open(url, '_blank');
+  };
   window.goAdmin = function () {
     var base = 'https://www.myrosebd.com/app?open=store', w = null;
     try { w = window.open('', '_blank'); } catch (e) {}
@@ -1183,7 +1214,8 @@ function start(S, P, liveId) {
     var menu = [['#/wishlist', '❤️', t('myWish'), st.wish.length ? st.wish.length : ''], ['#/account/coupons', '🎟️', t('myCoupons'), ''], ['#/account/address', '📍', t('addresses'), ''], ['#/account/help', '🎧', t('help'), ''], ['#/page/about', 'ℹ️', t('aboutUs'), '']];
     var ml = '<div class="mlist" style="margin-top:14px">' + menu.map(function (m) { return '<a href="' + m[0] + '"><span class="i">' + m[1] + '</span>' + m[2] + '<em>' + (m[3] ? '<small style="font-size:12px;margin-right:6px;color:var(--c)">' + m[3] + '</small>' : '') + '›</em></a>'; }).join('') +
       '<button onclick="shareStore()"><span class="i">🔗</span>' + t('shareApp') + '<em>›</em></button>' + (logged ? '<button class="lo" onclick="logoutCust()"><span class="i">🚪</span>' + t('logout') + '<em>›</em></button>' : '') + '</div>';
-    var own = S.live && logged && acct.owner ? '<button class="btn" style="margin-top:10px;padding:12px" onclick="goAdmin()">🛠️ Store admin · products · orders</button>' : '';
+    var own = S.live && logged && acct.owner ? '<button class="btn" style="margin-top:10px;padding:12px" onclick="goAdmin()">🛠️ Store admin · products · orders</button>'
+      : !S.live && logged && cust.myShop ? '<button class="btn" style="margin-top:10px;padding:12px" onclick="goMyAdmin()">🛠️ My store admin · ' + esc(cust.myShop.name || '') + '</button>' : '';
     return '<div style="max-width:620px;margin:0 auto">' + top + login + own + ord + (list.length ? '<div style="margin-top:10px">' + orderRows(list.slice(0, 2)) + '</div>' : '') + ml + '</div>';
   }
   window.openAuth = function (mode) {
