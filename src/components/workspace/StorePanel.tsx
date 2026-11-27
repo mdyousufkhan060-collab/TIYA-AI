@@ -1850,13 +1850,13 @@ const CustomersTab: React.FC<{ store: Store }> = ({ store }) => {
 
 // ---------------------------------------------------------------- reviews (buyers write, the shop checks and replies)
 const ReviewsTab: React.FC<{ store: Store }> = ({ store }) => {
-  type Rev = { id: string; product_id: string | null; name: string; stars: number; body: string; reply: string; approved: boolean; created_at: string; order_no: number | null };
+  type Rev = { id: string; product_id: string | null; name: string; stars: number; body: string; reply: string; approved: boolean; created_at: string; order_no: number | null; source?: string };
   const [rows, setRows] = useState<Rev[] | null>(null);
   const [names, setNames] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState('');
   const load = useCallback(async () => {
     const [{ data: r, error }, { data: p }] = await Promise.all([
-      supabase.from('store_reviews').select('id,product_id,name,stars,body,reply,approved,created_at,order_no').eq('store_id', store.id).order('created_at', { ascending: false }).limit(500),
+      supabase.from('store_reviews').select('id,product_id,name,stars,body,reply,approved,created_at,order_no,source').eq('store_id', store.id).order('created_at', { ascending: false }).limit(500),
       supabase.from('store_products').select('id,name').eq('store_id', store.id).limit(5000),
     ]);
     if (error) setMsg(error.message);
@@ -1888,7 +1888,7 @@ const ReviewsTab: React.FC<{ store: Store }> = ({ store }) => {
     </div>
   );
 };
-const ReviewRow: React.FC<{ x: { name: string; stars: number; body: string; reply: string; approved: boolean; created_at: string; order_no: number | null }; product: string; onToggle: () => void; onReply: (t: string) => void; onDelete: () => void }> = ({ x, product, onToggle, onReply, onDelete }) => {
+const ReviewRow: React.FC<{ x: { name: string; stars: number; body: string; reply: string; approved: boolean; created_at: string; order_no: number | null; source?: string }; product: string; onToggle: () => void; onReply: (t: string) => void; onDelete: () => void }> = ({ x, product, onToggle, onReply, onDelete }) => {
   const [rep, setRep] = useState(x.reply || '');
   return (
     <div className={box + ' space-y-1.5'}>
@@ -1896,7 +1896,7 @@ const ReviewRow: React.FC<{ x: { name: string; stars: number; body: string; repl
         <p className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-white">{x.name} · <span className="text-amber-300">{'★'.repeat(x.stars)}</span></p>
         <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${x.approved ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-black'}`}>{x.approved ? 'SHOWN' : 'WAITING'}</span>
       </div>
-      <p className="text-[11px] text-slate-400">{product}{x.order_no ? ` · order #${x.order_no}` : ''} · {new Date(x.created_at).toLocaleDateString('en-GB')}</p>
+      <p className="text-[11px] text-slate-400">{product}{x.order_no ? ` · order #${x.order_no}` : ''}{x.source === 'account' ? ' · from customer account' : ''} · {new Date(x.created_at).toLocaleDateString('en-GB')}</p>
       <p className="text-[12.5px] text-slate-200">{x.body}</p>
       <input className={input} value={rep} onChange={(e) => setRep(e.target.value)} placeholder="Reply from the shop (optional)" />
       <div className="grid grid-cols-3 gap-1.5">
