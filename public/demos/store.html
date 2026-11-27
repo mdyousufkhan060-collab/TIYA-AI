@@ -542,13 +542,14 @@ if (liveSlug || ownDomain) {
 }
 
 // ROSE design: only safe values (colours, a few shapes, themes) change this one store's look
-var THEMES = {
-  birthday: { bg: '#fff1f7', ribbon: '🎈 🎉 🎂 🎁 🎈' }, eid: { bg: '#f0fdf4', ribbon: '🌙 ✨ Eid Mubarak ✨ 🌙' }, ramadan: { bg: '#f5f3ff', ribbon: '🌙 Ramadan Kareem 🌙' },
-  winter: { bg: '#eff6ff', ribbon: '❄️ Winter collection ❄️' }, valentine: { bg: '#fff1f2', ribbon: '❤️ 💝 ❤️' }, pohela: { bg: '#fff7ed', ribbon: '🌼 শুভ নববর্ষ 🌼' },
-  victory: { bg: '#f0fdf4', ribbon: '🇧🇩 Victory Day 🇧🇩' }, sale: { bg: '#fefce8', ribbon: '🔥 BIG SALE 🔥' }, wedding: { bg: '#fffbeb', ribbon: '💍 ✨ 💐' },
-};
 function applyDesign(d, preview) {
   d = d || {};
+  var THEMES = {
+    birthday: { bg: '#fff1f7', ribbon: '🎈 🎉 🎂 🎁 🎈' }, eid: { bg: '#f0fdf4', ribbon: '🌙 ✨ Eid Mubarak ✨ 🌙' }, ramadan: { bg: '#f5f3ff', ribbon: '🌙 Ramadan Kareem 🌙' },
+    winter: { bg: '#eff6ff', ribbon: '❄️ Winter collection ❄️' }, valentine: { bg: '#fff1f2', ribbon: '❤️ 💝 ❤️' }, pohela: { bg: '#fff7ed', ribbon: '🌼 শুভ নববর্ষ 🌼' },
+    victory: { bg: '#f0fdf4', ribbon: '🇧🇩 Victory Day 🇧🇩' }, sale: { bg: '#fefce8', ribbon: '🔥 BIG SALE 🔥' }, wedding: { bg: '#fffbeb', ribbon: '💍 ✨ 💐' },
+  };
+
   var hex = function (v) { return /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v || '') ? v : ''; };
   var th = THEMES[d.theme] || null;
   var R = { square: '4px', soft: '10px', round: '16px', pill: '999px' }[d.radius] || '';
