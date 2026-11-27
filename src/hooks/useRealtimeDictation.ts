@@ -1,3 +1,5 @@
+import { openQuietMic, type QuietMic } from '../lib/quietMic';
+import { premiumStt } from '../lib/premium';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createTranscribeSocket } from '../lib/clientApi';
 import { TiyaSettings } from '../types/tiya';
@@ -120,6 +122,7 @@ export function useRealtimeDictation({
 }: UseRealtimeDictationOptions): UseRealtimeDictationResult {
   const [isRecordingMic, setIsRecordingMic] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const premMicRef = useRef<QuietMic | null>(null);
   const [micError, setMicError] = useState('');
 
   const settingsRef = useRef(settings);
@@ -285,6 +288,16 @@ export function useRealtimeDictation({
   }, []);
 
   const stopMicInput = useCallback(async (): Promise<string> => {
+    // ROSE PREMIUM dictation (no own key): send the last words, then close the mic
+    if (premMicRef.current) {
+      const mic = premMicRef.current;
+      premMicRef.current = null;
+      mic.flush();
+      mic.close();
+      isRecordingRef.current = false;
+      setIsRecordingMic(false);
+      return bufferRef.current.getValue();
+    }
     if (!isRecordingRef.current && activeEngineRef.current === 'none') {
       return bufferRef.current.getValue();
     }
@@ -893,8 +906,36 @@ export function useRealtimeDictation({
       const groqKey = currentSettings.providerConnections?.groq?.apiKey?.trim() || '';
       const hasWebSpeech = getBrowserSpeechRecognitionCtor() !== null;
 
-      if (!geminiKey && !groqKey && !hasWebSpeech) {
-        setMicError('No API key. Add your key in Connections.');
+      // No own key: Premium customers and the admin dictate through the ROSE server (the mic stays open,
+      // each sentence is turned into text when he pauses). Others get the server's clear message.
+      if (!geminiKey && !groqKey) {
+        let acc = currentInput;
+        try {
+          const mic = await openQuietMic(async (wav) => {
+            setIsTranscribing(true);
+            const r = await premiumStt(wav, String(settingsRef.current.language || 'Bengali'));
+            setIsTranscribing(false);
+            if (r.ok && r.text) {
+              acc = acc.trim() ? `${acc.trim()} ${r.text}` : r.text;
+              bufferRef.current.reset(acc);
+              onTranscriptChangeRef.current(acc);
+            } else if (!r.ok) {
+              setMicError(r.message || 'শুনতে সমস্যা হলো।');
+            }
+          });
+          bufferRef.current.reset(currentInput);
+          premMicRef.current = mic;
+          mic.setListening(true);
+          isRecordingRef.current = true;
+          setIsRecordingMic(true);
+        } catch {
+          if (!hasWebSpeech) setMicError('মাইক চালু করা যায়নি। মাইকের অনুমতি দিন, অথবা Connections-এ নিজের ফ্রি key দিন।');
+          else {
+            sessionIdRef.current += 1;
+            bufferRef.current.reset(currentInput);
+            startWebSpeechFallback(sessionIdRef.current);
+          }
+        }
         return;
       }
 

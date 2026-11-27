@@ -7,6 +7,8 @@
 export type QuietMic = {
   /** true = waiting for him to talk; false = ignore the mic (ROSE is thinking or speaking) */
   setListening: (on: boolean) => void;
+  /** send what he is saying right now (when he taps stop in the middle of a sentence) */
+  flush: () => void;
   close: () => void;
 };
 
@@ -74,6 +76,11 @@ export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?:
   return {
     setListening: (on) => {
       listening = on;
+    },
+    flush: () => {
+      if (talking && spokeFor - quietFor >= 350) onSpeech(toWav16k(chunks, rate));
+      talking = false;
+      chunks = [];
     },
     close: () => {
       listening = false;
