@@ -81,7 +81,7 @@ import {
 } from './components/settings/AboutLookPhonePages';
 import { PrivacyControlsPage } from './components/settings/DeveloperPrivacyPages';
 import { WorkspacePage } from './components/workspace/WorkspacePage';
-import { DesktopDashboard, DesktopRosePanel, DesktopTab, DesktopTeam, DesktopTopBar } from './components/desktop/DesktopHub';
+import { DesktopDashboard, DesktopRosePanel, DesktopSideNav, DesktopTab, DesktopTeam, DesktopTopBar } from './components/desktop/DesktopHub';
 import { WriterPanel } from './components/desktop/WriterPanel';
 import { agentById, parseAgentCommand, runAgentTask } from './lib/agents';
 import { clearModeContext, refreshModeContext, refreshParcelsContext } from './utils/modeContext';
@@ -1952,6 +1952,8 @@ export default function App() {
     return () => mq.removeEventListener?.('change', on);
   }, []);
   const [desktopTab, setDesktopTab] = useState<DesktopTab>('dashboard');
+  // PC left menu: ☰ shows / hides it
+  const [pcMenu, setPcMenu] = useState(true);
   const [writerInbox, setWriterInbox] = useState<string | null>(null);
   const [adminView, setAdminView] = useState<string>('dashboard');
   // PC (wide window) shows the PC dashboard he designed; phones and small windows keep the mobile app (Nov 27)
@@ -1980,7 +1982,7 @@ export default function App() {
     <div
       className={`${
         desktopMode
-          ? 'relative isolate grid h-[100dvh] w-full grid-cols-[minmax(0,1fr)_380px] grid-rows-[auto_minmax(0,1fr)] gap-3 bg-[#07060F] p-3'
+          ? 'relative isolate grid h-[100dvh] w-full grid-cols-[auto_minmax(0,1fr)_380px] grid-rows-[auto_minmax(0,1fr)] gap-3 bg-[#07060F] p-3'
           : 'flex min-h-[100dvh] w-full items-center justify-center gap-4 bg-[#05070B] pc:p-3'
       } ${settings.reduceMotion ? 'reduce-motion' : ''}`}
     >
@@ -1992,22 +1994,7 @@ export default function App() {
       {desktopMode && session?.user && (
         <>
           <DesktopTopBar
-            tab={desktopTab}
-            onTab={(t) => {
-              if (t !== 'admin') setShowAdminScreen(false);
-              setDesktopTab(t);
-              if (t === 'app') {
-                setShowAdminScreen(false);
-                setShowMotivationScreen(false);
-                navigateTo('settings', 'hub', null);
-              }
-            }}
-            isAdmin={isAdmin}
-            onAdmin={() => {
-              setDesktopTab('admin');
-              setShowMotivationScreen(false);
-              setShowAdminScreen(true);
-            }}
+            onMenu={() => setPcMenu((v) => !v)}
             unread={unreadNotifications}
             onBell={() => {
               setDesktopTab('app');
@@ -2025,8 +2012,35 @@ export default function App() {
             avatar={(session.user.user_metadata as any)?.avatar_url || null}
             onSignOut={handleSignOut}
           />
+          {pcMenu ? (
+            <DesktopSideNav
+              active={desktopTab === 'admin' ? 'admin' : desktopTab === 'writer' ? 'writer' : desktopTab === 'app' ? (settingsPage === 'workspace' ? 'website' : 'bars') : 'dashboard'}
+              isAdmin={isAdmin}
+              onSignOut={handleSignOut}
+              onPick={(k) => {
+                setShowMotivationScreen(false);
+                if (k === 'admin') {
+                  setDesktopTab('admin');
+                  setShowAdminScreen(true);
+                  return;
+                }
+                setShowAdminScreen(false);
+                if (k === 'dashboard') setDesktopTab('dashboard');
+                else if (k === 'writer') setDesktopTab('writer');
+                else if (k === 'website') {
+                  setDesktopTab('app');
+                  navigateTo('settings', 'workspace', 'store');
+                } else {
+                  setDesktopTab('app');
+                  navigateTo('settings', 'hub', null);
+                }
+              }}
+            />
+          ) : (
+            <span className="col-start-1 row-start-2" />
+          )}
           {desktopTab === 'admin' && (
-            <div className="col-start-1 row-start-2 flex min-h-0 w-[330px] flex-col overflow-hidden rounded-[10px] border border-amber-300/20 bg-[#0D0B1A]">
+            <div className="col-start-2 row-start-2 flex min-h-0 w-[330px] flex-col overflow-hidden rounded-[10px] border border-amber-300/20 bg-[#0D0B1A]">
               <AdminScreen
                 navOnly
                 activeView={showMotivationScreen ? 'motivation' : adminView}
@@ -2052,7 +2066,7 @@ export default function App() {
             </div>
           )}
           {desktopTab === 'app' && (
-            <div className="col-start-1 row-start-2 flex min-h-0 w-[330px] flex-col overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]">
+            <div className="col-start-2 row-start-2 flex min-h-0 w-[330px] flex-col overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#0D0B1A]">
               <SettingsHub
                 settings={settings}
                 profile={profile}
@@ -2070,9 +2084,19 @@ export default function App() {
             </div>
           )}
           {desktopTab !== 'app' && desktopTab !== 'admin' && (
-            <div className="col-start-1 row-start-2 min-h-0">
+            <div className="col-start-2 row-start-2 min-h-0">
               {desktopTab === 'dashboard' ? (
-                <DesktopDashboard userId={session.user.id} isAdmin={isAdmin} onOpenTeam={() => setDesktopTab('team')} />
+                <DesktopDashboard
+                  userId={session.user.id}
+                  isAdmin={isAdmin}
+                  onOpenTeam={() => setDesktopTab('team')}
+                  onAction={(k) => {
+                    setShowAdminScreen(false);
+                    setDesktopTab('app');
+                    if (k === 'bars') navigateTo('settings', 'hub', null);
+                    else navigateTo('settings', 'workspace', k === 'shop' ? 'hub' : 'store');
+                  }}
+                />
               ) : desktopTab === 'writer' ? (
                 <WriterPanel initialText={writerInbox} onUsed={() => setWriterInbox(null)} />
               ) : (
@@ -2083,7 +2107,7 @@ export default function App() {
         </>
       )}
       {/* Portrait Phone Container */}
-      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 pc:h-[min(calc(100dvh-24px),900px)] pc:max-w-[420px] pc:lg:!max-w-[760px] pc:rounded-[28px] pc:border pc:border-white/[0.12] pc:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' || desktopTab === 'admin' ? 'col-start-1 row-start-2 ml-[342px] !w-auto pc:!h-full pc:!max-w-none pc:!rounded-[10px]' : 'hidden') : ''}`}>
+      <main className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 text-slate-900 pc:h-[min(calc(100dvh-24px),900px)] pc:max-w-[420px] pc:lg:!max-w-[760px] pc:rounded-[28px] pc:border pc:border-white/[0.12] pc:shadow-2xl dark:bg-[#090B10] dark:text-[#F4F5F7] ${desktopMode ? (desktopTab === 'app' || desktopTab === 'admin' ? 'col-start-2 row-start-2 ml-[342px] !w-auto pc:!h-full pc:!max-w-none pc:!rounded-[10px]' : 'hidden') : ''}`}>
         {!authReady ? (
           <div className="flex flex-1 items-center justify-center text-xs text-slate-500 dark:text-slate-400">
             Loading ROSE...
@@ -2434,7 +2458,7 @@ export default function App() {
 
       {/* PC: ROSE picture + chat box on the right */}
       {desktopMode && (
-        <div className="col-start-2 row-start-2 flex min-h-0">
+        <div className="col-start-3 row-start-2 flex min-h-0">
           <DesktopRosePanel
             messages={messages}
             isSending={isSendingChat}
