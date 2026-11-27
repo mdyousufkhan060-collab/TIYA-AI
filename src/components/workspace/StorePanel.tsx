@@ -1478,7 +1478,7 @@ const AdminFrame: React.FC<{
               <button key={k} type="button" onClick={() => pick(k)} data-testid={`store-${k}`} className={`mb-0.5 flex items-center gap-2.5 px-2 py-2 text-left text-[13px] ${current === k || (current === 'home' && k === 'dashboard') ? 'rounded-lg bg-emerald-600/15 font-bold text-emerald-400' : 'text-slate-200'}`}>
                 <span className="w-6 font-mono text-[10.5px] text-slate-500">{String(i + 1).padStart(2, '0')}</span>
                 <span className="text-[15px]">{icon}</span>
-                <span className="truncate">{title.charAt(0) + title.slice(1).toLowerCase().replace(/(^|\s|&)(\w)/g, (m) => m.toUpperCase())}</span>
+                <span className="truncate">{title.toLowerCase().replace(/(^|\s)(\w)/g, (m) => m.toUpperCase()).replace(/\bSeo\b/, 'SEO')}</span>
               </button>
             ))}
             {extra}
@@ -1520,7 +1520,11 @@ const AdminFrame: React.FC<{
         <div className="fixed inset-0 z-[70] flex lg:hidden">
           <div className="flex h-full w-[82%] max-w-[300px] flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5">
             <div className="mb-2 flex items-center justify-between">
-              <div className="flex min-w-0 items-center gap-1.5">{brand}</div>
+              {/* ☰ menu top: ROSE's own logo and name (the top bar keeps the shop's logo and name) */}
+              <div className="flex min-w-0 items-center gap-1.5">
+                <img src="/agents/rose.png?v=3" alt="ROSE" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                <div className="min-w-0 leading-tight"><p className="truncate text-[14px] font-extrabold text-white">ROSE</p><p className="truncate text-[10.5px] text-slate-400">myrosebd.com</p></div>
+              </div>
               <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center text-white"><X className="h-5 w-5" /></button>
             </div>
             {side}
