@@ -330,14 +330,17 @@ export const Landing: React.FC = () => {
             ))}
           </div>
           <div className="-mx-5 mt-6 flex gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {([['foodbazaar', '🍔', 'Food'], ['fashionhub', '👕', 'Fashion'], ['sotadari', '🛒', 'Grocery'], ['shopshotoi', '🛍️', 'Market'], ['homenest', '🛋️', 'Furniture'], ['medicare', '💊', 'Pharmacy'], ['printpack', '📦', 'Packaging']] as Array<[string, string, string]>).map(([k, ic, l]) => (
-              <div key={k} className="w-40 shrink-0 rounded-[4px] border border-white/[0.08] bg-black p-3">
-                <p className="text-2xl">{ic}</p>
-                <p className="mt-1 text-sm font-bold">{l}</p>
-                {/* two clear buttons with space between, so a finger never hits the wrong one (phone: one above the other) */}
-                <div className="mt-3 grid grid-cols-1 gap-2 text-[12px] font-bold pc:grid-cols-2">
-                  <a href={`/demos/store.html?s=${k}`} className="flex h-10 items-center justify-center rounded-[4px] border border-teal-400/60 bg-teal-500/10 text-teal-300">OPEN</a>
-                  <a href={`/demo-admin?s=${k}`} className="flex h-10 items-center justify-center rounded-[4px] border border-pink-400/60 bg-pink-500/10 text-pink-300">ADMIN</a>
+            {([['foodbazaar', '🍔', 'Food', 'photo-1568901346375-23c9450c58cd'], ['fashionhub', '👕', 'Fashion', 'photo-1521572163474-6864f9cf17ab'], ['sotadari', '🛒', 'Grocery', 'photo-1488459716781-31db52582fe9'], ['shopshotoi', '🛍️', 'Market', 'photo-1788458131906-d0878ba5fa4d'], ['homenest', '🛋️', 'Furniture', 'photo-1583847268964-b28dc8f51f92'], ['medicare', '💊', 'Pharmacy', 'photo-1607874963930-2edecc67a25a'], ['printpack', '📦', 'Packaging', 'photo-1621252756235-7f37e5e5125e']] as Array<[string, string, string, string]>).map(([k, ic, l, ph]) => (
+              <div key={k} className="w-48 shrink-0 overflow-hidden rounded-[6px] border border-white/[0.1] bg-[#0d1117]">
+                {/* a product photo of that demo shop, so each card shows what the website sells */}
+                <a href={`/demos/store.html?s=${k}`} className="relative block h-28 bg-white/5">
+                  <img src={`https://images.unsplash.com/${ph}?auto=format&fit=crop&q=70&w=400`} alt={`${l} demo website`} loading="lazy" className="h-full w-full object-cover" />
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2.5 pb-1.5 pt-6 text-[14px] font-bold text-white">{ic} {l}</span>
+                </a>
+                {/* OPEN on the left, ADMIN on the right, with space between */}
+                <div className="grid grid-cols-2 gap-2 p-2.5 text-[11px] font-bold">
+                  <a href={`/demos/store.html?s=${k}`} className="flex h-9 items-center justify-center rounded-[4px] border border-teal-400/60 bg-teal-500/10 text-teal-300">OPEN</a>
+                  <a href={`/demo-admin?s=${k}`} className="flex h-9 items-center justify-center rounded-[4px] border border-pink-400/60 bg-pink-500/10 text-pink-300">ADMIN</a>
                 </div>
               </div>
             ))}
