@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LanguageOption, VoiceState } from '../types/tiya';
-import { premiumChat, premiumTts, type PremiumChatMessage } from '../lib/premium';
+import { premiumChat, premiumStt, premiumTts, type PremiumChatMessage } from '../lib/premium';
+import { openQuietMic, type QuietMic } from '../lib/quietMic';
 import { fadePcm } from '../lib/pcmFade';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -73,8 +74,11 @@ export function usePremiumVoice(opts: Options) {
   const recRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const micRef = useRef<QuietMic | null>(null);
   const stop = useCallback(() => {
     activeRef.current = false;
+    micRef.current?.close();
+    micRef.current = null;
     try {
       recRef.current?.abort?.();
     } catch {
@@ -95,7 +99,19 @@ export function usePremiumVoice(opts: Options) {
     if (speakToChat) optsRef.current.onAppend('assistant', msg);
   }, []);
 
+  // quiet mic open: just start waiting for his words (no phone beep); otherwise the speech recognizer
   const listen = useCallback(() => {
+    if (!activeRef.current) return;
+    if (micRef.current) {
+      micRef.current.setListening(true);
+      setState('listening');
+      return;
+    }
+    listenSR();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const listenSR = useCallback(() => {
     if (!activeRef.current) return;
     const w = window as any;
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
@@ -161,7 +177,9 @@ export function usePremiumVoice(opts: Options) {
               '\n\nVOICE MODE: reply in 1-3 short spoken sentences, no lists, no markdown, never write tool names or JSON in the words.' +
               '\nPHONE ACTIONS: use the trigger_phone_action tool for every phone task (open an app, screen items, tap item <n>, scroll, type, ' +
               'read screen, comments, calls, messages). After a tool, the app sends the result as "[App result]"; read it and call the next ' +
-              'step yourself until the task is done, one step at a time. Never say a step is done before its result says so.',
+              'step yourself until the task is done, one step at a time. Never say a step is done before its result says so.' +
+              '\nORDER: first OPEN the app (open_app with app "Facebook", "YouTube"...; for his Facebook comments use app "open latest post comments"), ' +
+              'then use "screen items" / "tap item <n>" inside it. Never use "read screen" or "screen items" while ROSE itself (com.myrosebd.rose) is on the screen.',
           },
           ...history,
           { role: 'user', content: note ? `[App result, not his words] ${input}` : input },
@@ -229,6 +247,7 @@ export function usePremiumVoice(opts: Options) {
   const pendingRef = useRef(false);
   const answer = useCallback(
     async (heard: string) => {
+      micRef.current?.setListening(false);
       optsRef.current.onAppend('user', heard);
       stepsRef.current = 0;
       await runTurn(heard, false);
@@ -245,6 +264,7 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       pendingRef.current = true;
+      micRef.current?.setListening(false);
       try {
         recRef.current?.abort?.();
       } catch {
@@ -272,7 +292,26 @@ export function usePremiumVoice(opts: Options) {
     setErrorText('');
     activeRef.current = true;
     setState('connecting');
-    listen();
+    // open the mic once for the whole talk; if the phone does not allow it, use the speech recognizer
+    void openQuietMic(async (wav) => {
+      if (!activeRef.current) return;
+      micRef.current?.setListening(false);
+      setState('thinking');
+      const r = await premiumStt(wav, optsRef.current.language);
+      if (!activeRef.current) return;
+      if (r.ok && r.text) void answer(r.text);
+      else listen();
+    })
+      .then((mic) => {
+        if (!activeRef.current) {
+          mic.close();
+          return;
+        }
+        micRef.current = mic;
+        listen();
+      })
+      .catch(() => listen());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listen]);
 
   const toggle = useCallback(() => {

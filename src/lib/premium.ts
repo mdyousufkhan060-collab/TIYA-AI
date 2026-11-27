@@ -137,3 +137,14 @@ export async function premiumTts(
     return { ok: false, message: 'নেট সংযোগে সমস্যা।' };
   }
 }
+
+/** ROSE PREMIUM listening: his words (16 kHz WAV, base64) to text on the server. No credit is used for this. */
+export async function premiumStt(wavB64: string, language: string): Promise<{ ok: boolean; text?: string; message?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('tiya-premium', { body: { action: 'stt', audio: wavB64, language } });
+    if (error) return { ok: false, message: 'শুনতে সমস্যা হলো।' };
+    return { ok: Boolean(data?.ok), text: String(data?.text || '').trim(), message: data?.message };
+  } catch {
+    return { ok: false, message: 'নেট সংযোগে সমস্যা।' };
+  }
+}
