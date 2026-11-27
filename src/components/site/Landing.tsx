@@ -142,14 +142,48 @@ export const Landing: React.FC = () => {
     setInstallEvt(null);
   };
 
-  const nav = [
-    ['Features', '#features'],
-    ['Modes', '#modes'],
-    ['Pricing', '#pricing'],
-    ['Online Store', '/demos'],
-    ['Download', '#download'],
-    ['FAQ', '#faq'],
+  // one long page: every button jumps to its part, and plain scrolling shows everything in this order
+  const nav: Array<[string, string]> = [
+    ['Home', 'top'],
+    ['ROSE AI', 'features'],
+    ['Modes', 'modes'],
+    ['Website Builder', 'store'],
+    ['Videos', 'videos'],
+    ['Pricing', 'pricing'],
+    ['Download', 'download'],
+    ['FAQ', 'faq'],
+    ['Contact', 'contact'],
   ];
+  const [active, setActive] = useState('top');
+  const [contactOpen, setContactOpen] = useState(false);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const chipsRef = React.useRef<HTMLDivElement>(null);
+  const go = (id: string) => {
+    const box = scrollRef.current;
+    const el = document.getElementById(id);
+    if (!box || !el) return;
+    box.scrollTo({ top: id === 'top' ? 0 : el.offsetTop - 104, behavior: 'smooth' });
+  };
+  useEffect(() => {
+    const box = scrollRef.current;
+    if (!box) return;
+    const on = () => {
+      let cur = 'top';
+      for (const [, id] of nav) {
+        const el = document.getElementById(id);
+        if (el && el.offsetTop - 120 <= box.scrollTop) cur = id;
+      }
+      setActive((a) => (a === cur ? a : cur));
+    };
+    box.addEventListener('scroll', on, { passive: true });
+    return () => box.removeEventListener('scroll', on);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    const chip = chipsRef.current?.querySelector(`[data-id="${active}"]`) as HTMLElement | null;
+    chip?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  }, [active]);
+
 
   const btnMain =
     'inline-flex h-12 items-center justify-center gap-2 rounded-[4px] bg-[#FF4D8D] px-6 text-sm font-bold tracking-wide text-white shadow-[0_0_30px_-6px_#FF4D8D] active:scale-[0.98]';
@@ -157,48 +191,52 @@ export const Landing: React.FC = () => {
     'inline-flex h-12 items-center justify-center gap-2 rounded-[4px] border border-white/20 px-6 text-sm font-semibold text-white hover:bg-white/5';
 
   return (
-    <div className="h-[100dvh] overflow-y-auto bg-black text-white [scroll-behavior:smooth]" style={{ fontFamily: "'DM Sans', 'Noto Sans Bengali', sans-serif" }}>
-      {/* NAV */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-black/70 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-          <a href="#top" className="flex items-center gap-2">
+    <div ref={scrollRef} className="h-[100dvh] overflow-y-auto overscroll-y-contain bg-black text-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ fontFamily: "'DM Sans', 'Noto Sans Bengali', sans-serif", WebkitOverflowScrolling: 'touch' }}>
+      {/* NAV: logo row + the section buttons (they stay on top while scrolling) */}
+      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-black/85 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
+          <button type="button" onClick={() => go('top')} className="flex items-center gap-2">
             <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[6px]" />
             <span className="text-lg font-extrabold tracking-[0.25em]">ROSE</span>
+            <span className="hidden text-[11px] text-slate-500 sm:inline">myrosebd.com</span>
+          </button>
+          <a href={APP_URL} className="inline-flex h-9 items-center rounded-[4px] bg-white px-4 text-xs font-bold text-black">
+            {signedIn ? 'OPEN ROSE' : 'GET STARTED'}
           </a>
-          <nav className="hidden items-center gap-7 text-sm text-slate-300 md:flex">
-            {nav.map(([l, h]) => (
-              <a key={l} href={h} className="hover:text-white">
-                {l}
-              </a>
-            ))}
-          </nav>
-          <div className="flex items-center gap-2">
-            <a href={APP_URL} className="inline-flex h-10 items-center rounded-[4px] bg-white px-4 text-xs font-bold text-black">
-              {signedIn ? 'OPEN ROSE' : 'GET STARTED'}
-            </a>
-            <button type="button" aria-label="Menu" onClick={() => setMenu((m) => !m)} className="flex h-10 w-10 items-center justify-center md:hidden">
-              {menu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
         </div>
-        {menu && (
-          <div className="border-t border-white/10 bg-black px-5 py-3 md:hidden">
-            {nav.map(([l, h]) => (
-              <a key={l} href={h} onClick={() => setMenu(false)} className="block py-2.5 text-sm text-slate-200">
-                {l}
-              </a>
-            ))}
-            <a href={APP_URL} className="mt-2 flex h-11 items-center justify-center rounded-[4px] bg-white text-xs font-bold text-black">
-              GET STARTED
-            </a>
-          </div>
-        )}
+        <div ref={chipsRef} className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-5 pb-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center">
+          {nav.map(([l, id]) => (
+            <button
+              key={id}
+              type="button"
+              data-id={id}
+              onClick={() => go(id)}
+              className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${active === id ? 'border-pink-400 bg-pink-500/15 text-pink-200' : 'border-white/15 text-slate-300 hover:text-white'}`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
       </header>
 
       {/* HERO */}
       <section id="top" className="relative overflow-hidden">
+        {/* BANNER 2560 x 1440: a computer shows all of it, a phone the middle; keep words and faces in the middle */}
+        <div className="relative mx-auto max-w-[1600px] overflow-hidden bg-[radial-gradient(ellipse_at_70%_20%,rgba(255,77,141,0.35),transparent_60%),radial-gradient(ellipse_at_20%_80%,rgba(45,212,191,0.25),transparent_55%)]">
+          <img
+            src="/banner.jpg"
+            alt="ROSE · Bangla voice AI assistant"
+            className="block aspect-[16/9] max-h-[640px] w-full object-cover md:aspect-[2560/900]"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}
+          />
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+            <p className="text-[11px] font-bold tracking-[0.35em] text-pink-200 [text-shadow:0_2px_12px_#000]">MADE IN BANGLADESH</p>
+            <p className="mt-2 text-3xl font-extrabold [text-shadow:0_2px_16px_#000] md:text-6xl">ROSE</p>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black to-transparent" />
+        </div>
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,rgba(255,77,141,0.25),transparent_55%),radial-gradient(ellipse_at_20%_80%,rgba(45,212,191,0.15),transparent_50%)]" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 pb-16 pt-0 md:grid-cols-2 md:gap-10 md:pt-20">
+        <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 pb-16 pt-6 md:grid-cols-2 md:gap-10 md:pt-12">
           <div>
             <p className="inline-flex items-center gap-2 rounded-[3px] border border-white/15 px-3 py-1 text-[11px] font-semibold tracking-widest text-pink-200">
               <span className="h-1.5 w-1.5 rounded-full bg-pink-400" /> MADE IN BANGLADESH
@@ -221,7 +259,7 @@ export const Landing: React.FC = () => {
             </div>
             <p className="mt-4 text-xs text-slate-500">Sign in with Google · No credit card · Works on any phone</p>
           </div>
-          <div className="relative order-first -mx-5 md:order-none md:mx-auto md:w-full md:max-w-sm">
+          <div className="relative hidden md:mx-auto md:block md:w-full md:max-w-sm">
             <div className="absolute -inset-6 hidden rounded-full bg-pink-500/20 blur-3xl md:block" />
             <div className="relative overflow-hidden md:rounded-[6px] md:border md:border-white/10 md:shadow-2xl">
               <img src="/tiya-home.jpg?v=3" alt="ROSE app home screen" className="block aspect-[9/16] w-full object-cover" />
@@ -279,6 +317,39 @@ export const Landing: React.FC = () => {
           "It isn't a feature list.
           <span className="block text-pink-300">It's someone who listens."</span>
         </p>
+      </section>
+
+      {/* WEBSITE BUILDER */}
+      <section id="store" className="border-y border-white/[0.06] bg-[#06070B]">
+        <div className="mx-auto max-w-6xl px-5 py-16">
+          <p className="text-xs font-bold tracking-[0.3em] text-teal-300">WEBSITE BUILDER</p>
+          <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">Your online store, ready in minutes.</h2>
+          <p className="mt-2 text-sm text-slate-300">Cash on delivery, bKash, Nagad and courier booking. আপনার নিজের অনলাইন দোকান, কয়েক মিনিটে।</p>
+          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {['Pick a design you like', 'Start the 5-day free trial', 'Add your logo and products', 'Go live on yourshop.myrosebd.com or your own domain'].map((t, i) => (
+              <div key={t} className="rounded-[4px] border border-white/[0.08] bg-black p-4">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-400 text-sm font-extrabold text-black">{i + 1}</span>
+                <p className="mt-3 text-sm font-semibold">{t}</p>
+              </div>
+            ))}
+          </div>
+          <div className="-mx-5 mt-6 flex gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {([['foodbazaar', '🍔', 'Food'], ['fashionhub', '👕', 'Fashion'], ['sotadari', '🛒', 'Grocery'], ['shopshotoi', '🛍️', 'Market'], ['homenest', '🛋️', 'Furniture'], ['medicare', '💊', 'Pharmacy'], ['printpack', '📦', 'Packaging']] as Array<[string, string, string]>).map(([k, ic, l]) => (
+              <div key={k} className="w-40 shrink-0 rounded-[4px] border border-white/[0.08] bg-black p-3">
+                <p className="text-2xl">{ic}</p>
+                <p className="mt-1 text-sm font-bold">{l}</p>
+                <div className="mt-2 flex gap-2 text-[11px] font-bold">
+                  <a href={`/demos/store.html?s=${k}`} className="text-teal-300">OPEN</a>
+                  <a href={`/demo-admin?s=${k}`} className="text-pink-300">ADMIN</a>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a href="/start" className={btnMain}>Start 5-day free trial <ArrowRight className="h-4 w-4" /></a>
+            <a href="/demos" className={btnGhost}>See all demos</a>
+          </div>
+        </div>
       </section>
 
       {/* VIDEOS */}
@@ -467,41 +538,45 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-white/[0.06] px-5 py-10 text-xs text-slate-500">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/icons/icon-192.png" alt="" className="h-6 w-6 rounded-[4px]" />
-            <span className="font-bold tracking-[0.25em] text-slate-300">ROSE</span>
-            <span>© {new Date().getFullYear()} {devs?.[0]?.full_name || 'MD Yousuf Khan'}</span>
+      {/* CONTACT + POLICIES */}
+      <footer id="contact" className="border-t border-white/[0.06] bg-[#06070B] px-5 py-12 text-sm text-slate-400">
+        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[6px]" />
+              <span className="text-lg font-extrabold tracking-[0.25em] text-white">ROSE</span>
+            </div>
+            <p className="mt-3 leading-relaxed">ROSE · {devs?.[0]?.full_name || 'MD Yousuf Khan'}<br />373/2 Modhubag, Moghbazar, Dhaka, Bangladesh</p>
+            <p className="mt-2">md.yousuf.khan060@gmail.com · info@myrosebd.com</p>
           </div>
-          <div className="flex flex-wrap gap-5">
-            <a href="/privacy.html" className="flex items-center gap-1 hover:text-white">
-              <Lock className="h-3 w-3" /> Privacy
-            </a>
-            <a href="/terms.html" className="flex items-center gap-1 hover:text-white">
-              <Lock className="h-3 w-3" /> Terms
-            </a>
-            <a href="/refund.html" className="hover:text-white">
-              Refund
-            </a>
-            <a href="/acceptable-use.html" className="hover:text-white">
-              Acceptable use
-            </a>
-            <a href="/policies.html" className="hover:text-white">
-              All policies
-            </a>
-            <a href="/delete-account.html" className="hover:text-white">
-              Delete account
-            </a>
-            <a href="/developers" className="hover:text-white">
-              Developers
-            </a>
-            <a href={`mailto:${devs?.[0]?.email || 'md.yousuf.khan060@gmail.com'}`} className="hover:text-white">
-              Contact
-            </a>
+          <div>
+            <p className="text-xs font-bold tracking-[0.3em] text-pink-300">CONTACT US</p>
+            <button type="button" onClick={() => setContactOpen((o) => !o)} className="mt-3 flex w-full items-center justify-between rounded-[4px] border border-white/15 px-4 py-3 text-left font-semibold text-white">
+              🎧 WhatsApp help <ChevronDown className={`h-4 w-4 transition-transform ${contactOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {contactOpen && (
+              <div className="mt-2 space-y-2">
+                {['8801719188777', '8801777885978'].map((n, i) => (
+                  <a key={n} href={`https://wa.me/${n}`} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-[4px] border border-white/10 bg-black px-4 py-2.5 text-white">
+                    <span>Help line {i + 1}</span><span className="text-emerald-300">Chat →</span>
+                  </a>
+                ))}
+              </div>
+            )}
+            <a href="/developers" className="mt-3 inline-block text-slate-300 underline">Meet the developers</a>
+          </div>
+          <div>
+            <p className="text-xs font-bold tracking-[0.3em] text-pink-300">POLICIES</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {([['Terms', '/terms.html'], ['Privacy', '/privacy.html'], ['Refund', '/refund.html'], ['Acceptable use', '/acceptable-use.html'], ['Delete account', '/delete-account.html'], ['All policies', '/policies.html']] as Array<[string, string]>).map(([l, h]) => (
+                <a key={l} href={h} className="flex items-center gap-1.5 rounded-[4px] border border-white/10 px-3 py-2 text-slate-200 hover:border-pink-400/50">
+                  <Lock className="h-3 w-3" /> {l}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
+        <p className="mx-auto mt-8 max-w-6xl text-xs text-slate-600">© {new Date().getFullYear()} ROSE · myrosebd.com · Made in Bangladesh</p>
       </footer>
     </div>
   );
