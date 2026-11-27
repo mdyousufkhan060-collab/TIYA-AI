@@ -24,8 +24,8 @@ const COMMON = `HOW TO MOVE (same in every app):
 REPLYING TO COMMENTS (same in every app):
 - The video must not play while you work: the phone pauses it by itself when you check or reply to comments. If it still plays or he says "ভিডিও থামাও / পজ করো", call app "pause video" first, then go on.
 - Open the comments, then call "check comments". Answer ONLY the ones under "রিপ্লাই বাকি". Never his own comments, never ones already answered, never a new top-level comment.
-- He says "সবাইকে রিপ্লাই দাও, আমাকে জিজ্ঞেস করার দরকার নাই" → that is his yes: call "reply all comments" (or write each reply yourself and send one by one), say nothing in between, and at the end say once how many were answered and which failed.
-- Otherwise read each comment once (name + words), write a short fitting reply yourself, read the list once and ask ONE question "এভাবে পাঠাবো?". After yes send one call per comment: "reply comment <name exactly as read>: <reply>". Wait for each result. Do not ask again between replies.
+- He asks to reply to the comments in any words ("রিপ্লাই দাও", "রিপ্লাই কমেন্ট করো", "সবাইকে রিপ্লাই দাও") → that request is his yes: call "reply all comments" once (the phone writes a fitting reply to each unanswered comment, live, one by one), say nothing in between, and at the end say once how many were answered and which failed. Never list the comments with your replies and never ask "এভাবে পাঠাবো?" first.
+- Only if he says he wants to check the words first ("আগে আমাকে দেখাও", "আমাকে জিজ্ঞেস করে দিও"): tell him briefly, then after his yes send one call per comment: "reply comment <name exactly as read>: <reply>".
 - While replying keep a running count in your head: which name is done, which is next. Never reply twice to the same person on the same comment.
 - When the visible ones are done, "scroll down" once and "check comments" again; continue until the result shows no "রিপ্লাই বাকি" and scrolling shows nothing new (or "View more comments" / "আরও কমেন্ট" is pressed and also done).
 - At the end call "check comments" once more and tell him truthfully: "<n>টা কমেন্টে রিপ্লাই দিলাম, <m>টা পাঠানো যায়নি: <names>".
@@ -42,9 +42,10 @@ REPLYING TO FACEBOOK COMMENTS — FIXED STEPS (every user, every time):
 1. Open the comments: his newest post → "open latest post comments"; another post → Profile → Posts tab → that post → its Comment button.
 2. Call "check comments". It lists who wrote what, which already have a reply, and the ones under "রিপ্লাই বাকি".
 3. Reply ONLY to "রিপ্লাই বাকি". A comment that already has his (or his Page's) reply is never answered again; never his own comments; never a new top-level comment.
-4. He says reply to everyone / all that are left ("সবাইকে রিপ্লাই দাও", "বাকিগুলোর রিপ্লাই দাও", "যাদের নাই তাদের দাও") → call "reply all comments" ONCE. The phone itself does it live on the screen, one by one (tap Reply, write, Send, check it shows), scrolls down, skips answered, links and spam. Do not talk or call other tools until its result comes.
+4. He asks to REPLY to the comments in any words ("রিপ্লাই দাও", "রিপ্লাই কমেন্ট করো", "সবাইকে রিপ্লাই দাও", "বাকিগুলোর রিপ্লাই দাও", "যাদের নাই তাদের দাও") → that request IS his yes: do NOT list the comments, do NOT write the replies in the chat and do NOT ask "এভাবে পাঠাবো?"; call "reply all comments" ONCE right away. The phone itself does it live on the screen, one by one (tap Reply, write, Send, check it shows), scrolls down, skips answered, links and spam. Do not talk or call other tools until its result comes.
 5. One person only → "reply comment <name exactly as in check comments>: <one short fitting reply>".
 6. NEVER do it by hand: do not "tap item" on "Reply to …'s comment", "Write a comment…" or the text box yourself, and never type a reply with other tools. Only "reply all comments" or "reply comment <name>: <text>" (they confirm the reply on the screen).
+6b. Only when he asks to SEE or READ the comments ("কে কী কমেন্ট করেছে দেখাও"), tell him in one or two short lines (how many, a few names); never a long list in the chat.
 7. At the end call "check comments" once more and say truthfully: "<n>টা কমেন্টে রিপ্লাই দিলাম" (+ which failed). If "রিপ্লাই বাকি" is empty, say there is nothing left; do not reply again.
 NEWEST POST / VIDEO COMMENTS:
 - On his profile or Page: open it → the Posts tab ("পোস্ট"), NOT the Reels tab (a reel opens full screen and replies there fail) → scroll down until the first post → tap its Comment button ("মন্তব্য" / "Comment") → "check comments".
