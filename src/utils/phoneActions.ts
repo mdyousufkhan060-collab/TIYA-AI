@@ -155,6 +155,33 @@ const APP_WEB_URLS: Array<[RegExp, string]> = [
   [/tik ?tok|টিকটক/i, 'https://www.tiktok.com/'],
 ];
 
+/**
+ * ROSE's own phone steps (reading the screen, tapping, replying to comments, gallery videos…) are not apps to open:
+ * the chat shows them as one small card with a plain title, without an extra "… খোলা হচ্ছে" bubble.
+ */
+const STEP_TITLES: Array<[RegExp, string]> = [
+  [/^screen items|^see screen|^look at screen|^read screen/i, 'Reading the screen'],
+  [/^tap item|^tap |^press /i, 'Tap'],
+  [/^scroll/i, 'Scroll'],
+  [/^go back|^back$/i, 'Back'],
+  [/^reply (to )?comment/i, 'Reply to comment'],
+  [/^(check|read|show) (new )?comments?|^open (my )?(latest|first|newest)/i, 'Comments'],
+  [/^(list|show|count) (gallery )?videos|^gallery videos/i, 'Gallery videos'],
+  [/^(prepare|describe|check) video/i, 'Video words'],
+  [/^video words/i, 'Video words'],
+  [/^publish video/i, 'Publish video'],
+  [/^delete videos/i, 'Delete videos'],
+  [/^(read|new|latest) (messages|notifications)|^check (whatsapp|messenger|imo|telegram)/i, 'Messages'],
+  [/^open (whatsapp |messenger |imo |telegram |sms )?chat/i, 'Open chat'],
+  [/^reply (to )?|^sms (to )?/i, 'Send message'],
+  [/^(end|cut|hang up)/i, 'End call'],
+];
+export function phoneStepTitle(action: PhoneAction): string | null {
+  if (action.action !== 'open_app') return null;
+  const hit = STEP_TITLES.find(([re]) => re.test(action.app.trim()));
+  return hit ? hit[1] : null;
+}
+
 export function requiresConfirmation(action: PhoneAction): boolean {
   return (
     action.action === 'call' ||

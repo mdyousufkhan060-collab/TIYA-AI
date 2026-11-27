@@ -6,6 +6,7 @@ import { TiyaNeonNav } from './TiyaNeonNav';
 import { MessageActions } from './MessageActions';
 import { ReportSheet } from './ReportSheet';
 import { MiniFace } from './MiniFace';
+import { phoneStepTitle } from '../utils/phoneActions';
 
 interface ChatScreenProps {
   settings: TiyaSettings;
@@ -227,7 +228,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               ) : (
                 <MiniFace src="/agents/rose.png?v=3" name="ROSE" rose />
               )}
-              <div
+              {!(msg.pendingAction && phoneStepTitle(msg.pendingAction) && /খোলা হচ্ছে…?$/.test(msg.text.trim())) && <div
                 className={`max-w-[80vw] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed backdrop-blur-sm sm:max-w-[320px] ${
                   msg.role === 'user'
                     ? 'bg-gradient-to-br from-sky-500/90 to-blue-700/90 text-white'
@@ -235,9 +236,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 }`}
               >
                 <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+              </div>}
               </div>
-              </div>
-              {msg.role === 'assistant' && msg.text.trim() && (() => {
+              {msg.role === 'assistant' && msg.text.trim() && !(msg.pendingAction && phoneStepTitle(msg.pendingAction) && /খোলা হচ্ছে…?$/.test(msg.text.trim())) && (() => {
                 const i = messages.findIndex((m) => m.id === msg.id);
                 const prevUser = [...messages.slice(0, i)].reverse().find((m) => m.role === 'user');
                 return (

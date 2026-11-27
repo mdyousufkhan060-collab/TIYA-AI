@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, ExternalLink, Package, Phone, MessageSquare, Search, Smartphone, X } from 'lucide-react';
 import { ActionStatus, PhoneAction } from '../types/tiya';
-import { getConfirmationPromptText } from '../utils/phoneActions';
+import { getConfirmationPromptText, phoneStepTitle } from '../utils/phoneActions';
 
 interface ActionConfirmCardProps {
   action: PhoneAction;
@@ -48,7 +48,7 @@ export const ActionConfirmCard: React.FC<ActionConfirmCardProps> = ({
   const getTitle = () => {
     switch (action.action) {
       case 'open_app':
-        return `Open ${action.app}`;
+        return phoneStepTitle(action) || `Open ${action.app}`;
       case 'call':
         return `Phone Call · ${action.contact}`;
       case 'whatsapp_call':
