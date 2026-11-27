@@ -149,7 +149,7 @@ export default function StartStorePage() {
   };
 
   const shell = (body: React.ReactNode, sub = true) => (
-    <div className="min-h-[100dvh] bg-[#07090D] px-4 py-3 text-white md:px-8 md:py-3">
+    <div className="h-[100dvh] overflow-y-auto overscroll-y-contain bg-[#07090D] px-4 py-3 pb-10 text-white md:px-8 md:py-3">
       <div className="mx-auto max-w-[1500px] space-y-2.5 md:space-y-3">
         <a href="/demos" className="text-[12px] font-bold text-teal-300">‹ All designs</a>
         <h1 className="text-xl font-extrabold md:flex md:items-baseline md:gap-3 md:text-2xl">Get your own store {sub && <span className="block text-[13px] font-semibold text-slate-400 md:text-[15px]">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span>}</h1>

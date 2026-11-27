@@ -513,7 +513,7 @@ type PriceRow = { plan: StorePlanId; monthly: number; stores: number; products: 
 const DISC: Record<number, number> = { 3: 0, 6: 5, 9: 10, 12: 15, 24: 25 };
 /** Terms of the one-time LIFETIME website (also shown on myrosebd.com/start) */
 export const LIFETIME_TERMS =
-  'One payment, the website is yours for life on myrosebd.com (1 store, PRO features). A small yearly hosting and maintenance charge applies, agreed with ROSE before payment. Domain fee is separate. ROSE app plans (voice and chat credits) are not included.';
+  'One payment of 26,000 Tk, the website is yours for life on myrosebd.com (1 store, PRO features). Domain and hosting are billed separately every year; the yearly amount is agreed with ROSE before payment (subject to conditions). Small problems and fixes on the website are solved free for life. Big changes or a new design are charged separately. ROSE app plans (voice and chat credits) are not included.';
 export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPlan?: string; startMonths?: number }> = ({ current, onPaid, startPlan, startMonths }) => {
   const [prices, setPrices] = useState<PriceRow[]>([]);
   const [lifePrice, setLifePrice] = useState(0);
