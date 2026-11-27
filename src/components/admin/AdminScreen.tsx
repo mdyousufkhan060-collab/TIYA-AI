@@ -36,6 +36,7 @@ import { AdminVideosPage, AdminGuidePage } from './AdminGuideVideos';
 import { AdminWebsiteBuilderDemo } from './AdminWebsiteBuilderDemo';
 import { AdminWebsiteAccessPage } from './AdminWebsiteAccessPage';
 import { AdminBrandCard, AdminBrandPage, AdminSiteSwitchesPage } from './AdminBrandPage';
+import { AdminSiteReviews } from './AdminSiteReviews';
 import { AdminDeletionRequestsPage, AdminOverviewTiles } from './AdminSystemPages';
 import { AdminAiKeyPage } from './AdminAiKeyPage';
 import { AdminSupportOpen } from '../workspace/StorePanel';
@@ -70,7 +71,8 @@ type AdminView =
   | 'brand'
   | 'site_switches'
   | 'ai_key'
-  | 'support_id';
+  | 'support_id'
+  | 'site_reviews';
 
 interface AdminScreenProps {
   settings: TiyaSettings;
@@ -700,6 +702,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               site_switches: '22 Site Switches',
               ai_key: '02 AI Key & Billing',
               support_id: '23 Support ID',
+              site_reviews: '24 Site Reviews',
               guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
@@ -754,6 +757,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="21" title="WEBSITE ACCESS" value="GMAIL" tone={activeView === 'website_access' ? 'accent' : 'default'} onClick={() => go('website_access')} testId="admin-bar-website-access" />
             <SettingsBar badge="22" title="SITE SWITCHES" value="ROSE BRANDING" tone={activeView === 'site_switches' ? 'accent' : 'default'} onClick={() => go('site_switches')} testId="admin-bar-site-switches" />
             <SettingsBar badge="23" title="SUPPORT ID" value="OPEN A SHOP" tone={activeView === 'support_id' ? 'accent' : 'default'} onClick={() => go('support_id')} testId="admin-bar-support-id" />
+            <SettingsBar badge="24" title="SITE REVIEWS" value="MYROSEBD.COM" tone={activeView === 'site_reviews' ? 'accent' : 'default'} onClick={() => go('site_reviews')} testId="admin-bar-site-reviews" />
           </div>
   );
 
@@ -863,6 +867,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'site_switches' && <AdminSiteSwitchesPage />}
         {view === 'ai_key' && <AdminAiKeyPage />}
         {view === 'support_id' && <AdminSupportOpen />}
+        {view === 'site_reviews' && <AdminSiteReviews />}
         {view === 'guide' && <AdminGuidePage onOpen={(v) => setView(v as AdminView)} />}
 
         {view === 'dashboard' && (

@@ -21,6 +21,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useDevelopers } from './DevelopersPage';
 import { YouTubeCard, useTutorialVideos } from '../TutorialVideos';
+import { SiteReviews } from './SiteReviews';
 
 /** Public website for ROSE (myrosebd.com). The app itself lives at /app. */
 
@@ -151,6 +152,7 @@ export const Landing: React.FC = () => {
     ['Videos', 'videos'],
     ['Pricing', 'pricing'],
     ['Download', 'download'],
+    ['Reviews', 'reviews'],
     ['FAQ', 'faq'],
     ['Contact', 'contact'],
   ];
@@ -200,7 +202,7 @@ export const Landing: React.FC = () => {
             <span className="text-lg font-extrabold tracking-[0.25em]">ROSE</span>
             <span className="hidden text-[11px] text-slate-500 sm:inline">myrosebd.com</span>
           </button>
-          <a href={APP_URL} className="inline-flex h-9 items-center rounded-[4px] bg-white px-4 text-xs font-bold text-black">
+          <a href={APP_URL} className="inline-flex h-9 items-center rounded-full bg-pink-500 px-5 text-xs font-bold text-white shadow-[0_0_24px_-6px_#FF4D8D] hover:bg-pink-400">
             {signedIn ? 'OPEN ROSE' : 'GET STARTED'}
           </a>
         </div>
@@ -251,6 +253,15 @@ export const Landing: React.FC = () => {
               </a>
             </div>
             <p className="mt-4 text-xs text-slate-500">Sign in with Google · No credit card · Works on any phone</p>
+            {/* quick facts */}
+            <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-2 sm:grid-cols-4">
+              {([['22', 'Languages'], ['12', 'Personalities'], ['7', 'Store designs'], ['24/7', 'Always here']] as Array<[string, string]>).map(([n, l]) => (
+                <div key={l} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-4">
+                  <p className="bg-gradient-to-r from-pink-300 to-teal-300 bg-clip-text text-2xl font-extrabold text-transparent md:text-3xl">{n}</p>
+                  <p className="mt-1 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">{l}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         </div>
@@ -499,6 +510,9 @@ export const Landing: React.FC = () => {
           </span>
         </a>
       </section>
+
+      {/* REVIEWS (own file: SiteReviews.tsx) */}
+      <SiteReviews />
 
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-3xl px-5 lg:px-10 pb-16">
