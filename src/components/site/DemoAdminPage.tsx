@@ -58,6 +58,15 @@ export default function DemoAdminPage() {
           is_admin: false, my_staff_stores: [], store_staff_list: [], courier_status: [], get_payment_info: { bkash: '01700000000' },
           // Ask ROSE in the demo: the design shows at once (nothing is saved)
           store_set_design: (x: { p_design?: Record<string, string> }) => x.p_design || {}, store_undo_design: {},
+          // ADD ORDER in the demo: the order shows in the list (nothing is saved)
+          admin_add_store_order: (x: Record<string, any>, t: Record<string, any[]>) => {
+            const items = (x.p_items || []).map((it: any) => { const p = t.store_products.find((y) => y.id === it.id) || {}; return { id: it.id, name: p.name, price: Number(p.price) || 0, q: it.q, opt: it.opt, img: (p.images || [])[0] || '' }; });
+            const sub = items.reduce((a: number, i: any) => a + i.price * i.q, 0);
+            const del = x.p_area === 'pickup' ? 0 : x.p_area === 'outside' ? 120 : 60;
+            const no = 2000 + t.store_orders.length;
+            t.store_orders.unshift({ id: `ord-${no}`, store_id: 'demo-store', order_no: no, customer_name: x.p_name, phone: x.p_phone, address: x.p_address, district: x.p_district, upazila: x.p_upazila, area: x.p_area === 'outside' ? 'outside' : 'inside', items, subtotal: sub, delivery: del, total: sub + del - (Number(x.p_discount) || 0), discount: Number(x.p_discount) || 0, payment_method: x.p_payment, trx_id: x.p_trx || '', status: 'new', note: 'Added by admin', created_at: new Date().toISOString(), email: '', payment_status: x.p_paid ? 'paid' : 'none' });
+            return { order_no: no };
+          },
           // REPORTS: worked out from the sample orders the same way the server does it
           store_report: (a: { p_from?: string; p_to?: string }, t: Record<string, any[]>) => {
             const from = a.p_from || '0000', to = a.p_to || '9999';

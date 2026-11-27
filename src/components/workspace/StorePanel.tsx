@@ -8,6 +8,7 @@ import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/
 import { AdminBrandPage } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
 import { DomainAccess } from './DomainAccess';
+import { AddOrderForm } from './AddOrderForm';
 import { INVOICE_SIZES, PRINT_CSS, invoiceDims, kgText, invoicePreviewHTML, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
 
 /**
@@ -1007,6 +1008,7 @@ const OrdersTab: React.FC<{ store: Store; readOnly?: boolean }> = ({ store, read
   const [edit, setEdit] = useState<Partial<Order> | null>(null);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState('');
+  const [adding, setAdding] = useState(false);
   const ps = (store.print_settings || {}) as PrintSettings;
   const load = useCallback(async () => {
     const { data } = await supabase.from('store_orders').select('*').eq('store_id', store.id).order('created_at', { ascending: false }).limit(200);
@@ -1088,8 +1090,22 @@ const OrdersTab: React.FC<{ store: Store; readOnly?: boolean }> = ({ store, read
     );
   }
 
+  if (adding)
+    return (
+      <AddOrderForm
+        store={store}
+        onClose={() => setAdding(false)}
+        onSaved={(no) => { setAdding(false); setMsg(no ? `Order #${no} added.` : 'Order added.'); void load(); }}
+      />
+    );
+
   return (
     <div className="space-y-2">
+      {!readOnly && (
+        <button type="button" onClick={() => { setMsg(''); setAdding(true); }} data-testid="store-add-order" className={btn + ' w-full'}>
+          <Plus className="h-4 w-4" /> ADD ORDER
+        </button>
+      )}
       <div className={box + ' grid grid-cols-2 gap-2 text-center'}>
         <div><p className="text-lg font-bold text-white">{today.length}</p><p className="text-[10.5px] text-slate-400">ORDERS TODAY</p></div>
         <div><p className="text-lg font-bold text-white">{tk(today.reduce((a, o) => a + Number(o.total), 0))}</p><p className="text-[10.5px] text-slate-400">SALES TODAY</p></div>

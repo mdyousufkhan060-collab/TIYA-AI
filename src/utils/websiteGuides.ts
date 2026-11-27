@@ -37,7 +37,7 @@ You cannot change layout, bars, footer, plans or anything outside this list; if 
 ANSWER FORMAT: reply ONLY with JSON: {"reply":"one or two short sentences in the owner's language","design":{...the full new design...}}. If the request is not about the look, put "design": null and explain in reply.`;
 
 export const STORE_ADMIN_GUIDE = `SHOP OWNER'S ADMIN (☰ menu; same on phone and computer):
-01 Dashboard: today's sales, orders, visitors. 02 Plan & Payment: trial days left, take or renew a plan. 03 Orders: new orders, confirm, courier, print, status.
+01 Dashboard: today's sales, orders, visitors. 02 Plan & Payment: trial days left, take or renew a plan. 03 Orders: new orders, confirm, courier, print, status; ADD ORDER (top) types an order that came by phone, Messenger or in the shop (customer, products with − / +, inside / outside Dhaka or pickup, COD / bKash / Nagad / Paid in shop, discount) and it joins the list as NEW.
 04 Products: add or edit products (photos, name, icon, category, price, old price, stock, sizes, description, SEO); the toggle shows or hides a product.
 05 Categories: + with an empty box shows ready categories to tap; write a name and + to make your own; tap the icon to change it; + CATEGORY BANNER adds a banner on top of that category's page.
 06 Homepage, Banners & Design: shop name, logo, colours, up to 8 main banners (they slide by themselves every 3 seconds), trust lines, note.
