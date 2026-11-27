@@ -499,7 +499,10 @@ export default function App() {
   const hasOwnVoiceKey = Boolean(
     settings.apiKey.trim() || (settings.providerConnections?.groq?.apiKey || '').trim(),
   );
-  const premiumVoiceMode = !hasOwnVoiceKey && isProfilePremium(profile);
+  // voice needs a Gemini key (Groq cannot speak). With no working own Gemini key, Premium customers and the
+  // admin talk through the ROSE PREMIUM server, so a Groq-only or broken key never leaves ROSE silent.
+  const ownGeminiVoice = Boolean(settings.apiKey.trim()) && settings.connectionStatus !== 'error';
+  const premiumVoiceMode = !ownGeminiVoice && (isAdmin || isProfilePremium(profile));
   const premiumVoice = usePremiumVoice({
     language: settings.language,
     voiceName: settings.voiceName,
@@ -1401,7 +1404,7 @@ export default function App() {
 
       const key = settings.apiKey.trim();
       // No own key: Premium customers (and the admin) use the ROSE PREMIUM server
-      const usePremiumServer = !key && (isAdmin || isProfilePremium(profile));
+      const usePremiumServer = (!key || settings.connectionStatus === 'error') && (isAdmin || isProfilePremium(profile));
       if (!key && !usePremiumServer) {
         setChatError('No API key. Settings > Connections: add your free key, or buy ROSE Premium credits.');
         return;
