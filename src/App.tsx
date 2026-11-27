@@ -513,7 +513,7 @@ export default function App() {
       messages
         .filter((m) => m.role === 'user' || m.role === 'assistant')
         .map((m) => ({ role: m.role as 'user' | 'assistant', text: m.text })),
-    onAppend: (role, text) => handleAppendVoiceMessage(role, text),
+    onAppend: (role, text, action) => handleAppendVoiceMessage(role, text, action),
     onCredits: (v, t) =>
       setProfile((prev) =>
         prev
@@ -534,6 +534,16 @@ export default function App() {
   const errorDetail = premiumVoiceMode ? '' : liveErrorDetail;
   const toggleVoice = premiumVoiceMode ? premiumVoice.toggle : liveToggleVoice;
   const premiumVoiceStop = premiumVoice.stop;
+  // a phone action finished: tell the voice that is running (Live, or ROSE PREMIUM step by step)
+  const premiumFeedbackRef = useRef(premiumVoice.feedback);
+  premiumFeedbackRef.current = premiumVoice.feedback;
+  const sendActionFeedback = useCallback(
+    (text: string) => {
+      if (premiumVoiceModeRef.current) premiumFeedbackRef.current(text);
+      else sendActionFeedbackToLive(text);
+    },
+    [sendActionFeedbackToLive],
+  );
   const stopVoice = useCallback(() => {
     liveStopVoice();
     premiumVoiceStop();
@@ -1009,7 +1019,7 @@ export default function App() {
                   : m,
               ),
             );
-            sendActionFeedbackToLive(`Action result: SUCCESS — "${action.query}" is now playing on YouTube.`);
+            sendActionFeedback(`Action result: SUCCESS — "${action.query}" is now playing on YouTube.`);
             return;
           }
         }
@@ -1036,11 +1046,11 @@ export default function App() {
         ),
       );
 
-      sendActionFeedbackToLive(
+      sendActionFeedback(
         `Action result: ${result.success ? 'SUCCESS' : 'FAILED'} — ${result.messageBn}`,
       );
     },
-    [sendActionFeedbackToLive, updateMessages],
+    [sendActionFeedback, updateMessages],
   );
 
   // Safe actions (open app, search YouTube/Google/Maps, close tabs) run at once.
@@ -1084,9 +1094,9 @@ export default function App() {
             : m,
         ),
       );
-      sendActionFeedbackToLive('User cancelled the phone action.');
+      sendActionFeedback('User cancelled the phone action.');
     },
-    [sendActionFeedbackToLive, updateMessages],
+    [sendActionFeedback, updateMessages],
   );
 
   // Voice "হ্যাঁ" / "না" answers the waiting Confirm card (calls and messages).

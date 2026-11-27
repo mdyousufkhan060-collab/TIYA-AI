@@ -9,6 +9,7 @@ export interface PremiumChatResult {
   message?: string;
   voiceLeft?: number | null;
   textLeft?: number | null;
+  calls?: Array<{ name: string; args: Record<string, unknown> }>;
 }
 
 /**
@@ -17,7 +18,7 @@ export interface PremiumChatResult {
  */
 export async function premiumChat(
   messages: PremiumChatMessage[],
-  opts: { forVoice?: boolean; maxTokens?: number } = {},
+  opts: { forVoice?: boolean; maxTokens?: number; tools?: Array<Record<string, unknown>> } = {},
 ): Promise<PremiumChatResult> {
   try {
     const { data, error } = await supabase.functions.invoke('tiya-premium', {
@@ -26,6 +27,7 @@ export async function premiumChat(
         messages,
         forVoice: Boolean(opts.forVoice),
         maxTokens: opts.maxTokens || 1024,
+        ...(opts.tools?.length ? { tools: opts.tools } : {}),
       },
     });
     if (error) {
@@ -44,12 +46,17 @@ export async function premiumChat(
         textLeft: body?.text_left ?? null,
       };
     }
+    const calls = Array.isArray(data?.calls) ? (data.calls as PremiumChatResult['calls']) : [];
+    if (data?.ok && !String(data?.text || '').trim() && calls?.length) {
+      return { ok: true, text: '', calls, voiceLeft: data.voice_left ?? null, textLeft: data.text_left ?? null };
+    }
     if (!data?.ok || !String(data?.text || '').trim()) {
       return { ok: false, reason: data?.reason || 'empty', message: data?.message || 'উত্তর পাওয়া যায়নি।' };
     }
     return {
       ok: true,
       text: String(data.text).trim(),
+      calls,
       voiceLeft: data.voice_left ?? null,
       textLeft: data.text_left ?? null,
     };

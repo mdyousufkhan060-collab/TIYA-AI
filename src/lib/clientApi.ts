@@ -41,6 +41,11 @@ const GROQ_ACTION_RULE =
 
 const errMsg = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
+/** The phone-action tool, for ROSE PREMIUM (the server passes it to Gemini so actions come back as real calls). */
+export function phoneActionToolDeclaration(): Record<string, unknown> {
+  return buildPhoneActionTool(false);
+}
+
 function buildPhoneActionTool(nonBlocking: boolean): Record<string, unknown> {
   return {
     name: 'trigger_phone_action',

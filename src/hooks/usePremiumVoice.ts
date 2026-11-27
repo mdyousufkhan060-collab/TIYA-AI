@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LanguageOption, VoiceState } from '../types/tiya';
 import { premiumChat, premiumTts, type PremiumChatMessage } from '../lib/premium';
+import { fadePcm } from '../lib/pcmFade';
+import { phoneActionToolDeclaration } from '../lib/clientApi';
+import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
+import type { PhoneAction } from '../types/tiya';
 
 /**
  * ROSE PREMIUM voice (no API key on the phone).
@@ -20,8 +24,9 @@ const LANG_CODE: Partial<Record<LanguageOption, string>> = {
 
 function pcmToWavUrl(b64: string, sampleRate = 24000): string {
   const bin = atob(b64);
-  const pcm = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) pcm[i] = bin.charCodeAt(i);
+  const raw = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) raw[i] = bin.charCodeAt(i);
+  const pcm = fadePcm(raw, sampleRate);
   const header = new ArrayBuffer(44);
   const v = new DataView(header);
   const w = (o: number, s: string) => {
@@ -55,7 +60,7 @@ interface Options {
   speechSpeed: number;
   buildSystemPrompt: () => string;
   getHistory: () => Array<{ role: 'user' | 'assistant'; text: string }>;
-  onAppend: (role: 'user' | 'assistant', text: string) => void;
+  onAppend: (role: 'user' | 'assistant', text: string, action?: PhoneAction) => void;
   onCredits?: (voiceLeft: number | null, textLeft: number | null) => void;
 }
 
@@ -118,7 +123,8 @@ export function usePremiumVoice(opts: Options) {
       }
     };
     rec.onend = () => {
-      if (!activeRef.current) return;
+      // stopped on purpose (an action result is coming): do not restart here
+      if (!activeRef.current || recRef.current !== rec) return;
       if (!heard) {
         // nothing said: keep listening
         window.setTimeout(listen, 250);
@@ -135,10 +141,12 @@ export function usePremiumVoice(opts: Options) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fail]);
 
-  const answer = useCallback(
-    async (heard: string) => {
+  // one turn: ask the server (with the phone-action tool), show the words, run the action, speak, listen again.
+  // "note" turns carry an app result (e.g. the list of buttons on the screen) so ROSE can take the next step.
+  const stepsRef = useRef(0);
+  const runTurn = useCallback(
+    async (input: string, note: boolean) => {
       const o = optsRef.current;
-      o.onAppend('user', heard);
       setState('thinking');
       const history: PremiumChatMessage[] = o
         .getHistory()
@@ -150,36 +158,47 @@ export function usePremiumVoice(opts: Options) {
             role: 'system',
             content:
               o.buildSystemPrompt() +
-              '\n\nVOICE MODE: reply in 1-3 short spoken sentences, no lists, no markdown.' +
-              '\nPHONE ACTIONS IN VOICE MODE: you have no tool here. When he asks to open an app or website, go home, scroll, read the screen, ' +
-              'call someone or message on WhatsApp / Messenger, say one short Bengali sentence and then put exactly ONE JSON object at the very end, ' +
-              'the same values you would give trigger_phone_action, for example {"action":"open_app","app":"Facebook"}, {"action":"open_app","app":"scroll down"}, ' +
-              '{"action":"call","contact":"Ma"}, {"action":"whatsapp_message","contact":"Rahim","text":"..."}. The app runs it; never say it is already done. ' +
-              'No JSON when there is nothing to do on the phone.',
+              '\n\nVOICE MODE: reply in 1-3 short spoken sentences, no lists, no markdown, never write tool names or JSON in the words.' +
+              '\nPHONE ACTIONS: use the trigger_phone_action tool for every phone task (open an app, screen items, tap item <n>, scroll, type, ' +
+              'read screen, comments, calls, messages). After a tool, the app sends the result as "[App result]"; read it and call the next ' +
+              'step yourself until the task is done, one step at a time. Never say a step is done before its result says so.',
           },
           ...history,
-          { role: 'user', content: heard },
+          { role: 'user', content: note ? `[App result, not his words] ${input}` : input },
         ],
-        { forVoice: true, maxTokens: 400 },
+        { forVoice: true, maxTokens: 400, tools: [phoneActionToolDeclaration()] },
       );
       if (!activeRef.current) return;
       if (typeof res.voiceLeft === 'number' || typeof res.textLeft === 'number') {
         o.onCredits?.(res.voiceLeft ?? null, res.textLeft ?? null);
       }
-      if (!res.ok || !res.text) {
+      if (!res.ok) {
         fail(res.message || 'উত্তর পাওয়া যায়নি।');
         return;
       }
-      // the JSON action (if any) goes to the app, which runs it; only the words are spoken
-      const reply = res.text.replace(/\{[\s\S]*\}\s*$/, '').trim();
-      o.onAppend('assistant', res.text);
+      // the action: a real tool call first, else a JSON written in the words
+      let action: PhoneAction | null = null;
+      for (const c of res.calls || []) {
+        if (c.name === 'trigger_phone_action' && !action) action = validatePhoneAction(c.args);
+      }
+      const parsed = extractActionFromText(res.text || '');
+      if (!action) action = parsed.action;
+      const reply = (parsed.cleanText || '').replace(/`[^`]*`/g, '').replace(/\{[\s\S]*\}\s*$/, '').trim();
+      if (reply || action) o.onAppend('assistant', reply, action || undefined);
+      if (action) stepsRef.current += 1;
       if (!reply) {
-        if (activeRef.current) listen();
+        // nothing to say: wait for the action result (it comes back through feedback) or listen
+        if (!action && activeRef.current) listen();
         return;
       }
       setState('speaking');
       const tts = await premiumTts(reply, o.voiceName);
       if (!activeRef.current) return;
+      const next = () => {
+        audioRef.current = null;
+        // an action is running: its result restarts the talk; otherwise listen for him
+        if (activeRef.current && !pendingRef.current) listen();
+      };
       if (tts.ok && tts.audio) {
         const url = pcmToWavUrl(tts.audio);
         const a = new Audio(url);
@@ -188,23 +207,64 @@ export function usePremiumVoice(opts: Options) {
         a.playbackRate = Math.max(0.75, Math.min(1.35, o.speechSpeed || 1));
         a.onended = () => {
           URL.revokeObjectURL(url);
-          audioRef.current = null;
-          if (activeRef.current) listen();
+          next();
         };
         a.onerror = () => {
           URL.revokeObjectURL(url);
-          if (activeRef.current) listen();
+          next();
         };
         try {
           await a.play();
         } catch {
-          if (activeRef.current) listen();
+          next();
         }
       } else {
-        if (activeRef.current) listen();
+        next();
       }
     },
-    [fail, listen],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fail],
+  );
+
+  const pendingRef = useRef(false);
+  const answer = useCallback(
+    async (heard: string) => {
+      optsRef.current.onAppend('user', heard);
+      stepsRef.current = 0;
+      await runTurn(heard, false);
+    },
+    [runTurn],
+  );
+
+  /** The app ran a phone action: give ROSE the result so she can say it or take the next step (max 12 steps). */
+  const feedback = useCallback(
+    (text: string) => {
+      if (!activeRef.current) return;
+      if (stepsRef.current >= 12) {
+        pendingRef.current = false;
+        return;
+      }
+      pendingRef.current = true;
+      try {
+        recRef.current?.abort?.();
+      } catch {
+        /* ignore */
+      }
+      recRef.current = null;
+      // let the screen settle a moment after the step, then continue
+      const go = () => {
+        if (!activeRef.current) return;
+        // wait until ROSE finished speaking the last line
+        if (audioRef.current && !audioRef.current.ended && !audioRef.current.paused) {
+          window.setTimeout(go, 300);
+          return;
+        }
+        pendingRef.current = false;
+        void runTurn(text, true);
+      };
+      window.setTimeout(go, 700);
+    },
+    [runTurn],
   );
 
   const start = useCallback(() => {
@@ -222,5 +282,5 @@ export function usePremiumVoice(opts: Options) {
 
   useEffect(() => () => stop(), [stop]);
 
-  return { state, errorText, toggle, stop, start };
+  return { state, errorText, toggle, stop, start, feedback };
 }

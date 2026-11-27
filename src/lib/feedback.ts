@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { premiumTts } from './premium';
+import { fadePcm } from './pcmFade';
 import { generateContent, pickTtsModels, responseAudio } from './geminiRest';
 
 /** 👍 / 👎 on a ROSE reply (admin sees totals in 18 REPORTS & FEEDBACK). */
@@ -39,8 +40,9 @@ export function stopSpeaking() {
 
 function pcmWav(b64: string, rate = 24000) {
   const bin = atob(b64);
-  const pcm = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) pcm[i] = bin.charCodeAt(i);
+  const raw = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) raw[i] = bin.charCodeAt(i);
+  const pcm = fadePcm(raw, rate);
   const h = new DataView(new ArrayBuffer(44));
   const w = (o: number, s: string) => [...s].forEach((c, i) => h.setUint8(o + i, c.charCodeAt(0)));
   w(0, 'RIFF');
