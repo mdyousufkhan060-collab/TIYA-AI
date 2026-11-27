@@ -345,6 +345,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
     <AdminFrame
       store={store} bars={barsFor(myRole)} current={tab} userName={userName} light={light} onTheme={flipTheme}
       onPick={(k) => setTab((k === 'dashboard' ? 'home' : k) as typeof tab)}
+      onExit={() => { if (tab !== 'home') { setPreviewRole(''); setTab('home'); } else window.dispatchEvent(new Event('rose-admin-exit')); }}
       extra={can('owner') && !forceStoreId && stores.length < limit ? <button type="button" onClick={() => setTab('create')} data-testid="store-new" className="mt-1 flex items-center gap-2.5 px-2 py-2 text-left text-[13px] font-bold text-emerald-400">＋ NEW STORE</button> : null}
     >
       {content}
@@ -1456,14 +1457,16 @@ const AdminDashboard: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: s
 /** The admin frame: logo, ☰ menu with the bars (closes by itself after choosing), light / dark switch, bottom bar on phones */
 const AdminFrame: React.FC<{
   store: Store; bars: Array<[boolean, string, string, string, string, string]>; current: string; userName: string; light: boolean;
-  onTheme: () => void; onPick: (k: string) => void; extra?: React.ReactNode; children: React.ReactNode;
-}> = ({ store, bars, current, userName, light, onTheme, onPick, extra, children }) => {
+  onTheme: () => void; onPick: (k: string) => void; onExit: () => void; extra?: React.ReactNode; children: React.ReactNode;
+}> = ({ store, bars, current, userName, light, onTheme, onPick, onExit, extra, children }) => {
   const [open, setOpen] = useState(false);
   const pick = (k: string) => { setOpen(false); onPick(k); };
   const initials = userName.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('') || 'R';
   return (
-    <div className={`rose-adm ${light ? 'adm-light' : ''} -mx-1`}>
-      <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-white/10 bg-[#0B0E14] px-2 py-2">
+    // the admin always fills the whole screen (no dark edges on any phone), the same in ROSE, on the website and in the demos
+    <div className={`rose-adm ${light ? 'adm-light' : ''} fixed inset-0 z-[60] flex flex-col bg-[#05070B] pc:inset-y-3 pc:mx-auto pc:max-w-[760px] pc:overflow-hidden pc:rounded-[28px]`}>
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-white/10 bg-[#0B0E14] px-1.5 pb-2 pt-[max(8px,env(safe-area-inset-top))]">
+        <button type="button" aria-label="Back" onClick={onExit} className="grid h-9 w-8 place-items-center text-[22px] text-white">‹</button>
         <button type="button" aria-label="Menu" onClick={() => setOpen(true)} className="grid h-9 w-9 place-items-center text-white"><Menu className="h-5 w-5" /></button>
         <button type="button" aria-label={light ? 'Dark mode' : 'Light mode'} onClick={onTheme} className="grid h-9 w-9 place-items-center text-white">{light ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}</button>
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -1476,7 +1479,7 @@ const AdminFrame: React.FC<{
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-800 text-[11px] font-bold text-white" title={userName}>{initials}</span>
       </div>
       {open && (
-        <div className="fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 z-[70] flex">
           <div className="flex h-full w-[82%] max-w-[300px] flex-col overflow-y-auto border-r border-white/10 bg-[#0B0E14] p-2.5">
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
@@ -1504,8 +1507,8 @@ const AdminFrame: React.FC<{
           <button type="button" aria-label="Close menu" className="flex-1 bg-black/50" onClick={() => setOpen(false)} />
         </div>
       )}
-      <div className="adm-body min-h-[60vh] bg-[#05070B] px-2 py-3">{children}</div>
-      <div className="sticky bottom-0 z-30 grid grid-cols-4 border-t border-white/10 bg-[#0B0E14] py-1.5">
+      <div className="adm-body min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#05070B] px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
+      <div className="grid shrink-0 grid-cols-4 border-t border-white/10 bg-[#0B0E14] pb-[max(6px,env(safe-area-inset-bottom))] pt-1.5">
         {([['🏠', 'Home', 'home'], ['📦', 'Products', 'products'], ['🛒', 'Orders', 'orders'], ['⚙️', 'Settings', 'menu']] as Array<[string, string, string]>).map(([ic, l, k]) => (
           <button key={l} type="button" onClick={() => (k === 'menu' ? setOpen(true) : onPick(k))} className={`flex flex-col items-center text-[10.5px] font-bold ${current === k ? 'text-emerald-500' : 'text-slate-400'}`}>
             <span className="text-[17px]">{ic}</span>{l}

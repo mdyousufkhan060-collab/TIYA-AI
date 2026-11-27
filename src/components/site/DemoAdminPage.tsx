@@ -15,6 +15,11 @@ export default function DemoAdminPage() {
   const key = (new URLSearchParams(window.location.search).get('s') || 'fashionhub').replace(/[^a-z0-9-]/gi, '');
   const [ready, setReady] = useState<'' | 'ok' | 'missing'>('');
   useEffect(() => {
+    const out = () => { window.location.href = '/demos'; };
+    window.addEventListener('rose-admin-exit', out);
+    return () => window.removeEventListener('rose-admin-exit', out);
+  }, []);
+  useEffect(() => {
     void loadDemos().then((all) => {
       const d = all[key];
       if (!d) return setReady('missing');
@@ -78,7 +83,7 @@ export default function DemoAdminPage() {
   }, [key]);
   return (
     <div className="min-h-[100dvh] bg-[#05070B]">
-      <div className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-yellow-400 px-3 py-1.5 text-center text-[12px] font-bold text-black">
+      <div className="fixed inset-x-0 bottom-[62px] z-[65] mx-auto flex max-w-[760px] flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-yellow-400 px-3 py-1.5 text-center text-[12px] font-bold text-black">
         <span>DEMO ADMIN · sample data · changes are not saved</span>
         <a href={`/demos/store.html?s=${key}`} className="underline">Open demo store</a>
         <a href={`/start?d=${key}`} className="rounded bg-black px-2 py-0.5 text-white">Start 5-day free trial</a>

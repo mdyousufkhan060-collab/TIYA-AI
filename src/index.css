@@ -157,3 +157,6 @@
 .rose-adm:not(.adm-light) .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1) !important; }
 .rose-adm:not(.adm-light) .border-emerald-200, .rose-adm:not(.adm-light) .border-amber-200 { border-color: rgba(255, 255, 255, 0.12) !important; }
 .rose-adm:not(.adm-light) .text-amber-800, .rose-adm:not(.adm-light) .text-amber-900 { color: #fcd34d !important; }
+
+/* a light-grey button with white letters (dark-mode style) gets dark letters in the light look */
+.adm-light .text-white[class*="bg-white/"] { color: #0f172a !important; }

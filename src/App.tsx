@@ -349,6 +349,13 @@ export default function App() {
     navigateTo('settings', 'workspace', 'hub');
   }, [session?.user?.id, profileLoaded, openAfterLogin, navigateTo]);
 
+  // the full-screen WEBSITE ADMIN asks to close (its ‹ button on the dashboard)
+  useEffect(() => {
+    const onExit = () => handleNavigateBack();
+    window.addEventListener('rose-admin-exit', onExit);
+    return () => window.removeEventListener('rose-admin-exit', onExit);
+  }, [handleNavigateBack]);
+
   const handleNavigateCommand = useCallback(
     (cmd: NavigationCommand) => {
       if (cmd.type === 'back') {
