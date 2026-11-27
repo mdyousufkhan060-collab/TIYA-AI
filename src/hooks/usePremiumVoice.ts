@@ -262,14 +262,36 @@ export function usePremiumVoice(opts: Options) {
   );
 
   const pendingRef = useRef(false);
+  // FIXED RECIPES: jobs that always go the same way run step by step inside the phone, without asking the AI
+  // what to tap (fast and the same for every user). Facebook comment replies: open the newest post's comments,
+  // then the phone answers every comment without his reply, live, one by one.
+  const recipeRef = useRef<{ steps: string[]; at: number } | null>(null);
+  const runRecipeStep = useCallback(() => {
+    const r = recipeRef.current;
+    if (!r || r.at >= r.steps.length) return false;
+    const app = r.steps[r.at];
+    r.at += 1;
+    stepsRef.current += 1;
+    setState('thinking');
+    optsRef.current.onAppend('assistant', '', { action: 'open_app', app } as PhoneAction);
+    return true;
+  }, []);
+
   const answer = useCallback(
     async (heard: string) => {
       micRef.current?.setListening(false);
       optsRef.current.onAppend('user', heard);
       stepsRef.current = 0;
+      const t = heard.toLowerCase();
+      if (/ফেসবুক|facebook|ফেবু/.test(t) && /কমেন্ট|comment|মন্তব্য/.test(t) && /রিপ্লাই|reply|উত্তর|জবাব/.test(t)) {
+        recipeRef.current = { steps: ['open latest post comments', 'reply all comments'], at: 0 };
+        runRecipeStep();
+        return;
+      }
+      recipeRef.current = null;
       await runTurn(heard, false);
     },
-    [runTurn],
+    [runTurn, runRecipeStep],
   );
 
   /** The app ran a phone action: give ROSE the result so she can say it or take the next step (max 12 steps). */
@@ -279,6 +301,19 @@ export function usePremiumVoice(opts: Options) {
       if (stepsRef.current >= 12) {
         pendingRef.current = false;
         return;
+      }
+      // a fixed recipe is running: a good result goes straight to the next step; at the end (or if a step
+      // fails) ROSE reads the result and tells him in her own words
+      const rc = recipeRef.current;
+      if (rc) {
+        const ok = /SUCCESS/.test(text) && !/খুঁজে পাইনি|পারিনি|could not/i.test(text);
+        if (ok && rc.at < rc.steps.length) {
+          window.setTimeout(() => {
+            if (activeRef.current) runRecipeStep();
+          }, 400);
+          return;
+        }
+        recipeRef.current = null;
       }
       pendingRef.current = true;
       micRef.current?.setListening(false);
@@ -301,7 +336,7 @@ export function usePremiumVoice(opts: Options) {
       };
       window.setTimeout(go, 350);
     },
-    [runTurn],
+    [runTurn, runRecipeStep],
   );
 
   const start = useCallback(() => {
