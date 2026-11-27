@@ -1,5 +1,9 @@
 import { socialGuidesFor } from './socialGuides';
 import { websiteGuidesFor } from './websiteGuides';
+import { knowledgeFor, refreshKnowledge } from './roseFiles/liveKnowledge';
+
+// ROSE's self-updating files (world news, AI tools) load when the app starts
+void refreshKnowledge();
 import { getTiyaMode, getTiyaModeContext, getTiyaParcelsContext, ROSE_SKILLS_BLOCK } from './modeContext';
 import { TEAM_PROMPT_BLOCK } from '../lib/agents';
 import { getRoseGuide } from './roseGuides';
@@ -298,6 +302,8 @@ export function buildTiyaSystemPrompt(
   if (social) lines.push(social);
   const web = websiteGuidesFor(socialText);
   if (web) lines.push(web);
+  const live = knowledgeFor(socialText, Boolean(isOwner));
+  if (live) lines.push(live);
 
   // Owner / admin: the partner persona goes LAST so it wins over every rule above
   // (all the task rules still apply, only the way of talking changes).

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { AdminLiveFiles } from './AdminLiveFiles';
 
 /**
  * 02 AI KEY & BILLING (admin only): the server keys every ROSE PREMIUM customer uses.
@@ -129,6 +130,7 @@ export const AdminAiKeyPage: React.FC = () => {
       </p>
       <KeyCard kind="gemini" status={status.gemini} />
       <KeyCard kind="groq" status={status.groq} />
+      <AdminLiveFiles />
       <p className="px-1 text-[10.5px] text-slate-500">
         Buying a paid plan: open BUY PAID PLAN, add your card (Gemini: "Set up billing" next to the key; Groq: Billing). The same key becomes paid, so you do not need to change it here.
         A key saved in Supabase Secrets still works as a backup.
