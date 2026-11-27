@@ -7,6 +7,8 @@ import { MessageActions } from './MessageActions';
 import { ReportSheet } from './ReportSheet';
 import { MiniFace } from './MiniFace';
 import { phoneStepTitle } from '../utils/phoneActions';
+import { openQuietMic, type QuietMic } from '../lib/quietMic';
+import { premiumStt } from '../lib/premium';
 
 interface ChatScreenProps {
   settings: TiyaSettings;
@@ -72,7 +74,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     await onSendMessage(trimmed);
   };
 
+  const premMicRef = useRef<QuietMic | null>(null);
+  useEffect(() => () => premMicRef.current?.close(), []);
   const stopRecordingAndTranscribe = () => {
+    // ROSE PREMIUM dictation: send the last words, then close the mic
+    if (premMicRef.current) {
+      const mic = premMicRef.current;
+      premMicRef.current = null;
+      mic.flush();
+      mic.close();
+    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
@@ -86,8 +97,23 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       return;
     }
 
-    if (!settings.apiKey.trim()) {
-      setMicError('No API key. Add your key in Connections.');
+    // No own key (Gemini or Groq): Premium customers and the admin dictate through the ROSE server. The mic
+    // stays open (no phone beep) and each sentence is written into the box when he pauses; tap again to stop.
+    if (!settings.apiKey.trim() && !(settings.providerConnections?.groq?.apiKey || '').trim()) {
+      try {
+        const mic = await openQuietMic(async (wav) => {
+          setIsTranscribing(true);
+          const r = await premiumStt(wav, String(settings.language || 'Bengali'));
+          setIsTranscribing(false);
+          if (r.ok && r.text) setInput((prev) => (prev.trim() ? `${prev.trim()} ${r.text}` : r.text!));
+          else if (!r.ok) setMicError(r.message || 'শুনতে সমস্যা হলো।');
+        });
+        premMicRef.current = mic;
+        mic.setListening(true);
+        setIsRecordingMic(true);
+      } catch {
+        setMicError('মাইক চালু করা যায়নি। মাইকের অনুমতি দিন।');
+      }
       return;
     }
 

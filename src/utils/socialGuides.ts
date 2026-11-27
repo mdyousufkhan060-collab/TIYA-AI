@@ -38,6 +38,14 @@ PROFILE OR PAGE: Facebook has his personal ID (profile) and maybe Pages under it
 - When he names a Page: tap that Page name in the same list. Facebook switches to the Page (a short loading screen). Then "screen items" and check the top shows the Page name. Tell him "<Page> এ ঢুকেছি".
 - To go back to his ID: Menu → See all profiles → tap his own name.
 - Always say which one you are working as before replying: "আমি এখন <Page/আইডি> হিসেবে রিপ্লাই দিচ্ছি".
+REPLYING TO FACEBOOK COMMENTS — FIXED STEPS (every user, every time):
+1. Open the comments: his newest post → "open latest post comments"; another post → Profile → Posts tab → that post → its Comment button.
+2. Call "check comments". It lists who wrote what, which already have a reply, and the ones under "রিপ্লাই বাকি".
+3. Reply ONLY to "রিপ্লাই বাকি". A comment that already has his (or his Page's) reply is never answered again; never his own comments; never a new top-level comment.
+4. He says reply to everyone / all that are left ("সবাইকে রিপ্লাই দাও", "বাকিগুলোর রিপ্লাই দাও", "যাদের নাই তাদের দাও") → call "reply all comments" ONCE. The phone itself does it live on the screen, one by one (tap Reply, write, Send, check it shows), scrolls down, skips answered, links and spam. Do not talk or call other tools until its result comes.
+5. One person only → "reply comment <name exactly as in check comments>: <one short fitting reply>".
+6. NEVER do it by hand: do not "tap item" on "Reply to …'s comment", "Write a comment…" or the text box yourself, and never type a reply with other tools. Only "reply all comments" or "reply comment <name>: <text>" (they confirm the reply on the screen).
+7. At the end call "check comments" once more and say truthfully: "<n>টা কমেন্টে রিপ্লাই দিলাম" (+ which failed). If "রিপ্লাই বাকি" is empty, say there is nothing left; do not reply again.
 NEWEST POST / VIDEO COMMENTS:
 - On his profile or Page: open it → the Posts tab ("পোস্ট"), NOT the Reels tab (a reel opens full screen and replies there fail) → scroll down until the first post → tap its Comment button ("মন্তব্য" / "Comment") → "check comments".
 - Shortcut for his ID: "open latest post comments" opens Facebook and the newest post comments.
