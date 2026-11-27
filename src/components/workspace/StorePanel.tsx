@@ -1466,6 +1466,48 @@ const AdminDashboard: React.FC<{ store: Store; seeOrders: boolean; onOpen: (t: s
  * store_set_design (server keeps only safe look values, only for the owner's own shop), UNDO goes back one step.
  */
 type DesignMsg = { me: boolean; text: string; design?: Record<string, string> | null };
+/** Top of Ask ROSE: quick ideas to tap, the rules for shop owners, and ROSE's website link */
+const ROSE_IDEAS = ['বাটন লাল আর গোল করো', 'বার্থডে থিম দাও', 'ঈদের থিম দাও', 'কালো আর সোনালি রঙে সাজাও', 'দামের রং সবুজ করো', 'আগের ডিজাইনে ফিরে যাও'];
+const ROSE_POLICY: Array<[string, string]> = [
+  ['✅', 'Only your website changes. Other shops never change.'],
+  ['🎨', 'ROSE can change colours, buttons, cards, font and festival themes (Birthday, Eid, Ramadan, Winter, পহেলা বৈশাখ, Victory Day, Sale, Wedding).'],
+  ['👀', 'Every change shows first in PREVIEW. Nothing is saved until you tap APPLY, and UNDO brings back the last look.'],
+  ['🔒', 'ROSE cannot change your plan, payments, the ROSE footer, the admin bars or anything of other shops.'],
+  ['🙋', 'Keep your products, prices and photos true. Fake products, copied brand logos or misleading offers are not allowed on myrosebd.com.'],
+  ['🛡️', 'Never share your password or payment PIN with anyone, not even ROSE. ROSE never asks for them.'],
+  ['📞', 'Need something ROSE cannot do? ROSE SUPPORT: call or WhatsApp the ROSE team.'],
+];
+const RoseDesignGuide: React.FC<{ onPick: (t: string) => void }> = ({ onPick }) => {
+  const [rules, setRules] = useState(false);
+  return (
+    <div className="space-y-2">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+        <p className="text-[10.5px] font-bold tracking-wider text-emerald-300">TAP AN IDEA</p>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {ROSE_IDEAS.map((t) => (
+            <button key={t} type="button" onClick={() => onPick(t)} className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-1 text-[11.5px] text-emerald-100">{t}</button>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04]">
+        <button type="button" onClick={() => setRules((v) => !v)} className="flex w-full items-center justify-between px-3 py-2.5 text-left">
+          <span className="text-[12.5px] font-bold text-white">📜 Rules for shop owners</span>
+          <span className="text-[11px] font-bold text-emerald-300">{rules ? 'HIDE' : 'READ'}</span>
+        </button>
+        {rules && (
+          <div className="space-y-1.5 px-3 pb-3">
+            {ROSE_POLICY.map(([ic, t]) => (
+              <p key={t} className="flex gap-2 text-[12px] leading-relaxed text-slate-200"><span>{ic}</span><span>{t}</span></p>
+            ))}
+            <a href="https://www.myrosebd.com" target="_blank" rel="noreferrer" className="mt-2 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2 text-[12px] font-bold text-white">
+              🌹 myrosebd.com <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 const AskRosePanel: React.FC<{ store: Store; onClose: () => void }> = ({ store, onClose }) => {
   const [design, setDesign] = useState<Record<string, string>>(((store as any).design as Record<string, string>) || {});
   const [msgs, setMsgs] = useState<DesignMsg[]>([{ me: false, text: 'আপনার ওয়েবসাইটের রং, বাটন বা থিম কেমন চান লিখুন। যেমন: "বাটন লাল আর গোল করো", "বার্থডে থিম দাও"। শুধু এই দোকানটাই বদলাবে।' }]);
@@ -1529,6 +1571,7 @@ const AskRosePanel: React.FC<{ store: Store; onClose: () => void }> = ({ store, 
         <button type="button" aria-label="Close" onClick={onClose} className="grid h-9 w-9 place-items-center"><X className="h-5 w-5" /></button>
       </div>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+        <RoseDesignGuide onPick={(t) => setText(t)} />
         {msgs.map((m, i) => (
           <div key={i} className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${m.me ? 'ml-auto bg-emerald-600 text-white' : 'bg-white/[0.06] text-slate-100'}`}>
             {m.text}
@@ -1542,10 +1585,11 @@ const AskRosePanel: React.FC<{ store: Store; onClose: () => void }> = ({ store, 
         ))}
         {busy && <p className="flex items-center gap-2 text-[12px] text-emerald-300"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {busy}</p>}
       </div>
-      <div className="flex shrink-0 gap-2 border-t border-white/10 p-2 pb-[max(8px,env(safe-area-inset-bottom))]">
+      <div className="flex shrink-0 gap-2 border-t border-white/10 p-2">
         <input className={input} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void send(); }} placeholder="Tell ROSE what to change…" />
         <button type="button" onClick={() => void send()} disabled={Boolean(busy)} className={btn}>SEND</button>
       </div>
+      <a href="https://www.myrosebd.com" target="_blank" rel="noreferrer" className="shrink-0 pb-[max(6px,env(safe-area-inset-bottom))] text-center text-[10.5px] text-slate-500">Made with ROSE · <span className="font-bold text-emerald-400">myrosebd.com</span></a>
     </div>
   );
 };

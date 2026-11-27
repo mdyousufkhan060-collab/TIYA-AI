@@ -221,7 +221,7 @@ export const SettingsBar: React.FC<SettingsBarProps> = ({
       className="flex h-12 w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 dark:border-white/[0.08] dark:bg-[#11151E] dark:hover:bg-white/[0.05] dark:active:bg-white/[0.08]"
     >
       {badge !== undefined && (
-        <span className="font-mono-code flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-md bg-slate-100 px-1.5 text-[10px] font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
+        <span className="font-mono-code flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-md bg-[#1e293b] px-1.5 text-[10px] font-bold text-teal-300 dark:bg-white/[0.07] dark:font-semibold dark:text-teal-400">
           {badge}
         </span>
       )}
@@ -233,7 +233,7 @@ export const SettingsBar: React.FC<SettingsBarProps> = ({
       </span>
 
       {value && (
-        <span className="max-w-[115px] shrink-0 truncate text-[10.5px] font-medium text-slate-400 dark:text-slate-500">
+        <span className="max-w-[115px] shrink-0 truncate text-[10.5px] font-semibold text-teal-700 dark:font-medium dark:text-slate-500">
           {value}
         </span>
       )}
@@ -271,7 +271,7 @@ export const SettingsToggleBar: React.FC<SettingsToggleBarProps> = ({
   return (
     <div className="flex h-11 w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 dark:border-white/[0.08] dark:bg-[#11151E]">
       {badge !== undefined && (
-        <span className="font-mono-code flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-md bg-slate-100 px-1.5 text-[10px] font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
+        <span className="font-mono-code flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-md bg-[#1e293b] px-1.5 text-[10px] font-bold text-teal-300 dark:bg-white/[0.07] dark:font-semibold dark:text-teal-400">
           {badge}
         </span>
       )}
@@ -341,7 +341,7 @@ export const SettingsSelectBar: React.FC<SettingsSelectBarProps> = ({
     }`}
   >
     {badge !== undefined && (
-      <span className="font-mono-code flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-md bg-slate-100 px-1.5 text-[10px] font-semibold text-teal-700 dark:bg-white/[0.07] dark:text-teal-400">
+      <span className="font-mono-code flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-md bg-[#1e293b] px-1.5 text-[10px] font-bold text-teal-300 dark:bg-white/[0.07] dark:font-semibold dark:text-teal-400">
         {badge}
       </span>
     )}
@@ -353,7 +353,7 @@ export const SettingsSelectBar: React.FC<SettingsSelectBarProps> = ({
       {title}
     </span>
     {value && (
-      <span className="max-w-[115px] shrink-0 truncate text-[10.5px] font-medium text-slate-400 dark:text-slate-500">
+      <span className="max-w-[115px] shrink-0 truncate text-[10.5px] font-semibold text-teal-700 dark:font-medium dark:text-slate-500">
         {value}
       </span>
     )}

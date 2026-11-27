@@ -330,6 +330,24 @@
   .slide.left { transform: translateX(-100%); }
   .catban { margin: 4px 0 12px; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 6; background: #fff; border: 1px solid var(--line); }
   .catban img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* bigger products (Nov 27): computer 3 big cards in a row, phone one big card per row; slim main banner */
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .card .img { height: 300px; }
+  .card .t { font-size: 16px; }
+  .card .price b { font-size: 20px; }
+  .slider { height: 150px; }
+  .slide { padding: 12px 16px; }
+  .slide h2 { font-size: clamp(16px, 3.6vw, 26px); margin-bottom: 6px; }
+  .slide .bpic { object-position: center top; }
+  @media (min-width: 761px) { .slider { height: 220px; } }
+  .wrap { max-width: 1320px; }
+  .slide .badge { padding: 4px 10px; font-size: 13px; }
+  .slide .btn { padding: 7px 16px !important; font-size: 13px; }
+  @media (max-width: 760px) { .slide .btn { display: none !important; } }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .card .img { height: min(86vw, 380px); }
+  }
   .moreload { text-align: center; padding: 14px; color: #64748b; font-size: 13px; }
   #zoomV { position: fixed; inset: 0; z-index: 90; background: #000; touch-action: none; overflow: hidden; display: grid; place-items: center; }
   #zoomV img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: 0 0; will-change: transform; user-select: none; -webkit-user-drag: none; }
@@ -729,9 +747,6 @@ function start(S, P, liveId) {
     html = html + catTiles(true);
     html += '<div class="trust">' + S.trust.map(function (t) { var x = t.replace(/^[^A-Za-z0-9]+/, ''), sp = x.indexOf(' '); return '<div>' + trustIcon(x) + '<span>' + esc(sp > 0 ? x.slice(0, sp) : x) + '<br>' + esc(sp > 0 ? x.slice(sp + 1) : '') + '</span></div>'; }).join('') + '</div>';
     html += '<div class="head"><h3>' + IC.bolt + esc(S.sectionTitle) + '</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(0, 8).map(card).join('') + '</div>';
-    var b2 = S.banners[1] || S.banners[0], b3 = S.banners[2] || S.banners[0];
-    var promo = function (x, bg, ink, img) { return '<a class="promo" href="#/all" style="background:' + bg + ';color:' + ink + '"><div><h4>' + esc(x.title) + '</h4><span class="pill">Shop Now ' + IC.arrow.replace('<svg', '<svg width="16" height="16"') + '</span></div>' + (img ? '<img src="' + bimg(img) + '" alt="" onerror="this.style.display=\'none\'">' : '<span>' + (x.icon || S.logo) + '</span>') + '</a>'; };
-    html += '<div class="promos">' + promo(b2, 'linear-gradient(120deg,' + S.color + ',color-mix(in srgb,' + S.color + ' 55%,#000))', '#fff', b2.img) + promo({ title: 'Best Quality, Best Price', icon: S.logo }, 'linear-gradient(120deg,#fde047,#f59e0b)', '#0f172a', b3.img) + '</div>';
     html += '<div class="head"><h3>New Arrivals</h3><a href="#/all">See All →</a></div><div class="grid">' + P.slice(-4).map(card).join('') + '</div>';
     return html;
   }

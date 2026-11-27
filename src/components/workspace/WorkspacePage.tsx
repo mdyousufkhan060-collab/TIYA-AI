@@ -999,7 +999,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
           )}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[12.5px] font-bold text-slate-900 dark:text-slate-100">{me.email}</span>
-            <span className="block text-[10.5px] text-slate-400">{supportId ? <>ID <b className="font-mono tracking-wider text-teal-300">{supportId}</b> · MY DETAILS</> : 'MY DETAILS'}</span>
+            <span className="block text-[10.5px] text-slate-500 dark:text-slate-400">{supportId ? <>ID <b className="font-mono tracking-wider text-teal-700 dark:text-teal-300">{supportId}</b> · MY DETAILS</> : 'MY DETAILS'}</span>
           </span>
           <span className="text-base text-slate-500">›</span>
         </button>

@@ -80,7 +80,7 @@ const LandingVideos: React.FC = () => {
   const list = useTutorialVideos(null);
   if (!list.length) return null;
   return (
-    <section id="videos" className="mx-auto max-w-6xl px-5 pb-16">
+    <section id="videos" className="mx-auto max-w-[1360px] px-5 pb-16">
       <p className="text-xs font-bold tracking-[0.3em] text-red-300">WATCH</p>
       <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">See ROSE in action.</h2>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -194,7 +194,7 @@ export const Landing: React.FC = () => {
     <div ref={scrollRef} className="h-[100dvh] overflow-y-auto overscroll-y-contain bg-black text-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ fontFamily: "'DM Sans', 'Noto Sans Bengali', sans-serif", WebkitOverflowScrolling: 'touch' }}>
       {/* NAV: logo row + the section buttons (they stay on top while scrolling) */}
       <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-black/85 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
+        <div className="mx-auto flex h-14 max-w-[1360px] items-center justify-between px-5">
           <button type="button" onClick={() => go('top')} className="flex items-center gap-2">
             <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[6px]" />
             <span className="text-lg font-extrabold tracking-[0.25em]">ROSE</span>
@@ -204,7 +204,7 @@ export const Landing: React.FC = () => {
             {signedIn ? 'OPEN ROSE' : 'GET STARTED'}
           </a>
         </div>
-        <div ref={chipsRef} className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-5 pb-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center">
+        <div ref={chipsRef} className="mx-auto flex max-w-[1360px] gap-2 overflow-x-auto px-5 pb-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center">
           {nav.map(([l, id]) => (
             <button
               key={id}
@@ -222,16 +222,18 @@ export const Landing: React.FC = () => {
       {/* HERO */}
       <section id="top" className="relative overflow-hidden">
         {/* BANNER: the whole picture on every screen (nothing is cut), a smaller file for phones */}
-        <div className="relative mx-auto max-w-[1600px] overflow-hidden">
+        {/* slim banner, edge to edge: the whole picture in the middle (no head or text cut), the same picture softly blurred fills both sides */}
+        <div className="relative h-[200px] w-full overflow-hidden sm:h-[260px] lg:h-[340px]">
+          <img src="/banner.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
           <picture>
             <source media="(max-width: 700px)" srcSet="/banner-m.jpg" />
-            <img src="/banner.jpg" alt="ROSE · your AI assistant, always here for you" width={1672} height={941} fetchPriority="high" className="block h-auto w-full" />
+            <img src="/banner.jpg" alt="ROSE · your AI assistant, always here for you" width={1672} height={941} fetchPriority="high" className="relative mx-auto block h-full w-auto max-w-full object-contain" />
           </picture>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black to-transparent md:h-16" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black to-transparent md:h-12" />
         </div>
         <div className="relative">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,rgba(255,77,141,0.25),transparent_55%),radial-gradient(ellipse_at_20%_80%,rgba(45,212,191,0.15),transparent_50%)]" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 pb-16 pt-6 md:grid-cols-2 md:gap-10 md:pt-12">
+        <div className="relative mx-auto grid max-w-[1360px] items-center gap-8 px-5 pb-16 pt-6 md:grid-cols-2 md:gap-10 md:pt-12">
           <div>
             <p className="inline-flex items-center gap-2 rounded-[3px] border border-white/15 px-3 py-1 text-[11px] font-semibold tracking-widest text-pink-200">
               <span className="h-1.5 w-1.5 rounded-full bg-pink-400" /> MADE IN BANGLADESH
@@ -266,7 +268,7 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="mx-auto max-w-6xl px-5 py-16">
+      <section id="features" className="mx-auto max-w-[1360px] px-5 py-16">
         <p className="text-xs font-bold tracking-[0.3em] text-pink-300">MEET ROSE</p>
         <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">More than a chatbot.</h2>
         <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -282,7 +284,7 @@ export const Landing: React.FC = () => {
 
       {/* MODES */}
       <section id="modes" className="border-y border-white/[0.06] bg-[#06070B]">
-        <div className="mx-auto max-w-6xl px-5 py-16">
+        <div className="mx-auto max-w-[1360px] px-5 py-16">
           <p className="text-xs font-bold tracking-[0.3em] text-teal-300">THREE MODES</p>
           <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">One ROSE, made for you.</h2>
           <div className="mt-8 grid gap-3 md:grid-cols-3">
@@ -317,7 +319,7 @@ export const Landing: React.FC = () => {
 
       {/* WEBSITE BUILDER */}
       <section id="store" className="border-y border-white/[0.06] bg-[#06070B]">
-        <div className="mx-auto max-w-6xl px-5 py-16">
+        <div className="mx-auto max-w-[1360px] px-5 py-16">
           <p className="text-xs font-bold tracking-[0.3em] text-teal-300">WEBSITE BUILDER</p>
           <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">Your online store, ready in minutes.</h2>
           <p className="mt-2 text-sm text-slate-300">Cash on delivery, bKash, Nagad and courier booking. আপনার নিজের অনলাইন দোকান, কয়েক মিনিটে।</p>
@@ -331,14 +333,14 @@ export const Landing: React.FC = () => {
           </div>
           <div className="-mx-5 mt-6 flex gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {([['foodbazaar', '🍔', 'Food', 'photo-1568901346375-23c9450c58cd'], ['fashionhub', '👕', 'Fashion', 'photo-1521572163474-6864f9cf17ab'], ['sotadari', '🛒', 'Grocery', 'photo-1488459716781-31db52582fe9'], ['shopshotoi', '🛍️', 'Market', 'photo-1788458131906-d0878ba5fa4d'], ['homenest', '🛋️', 'Furniture', 'photo-1583847268964-b28dc8f51f92'], ['medicare', '💊', 'Pharmacy', 'photo-1607874963930-2edecc67a25a'], ['printpack', '📦', 'Packaging', 'photo-1621252756235-7f37e5e5125e']] as Array<[string, string, string, string]>).map(([k, ic, l, ph]) => (
-              <div key={k} className="w-48 shrink-0 overflow-hidden rounded-[6px] border border-white/[0.1] bg-[#0d1117]">
+              <div key={k} className="w-[64vw] max-w-[300px] shrink-0 overflow-hidden rounded-[10px] border border-white/[0.1] bg-[#0d1117] sm:w-72 lg:w-[300px]">
                 {/* a product photo of that demo shop, so each card shows what the website sells */}
-                <a href={`/demos/store.html?s=${k}`} className="relative block h-28 bg-white/5">
+                <a href={`/demos/store.html?s=${k}`} className="relative block h-44 bg-white/5 lg:h-52">
                   <img src={`https://images.unsplash.com/${ph}?auto=format&fit=crop&q=70&w=400`} alt={`${l} demo website`} loading="lazy" className="h-full w-full object-cover" />
-                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2.5 pb-1.5 pt-6 text-[14px] font-bold text-white">{ic} {l}</span>
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-3 pb-2 pt-8 text-[17px] font-bold text-white">{ic} {l}</span>
                 </a>
                 {/* OPEN on the left, ADMIN on the right, with space between */}
-                <div className="grid grid-cols-2 gap-2 p-2.5 text-[11px] font-bold">
+                <div className="grid grid-cols-2 gap-2 p-3 text-[12px] font-bold">
                   <a href={`/demos/store.html?s=${k}`} className="flex h-9 items-center justify-center rounded-[4px] border border-teal-400/60 bg-teal-500/10 text-teal-300">OPEN</a>
                   <a href={`/demo-admin?s=${k}`} className="flex h-9 items-center justify-center rounded-[4px] border border-pink-400/60 bg-pink-500/10 text-pink-300">ADMIN</a>
                 </div>
@@ -356,7 +358,7 @@ export const Landing: React.FC = () => {
       <LandingVideos />
 
       {/* PRICING */}
-      <section id="pricing" className="mx-auto max-w-6xl px-5 pb-16">
+      <section id="pricing" className="mx-auto max-w-[1360px] px-5 pb-16">
         <p className="text-xs font-bold tracking-[0.3em] text-pink-300">PRICING</p>
         <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">Start free. Go Premium anytime.</h2>
         {(() => {
@@ -457,7 +459,7 @@ export const Landing: React.FC = () => {
 
       {/* DOWNLOAD */}
       <section id="download" className="border-y border-white/[0.06] bg-[#06070B]">
-        <div className="mx-auto max-w-6xl px-5 py-16">
+        <div className="mx-auto max-w-[1360px] px-5 py-16">
           <p className="text-xs font-bold tracking-[0.3em] text-teal-300">DOWNLOAD</p>
           <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">Use ROSE everywhere.</h2>
           <div className="mt-8 grid gap-3 md:grid-cols-3">
@@ -492,7 +494,7 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* DEVELOPERS */}
-      <section className="mx-auto max-w-6xl px-5 py-16">
+      <section className="mx-auto max-w-[1360px] px-5 py-16">
         <a
           href="/developers"
           className="group grid items-center gap-6 rounded-[4px] border border-white/[0.08] bg-white/[0.03] p-6 hover:border-pink-400/50 md:grid-cols-[auto_1fr_auto]"
@@ -540,7 +542,7 @@ export const Landing: React.FC = () => {
 
       {/* CONTACT + POLICIES */}
       <footer id="contact" className="border-t border-white/[0.06] bg-[#06070B] px-5 py-12 text-sm text-slate-400">
-        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-3">
+        <div className="mx-auto grid max-w-[1360px] gap-8 md:grid-cols-3">
           <div>
             <div className="flex items-center gap-2">
               <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[6px]" />
@@ -576,7 +578,7 @@ export const Landing: React.FC = () => {
             </div>
           </div>
         </div>
-        <p className="mx-auto mt-8 max-w-6xl text-xs text-slate-600">© {new Date().getFullYear()} ROSE · myrosebd.com · Made in Bangladesh</p>
+        <p className="mx-auto mt-8 max-w-[1360px] text-xs text-slate-600">© {new Date().getFullYear()} ROSE · myrosebd.com · Made in Bangladesh</p>
       </footer>
     </div>
   );
