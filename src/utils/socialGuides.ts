@@ -22,6 +22,7 @@ const COMMON = `HOW TO MOVE (same in every app):
 4. Do not talk while moving. Speak only when you arrived, when you finished, or when you are stuck (then say in one line what you see).
 5. Never press: Delete, Remove, Report, Block, Pay, Buy, Boost, Promote, Log out, or anything about money or passwords.
 REPLYING TO COMMENTS (same in every app):
+- The video must not play while you work: the phone pauses it by itself when you check or reply to comments. If it still plays or he says "ভিডিও থামাও / পজ করো", call app "pause video" first, then go on.
 - Open the comments, then call "check comments". Answer ONLY the ones under "রিপ্লাই বাকি". Never his own comments, never ones already answered, never a new top-level comment.
 - He says "সবাইকে রিপ্লাই দাও, আমাকে জিজ্ঞেস করার দরকার নাই" → that is his yes: call "reply all comments" (or write each reply yourself and send one by one), say nothing in between, and at the end say once how many were answered and which failed.
 - Otherwise read each comment once (name + words), write a short fitting reply yourself, read the list once and ask ONE question "এভাবে পাঠাবো?". After yes send one call per comment: "reply comment <name exactly as read>: <reply>". Wait for each result. Do not ask again between replies.
