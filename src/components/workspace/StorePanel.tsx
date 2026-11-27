@@ -512,8 +512,8 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
 type PriceRow = { plan: StorePlanId; monthly: number; stores: number; products: number; storage_gb: number; staff: number; own_domain: boolean };
 const DISC: Record<number, number> = { 3: 0, 6: 5, 9: 10, 12: 15, 24: 25 };
 /** Terms of the one-time LIFETIME website (also shown on myrosebd.com/start) */
-export const LIFETIME_TERMS =
-  'One payment of 26,000 Tk, the website is yours for life on myrosebd.com (1 store, PRO features). Domain and hosting are billed separately every year; the yearly amount is agreed with ROSE before payment (subject to conditions). Small problems and fixes on the website are solved free for life. Big changes or a new design are charged separately. ROSE app plans (voice and chat credits) are not included.';
+export const lifetimeTerms = (price: number) =>
+  `One payment of ${tk(price)}, the website is yours for life on myrosebd.com (1 store, PRO features). Domain and hosting are billed separately every year; the yearly amount is agreed with ROSE before payment (subject to conditions). Small problems and fixes on the website are solved free for life. Big changes or a new design are charged separately. ROSE app plans (voice and chat credits) are not included.`;
 export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPlan?: string; startMonths?: number }> = ({ current, onPaid, startPlan, startMonths }) => {
   const [prices, setPrices] = useState<PriceRow[]>([]);
   const [lifePrice, setLifePrice] = useState(0);
@@ -579,7 +579,7 @@ export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPla
               <span className="flex-1 text-[13px] font-bold text-white">LIFETIME WEBSITE · ONE-TIME</span>
               <span className="text-[13px] font-bold text-amber-300">{tk(lifePrice)} once</span>
             </span>
-            <span className="block text-[11px] leading-snug text-slate-400">{LIFETIME_TERMS}</span>
+            <span className="block text-[11px] leading-snug text-slate-400">{lifetimeTerms(lifePrice)}</span>
           </button>
         )}
         {!life && <p className="pt-1 text-[11px] font-bold tracking-wider text-teal-300">2 · HOW LONG</p>}

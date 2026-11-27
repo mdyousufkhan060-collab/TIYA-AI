@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { BuyPlan, LIFETIME_TERMS, RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
+import { BuyPlan, lifetimeTerms, RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
 import { STORE_DURATIONS, STORE_PLANS, storePrice, tk, type StorePlanId } from '../../utils/storePlans';
 
 /**
@@ -227,7 +227,7 @@ export default function StartStorePage() {
       {choice === 'lifetime' && (
         <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">
           <p className="text-[13px] font-extrabold text-amber-200">Lifetime website · {tk(lifePrice)} one-time</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-amber-50/90"><b>Terms:</b> {LIFETIME_TERMS}</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-amber-50/90"><b>Terms:</b> {lifetimeTerms(lifePrice)}</p>
         </div>
       )}
       {needPay && choice !== 'trial' && <BuyPlan startPlan={choice === 'lifetime' ? 'lifetime' : tier} startMonths={months} />}

@@ -11,19 +11,23 @@ import { BUSINESS } from './roseFiles/businessMode';
 import { ADMIN } from './roseFiles/roseAdmin';
 import { WHATS_NEW_ADMIN } from './roseFiles/whatsNew';
 import { WHATS_NEW_USER } from './roseFiles/whatsNewUser';
-import { ALL_MODES } from './roseFiles/plansAndModes';
+import { plansFile } from './roseFiles/plansAndModes';
 import { STORE_BUILDER } from './roseFiles/storeBuilder';
-import { PREMIUM } from './roseFiles/premiumPlan';
+import { premiumFile } from './roseFiles/premiumPlan';
+import { refreshLivePrices } from './roseFiles/livePrices';
+
+// load today's prices as soon as ROSE starts, so even her first answer uses them
+void refreshLivePrices();
 
 export function getRoseGuide(mode: string | null | undefined, isAdmin: boolean): string {
-  if (isAdmin) return [WHATS_NEW_ADMIN, COMMON, ACTIONS, ADMIN, BUSINESS, STUDENT, PERSONAL, ALL_MODES, PREMIUM, STORE_BUILDER].join('\n\n');
+  if (isAdmin) return [WHATS_NEW_ADMIN, COMMON, ACTIONS, ADMIN, BUSINESS, STUDENT, PERSONAL, plansFile(), premiumFile(), STORE_BUILDER].join('\n\n');
   const own = mode === 'business' ? BUSINESS : mode === 'student' ? STUDENT : PERSONAL;
   return [
     COMMON,
     ACTIONS,
     own,
-    ALL_MODES,
-    PREMIUM,
+    plansFile(),
+    premiumFile(),
     STORE_BUILDER,
     WHATS_NEW_USER,
     'You may explain every mode and plan to anyone, but only DO the tools of this user\'s own mode. Never describe the Admin panel to normal users.',
