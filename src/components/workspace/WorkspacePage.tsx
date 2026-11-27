@@ -1270,9 +1270,13 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
       </div>
     );
 
-  return (
+  const shell = (
     <SettingsShell title={view === 'hub' ? 'WORKSPACE' : view === 'store' && siteOwner ? 'WEBSITE ADMIN' : TITLES[view]} onBack={back}>
       <div className="pb-4">{body}</div>
     </SettingsShell>
   );
+  // website owners see their WORKSPACE pages in white (the full-screen website admin keeps its own look)
+  if (siteOwner && view !== 'store')
+    return <div className="light-zone flex min-h-0 flex-1 flex-col bg-slate-50 text-slate-900">{shell}</div>;
+  return shell;
 };

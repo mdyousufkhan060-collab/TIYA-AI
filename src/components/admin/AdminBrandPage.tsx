@@ -149,13 +149,13 @@ export const AdminSiteSwitchesPage: React.FC = () => {
 
 /** ROSE SUPPORT card for users (Settings top) and store owners (store admin top). */
 export const RoseSupportCard: React.FC<{ onOpen: () => void; open?: boolean }> = ({ onOpen, open }) => (
-  <button type="button" onClick={onOpen} data-testid="rose-support-card" className="flex min-h-[72px] w-full items-center gap-3 border border-teal-400/50 bg-gradient-to-r from-teal-500/15 to-fuchsia-500/10 p-3 text-left">
+  <button type="button" onClick={onOpen} data-testid="rose-support-card" className="flex min-h-[72px] w-full items-center gap-3 rounded-xl border border-teal-500/50 bg-white bg-gradient-to-r from-teal-500/10 to-fuchsia-500/5 p-3 text-left shadow-sm dark:rounded-none dark:bg-transparent dark:from-teal-500/15 dark:to-fuchsia-500/10 dark:shadow-none">
     <img src="/team/devs-square.jpg" alt="ROSE developers" className="h-12 w-12 shrink-0 rounded-full border-2 border-teal-400 object-cover object-top" />
     <span className="min-w-0 flex-1">
-      <span className="block text-[10.5px] font-bold tracking-[0.16em] text-teal-300">ROSE SUPPORT</span>
-      <span className="block text-[16px] font-extrabold text-white">MYROSEBD.COM</span>
-      <span className="block text-[11px] text-slate-300">Help · call or WhatsApp ROSE · plans</span>
+      <span className="block text-[10.5px] font-bold tracking-[0.16em] text-teal-700 dark:text-teal-300">ROSE SUPPORT</span>
+      <span className="block text-[16px] font-extrabold text-slate-900 dark:text-white">MYROSEBD.COM</span>
+      <span className="block text-[11px] text-slate-500 dark:text-slate-300">Help · call or WhatsApp ROSE · plans</span>
     </span>
-    <span className="text-[10px] font-bold text-teal-200">{open ? 'CLOSE ×' : 'OPEN ›'}</span>
+    <span className="text-[10px] font-bold text-teal-700 dark:text-teal-200">{open ? 'CLOSE ×' : 'OPEN ›'}</span>
   </button>
 );
