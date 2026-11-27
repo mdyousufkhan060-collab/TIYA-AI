@@ -66,6 +66,26 @@ interface Options {
   onCredits?: (voiceLeft: number | null, textLeft: number | null) => void;
 }
 
+/** The post he means: "দুই নম্বর ভিডিও", "২য় পোস্ট", "দ্বিতীয়", "second video", "post 3" → 2, 2, 2, 2, 3 (null = not said) */
+function postNumber(t: string): number | null {
+  const bn = '০১২৩৪৫৬৭৮৯';
+  const s = t.replace(/[০-৯]/g, (d) => String(bn.indexOf(d)));
+  const words: [RegExp, number][] = [
+    [/প্রথম|first|1st|শেষ|latest|newest|নতুন/, 1],
+    [/দ্বিতীয়|second|2nd|দুই নম্বর|দুই নাম্বার|দুই নং|দুইটা নম্বর/, 2],
+    [/তৃতীয়|third|3rd|তিন নম্বর|তিন নাম্বার|তিন নং/, 3],
+    [/চতুর্থ|fourth|4th|চার নম্বর|চার নাম্বার|চার নং/, 4],
+    [/পঞ্চম|fifth|5th|পাঁচ নম্বর|পাঁচ নাম্বার|পাঁচ নং/, 5],
+  ];
+  const d = s.match(/(\d{1,2})\s*(নম্বর|নাম্বার|নং|য়|তম|th|nd|rd|st)?\s*(পোস্ট|ভিডিও|post|video)|(পোস্ট|ভিডিও|post|video)\s*(নম্বর|নাম্বার|no\.?|number)?\s*(\d{1,2})/);
+  if (d) {
+    const n = Number(d[1] || d[6]);
+    if (n >= 1 && n <= 30) return n;
+  }
+  for (const [re, n] of words.slice(1)) if (re.test(s)) return n;
+  return null;
+}
+
 export function usePremiumVoice(opts: Options) {
   const [state, setState] = useState<VoiceState>('idle');
   const [errorText, setErrorText] = useState('');
@@ -285,6 +305,7 @@ export function usePremiumVoice(opts: Options) {
   // then the phone answers every comment without his reply, live, one by one.
   const recipeRef = useRef<{ steps: string[]; at: number } | null>(null);
   const lastRecipeAt = useRef(0);
+  const lastPostNo = useRef(1);
   const runRecipeStep = useCallback(() => {
     const r = recipeRef.current;
     if (!r || r.at >= r.steps.length) return false;
@@ -307,14 +328,28 @@ export function usePremiumVoice(opts: Options) {
       // from his own profile
       const otherApp = /ইউটিউব|youtube|ইনস্টা|instagram|টিকটক|tiktok|হোয়াটসঅ্যাপ|whatsapp|মেসেঞ্জার|messenger/.test(t);
       const asksReplies =
-        /কমেন্ট|comment|মন্তব্য/.test(t) && /রিপ্লাই|reply|উত্তর|জবাব|দাও|দেও|করো|কর\b/.test(t);
+        /কমেন্ট|কমেন|comment|মন্তব্য/.test(t) &&
+        /রিপ্লাই|রিফ্লাই|রিপলাই|রিপ্লে|reply|উত্তর|জবাব|দাও|দেও|দিয়া|দিয়ে|করো|করে দ/.test(t) &&
+        !/পড়ে শোনাও|পড়ো|শোনাও|দেখাও|কয়টা|কতগুলো|read|show/.test(t);
       const corrects =
         Date.now() - lastRecipeAt.current < 5 * 60 * 1000 &&
         /আরেকজন|অন্যের|অন্য কার|ভুল|আমার (পোস্ট|ভিডিও|প্রোফাইল)|এটা না|ওটা না|wrong|someone else/.test(t);
       if (!otherApp && (asksReplies || corrects)) {
         lastRecipeAt.current = Date.now();
-        recipeRef.current = { steps: ['open latest post comments', 'reply all comments'], at: 0 };
-        void speakLine('ঠিক আছে, আপনার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।');
+        // which post: "দুই নম্বর", "২য়", "দ্বিতীয়", "second", "post 2"… (newest when he names none)
+        const nth = postNumber(t);
+        if (nth) lastPostNo.current = nth;
+        const no = corrects && !nth ? lastPostNo.current : nth || 1;
+        if (!corrects || nth) lastPostNo.current = no;
+        recipeRef.current = {
+          steps: [no === 1 ? 'open latest post comments' : `open post ${no} comments`, 'reply all comments'],
+          at: 0,
+        };
+        void speakLine(
+          no === 1
+            ? 'ঠিক আছে, আপনার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।'
+            : `ঠিক আছে, আপনার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`,
+        );
         runRecipeStep();
         return;
       }
