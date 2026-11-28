@@ -26,12 +26,12 @@ export function postNumber(t: string): number | null {
   return null;
 }
 
-const REPLY = /রিপ্লাই|রিফ্লাই|রিপলাই|রিপ্লে|রিপ্লায়|reply/;
+const REPLY = /রিপ্লাই|রিফ্লাই|রিপলাই|রিপ্লে|রিপ্লায়|রিপ্লাইয়|reply/;
 
 /** a reply-the-comments job: "কমেন্টে রিপ্লাই দাও", or "রিপ্লাই" about his post / video / Facebook */
 export function asksCommentReplies(t: string): boolean {
   const s = t.toLowerCase();
-  const comment = /কমেন্ট|কমেন|comment|মন্তব্য/.test(s);
+  const comment = /কমেন্ট|কমেন|কমন|কোমেন্ট|কমেন্ড|comment|মন্তব্য/.test(s);
   const post = /পোস্ট|ভিডিও|post|video|ফেসবুক|facebook|প্রোফাইল/.test(s);
   if (comment && REPLY.test(s)) return true;
   if (comment && /উত্তর|জবাব|দাও|দেও|দিয়া|দিয়ে|করো|করে দ/.test(s) && !/পড়ে শোনাও|পড়ো|শোনাও|দেখাও|কয়টা|কতগুলো|read|show/.test(s)) return true;
@@ -80,4 +80,10 @@ export function postAgeMinutes(t: string): number | null {
 export function saysYes(t: string): boolean {
   return /^(হ্যাঁ|হা|হুম|হ্যা|জি|জ্বি|ঠিক আছে|ok|okay|yes|ঢুকো|ঢোকো|ধুকো|দুকো|করো|দাও|চলো)/.test(t.trim().toLowerCase()) ||
     /হ্যাঁ|ঢুকো|ঢোকো|ধুকো|ওটাতেই|ওইটাতে|এটাতেই/.test(t);
+}
+
+/** right after ROSE stopped on a video: "দেখো রিপ্লাই বাকি আছে কিনা, রিপ্লাই দাও" (any reply / comment talk) = that video */
+export function asksReplyHere(t: string): boolean {
+  const s = t.toLowerCase();
+  return REPLY.test(s) || (/কমেন্ট|কমেন|কমন|comment/.test(s) && /দেখো|চেক|check|করো|দাও|খুল/.test(s));
 }

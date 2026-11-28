@@ -9,7 +9,7 @@ import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
 import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
-import { asksCommentReplies, goToPostNumber, postAgeMinutes, postNumber, saysYes } from '../lib/replyRequest';
+import { asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, saysYes } from '../lib/replyRequest';
 import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -450,6 +450,17 @@ export function usePremiumVoice(opts: Options) {
           ? { steps: ['open comments here', 'reply all comments'], at: 0 }
           : { steps: ['open comments here'], at: 0, doneLine: 'কমেন্ট খুলেছি। এখন কী করবো বলো?' };
         await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + (pe.reply ? 'ঢুকে কমেন্টগুলোতে রিপ্লাই দিচ্ছি।' : 'ঢুকছি।'));
+        if (!activeRef.current) return;
+        runRecipeStep();
+        return;
+      }
+      // LOCKED (owner, Nov 28): ROSE stopped on a video (by number or by age) a little while ago and he now talks about
+      // replies/comments without naming another video → that same video: its comments, then reply all
+      if (Date.now() - lastGoAt.current < 15 * 60 * 1000 && postNumber(t) === null && postAgeMinutes(t) === null && asksReplyHere(t)) {
+        lastRecipeAt.current = Date.now();
+        lastGoAt.current = Date.now();
+        recipeRef.current = { steps: ['open comments here', 'reply all comments'], at: 0 };
+        await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + 'এই ভিডিওর কমেন্টগুলো দেখে রিপ্লাই দিচ্ছি।');
         if (!activeRef.current) return;
         runRecipeStep();
         return;
