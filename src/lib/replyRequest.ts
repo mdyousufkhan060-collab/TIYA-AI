@@ -119,7 +119,7 @@ export function postAgeMinutes(t: string): number | null {
 /** his yes to "এটাতে ঢুকবো?" */
 export function saysYes(t: string): boolean {
   return /^(হ্যাঁ|হা|হুম|হ্যা|জি|জ্বি|ঠিক আছে|ok|okay|yes|ঢুকো|ঢোকো|ধুকো|দুকো|করো|দাও|চলো)/.test(t.trim().toLowerCase()) ||
-    /হ্যাঁ|ঢুকো|ঢোকো|ধুকো|ওটাতেই|ওইটাতে|এটাতেই/.test(t);
+    (/হ্যাঁ|ঢুক|ঢোক|ধুক|দুক|ডুক|ওটাতেই|ওইটাতে|এটাতেই|রিপ্লাই|রিফ্লাই|দাও|করো|শুরু/.test(t) && !/^(না|নাহ|নো)(?=$|[\s,।])|নিচে|নিচের/.test(t.trim()));
 }
 
 /** right after ROSE stopped on a video: "দেখো রিপ্লাই বাকি আছে কিনা, রিপ্লাই দাও" (any reply / comment talk) = that video */
