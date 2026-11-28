@@ -255,7 +255,7 @@ export default function StartStorePage() {
           <p className="mt-1 text-[12px] leading-relaxed text-[#3b0a24]"><b>Terms:</b> {lifetimeTerms(lifePrice)}</p>
         </div>
       )}
-      <p className="border-l-4 border-[#e5337f] bg-[#fde3ed] px-3 py-2 text-[12px] leading-relaxed text-[#3b0a24]"><b className="text-[#6d0f3f]">Lifetime free service:</b> no more charges unless you ask for a big change. Only the yearly hosting and domain fee is paid each year. BUSINESS PREMIUM can change the website's colours and layout; PERSONAL · STUDENT websites keep the chosen design.</p>
+      <p className="border-l-4 border-[#e5337f] bg-[#fde3ed] px-3 py-2 text-[12px] leading-relaxed text-[#3b0a24]"><b className="text-[#6d0f3f]">Lifetime free service:</b> no more charges unless you ask for a big change. After 12 months, only the yearly hosting and domain fee is paid. BUSINESS PREMIUM can change the website's colours and layout; PERSONAL · STUDENT websites keep the chosen design.</p>
       <button type="button" onClick={() => setCond((v) => !v)} className="text-[12.5px] font-extrabold tracking-wide text-[#6d0f3f] underline">CONDITIONS {cond ? '▾' : '›'}</button>
       {cond && (
         <ol className="list-decimal space-y-1 border-[1.5px] border-[#f3b8cf] bg-white py-2.5 pl-7 pr-3 text-[12px] leading-relaxed text-[#3b0a24]">

@@ -606,7 +606,7 @@ export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPla
             </button>
           ))}
         </div>}
-        <p className="text-[11px] leading-snug text-slate-300"><b className="text-white">Lifetime free service:</b> no more charges unless you ask for a big change. Only the yearly hosting and domain fee is paid each year.</p>
+        <p className="text-[11px] leading-snug text-slate-300"><b className="text-white">Lifetime free service:</b> no more charges unless you ask for a big change. After 12 months, only the yearly hosting and domain fee is paid.</p>
         <button type="button" onClick={() => setCond((v) => !v)} className="text-[11.5px] font-bold tracking-wide text-teal-300 underline">CONDITIONS {cond ? '▾' : '›'}</button>
         {cond && (
           <ol className="list-decimal space-y-1 border border-white/10 bg-black/30 py-2 pl-6 pr-2 text-[11px] leading-snug text-slate-200">
