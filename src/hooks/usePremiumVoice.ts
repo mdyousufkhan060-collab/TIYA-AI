@@ -475,6 +475,8 @@ export function usePremiumVoice(opts: Options) {
   const lastAgeReplyAt = useRef(0);
   /** ROSE could not find the exact day he named and is stepping down video by video */
   const ageAskAt = useRef(0);
+  /** a phone step was running when he came back: its late answer is ignored */
+  const dropNextResultRef = useRef(false);
   /** his profile + Pages, as Facebook showed them (PageSwitch.kt) */
   /** the Page ROSE is in now (null = his own profile); ROSE then says 'পেজের', not 'প্রোফাইলের' */
   const activePageRef = useRef<string | null>(null);
@@ -735,11 +737,36 @@ export function usePremiumVoice(opts: Options) {
   );
   speakRef.current = speakLine;
 
+  // Nov 28 (owner): he tapped the floating ball and came back to ROSE while she was working in Facebook → stop the
+  // job, never pull him back, say why she stopped and ask what next
+  useEffect(() => {
+    const onBack = () => {
+      if (!activeRef.current) return;
+      const busy = !!recipeRef.current || watchRef.current !== null;
+      if (!busy) return;
+      if (watchRef.current !== null) dropNextResultRef.current = true;
+      clearWatch();
+      recipeRef.current = null;
+      pendingRef.current = false;
+      const nm = callNameOf(optsRef.current.yourName);
+      void speakLine(`${nm ? nm + ', ' : ''}তুমি আমাকে হোমে নিয়ে এলে কেন? আমি তো তোমার কথায় Facebook-এ কাজ করছিলাম। কাজটা থামিয়ে দিয়েছি। এখন কী করবো বলো?`).then(() => {
+        if (activeRef.current) window.setTimeout(() => listen(), 300);
+      });
+    };
+    window.addEventListener('rose-user-back', onBack);
+    return () => window.removeEventListener('rose-user-back', onBack);
+  }, [speakLine, listen]);
+
   /** The app ran a phone action: give ROSE the result so she can say it or take the next step (max 12 steps). */
   const feedback = useCallback(
     (text: string) => {
       clearWatch();
       if (!activeRef.current) return;
+      // he came back to ROSE in the middle of a phone step: that step's late answer is dropped (no AI, no next step)
+      if (dropNextResultRef.current) {
+        dropNextResultRef.current = false;
+        return;
+      }
       if (stepsRef.current >= 12) {
         // too many steps: stop the job, tell him, and listen again (before, ROSE went silent here)
         pendingRef.current = false;
