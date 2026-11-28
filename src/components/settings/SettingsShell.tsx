@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Bot,
   Activity,
   BarChart3,
   Bell,
@@ -62,6 +63,7 @@ import {
 const BAR_ICONS: Array<[RegExp, React.ElementType, string]> = [
   [/SITE REVIEWS/, Star, '#fbbf24'],
   [/ADMIN SMS/, MessageSquareText, '#22d3ee'],
+  [/^AUTO-PILOT$/, Bot, '#ec4899'],
   [/^WEBSITE ADMIN$/, MonitorCog, '#14b8a6'],
   [/^MY SHOP$/, ShoppingBag, '#22c55e'],
   [/^CUSTOMER VIEW$/, Eye, '#38bdf8'],
