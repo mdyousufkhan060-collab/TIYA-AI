@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Get your store · ROSE (preview)</title>
+<meta name="robots" content="noindex" />
+<style>
+  :root { --m: #6d0f3f; --m2: #8a1450; --p: #e5337f; --pl: #f472a8; --bg: #fde8f0; --line: #f3b8cf; --card: #fff6f9; --ink: #3b0a24; --mut: #6b5160; }
+  * { box-sizing: border-box; border-radius: 0 !important; }
+  html, body { margin: 0; width: 100%; min-height: 100dvh; background: var(--bg); }
+  body { font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", sans-serif; color: var(--ink); overflow-x: hidden; display: flex; flex-direction: column; }
+  a { color: inherit; text-decoration: none; }
+  button, input, select { font: inherit; }
+
+  /* full width at every screen size: only side padding, no max-width box, so no empty/black edges */
+  .page { flex: 1; width: 100%; padding: 18px clamp(14px, 3vw, 48px) 0; background: linear-gradient(180deg, #fbd3e3 0, var(--bg) 260px); }
+  .back { display: inline-block; font-size: 13px; font-weight: 700; color: var(--p); }
+  h1 { margin: 8px 0 2px; font-size: clamp(24px, 3vw, 38px); font-weight: 800; color: var(--m); letter-spacing: -.01em; }
+  .sub { margin: 0 0 16px; font-size: clamp(14px, 1.4vw, 17px); font-weight: 600; color: var(--p); }
+
+  .step { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; font-size: 15px; font-weight: 600; }
+  .step b { display: grid; place-items: center; width: 28px; height: 28px; background: var(--m); color: #fff; font-size: 14px; flex: none; }
+  .step span { color: var(--mut); font-weight: 500; }
+
+  .layout { display: grid; gap: 22px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .d { position: relative; background: var(--card); border: 1.5px solid var(--line); text-align: left; padding: 0; cursor: pointer; color: var(--ink); display: flex; flex-direction: column; transition: border-color .15s, box-shadow .15s; }
+  .d:hover { border-color: var(--pl); }
+  .d .ph { display: block; aspect-ratio: 16 / 10; background: #f9d5e3 center/cover; }
+  .d .nm { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1.5px solid var(--line); }
+  .d svg { width: 26px; height: 26px; color: var(--p); flex: none; }
+  .d strong { display: block; font-size: 15px; font-weight: 800; line-height: 1.15; }
+  .d small { display: block; font-size: 12.5px; color: var(--mut); }
+  .d.on { border: 3px solid var(--p); box-shadow: 0 8px 22px rgba(229,51,127,.25); }
+  .d .chosen { position: absolute; top: 8px; right: 8px; background: var(--p); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .06em; padding: 4px 9px; display: none; }
+  .d.on .chosen { display: block; }
+
+  .side { background: var(--card); border: 1.5px solid var(--line); padding: 18px; box-shadow: 0 10px 28px rgba(109,15,63,.08); }
+  .demo { display: inline-block; margin: 0 0 16px; font-size: 14px; font-weight: 600; color: var(--p); text-decoration: underline; }
+  .g { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 52px; background: #fff; border: 2px solid var(--m); color: var(--m); font-size: 16px; font-weight: 800; cursor: pointer; }
+  .g:hover { background: var(--m); color: #fff; }
+  .note { margin: 10px 0 0; font-size: 13px; color: var(--mut); }
+  .pick { margin: 0 0 14px; padding: 10px 12px; background: #fde3ed; border-left: 4px solid var(--p); font-size: 14px; }
+  .pick b { color: var(--m); }
+
+  .foot { margin: 28px 0 0; padding: 0 0 14px; text-align: center; font-size: 12.5px; color: var(--mut); }
+  .foot a { text-decoration: underline; }
+  .wave { height: 64px; width: 100%; background: linear-gradient(90deg, #6d0f3f, #b0205f 60%, #6d0f3f); clip-path: polygon(0 55%, 18% 30%, 40% 50%, 62% 20%, 82% 45%, 100% 25%, 100% 100%, 0 100%); }
+
+  /* review-only switch (removed when it goes live) */
+  .rv { position: fixed; right: 10px; bottom: 10px; z-index: 9; display: flex; gap: 4px; background: #fff; border: 1.5px solid var(--m); padding: 4px; font-size: 12px; }
+  .rv button { border: 0; background: transparent; padding: 6px 9px; font-weight: 700; color: var(--m); cursor: pointer; }
+  .rv button.on { background: var(--m); color: #fff; }
+
+  /* form (after Google sign-in) */
+  .form { display: none; }
+  .form label { display: block; font-size: 13px; font-weight: 700; color: var(--m); margin: 0 0 10px; }
+  .form input, .form select { display: block; width: 100%; margin-top: 5px; padding: 10px 12px; border: 1.5px solid var(--line); background: #fff; color: var(--ink); font-size: 14.5px; }
+  .form input:focus, .form select:focus { outline: none; border-color: var(--p); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .url { display: flex; align-items: center; gap: 6px; } .url input { flex: 1; } .url span { font-size: 13px; color: var(--mut); white-space: nowrap; margin-top: 5px; }
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 14px; }
+  .plans button { text-align: left; padding: 11px; background: #fff; border: 1.5px solid var(--line); cursor: pointer; color: var(--ink); }
+  .plans button b { display: block; font-size: 14px; } .plans button span { display: block; font-size: 12px; color: var(--p); font-weight: 600; }
+  .plans button.on { border: 3px solid var(--p); background: #fde3ed; }
+  .start { width: 100%; height: 52px; border: 0; background: var(--m); color: #fff; font-size: 16px; font-weight: 800; letter-spacing: .02em; cursor: pointer; }
+  .start:hover { background: var(--m2); }
+  body.f .signin { display: none; } body.f .form { display: block; }
+
+  /* tablets: 3 cards a row */
+  @media (min-width: 640px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  /* computers: designs on the left, sign-in / form on the right, both filling the full width */
+  @media (min-width: 1000px) {
+    .layout { grid-template-columns: minmax(0, 1fr) clamp(360px, 32vw, 560px); align-items: start; gap: clamp(20px, 2.5vw, 44px); }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+    .side { position: sticky; top: 18px; padding: 26px; }
+  }
+  @media (min-width: 1800px) { .grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); } }
+  @media (max-width: 420px) { .plans { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <a class="back" href="/demos">‹ All designs</a>
+  <h1>Get your own store</h1>
+  <p class="sub">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</p>
+
+  <div class="layout">
+    <section>
+      <div class="step"><b>1</b>Choose a design <span>ডিজাইন বাছুন</span></div>
+      <div class="grid" id="g"></div>
+    </section>
+
+    <aside class="side">
+      <div class="signin">
+        <p class="pick" id="pick"></p>
+        <a class="demo" id="demo" href="#" target="_blank" rel="noopener"></a>
+        <div class="step"><b>2</b>Sign in with your company Gmail <span>কোম্পানির জিমেইল দিয়ে লগইন</span></div>
+        <button class="g" type="button">
+          <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+          Continue with Google
+        </button>
+        <p class="note">5-day free trial, once per Gmail. No payment now.</p>
+      </div>
+
+      <div class="form">
+        <div class="step"><b>2</b>Your company details <span>কোম্পানির তথ্য</span></div>
+        <div class="two">
+          <label>Company name (English) *<input placeholder="Rahim Fashion"></label>
+          <label>Company name (Bangla)<input placeholder="রহিম ফ্যাশন"></label>
+        </div>
+        <div class="two">
+          <label>Phone / WhatsApp *<input inputmode="numeric" placeholder="01XXXXXXXXX"></label>
+          <label>District *<select><option>Dhaka</option><option>Chattogram</option><option>Sylhet</option></select></label>
+        </div>
+        <label>Address (optional)<input placeholder="House, road, area"></label>
+        <label>Web address *<span class="url"><input placeholder="rahim-fashion"><span>.myrosebd.com</span></span></label>
+        <div class="step"><b>3</b>Choose a plan <span>প্ল্যান বাছুন</span></div>
+        <div class="plans" id="plans">
+          <button type="button" class="on"><b>5-day free trial</b><span>0 Tk · pay later</span></button>
+          <button type="button"><b>Monthly plan</b><span>from … / month</span></button>
+          <button type="button"><b>Lifetime website</b><span>… once</span></button>
+        </div>
+        <button class="start" type="button">START 5-DAY FREE STORE</button>
+        <p class="note" style="text-align:center">Logo, banners, more phones and emails: add later in Settings · <a href="/terms.html">Terms</a></p>
+      </div>
+    </aside>
+  </div>
+
+  <p class="foot">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a href="/policies.html">Policies</a></p>
+</div>
+<div class="wave"></div>
+
+<div class="rv"><button type="button" class="on" data-v="">Before sign-in</button><button type="button" data-v="f">After sign-in</button></div>
+
+<script src="https://www.myrosebd.com/demos/stores.js"></script>
+<script>
+  var S = window.ROSE_STORES || {}, keys = Object.keys(S);
+  var key = new URLSearchParams(location.search).get('d') || 'printpack';
+  if (!S[key]) key = keys[0];
+  var P = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+  var ICON = {
+    bag: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 7V6a4 4 0 0 1 8 0v1h3l1 15H4L5 7h3Zm2 0h4V6a2 2 0 0 0-4 0v1Z"/></svg>',
+    hanger: '<svg viewBox="0 0 24 24" ' + P + '><path d="M12 7a2 2 0 1 1 2-2c0 1-2 1.5-2 3v1L2.5 16.5c-.7.6-.3 1.5.6 1.5h17.8c.9 0 1.3-.9.6-1.5L12 9"/></svg>',
+    cart: '<svg viewBox="0 0 24 24" ' + P + '><path d="M2 3h3l2.6 12h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>',
+    sofa: '<svg viewBox="0 0 24 24" ' + P + '><path d="M4 11V8a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"/><path d="M2 13a2 2 0 0 1 4 0v2h12v-2a2 2 0 0 1 4 0v5H2v-5ZM5 18v2M19 18v2"/></svg>',
+    pill: '<svg viewBox="0 0 24 24" ' + P + '><rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-45 12 12)"/><path d="M8.5 8.5l7 7"/></svg>',
+    tag: '<svg viewBox="0 0 24 24" ' + P + '><path d="M3 12V3h9l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
+    box: '<svg viewBox="0 0 24 24" ' + P + '><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>'
+  };
+  var ic = { foodbazaar: 'bag', fashionhub: 'hanger', sotadari: 'cart', shopshotoi: 'box', homenest: 'sofa', medicare: 'pill', printpack: 'tag' };
+  function photo(s) {
+    var p = (s.products || []).filter(function (q) { return q[6]; })[0];
+    var u = p ? String(p[6]) : (s.banners && s.banners[0] && s.banners[0].img) || '';
+    return !u ? '' : /^https?:/.test(u) ? u : 'https://images.unsplash.com/' + u + '?w=600&q=65&auto=format&fit=crop';
+  }
+  function draw() {
+    document.getElementById('g').innerHTML = keys.map(function (k) {
+      var s = S[k], im = photo(s);
+      return '<button type="button" class="d' + (k === key ? ' on' : '') + '" data-k="' + k + '">' +
+        '<span class="ph" style="' + (im ? 'background-image:url(' + im + ')' : '') + '"></span><span class="chosen">CHOSEN</span>' +
+        '<span class="nm">' + ICON[ic[k] || 'bag'] + '<span><strong>' + s.name + '</strong><small>' + s.type + '</small></span></span></button>';
+    }).join('');
+    var s = S[key];
+    document.getElementById('pick').innerHTML = 'Chosen design: <b>' + s.name + '</b> · ' + s.type;
+    var a = document.getElementById('demo'); a.textContent = 'See the ' + s.name + ' demo first'; a.href = '/demos/store.html?s=' + key;
+  }
+  document.getElementById('g').addEventListener('click', function (e) {
+    var b = e.target.closest('.d'); if (!b) return; key = b.getAttribute('data-k'); draw();
+  });
+  document.getElementById('plans').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); });
+  });
+  [].forEach.call(document.querySelectorAll('.rv button'), function (b) {
+    b.onclick = function () {
+      [].forEach.call(document.querySelectorAll('.rv button'), function (x) { x.classList.toggle('on', x === b); });
+      document.body.className = b.getAttribute('data-v');
+    };
+  });
+  if (keys.length) draw();
+</script>
+</body>
+</html>
