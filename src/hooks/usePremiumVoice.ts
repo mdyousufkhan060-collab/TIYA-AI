@@ -459,7 +459,8 @@ export function usePremiumVoice(opts: Options) {
           steps: [no === 1 ? 'open latest post comments' : `open post ${no} comments`, 'reply all comments'],
           at: 0,
         };
-        void speakLine(
+        // LOCKED (owner, Nov 28): she says it FIRST, then the phone starts (not Facebook first, words later)
+        await speakLine(
           okWithName(callNameOf(optsRef.current.yourName)) +
             (no === 1 ? 'তোমার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।' : `তোমার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`),
         );
@@ -478,7 +479,8 @@ export function usePremiumVoice(opts: Options) {
           at: 0,
           doneLine: `${nm ? nm + ', ' : ''}আমি তোমার ${goNo} নম্বর ভিডিওর কাছে আছি। এখন কী করবো বলো?`,
         };
-        void speakLine(okWithName(nm) + `তোমার ${goNo} নম্বর ভিডিওতে যাচ্ছি।`);
+        await speakLine(okWithName(nm) + `তোমার ${goNo} নম্বর ভিডিওতে যাচ্ছি।`);
+        if (!activeRef.current) return;
         runRecipeStep();
         return;
       }
