@@ -693,7 +693,7 @@ export function usePremiumVoice(opts: Options) {
           greetFirst(t) + okWithName(callNameOf(optsRef.current.yourName)) +
             (many.length > 1
               ? `আগে ${many[0]} নম্বর ভিডিওর রিপ্লাই শেষ করবো, তারপর ${many.slice(1).join(', ')} নম্বর। সব শেষ হলে তোমাকে জানাবো।`
-              : `${activePageRef.current ? `তোমার ${activePageRef.current} পেজের` : 'তোমার প্রোফাইলের'} ${no === 1 ? 'সবচেয়ে নতুন (১ নম্বর) ভিডিওর' : `${no} নম্বর পোস্টের`} কমেন্টে রিপ্লাই দিচ্ছি।`),
+              : `${activePageRef.current ? `তোমার ${activePageRef.current} পেজের` : /পেজ|পেইজ|page/.test(t) ? 'তোমার পেজের' : 'তোমার প্রোফাইলের'} ${no === 1 ? 'সবচেয়ে নতুন (১ নম্বর) ভিডিওর' : `${no} নম্বর পোস্টের`} কমেন্টে রিপ্লাই দিচ্ছি।`),
         );
         runRecipeStep();
         return;
