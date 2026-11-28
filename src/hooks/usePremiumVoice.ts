@@ -742,12 +742,6 @@ export function usePremiumVoice(opts: Options) {
       const rc = recipeRef.current;
       if (rc) {
         const ok = /SUCCESS/.test(text) && !/খুঁজে পাইনি|পারিনি|could not/i.test(text);
-        if (ok && rc.at < rc.steps.length) {
-          window.setTimeout(() => {
-            if (activeRef.current) runRecipeStep();
-          }, 400);
-          return;
-        }
         // Nov 28 (owner): the video has no comments → stop, say it, wait ("নিচের ভিডিওতে যাও" works next)
         if (/NO_COMMENTS/.test(text)) {
           recipeRef.current = null;
@@ -756,6 +750,12 @@ export function usePremiumVoice(opts: Options) {
           void speakLine(`${nm ? nm + ', ' : ''}এই ভিডিওতে কোনো কমেন্ট নেই, তাই কিছু লিখিনি। এখন কী করবো? চাইলে নিচের ভিডিওতে যেতে পারি।`).then(() => {
             if (activeRef.current) window.setTimeout(() => listen(), 300);
           });
+          return;
+        }
+        if (ok && rc.at < rc.steps.length) {
+          window.setTimeout(() => {
+            if (activeRef.current) runRecipeStep();
+          }, 400);
           return;
         }
         // Nov 28 (owner): his profile + Pages were read, or ROSE went into one
