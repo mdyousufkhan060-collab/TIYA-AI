@@ -366,6 +366,12 @@ export default function App() {
     }
     // the shop's "Store admin" button opens the owner's WORKSPACE page (01 MY DETAILS with Gmail and ID, 02 MYROSEBD.COM BUSINESS,
     // 03 WEBSITE ADMIN, 04 MY SHOP, 05 CUSTOMER VIEW, 06 MY STAFF), straight, with no ROSE home page on the way
+    // LOCKED (owner, Nov 28): always the 6-bar website-owner page, whatever ROSE mode he is in
+    try {
+      window.sessionStorage.setItem('rose_from_store', '1');
+    } catch {
+      /* ignore */
+    }
     navigateTo('settings', 'workspace', 'hub');
     window.setTimeout(() => setOpeningAdmin(false), 1200);
   }, [session?.user?.id, profileLoaded, openAfterLogin, navigateTo]);

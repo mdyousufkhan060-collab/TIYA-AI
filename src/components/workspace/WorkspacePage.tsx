@@ -841,8 +841,28 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
   const [supportId, setSupportId] = useState('');
   const [isOwner, setIsOwner] = useState(false);
   const [staffCount, setStaffCount] = useState(0);
+  // LOCKED (owner, Nov 28 7:04 PM): the shop's "Store admin" button ALWAYS opens the website owner's 6-bar page
+  // (01 MY DETAILS … 06 MY STAFF) — also for the ROSE admin in MODE ADMIN · ALL (before, that mode skipped the shop
+  // check and showed ROSE's own workspace instead). The flag lives only while this page is open.
+  const [fromStore] = useState(() => {
+    try {
+      return window.sessionStorage.getItem('rose_from_store') === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(
+    () => () => {
+      try {
+        window.sessionStorage.removeItem('rose_from_store');
+      } catch {
+        /* ignore */
+      }
+    },
+    [],
+  );
   useEffect(() => {
-    if (allModes) return;
+    if (allModes && !fromStore) return;
     let gone = false;
     void (async () => {
       const [{ data: own }, { data: staff }, { data: u }, { data: flags }] = await Promise.all([
@@ -875,7 +895,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({ userId, mode, isMi
     return () => {
       gone = true;
     };
-  }, [userId, allModes]);
+  }, [userId, allModes, fromStore]);
   // things the WEBSITE ADMIN already has: not shown again inside ROSE
   const SITE_HIDES = new Set<string>(['store', 'couriers', 'orders', 'customers', 'expenses']);
 
