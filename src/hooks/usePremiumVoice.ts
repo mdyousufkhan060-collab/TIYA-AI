@@ -5,6 +5,7 @@ import { openQuietMic, type QuietMic } from '../lib/quietMic';
 import { isVoiceMuted } from '../lib/voiceMute';
 import { fadePcm } from '../lib/pcmFade';
 import { pcmStreamPlayer } from '../lib/pcmStream';
+import { voiceCaptions } from '../lib/voiceCaptions';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -113,6 +114,8 @@ export function usePremiumVoice(opts: Options) {
       /* ignore */
     }
     recRef.current = null;
+    voiceCaptions.clearUserLive();
+    voiceCaptions.finishTyping();
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -245,6 +248,8 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       fakeRef.current = 0;
+      // set the typing before the reply enters the chat, so it never flashes there whole first
+      if (reply && !action) voiceCaptions.waitTyping(reply);
       if (reply || action) o.onAppend('assistant', reply, action || undefined);
       if (action) stepsRef.current += 1;
       if (!reply || action) {
@@ -257,13 +262,26 @@ export function usePremiumVoice(opts: Options) {
       // fastest: the voice is streamed and starts playing with its first piece (about 0.7 s after the server starts)
       const player = pcmStreamPlayer(o.volume ?? 1, o.speechSpeed || 1);
       audioRef.current = player as unknown as HTMLAudioElement;
-      const streamed = (await player.canPlay()) ? await premiumTtsStream(reply, o.voiceName, (c) => player.push(c)) : { ok: false, got: 0 };
+      // the reply types itself in the chat in step with her voice (voiceCaptions)
+      voiceCaptions.waitTyping(reply);
+      let typingOn = false;
+      const streamed = (await player.canPlay())
+        ? await premiumTtsStream(reply, o.voiceName, (c) => {
+            player.push(c);
+            if (!typingOn) {
+              typingOn = true;
+              voiceCaptions.startTyping(reply, player.totalMs());
+            } else voiceCaptions.setTotal(player.totalMs());
+          })
+        : { ok: false, got: 0 };
       if (!activeRef.current) {
         player.pause();
         return;
       }
       if (streamed.got > 0) {
+        voiceCaptions.setTotal(player.totalMs());
         await player.end();
+        voiceCaptions.finishTyping();
         audioRef.current = null;
         if (activeRef.current && !pendingRef.current) listen();
         return;
@@ -282,6 +300,7 @@ export function usePremiumVoice(opts: Options) {
       const play = async (i: number): Promise<void> => {
         if (!activeRef.current) return;
         if (i >= jobs.length) {
+          voiceCaptions.finishTyping();
           next();
           return;
         }
@@ -296,6 +315,7 @@ export function usePremiumVoice(opts: Options) {
         audioRef.current = a;
         a.volume = Math.max(0, Math.min(1, o.volume ?? 1));
         a.playbackRate = Math.max(0.75, Math.min(1.35, o.speechSpeed || 1));
+        if (i === 0) voiceCaptions.startTyping(reply, Math.round((reply.length * 70) / Math.max(0.75, o.speechSpeed || 1)));
         await new Promise<void>((done) => {
           a.onended = () => done();
           a.onerror = () => done();
@@ -452,15 +472,28 @@ export function usePremiumVoice(opts: Options) {
     activeRef.current = true;
     setState('connecting');
     // open the mic once for the whole talk; if the phone does not allow it, use the speech recognizer
+    // his words show live while he talks; ROSE waits 1.2 s of quiet so she never cuts him off mid-sentence
+    let finalAt = 0;
     void openQuietMic(async (wav) => {
       if (!activeRef.current) return;
+      finalAt = Date.now();
       micRef.current?.setListening(false);
       setState('thinking');
       const r = await premiumStt(wav, optsRef.current.language);
+      voiceCaptions.clearUserLive();
       if (!activeRef.current) return;
       if (r.ok && r.text) void answer(r.text);
       else listen();
-    }, undefined, true)
+    }, undefined, true, {
+      endMs: 1200,
+      onPartial: (wav) => {
+        const asked = Date.now();
+        void premiumStt(wav, optsRef.current.language, true).then((r) => {
+          // a late partial must not come back after the final words
+          if (activeRef.current && r.ok && r.text && asked > finalAt) voiceCaptions.setUserLive(r.text);
+        });
+      },
+    })
       .then((mic) => {
         if (!activeRef.current) {
           mic.close();

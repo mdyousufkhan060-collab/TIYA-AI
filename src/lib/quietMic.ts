@@ -14,7 +14,13 @@ export type QuietMic = {
   close: () => void;
 };
 
-export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?: (level: number) => void, muteAware = false): Promise<QuietMic> {
+/** opts.endMs: the pause that ends his sentence; opts.onPartial: what he said so far, every ~2 s while he talks */
+export async function openQuietMic(
+  onSpeech: (wavB64: string) => void,
+  onLevel?: (level: number) => void,
+  muteAware = false,
+  opts: { endMs?: number; onPartial?: (wavB64: string) => void } = {},
+): Promise<QuietMic> {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
   });
@@ -32,6 +38,8 @@ export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?:
   let quietFor = 0;
   let spokeFor = 0;
   let floor = 0.008; // background noise, learned while he is quiet
+  let partialAt = 0;
+  const endMs = opts.endMs ?? 800;
 
   proc.onaudioprocess = (e) => {
     const data = new Float32Array(e.inputBuffer.getChannelData(0));
@@ -58,14 +66,20 @@ export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?:
         pre = [];
         quietFor = 0;
         spokeFor = 0;
+        partialAt = 0;
       }
       return;
     }
     chunks.push(data);
     spokeFor += ms;
     quietFor = loud ? 0 : quietFor + ms;
+    // live caption: his words so far, while he is still talking
+    if (opts.onPartial && spokeFor > 1200 && spokeFor - partialAt >= 2000 && quietFor < 300) {
+      partialAt = spokeFor;
+      opts.onPartial(toWav16k(chunks, rate));
+    }
     // he stopped for a moment (or talked very long): that is one sentence
-    if (quietFor > 800 || spokeFor > 15000) {
+    if (quietFor > endMs || spokeFor > 20000) {
       const parts = chunks;
       talking = false;
       chunks = [];

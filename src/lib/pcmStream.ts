@@ -12,6 +12,8 @@ export type PcmStreamPlayer = {
   started: boolean;
   /** false when the phone does not let this page play sound by itself (then the old way is used) */
   canPlay: () => Promise<boolean>;
+  /** how long all pieces so far take to play, in ms */
+  totalMs: () => number;
 };
 
 export function pcmStreamPlayer(volume = 1, rate = 1, sampleRate = 24000): PcmStreamPlayer {
@@ -28,6 +30,7 @@ export function pcmStreamPlayer(volume = 1, rate = 1, sampleRate = 24000): PcmSt
   let done: (() => void) | null = null;
   const sources: AudioBufferSourceNode[] = [];
   let first = true;
+  let firstStart = 0;
   const finish = () => {
     if (p.ended) return;
     p.ended = true;
@@ -61,6 +64,7 @@ export function pcmStreamPlayer(volume = 1, rate = 1, sampleRate = 24000): PcmSt
       src.playbackRate.value = speed;
       src.connect(gain);
       const start = Math.max(at, ctx.currentTime + 0.04);
+      if (!firstStart) firstStart = start;
       src.start(start);
       at = start + buf.duration / speed;
       open++;
@@ -77,6 +81,9 @@ export function pcmStreamPlayer(volume = 1, rate = 1, sampleRate = 24000): PcmSt
         done = res;
         if (open <= 0 || p.paused) finish();
       });
+    },
+    totalMs() {
+      return firstStart ? Math.round((at - firstStart) * 1000) : 0;
     },
     async canPlay() {
       if (ctx.state === 'running') return true;

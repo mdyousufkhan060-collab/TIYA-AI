@@ -9,6 +9,7 @@ import { MiniFace } from './MiniFace';
 import { phoneStepTitle } from '../utils/phoneActions';
 import { openQuietMic, type QuietMic } from '../lib/quietMic';
 import { premiumStt } from '../lib/premium';
+import { typedPart, useVoiceCaptions } from '../lib/voiceCaptions';
 import { isVoiceMuted, onVoiceMuted, setVoiceMuted } from '../lib/voiceMute';
 
 interface ChatScreenProps {
@@ -61,11 +62,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const chunksRef = useRef<Blob[]>([]);
 
   const listRef = useRef<HTMLDivElement | null>(null);
+  // live voice captions: his words while he talks, ROSE's reply typing in step with her voice
+  const captions = useVoiceCaptions();
+  const typingLen = captions.typing ? typedPart(captions.typing.text, captions).length : 0;
   useEffect(() => {
     // scroll only the message list (scrollIntoView also pushed the whole page up)
     const el = listRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: settings.reduceMotion ? 'auto' : 'smooth' });
-  }, [messages.length, isSending, settings.reduceMotion]);
+  }, [messages.length, isSending, settings.reduceMotion, captions.userLive, typingLen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,7 +272,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                     : 'border border-cyan-400/25 bg-[#06122A]/80 text-slate-100'
                 }`}
               >
-                <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                <p className="whitespace-pre-wrap break-words">
+                  {msg.role === 'assistant' && msg.source === 'voice'
+                    ? typedPart(msg.text, captions) || <span className="inline-block animate-pulse tracking-widest text-cyan-200/80">•••</span>
+                    : msg.text}
+                </p>
               </div>}
               </div>
               {msg.role === 'assistant' && msg.text.trim() && !(msg.pendingAction && phoneStepTitle(msg.pendingAction) && /খোলা হচ্ছে…?$/.test(msg.text.trim())) && (() => {
@@ -298,6 +306,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               )}
             </div>
           ))
+        )}
+        {captions.userLive && (
+          <div className="flex flex-col items-end" data-testid="voice-live-caption">
+            <div className="mb-1 text-[10px] font-medium text-cyan-100/60">{settings.yourName.trim() || 'You'} · Voice · LIVE</div>
+            <div className="max-w-[80vw] rounded-2xl bg-gradient-to-br from-sky-500/60 to-blue-700/60 px-3.5 py-2.5 text-sm italic leading-relaxed text-white/90 sm:max-w-[320px]">
+              {captions.userLive}…
+            </div>
+          </div>
         )}
 
         {isSending && (
