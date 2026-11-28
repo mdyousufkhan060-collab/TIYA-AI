@@ -57,6 +57,8 @@ export function asksCommentReplies(t: string): boolean {
   const comment = /কমেন্ট|কমেন|কমন|কোমেন্ট|কমেন্ড|comment|মন্তব্য/.test(s);
   const post = /পোস্ট|ভিডিও|post|video|ফেসবুক|facebook|প্রোফাইল/.test(s);
   if (comment && REPLY.test(s)) return true;
+  // Nov 28: "ভিডিওতে গিয়ে দেখো কোনো কমেন্ট থাকলে…" (cut before "রিপ্লাই") = the reply job
+  if (comment && post && /থাকলে|থাকে|আছে কিনা|আছে কি না|আসে কিনা|দেখো|দেখ/.test(s)) return true;
   if (comment && /উত্তর|জবাব|দাও|দেও|দিয়া|দিয়ে|করো|করে দ/.test(s) && !/পড়ে শোনাও|পড়ো|শোনাও|দেখাও|কয়টা|কতগুলো|read|show/.test(s)) return true;
   // "দুই নম্বর ভিডিওতে রিপ্লাই করে আসো" (no word "comment")
   return post && REPLY.test(s) && !/মেসেজ|message|ইনবক্স|inbox|হোয়াটসঅ্যাপ|whatsapp|মেসেঞ্জার|messenger/.test(s);
@@ -85,6 +87,11 @@ const NUM_WORDS: [RegExp, number][] = [
 ];
 export function postAgeMinutes(t: string): number | null {
   const s = t.toLowerCase().replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d)));
+  // Nov 28: "গতকাল / কালকে একটা ভিডিও ছাড়ছিলাম" = 1 day; "পরশু" = 2 days (no number needed)
+  if (/ভিডিও|বিডিও|পোস্ট|video|post/.test(s) && !/আগে|আগের|ago/.test(s)) {
+    if (/গতকাল|গত কাল|কালকে|কালকের|কাল কে|গতকালের|yesterday/.test(s)) return 1440;
+    if (/পরশু/.test(s)) return 2880;
+  }
   if (!/আগে|আগের|আগি|আগো|আগা|ago/.test(s)) return null;
   const unit = s.match(/(মিনিট|minute|min\b|ঘণ্টা|ঘন্টা|ঘন্টে|hour|hr\b|দিন|day|সপ্তাহ|week|মাস|month)/);
   if (!unit) return null;
