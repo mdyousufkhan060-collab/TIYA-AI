@@ -27,13 +27,13 @@ export function postNumber(t: string): number | null {
   const bent = s.match(new RegExp(`(\\S{1,4})\\s*${NUM_WORD}`));
   if (bent) {
     const w = bent[1];
-    const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ/, 6], [/^সা/, 7], [/^আট/, 8], [/^ন[য়ও]/, 9], [/^দশ/, 10]];
+    const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ|^সাই|^সয়|^সয়|^চয়|^চয়/, 6], [/^সাত|^সাদ|^সাথ/, 7], [/^আট/, 8], [/^ন[য়ও]/, 9], [/^দশ/, 10]];
     for (const [re, n] of byStart) if (re.test(w)) return n;
   }
   // Nov 28: the number glued into নম্বর ("পাস্তম্বার" = পাঁচ নম্বর, "চান্নাম্বার" = চার নম্বর): by its first sound
   const glued = s.match(GLUED);
   if (glued) {
-    const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ/, 6], [/^সা/, 7], [/^আট/, 8], [/^দশ/, 10]];
+    const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ|^সাই|^সয়|^সয়|^চয়|^চয়/, 6], [/^সাত|^সাদ|^সাথ/, 7], [/^আট/, 8], [/^দশ/, 10]];
     for (const [re, n] of byStart) if (re.test(glued[1])) return n;
   }
   return null;
@@ -78,7 +78,7 @@ export function goToPostNumber(t: string): number | null {
  */
 const NUM_WORDS: [RegExp, number][] = [
   // Whisper often bends them: "চাদ"/"চাইর" = চার, "তিনি" = তিন, "পাচ" = পাঁচ, "দো"/"দু" = দুই
-  [/আধা/, 0.5], [/এক|১/, 1], [/দুই|দু|দো|২/, 2], [/তিন|তিনি|তিনো|৩/, 3], [/চার|চাদ|চাইর|চাপ|চার্|৪/, 4], [/পাঁচ|পাচ|পাজ|পাছ|পাঁছ|৫/, 5], [/ছয়|ছয়|৬/, 6], [/সাত|৭/, 7],
+  [/আধা/, 0.5], [/এক|১/, 1], [/দুই|দু|দো|২/, 2], [/তিন|তিনি|তিনো|৩/, 3], [/চার|চাদ|চাইর|চাপ|চার্|৪/, 4], [/পাঁচ|পাচ|পাজ|পাছ|পাঁছ|৫/, 5], [/ছয়|ছয়|সাই|সয়|সয়|৬/, 6], [/সাত|৭/, 7],
   [/আট|৮/, 8], [/নয়|৯/, 9], [/দশ|১০/, 10], [/এগারো/, 11], [/বারো/, 12],
 ];
 export function postAgeMinutes(t: string): number | null {
@@ -103,7 +103,7 @@ export function postAgeMinutes(t: string): number | null {
     // পাঁচ, চাদ/চাপ for চার, তিম for তিন …)
     if (Number.isNaN(n) && words[0] && words[0].length <= 4) {
       const w = words[0];
-      const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ/, 6], [/^সা/, 7], [/^আট/, 8], [/^ন[য়ও]/, 9], [/^দশ/, 10]];
+      const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ|^সাই|^সয়|^সয়|^চয়|^চয়/, 6], [/^সাত|^সাদ|^সাথ/, 7], [/^আট/, 8], [/^ন[য়ও]/, 9], [/^দশ/, 10]];
       for (const [re, v] of byStart) if (re.test(w)) { n = v; break; }
     }
   }
