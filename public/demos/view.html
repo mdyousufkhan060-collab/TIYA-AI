@@ -1,46 +1,51 @@
 <!DOCTYPE html>
+<!-- LOCKED (owner, Nov 28 2026 9:13 PM): demo preview page. Fills the whole screen (no black edges), PHONE + COMPUTER / PHONE / COMPUTER
+     are sized to the screen by fit(). Do not change unless the owner asks. -->
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mobile & Desktop preview · ROSE Store Builder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Phone & Computer preview · ROSE Store Builder</title>
 <meta name="robots" content="noindex" />
 <style>
+  :root { --m: #6d0f3f; --m2: #8a1450; --p: #e5337f; --pl: #f472a8; --line: #f3b8cf; --ink: #3b0a24; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: #030814; color: #e2e8f0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  html, body { margin: 0; width: 100%; height: 100%; }
+  body { font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); overflow: hidden; display: flex; flex-direction: column;
+    background: radial-gradient(70% 90% at 50% 40%, #fff3f8 0%, #fbd3e3 60%, #f5b6cf 100%); }
   a { color: inherit; text-decoration: none; }
-  .top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #1e293b; }
-  .top b { font-size: 16px; }
-  .tabs { display: flex; gap: 6px; }
-  .tabs button, .top a.btn { border: 1px solid #334155; background: transparent; color: #e2e8f0; border-radius: 10px; padding: 8px 12px; font-weight: 700; font-size: 12.5px; cursor: pointer; }
-  .tabs button.on { background: #14b8a6; border-color: #14b8a6; color: #021014; }
-  .stage { display: flex; gap: 28px; justify-content: center; align-items: flex-start; padding: 22px 12px 40px; flex-wrap: wrap; }
+  .top { flex: none; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px clamp(10px, 2vw, 24px);
+    background: var(--m); color: #fff; }
+  .top b { font-size: 16px; font-weight: 800; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tabs button, .top a.btn { border: 1.5px solid rgba(255,255,255,.55); background: transparent; color: #fff; padding: 7px 12px; font-weight: 800; font-size: 12.5px; letter-spacing: .03em; cursor: pointer; font-family: inherit; }
+  .tabs button:hover, .top a.btn:hover { background: rgba(255,255,255,.12); }
+  .tabs button.on { background: #fff; border-color: #fff; color: var(--m); }
+  .stage { flex: 1; min-height: 0; display: flex; gap: 28px; justify-content: center; align-items: center; padding: 14px; }
   .dev { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .dev small { color: #94a3b8; font-size: 12px; letter-spacing: .1em; }
-  .phone { width: 390px; height: 800px; border: 12px solid #111827; border-radius: 42px; overflow: hidden; background: #fff; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
-  .phone iframe { width: 100%; height: 100%; border: 0; }
-  .desk { width: 900px; }
-  .screen { width: 900px; height: 562px; border: 10px solid #111827; border-bottom-width: 18px; border-radius: 14px; overflow: hidden; background: #fff; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
-  .screen iframe { width: 1440px; height: 900px; border: 0; transform-origin: 0 0; position: absolute; top: 0; left: 0; }
-  .stand { width: 180px; height: 26px; margin: 0 auto; background: linear-gradient(#1f2937, #0b1220); clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%); }
+  .dev small { color: var(--m); font-size: 12px; font-weight: 800; letter-spacing: .14em; }
+  .phone { border: 10px solid #1b1b1f; border-radius: 40px; overflow: hidden; background: #fff; position: relative; box-shadow: 0 24px 50px rgba(109,15,63,.28); }
+  .screen { border: 10px solid #1b1b1f; border-bottom-width: 16px; border-radius: 12px; overflow: hidden; background: #fff; position: relative; box-shadow: 0 24px 50px rgba(109,15,63,.28); }
+  .phone iframe, .screen iframe { border: 0; position: absolute; top: 0; left: 0; transform-origin: 0 0; background: #fff; }
+  .stand { width: 22%; height: 22px; background: linear-gradient(#3a3a42, #1b1b1f); clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%); }
   body.m .desk, body.d .phonewrap { display: none; }
-  @media (max-width: 1360px) { .desk, .screen { width: 640px; } .screen { height: 400px; } }
-  @media (max-width: 720px) { .desk, .screen { width: 340px; } .screen { height: 213px; } .phone { width: 330px; height: 680px; } }
+  /* small screens (a real phone): stack and scroll */
+  body.small { overflow: auto; } body.small .stage { flex-direction: column; justify-content: flex-start; flex: none; }
 </style>
 </head>
 <body>
   <div class="top">
     <b id="title">Preview</b>
     <div class="tabs">
-      <button data-v="both" class="on">MOBILE + DESKTOP</button>
-      <button data-v="m">MOBILE</button>
-      <button data-v="d">DESKTOP</button>
+      <button data-v="both" class="on">PHONE + COMPUTER</button>
+      <button data-v="m">PHONE</button>
+      <button data-v="d">COMPUTER</button>
     </div>
     <div class="tabs"><a class="btn" href="/demos">‹ ALL DEMOS</a><a class="btn" id="adm" href="#">⚙️ ADMIN</a><a class="btn" id="open" href="#">OPEN FULL</a></div>
   </div>
-  <div class="stage">
-    <div class="dev phonewrap"><small>MOBILE</small><div class="phone"><iframe id="fm" title="Mobile preview"></iframe></div></div>
-    <div class="dev desk"><small>DESKTOP</small><div class="screen"><iframe id="fd" title="Desktop preview"></iframe></div><div class="stand"></div></div>
+  <div class="stage" id="stage">
+    <div class="dev phonewrap"><small>PHONE VIEW</small><div class="phone" id="ph"><iframe id="fm" title="Phone preview"></iframe></div></div>
+    <div class="dev desk"><small>COMPUTER VIEW</small><div class="screen" id="sc"><iframe id="fd" title="Computer preview"></iframe></div><div class="stand"></div></div>
   </div>
 <script src="/demos/stores.js"></script>
 <script>
@@ -52,21 +57,50 @@
   document.getElementById('fd').src = url;
   document.getElementById('open').href = url;
   document.getElementById('adm').href = '/demos/admin.html?s=' + encodeURIComponent(k);
+  var view = 'both';
   [].forEach.call(document.querySelectorAll('.tabs button'), function (b) {
     b.onclick = function () {
       [].forEach.call(document.querySelectorAll('.tabs button'), function (x) { x.classList.remove('on'); });
       b.classList.add('on');
-      document.body.className = b.dataset.v === 'both' ? '' : b.dataset.v;
+      view = b.dataset.v;
       fit();
     };
   });
-  // Scale the 1440px desktop page to the inside of the monitor frame, so the bottom bar and chat button stay in view.
+  // the phone shows a real 390 px wide phone page, the computer a real 1440 px wide page; both are scaled to fit the screen
+  var PW = 390, PH = 844, DW = 1440, DH = 900;
+  function place(frame, iframe, w, h, cw, ch) {
+    frame.style.width = w + 'px'; frame.style.height = h + 'px';
+    var inner = w - 20, s = inner / cw;
+    iframe.style.width = cw + 'px';
+    iframe.style.height = Math.round((frame.clientHeight || (h - 20)) / s) + 'px';
+    iframe.style.transform = 'scale(' + s + ')';
+  }
   function fit() {
-    var sc = document.querySelector('.screen'), f = document.getElementById('fd');
-    if (!sc || !sc.clientWidth) return;
-    var k = sc.clientWidth / 1440;
-    f.style.transform = 'scale(' + k + ')';
-    f.style.height = Math.round(sc.clientHeight / k) + 'px';
+    var small = window.innerWidth < 760;
+    document.body.className = (view === 'both' ? '' : view) + (small ? ' small' : '');
+    var stage = document.getElementById('stage');
+    var H = stage.clientHeight - 28 - 26, W = stage.clientWidth - 28;
+    var ph = document.getElementById('ph'), sc = document.getElementById('sc');
+    if (small) {
+      var w = Math.min(W, 420);
+      place(ph, document.getElementById('fm'), w, Math.round(w * PH / PW), PW, PH);
+      place(sc, document.getElementById('fd'), W, Math.round((W - 20) * DH / DW) + 26, DW, DH);
+      return;
+    }
+    var phH = H, phW = Math.round(phH * PW / PH);
+    if (view === 'm') {
+      place(ph, document.getElementById('fm'), phW, phH, PW, PH);
+    } else if (view === 'd') {
+      var dW = W, dH = Math.round((dW - 20) * DH / DW) + 26;
+      if (dH > H - 22) { dH = H - 22; dW = Math.round((dH - 26) * DW / DH) + 20; }
+      place(sc, document.getElementById('fd'), dW, dH, DW, DH);
+    } else {
+      var left = W - phW - 28;
+      var bW = left, bH = Math.round((bW - 20) * DH / DW) + 26;
+      if (bH > H - 22) { bH = H - 22; bW = Math.round((bH - 26) * DW / DH) + 20; }
+      place(ph, document.getElementById('fm'), phW, phH, PW, PH);
+      place(sc, document.getElementById('fd'), bW, bH, DW, DH);
+    }
   }
   window.addEventListener('resize', fit);
   fit();
