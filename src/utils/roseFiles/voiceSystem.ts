@@ -14,6 +14,8 @@
  *   supabase/functions/tiya-premium/index.ts  server: Groq Whisper STT (Gemini backup, only the main close speaker),
  *                              thinking off for voice, streamed Gemini TTS (old one as backup), time of every step logged
  *   src/lib/quickAnswers.ts    time, date, day: answered at once from the phone's clock (never Google, never the AI)
+ *   src/lib/replyRequest.ts    "reply to my post/video comments" + which post (দুই নম্বর, দুনামবার, ২য়, second); starts the fixed reply job
+ *   usePremiumVoice watchdog   a phone step with no result for 30 s (or 12 steps) → ROSE says so and listens again, never silent
  *   usePremiumVoice wantsWebAnswer + LIVE ANSWER  news, prices, weather, scores: the server's Google search answers and
  *                              ROSE says it on her home screen; a question is never turned into "open Google"
  *   src/utils/prompts.ts (ownerTimeContext) + roseFiles/talkWithAdmin.ts  back after 30+ minutes: one warm playful line
