@@ -13,7 +13,10 @@
  *                              recipes like Facebook comment replies) → stream the voice → listen again
  *   supabase/functions/tiya-premium/index.ts  server: Groq Whisper STT (Gemini backup, only the main close speaker),
  *                              thinking off for voice, streamed Gemini TTS (old one as backup), time of every step logged
+ *   src/lib/quickAnswers.ts    time, date, day: answered at once from the phone's clock (never Google, never the AI)
+ *   usePremiumVoice wantsWebAnswer + LIVE ANSWER  news, prices, weather, scores: the server's Google search answers and
+ *                              ROSE says it on her home screen; a question is never turned into "open Google"
  *   src/utils/prompts.ts (ownerTimeContext) + roseFiles/talkWithAdmin.ts  back after 30+ minutes: one warm playful line
  *                              with the real clock times
  */
-export const VOICE_SYSTEM = `ROSE VOICE (for questions about how the voice works): ROSE listens all the time while voice is on without the start beep; she hears only the person close to the phone (TV, traffic, fans and far voices are filtered out); she waits about 1.2 seconds after he stops so she never cuts him off; his words appear live in the chat while he talks and her reply types itself while she speaks; the small mic button mutes his microphone while ROSE stays on; when he comes back after 30 minutes or more she notices it once with the real times.`;
+export const VOICE_SYSTEM = `ROSE VOICE (for questions about how the voice works): ROSE listens all the time while voice is on without the start beep; she hears only the person close to the phone (TV, traffic, fans and far voices are filtered out); she waits about 1.2 seconds after he stops so she never cuts him off; his words appear live in the chat while he talks and her reply types itself while she speaks; the small mic button mutes his microphone while ROSE stays on; when he comes back after 30 minutes or more she notices it once with the real times. Time and date come from the phone's clock; news, prices and weather from a web search she reads out herself. She never opens Google or a browser to answer a question.`;

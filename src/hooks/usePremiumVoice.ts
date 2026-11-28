@@ -6,6 +6,7 @@ import { isVoiceMuted } from '../lib/voiceMute';
 import { fadePcm } from '../lib/pcmFade';
 import { pcmStreamPlayer } from '../lib/pcmStream';
 import { voiceCaptions } from '../lib/voiceCaptions';
+import { quickAnswer } from '../lib/quickAnswers';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -208,7 +209,7 @@ export function usePremiumVoice(opts: Options) {
   const stepsRef = useRef(0);
   const fakeRef = useRef(0);
   const runTurn = useCallback(
-    async (input: string, note: boolean) => {
+    async (input: string, note: boolean, forceWeb = false): Promise<void> => {
       const o = optsRef.current;
       setState('thinking');
       const history: PremiumChatMessage[] = o
@@ -217,7 +218,7 @@ export function usePremiumVoice(opts: Options) {
         .map((h) => ({ role: h.role, content: h.text }));
       // news, prices, weather, scores… are answered by the server's Google search and SAID by ROSE here;
       // the phone never opens Google or Chrome for them (that left her scrolling pages and saying nothing)
-      const web = !note && wantsWebAnswer(input);
+      const web = forceWeb || (!note && wantsWebAnswer(input));
       const res = await premiumChat(
         [
           {
@@ -255,6 +256,11 @@ export function usePremiumVoice(opts: Options) {
       }
       const parsed = extractActionFromText(res.text || '');
       if (!action) action = parsed.action;
+      // a question must never become "open Google": answer it from the server's web search and say it instead
+      if (!note && !web && action && (action.action === 'web_search' || (action.action === 'open_app' && /google|chrome|browser|ব্রাউজার|গুগল/i.test(String((action as { app?: string }).app || ''))))) {
+        await runTurn(input, false, true);
+        return;
+      }
       const reply = (parsed.cleanText || '').replace(/`[^`]*`/g, '').replace(/\{[\s\S]*\}\s*$/, '').trim();
       // the model wrote the phone steps as words ("facebook খোলা হচ্ছে… screen items…") instead of calling the tool:
       // ask once more, telling it to really call the tool
@@ -392,6 +398,14 @@ export function usePremiumVoice(opts: Options) {
       micRef.current?.setListening(false);
       optsRef.current.onAppend('user', heard);
       stepsRef.current = 0;
+      // time / date / day: the phone's own clock answers at once (quickAnswers.ts), never Google or the AI
+      const qa = quickAnswer(heard);
+      if (qa) {
+        recipeRef.current = null;
+        await speakLine(qa);
+        if (activeRef.current) listen();
+        return;
+      }
       const t = heard.toLowerCase();
       // comment replies: any "reply to the comments" request (Facebook is the default, no need to say it), and a
       // correction right after one ("that's someone else's video", "wrong place", "my post") starts it again
@@ -426,7 +440,7 @@ export function usePremiumVoice(opts: Options) {
       recipeRef.current = null;
       await runTurn(heard, false);
     },
-    [runTurn, runRecipeStep, speakLine],
+    [runTurn, runRecipeStep, speakLine, listen],
   );
 
   /** The app ran a phone action: give ROSE the result so she can say it or take the next step (max 12 steps). */
