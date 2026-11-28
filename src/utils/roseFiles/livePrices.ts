@@ -15,7 +15,11 @@ const DEFAULTS: LivePrices = {
     { name: 'Text Pack', price: 79, months: 1, text: 250, voice: 0 },
     { name: 'Voice Pack', price: 99, months: 1, text: 0, voice: 90 },
   ],
-  store: { starter: 999, pro: 1999, business: 3999, lifetime: 26000 },
+  store: {
+    starter: 1500, pro: 1999, business: 3000, lifetime: 26000,
+    'starter:1': 1500, 'starter:3': 4000, 'starter:6': 5500, 'starter:9': 8000, 'starter:12': 10500,
+    'business:1': 3000, 'business:3': 5500, 'business:6': 7000, 'business:9': 9500, 'business:12': 12000,
+  },
 };
 let cache: LivePrices = DEFAULTS;
 let at = 0;
@@ -25,15 +29,17 @@ export async function refreshLivePrices(): Promise<void> {
   if (loading) return loading;
   loading = (async () => {
     try {
-      const [p, s] = await Promise.all([
+      const [p, s, t] = await Promise.all([
         supabase.from('premium_plans').select('name,price_bdt,months,text_credits,voice_credits,is_active,sort').eq('is_active', true).order('sort'),
         supabase.from('store_plan_prices').select('plan,monthly'),
+        supabase.from('store_plan_totals').select('plan,months,price'),
       ]);
       const prem = ((p.data as Array<Record<string, unknown>>) || []).map((r) => ({
         name: String(r.name), price: Number(r.price_bdt), months: Number(r.months) || 1, text: Number(r.text_credits) || 0, voice: Number(r.voice_credits) || 0,
       }));
       const store: Record<string, number> = { ...DEFAULTS.store };
       for (const r of (s.data as Array<{ plan: string; monthly: number }>) || []) store[r.plan] = Number(r.monthly);
+      for (const r of (t.data as Array<{ plan: string; months: number; price: number }>) || []) store[`${r.plan}:${r.months}`] = Number(r.price);
       cache = { premium: prem.length ? prem : DEFAULTS.premium, store };
       at = Date.now();
     } catch {

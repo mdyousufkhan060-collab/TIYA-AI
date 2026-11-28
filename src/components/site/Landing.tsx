@@ -327,7 +327,7 @@ export const Landing: React.FC = () => {
           <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">Your online store, ready in minutes.</h2>
           <p className="mt-2 text-sm text-slate-300">Cash on delivery, bKash, Nagad and courier booking. আপনার নিজের অনলাইন দোকান, কয়েক মিনিটে।</p>
           <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            {['Pick a design you like', 'Start the 5-day free trial', 'Add your logo and products', 'Go live on yourshop.myrosebd.com or your own domain'].map((t, i) => (
+            {['Pick a design you like', 'Start the 10-day free trial', 'Add your logo and products', 'Go live on yourshop.myrosebd.com or your own domain'].map((t, i) => (
               <div key={t} className="rounded-[4px] border border-white/[0.08] bg-black p-4">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-400 text-sm font-extrabold text-black">{i + 1}</span>
                 <p className="mt-3 text-sm font-semibold">{t}</p>
@@ -351,7 +351,7 @@ export const Landing: React.FC = () => {
             ))}
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <a href="/start" className={btnMain}>Start 5-day free trial <ArrowRight className="h-4 w-4" /></a>
+            <a href="/start" className={btnMain}>Start 10-day free trial <ArrowRight className="h-4 w-4" /></a>
             <a href="/demos" className={btnGhost}>See all demos</a>
           </div>
         </div>

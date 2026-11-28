@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { livePrice, useLiveStorePrices } from '../../utils/liveStorePrices';
-import { STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
+import { SELL_PLANS, STORE_DURATIONS, STORE_PLANS, STORE_TOTALS, TRIAL_DAYS, tk, type StorePlanId } from '../../utils/storePlans';
 
 /**
  * Admin > 21 WEBSITE ACCESS: give the Store Builder to anyone by Gmail
@@ -117,13 +117,23 @@ const PaymentSms: React.FC = () => {
 const PlanPrices: React.FC = () => {
   const [rows, setRows] = useState<Array<{ plan: string; monthly: number; stores: number; products: number; storage_gb: number; staff: number; own_domain: boolean }>>([]);
   const [msg, setMsg] = useState('');
+  // LOCKED (owner, Nov 28 2026): the price of every plan + months lives in store_plan_totals (the server charges from it)
+  const [tot, setTot] = useState<Record<string, number>>({ ...STORE_TOTALS });
   useEffect(() => {
     void supabase.from('store_plan_prices').select('*').order('sort').then(({ data }) => setRows((data as typeof rows) || []));
+    void supabase.from('store_plan_totals').select('plan,months,price').then(({ data }) => {
+      const r = (data as Array<{ plan: string; months: number; price: number }>) || [];
+      if (r.length) setTot((x) => ({ ...x, ...Object.fromEntries(r.map((y) => [`${y.plan}:${y.months}`, Number(y.price)])) }));
+    });
   }, []);
   const set = (i: number, k: string, v: number | boolean) => setRows((r) => r.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
   const save = async () => {
     const { error } = await supabase.from('store_plan_prices').upsert(rows.map((r) => ({ ...r, updated_at: new Date().toISOString() })));
-    setMsg(error ? error.message : 'Saved. New buyers see these prices now.');
+    const now = new Date().toISOString();
+    const { error: e2 } = await supabase.from('store_plan_totals').upsert(
+      SELL_PLANS.flatMap((pl) => STORE_DURATIONS.map((d) => ({ plan: pl, months: d.months, price: Number(tot[`${pl}:${d.months}`]) || 0, updated_at: now }))),
+    );
+    setMsg(error || e2 ? (error || e2)!.message : 'Saved. New buyers see these prices now.');
   };
   const num = (i: number, k: string, v: number) => (
     <input className={input + ' py-1 text-[12px]'} type="number" value={v} onChange={(e) => set(i, k, Number(e.target.value))} />
@@ -131,11 +141,24 @@ const PlanPrices: React.FC = () => {
   return (
     <div className={box + ' space-y-2'}>
       <p className="text-[11px] font-bold tracking-wider text-teal-300">STORE PLAN PRICES</p>
+      {SELL_PLANS.map((pl) => (
+        <div key={'t' + pl} className="space-y-1 rounded-lg bg-black/30 p-2">
+          <p className="text-[12px] font-bold text-white">{STORE_PLANS[pl].label} · total Tk</p>
+          <div className="grid grid-cols-5 gap-1 text-[10px] text-slate-400">
+            {STORE_DURATIONS.map((d) => (
+              <label key={d.months}>{d.months}m
+                <input className={input + ' py-1 text-[12px]'} type="number" value={tot[`${pl}:${d.months}`] ?? 0} onChange={(e) => setTot((x) => ({ ...x, [`${pl}:${d.months}`]: Number(e.target.value) }))} />
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+      <p className="text-[10.5px] font-bold tracking-wider text-slate-400">LIMITS OF EACH PLAN</p>
       {rows.map((r, i) => (
         <div key={r.plan} className="space-y-1 rounded-lg bg-black/30 p-2">
-          <p className="text-[12px] font-bold text-white">{r.plan === 'lifetime' ? 'LIFETIME WEBSITE (one-time)' : r.plan.toUpperCase()}</p>
+          <p className="text-[12px] font-bold text-white">{r.plan === 'lifetime' ? 'LIFETIME WEBSITE (one-time)' : STORE_PLANS[r.plan as StorePlanId]?.label || r.plan.toUpperCase()}</p>
           <div className="grid grid-cols-3 gap-1 text-[10px] text-slate-400">
-            <label>{r.plan === 'lifetime' ? 'Tk once' : 'Tk / month'}{num(i, 'monthly', r.monthly)}</label>
+            <label>{r.plan === 'lifetime' ? 'Tk once' : '1 month Tk'}{num(i, 'monthly', r.monthly)}</label>
             <label>Stores{num(i, 'stores', r.stores)}</label>
             <label>Products{num(i, 'products', r.products)}</label>
             <label>Photos GB{num(i, 'storage_gb', r.storage_gb)}</label>
@@ -146,7 +169,7 @@ const PlanPrices: React.FC = () => {
       ))}
       <button type="button" onClick={() => void save()} className="h-9 w-full rounded-lg bg-teal-600 text-[12px] font-bold text-white">SAVE PRICES</button>
       {msg && <p className="text-[12px] text-teal-200">{msg}</p>}
-      <p className="text-[10.5px] text-slate-400">Months and discounts: 3m 0% · 6m 5% · 9m 10% · 12m 15% · 24m 25%. Free trial: 5 days, once per Gmail.</p>
+      <p className="text-[10.5px] text-slate-400">Months: 1 · 3 · 6 · 9 · 12. BUSINESS PREMIUM = PERSONAL · STUDENT + 1,500 Tk. Free trial: 10 days, once per Gmail. A bought plan starts on the day it is bought.</p>
     </div>
   );
 };
@@ -208,7 +231,7 @@ export const AdminWebsiteAccessPage: React.FC = () => {
   const storesOf = (e: string) => stores.filter((s) => (s.owner_email || '').toLowerCase() === e);
   const hideOf = (e: string) => (e in flags ? flags[e] : storesOf(e).some((s) => s.hide_rose));
   const live = useLiveStorePrices();
-  const price = gPlan === 'trial' ? 0 : livePrice(live[gPlan] ?? 0, gMonths || 1) * (gMonths ? 1 : 0);
+  const price = gPlan === 'trial' || !gMonths ? 0 : livePrice(live, gPlan, gMonths);
 
   const openRow = (e: string) => {
     if (open === e) return setOpen('');
@@ -225,7 +248,7 @@ export const AdminWebsiteAccessPage: React.FC = () => {
   const save = async (e: string) => {
     const a = accessOf(e);
     const p = STORE_PLANS[gPlan];
-    const plusDays = gPlan === 'trial' ? 5 : Number(gDays) || 0;
+    const plusDays = gPlan === 'trial' ? TRIAL_DAYS : Number(gDays) || 0;
     if (gPlan !== 'trial' && !gMonths && !plusDays) return setMsg('Choose months or days.');
     const base = a && new Date(a.ends_at) > new Date() && a.plan === gPlan ? new Date(a.ends_at) : new Date();
     const ends = new Date(base);
@@ -315,7 +338,7 @@ export const AdminWebsiteAccessPage: React.FC = () => {
             <input className={input + ' px-2 py-1.5 text-[12px]'} value={gNote} onChange={(ev) => setGNote(ev.target.value)} placeholder="Note / TrxID" />
           </div>
           <p className="text-[10.5px] text-slate-400">
-            {gPlan === 'trial' ? '5 days free.' : `${STORE_PLANS[gPlan].label}: ${STORE_PLANS[gPlan].stores} store · ${STORE_PLANS[gPlan].products >= 100000 ? 'unlimited' : STORE_PLANS[gPlan].products} products · ${STORE_PLANS[gPlan].staff} staff. Same plan still on → added to the end date.`}
+            {gPlan === 'trial' ? `${TRIAL_DAYS} days free.` : `${STORE_PLANS[gPlan].label}: ${STORE_PLANS[gPlan].stores} store · ${STORE_PLANS[gPlan].products >= 100000 ? 'unlimited' : STORE_PLANS[gPlan].products} products · ${STORE_PLANS[gPlan].staff} staff. Same plan still on → added to the end date.`}
           </p>
           <button type="button" disabled={busy} onClick={() => void save(e)} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-teal-600 text-[11.5px] font-bold text-white disabled:opacity-60">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} SAVE · {STORE_PLANS[gPlan].label}{gPlan === 'trial' ? '' : ` +${gMonths}m ${Number(gDays) || 0}d`}

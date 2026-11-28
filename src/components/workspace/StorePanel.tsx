@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase';
 import { loadSettings } from '../../utils/storage';
 import { WEBSITE_DESIGN_GUIDE, WEBSITE_RULES } from '../../utils/websiteGuides';
 import { SettingsBar } from '../settings/SettingsShell';
-import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
+import { SELL_PLANS, STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
+import { livePrice, useLiveStorePrices } from '../../utils/liveStorePrices';
 import { AdminBrandPage } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
 import { DomainAccess } from './DomainAccess';
@@ -17,7 +18,7 @@ import { INVOICE_SIZES, PRINT_CSS, invoiceDims, kgText, invoicePreviewHTML, STIC
 /**
  * Workspace > MY STORE: the ROSE Store Builder for the store owner.
  * Pick a demo design, then manage Products, Categories, Orders and Homepage.
- * Access comes from Admin > 21 WEBSITE ACCESS (or the 5-day free trial).
+ * Access comes from Admin > 21 WEBSITE ACCESS (or the 10-day free trial).
  */
 type Access = { plan: StorePlanId; ends_at: string; stores_limit: number; products_limit: number } | null;
 type Store = {
@@ -230,7 +231,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
     const startTrial = async () => {
       const { error } = await supabase.rpc('start_website_trial');
       if (error) return setMsg(error.message.includes('already') ? 'Free trial already used. Choose a plan below.' : error.message);
-      setMsg('5-day free trial started!');
+      setMsg('10-day free trial started!');
       void load();
     };
     return (
@@ -238,7 +239,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
         <div className={box}>
           {stores.length > 0 && (
             <p className="mb-2 border border-amber-400/50 bg-amber-500/10 p-2 text-[12px] font-bold text-amber-200">
-              ⏸ Your store {stores[0].name} is paused because the {access?.plan === 'trial' ? '5-day free trial' : 'plan'} ended. Choose a plan below and it opens again at once. Nothing is deleted.
+              ⏸ Your store {stores[0].name} is paused because the {access?.plan === 'trial' ? '10-day free trial' : 'plan'} ended. Choose a plan below and it opens again at once. Nothing is deleted.
             </p>
           )}
           <p className="text-sm font-bold text-white">Make your own online store</p>
@@ -248,7 +249,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
           </a>
           {!access && (
             <button type="button" onClick={() => void startTrial()} className={btn + ' mt-2 w-full bg-amber-500 text-black'}>
-              START 5-DAY FREE TRIAL
+              START 10-DAY FREE TRIAL
             </button>
           )}
           {access && <p className="mt-2 text-[12px] text-rose-300">Your plan ended on {new Date(access.ends_at).toLocaleDateString('en-GB')}. Your store is saved; renew to edit it.</p>}
@@ -521,7 +522,6 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
 
 // ---------------------------------------------------------------- buy / renew a plan (bKash · Nagad · Rocket)
 type PriceRow = { plan: StorePlanId; monthly: number; stores: number; products: number; storage_gb: number; staff: number; own_domain: boolean };
-const DISC: Record<number, number> = { 3: 0, 6: 5, 9: 10, 12: 15, 24: 25 };
 /** Terms of the one-time LIFETIME website (also shown on myrosebd.com/start) */
 export const lifetimeTerms = (price: number) =>
   `One payment of ${tk(price)}, the website is yours for life on myrosebd.com (1 store, PRO features). Domain and hosting are billed separately every year; the yearly amount is agreed with ROSE before payment (subject to conditions). Small problems and fixes on the website are solved free for life. Big changes or a new design are charged separately. ROSE app plans (voice and chat credits) are not included.`;
@@ -529,8 +529,9 @@ export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPla
   const [prices, setPrices] = useState<PriceRow[]>([]);
   const [lifePrice, setLifePrice] = useState(0);
   const [pay, setPay] = useState<{ bkash?: string; nagad?: string; rocket?: string }>({});
-  const [plan, setPlan] = useState<StorePlanId | 'lifetime'>((startPlan as StorePlanId) || 'starter');
-  const [months, setMonths] = useState(startMonths || 3);
+  const [plan, setPlan] = useState<StorePlanId | 'lifetime'>(startPlan === 'lifetime' || SELL_PLANS.includes(startPlan as StorePlanId) ? (startPlan as StorePlanId) : 'starter');
+  const live = useLiveStorePrices();
+  const [months, setMonths] = useState(STORE_DURATIONS.some((d) => d.months === startMonths) ? (startMonths as number) : 1);
   const [method, setMethod] = useState<'bKash' | 'Nagad' | 'Rocket'>('bKash');
   const [sender, setSender] = useState('');
   const [trx, setTrx] = useState('');
@@ -545,15 +546,15 @@ export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPla
     void supabase.from('store_plan_prices').select('*').order('sort').then(({ data }) => {
       const all = (data as Array<PriceRow & { plan: string }>) || [];
       setLifePrice(Number(all.find((r) => r.plan === 'lifetime')?.monthly || 0));
-      const rows = all.filter((r) => r.plan !== 'lifetime') as PriceRow[];
-      setPrices(rows.length ? rows : (['starter', 'pro', 'business'] as StorePlanId[]).map((k) => ({ plan: k, monthly: STORE_PLANS[k].monthly, stores: STORE_PLANS[k].stores, products: STORE_PLANS[k].products, storage_gb: STORE_PLANS[k].storageGb, staff: STORE_PLANS[k].staff, own_domain: STORE_PLANS[k].ownDomain })));
+      const rows = all.filter((r) => SELL_PLANS.includes(r.plan as StorePlanId)) as PriceRow[];
+      setPrices(rows.length ? rows : SELL_PLANS.map((k) => ({ plan: k, monthly: STORE_PLANS[k].monthly, stores: STORE_PLANS[k].stores, products: STORE_PLANS[k].products, storage_gb: STORE_PLANS[k].storageGb, staff: STORE_PLANS[k].staff, own_domain: STORE_PLANS[k].ownDomain })));
     });
     void supabase.rpc('get_payment_info').then(({ data }) => setPay((data as typeof pay) || {}));
     void loadMine();
   }, [loadMine]);
   const life = plan === 'lifetime';
   const row = prices.find((p) => p.plan === plan);
-  const total = life ? lifePrice : row ? Math.round((row.monthly * months * (100 - (DISC[months] || 0))) / 100) : 0;
+  const total = life ? lifePrice : row ? livePrice(live, row.plan, months) : 0;
   const number = method === 'bKash' ? pay.bkash : method === 'Nagad' ? pay.nagad : pay.rocket;
   const send = async () => {
     setBusy(true);
@@ -568,7 +569,7 @@ export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPla
     <div className="space-y-2">
       {current && current.plan !== 'trial' && (
         <div className={box + ' text-[12px] text-slate-200'}>
-          Now: <b>{STORE_PLANS[current.plan]?.label || current.plan}</b> until {new Date(current.ends_at).toLocaleDateString('en-GB')}. Renewing the same plan adds the months after this date.
+          Now: <b>{STORE_PLANS[current.plan]?.label || current.plan}</b> until {new Date(current.ends_at).toLocaleDateString('en-GB')}. Renewing the same plan adds the months after this date. A new plan starts on the day you buy it.
         </div>
       )}
       <div className={box + ' space-y-2'}>
@@ -577,10 +578,10 @@ export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPla
           <button key={p.plan} type="button" onClick={() => setPlan(p.plan)} className={`w-full border p-2 text-left ${plan === p.plan ? 'border-teal-400 bg-teal-500/10' : 'border-white/10 bg-black/30'}`}>
             <span className="flex items-center gap-2">
               <span className="flex-1 text-[13px] font-bold text-white">{STORE_PLANS[p.plan]?.label || p.plan.toUpperCase()}</span>
-              <span className="text-[13px] font-bold text-teal-300">{tk(p.monthly)} / month</span>
+              <span className="text-[13px] font-bold text-teal-300">{p.plan === 'business' ? `from ${tk(livePrice(live, 'business', 1))}` : `from ${tk(livePrice(live, p.plan, 1))}`}</span>
             </span>
             <span className="block text-[11px] text-slate-400">
-              {p.stores} store{p.stores > 1 ? 's' : ''} · {p.products > 10000 ? 'unlimited' : p.products} products · {p.storage_gb} GB photos · {p.staff} staff · {p.own_domain ? 'own domain' : 'name.myrosebd.com'}
+              {p.stores} store{p.stores > 1 ? 's' : ''} · {p.products > 10000 ? 'unlimited' : p.products} products · {p.storage_gb} GB photos · {p.staff} staff · {p.own_domain ? 'own domain' : 'name.myrosebd.com'}{p.plan === 'business' ? ' · can change the website design (premium)' : ' · design stays as chosen'}
             </span>
           </button>
         ))}
@@ -598,10 +599,12 @@ export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPla
           {STORE_DURATIONS.map((d) => (
             <button key={d.months} type="button" onClick={() => setMonths(d.months)} className={`border py-1.5 text-center ${months === d.months ? 'border-teal-400 bg-teal-500/10' : 'border-white/10 bg-black/30'}`}>
               <span className="block text-[12.5px] font-bold text-white">{d.months}m</span>
+              <span className="block text-[10px] text-slate-300">{life ? '' : tk(livePrice(live, plan, d.months))}</span>
               <span className="block text-[9.5px] text-amber-300">{d.off ? `-${d.off}%` : ' '}</span>
             </button>
           ))}
         </div>}
+        <p className="text-[11px] leading-snug text-slate-300"><b className="text-white">Lifetime free service:</b> no more charges unless you ask for a big change. Only the yearly hosting and domain fee is paid each year.</p>
         <div className="flex items-center border border-amber-400/40 bg-amber-500/10 p-2">
           <span className="flex-1 text-[12px] text-amber-100">{life ? 'LIFETIME WEBSITE · one-time' : `${STORE_PLANS[plan as StorePlanId]?.label} · ${months} months`}</span>
           <span className="text-[17px] font-extrabold text-amber-300">{tk(total)}</span>
@@ -1555,6 +1558,11 @@ const AskRosePanel: React.FC<{ store: Store; onClose: () => void }> = ({ store, 
   const [msgs, setMsgs] = useState<DesignMsg[]>([{ me: false, text: 'আপনার ওয়েবসাইটের রং, বাটন বা থিম কেমন চান লিখুন। যেমন: "বাটন লাল আর গোল করো", "বার্থডে থিম দাও"। শুধু এই দোকানটাই বদলাবে।' }]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState('');
+  // LOCKED (owner, Nov 28 2026): only BUSINESS PREMIUM (and ROSE admin) can change the website design; the server checks it too
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+  useEffect(() => {
+    void supabase.rpc('store_design_allowed', { p_store: store.id }).then(({ data, error }) => setAllowed(error ? true : data !== false));
+  }, [store.id]);
   const base = `${window.location.origin}/shop/${store.slug}`;
   const b64 = (d: Record<string, string>) => btoa(unescape(encodeURIComponent(JSON.stringify(d))));
   const send = async () => {
@@ -1589,7 +1597,7 @@ const AskRosePanel: React.FC<{ store: Store; onClose: () => void }> = ({ store, 
     setBusy('Saving…');
     const { data, error } = await supabase.rpc('store_set_design', { p_store: store.id, p_design: d });
     setBusy('');
-    if (error) return setMsgs((x) => [...x, { me: false, text: error.message === 'Not allowed' ? 'এই দোকানের ডিজাইন বদলানোর অনুমতি আপনার নেই।' : error.message }]);
+    if (error) return setMsgs((x) => [...x, { me: false, text: /Not allowed|BUSINESS PREMIUM/.test(error.message) ? 'ওয়েবসাইটের ডিজাইন বদলানো যায় শুধু BUSINESS PREMIUM প্ল্যানে। PERSONAL · STUDENT প্ল্যানে ডিজাইন লক থাকে।' : error.message }]);
     setDesign((data as Record<string, string>) || {});
     setMsgs((x) => [...x, { me: false, text: 'হয়ে গেছে, আপনার ওয়েবসাইটে নতুন ডিজাইন বসে গেছে। আগেরটা চাইলে UNDO চাপুন।' }]);
   };
@@ -1613,6 +1621,11 @@ const AskRosePanel: React.FC<{ store: Store; onClose: () => void }> = ({ store, 
         <button type="button" aria-label="Close" onClick={onClose} className="grid h-9 w-9 place-items-center"><X className="h-5 w-5" /></button>
       </div>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+        {allowed === false && (
+          <div className="rounded-2xl border border-amber-400/50 bg-amber-500/10 p-3 text-[12.5px] leading-relaxed text-amber-100">
+            🔒 <b>Design is locked on this plan.</b> PERSONAL · STUDENT websites keep the chosen design. Only <b>BUSINESS PREMIUM</b> can change colours, layout and themes. Upgrade in PLAN & PAYMENT.
+          </div>
+        )}
         <RoseDesignGuide onPick={(t) => setText(t)} />
         {msgs.map((m, i) => (
           <div key={i} className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${m.me ? 'ml-auto bg-emerald-600 text-white' : 'bg-white/10 text-slate-100'}`}>

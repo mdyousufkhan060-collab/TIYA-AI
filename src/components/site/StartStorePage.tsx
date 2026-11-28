@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { BuyPlan, lifetimeTerms, RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
-import { STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
+import { BUSINESS_EXTRA, SELL_PLANS, STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { livePrice, useLiveStorePrices } from '../../utils/liveStorePrices';
 
 /**
  * myrosebd.com/start?d=foodbazaar — take a demo store as your own:
- * Google sign-in with the company Gmail → company details → 5-day free trial starts → the store is live.
+ * Google sign-in with the company Gmail → company details → 10-day free trial starts → the store is live.
  */
 const KEY = 'rose_start_store';
 const DISTRICTS = ['Dhaka', 'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogura', 'Brahmanbaria', 'Chandpur', 'Chapainawabganj', 'Chattogram', 'Chuadanga', "Cox's Bazar", 'Cumilla', 'Dinajpur', 'Faridpur', 'Feni', 'Gaibandha', 'Gazipur', 'Gopalganj', 'Habiganj', 'Jamalpur', 'Jashore', 'Jhalokati', 'Jhenaidah', 'Joypurhat', 'Khagrachhari', 'Khulna', 'Kishoreganj', 'Kurigram', 'Kushtia', 'Lakshmipur', 'Lalmonirhat', 'Madaripur', 'Magura', 'Manikganj', 'Meherpur', 'Moulvibazar', 'Munshiganj', 'Mymensingh', 'Naogaon', 'Narail', 'Narayanganj', 'Narsingdi', 'Natore', 'Netrokona', 'Nilphamari', 'Noakhali', 'Pabna', 'Panchagarh', 'Patuakhali', 'Pirojpur', 'Rajbari', 'Rajshahi', 'Rangamati', 'Rangpur', 'Satkhira', 'Shariatpur', 'Sherpur', 'Sirajganj', 'Sunamganj', 'Sylhet', 'Tangail', 'Thakurgaon'];
@@ -39,9 +39,9 @@ export default function StartStorePage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [done, setDone] = useState<{ url: string; ends: string } | null>(null);
-  // plan chosen here: 5-day free trial, a monthly plan (3-24 months) or the one-time LIFETIME website
+  // plan chosen here: 10-day free trial, PERSONAL · STUDENT or BUSINESS PREMIUM (1-12 months) or the one-time LIFETIME website
   const [choice, setChoice] = useState<'trial' | 'monthly' | 'lifetime'>(qs.get('plan') === 'lifetime' ? 'lifetime' : 'trial');
-  const [tier, setTier] = useState<StorePlanId>('pro');
+  const [tier, setTier] = useState<StorePlanId>('starter');
   const [months, setMonths] = useState(12);
   const live = useLiveStorePrices();
   const lifePrice = live.lifetime;
@@ -149,7 +149,7 @@ export default function StartStorePage() {
       <div className="w-full flex-1 bg-[linear-gradient(180deg,#fbd3e3_0,#fde8f0_260px)] px-[clamp(14px,3vw,48px)] pt-[18px]">
         <a href="/demos" className="text-[13px] font-bold text-[#e5337f]">‹ All designs</a>
         <h1 className="mb-0.5 mt-2 text-[clamp(24px,3vw,38px)] font-extrabold tracking-tight text-[#6d0f3f]">Get your own store</h1>
-        <p className="mb-4 text-[clamp(14px,1.4vw,17px)] font-semibold text-[#e5337f]">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</p>
+        <p className="mb-4 text-[clamp(14px,1.4vw,17px)] font-semibold text-[#e5337f]">নিজের অনলাইন দোকান খুলুন · ১০ দিন ফ্রি</p>
         {body}
         <p className="mt-7 pb-3.5 text-center text-[12.5px] text-[#6b5160]">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a className="underline" href="/policies.html">Policies</a></p>
       </div>
@@ -207,7 +207,7 @@ export default function StartStorePage() {
     </div>
   );
 
-  const planPrice = choice === 'lifetime' ? lifePrice : choice === 'monthly' ? livePrice(live[tier], months) : 0;
+  const planPrice = choice === 'lifetime' ? lifePrice : choice === 'monthly' ? livePrice(live, tier, months) : 0;
   const on = 'border-[3px] border-[#e5337f] bg-[#fde3ed]';
   const off = 'border-[1.5px] border-[#f3b8cf] bg-white';
   const plans = (
@@ -215,8 +215,8 @@ export default function StartStorePage() {
       {step(3, 'Choose a plan', 'প্ল্যান বাছুন')}
       <div className="grid gap-2 sm:grid-cols-3">
         {([
-          ['trial', '5-day free trial', '0 Tk · pay later'],
-          ['monthly', 'Monthly plan', `from ${tk(live.starter)} / month`],
+          ['trial', '10-day free trial', '0 Tk · pay later'],
+          ['monthly', 'Monthly plan', `from ${tk(livePrice(live, 'starter', 1))} / month`],
           ['lifetime', 'Lifetime website', `${tk(lifePrice)} once`],
         ] as Array<['trial' | 'monthly' | 'lifetime', string, string]>).map(([k, t, sub]) => (
           <button key={k} type="button" onClick={() => setChoice(k)} className={`p-[11px] text-left ${choice === k ? on : off}`}>
@@ -227,11 +227,11 @@ export default function StartStorePage() {
       </div>
       {choice === 'monthly' && (
         <div className="space-y-2 border-[1.5px] border-[#f3b8cf] bg-white p-3">
-          <div className="grid grid-cols-3 gap-1.5">
-            {(['starter', 'pro', 'business'] as StorePlanId[]).map((p) => (
+          <div className="grid grid-cols-2 gap-1.5">
+            {SELL_PLANS.map((p) => (
               <button key={p} type="button" onClick={() => setTier(p)} className={`px-2 py-2 text-center ${tier === p ? on : off}`}>
                 <span className="block text-[12.5px] font-bold">{STORE_PLANS[p].label}</span>
-                <span className="block text-[11px] text-[#6b5160]">{tk(live[p])}/mo</span>
+                <span className="block text-[11px] text-[#6b5160]">{p === 'business' ? `+${tk(BUSINESS_EXTRA)} · design changes` : `from ${tk(livePrice(live, p, 1))}`}</span>
               </button>
             ))}
           </div>
@@ -239,6 +239,7 @@ export default function StartStorePage() {
             {STORE_DURATIONS.map((x) => (
               <button key={x.months} type="button" onClick={() => setMonths(x.months)} className={`py-1.5 text-center ${months === x.months ? on : off}`}>
                 <span className="block text-[12.5px] font-bold">{x.months} mo</span>
+                <span className="block text-[10.5px]">{tk(livePrice(live, tier, x.months))}</span>
                 <span className="block text-[10px] font-semibold text-[#e5337f]">{x.off ? `-${x.off}%` : ' '}</span>
               </button>
             ))}
@@ -252,6 +253,7 @@ export default function StartStorePage() {
           <p className="mt-1 text-[12px] leading-relaxed text-[#3b0a24]"><b>Terms:</b> {lifetimeTerms(lifePrice)}</p>
         </div>
       )}
+      <p className="border-l-4 border-[#e5337f] bg-[#fde3ed] px-3 py-2 text-[12px] leading-relaxed text-[#3b0a24]"><b className="text-[#6d0f3f]">Lifetime free service:</b> no more charges unless you ask for a big change. Only the yearly hosting and domain fee is paid each year. BUSINESS PREMIUM can change the website's colours and layout; PERSONAL · STUDENT websites keep the chosen design.</p>
       {needPay && choice !== 'trial' && <BuyPlan startPlan={choice === 'lifetime' ? 'lifetime' : tier} startMonths={months} />}
     </div>
   );
@@ -267,7 +269,7 @@ export default function StartStorePage() {
         {choice !== 'trial' && (
           <div className="space-y-2 border-[1.5px] border-[#e5337f] bg-[#fde3ed] p-3">
             <p className="text-[14px] font-extrabold text-[#6d0f3f]">Now pay for your {choice === 'lifetime' ? 'LIFETIME website' : `${STORE_PLANS[tier].label} plan (${months} months)`}: {tk(planPrice)}</p>
-            <p className="text-[12.5px] text-[#3b0a24]">Your store is already open with the 5-day trial. When the payment is checked, your plan starts by itself.</p>
+            <p className="text-[12.5px] text-[#3b0a24]">Your store is already open with the 10-day trial. When the payment is checked, your plan starts by itself.</p>
             <BuyPlan startPlan={choice === 'lifetime' ? 'lifetime' : tier} startMonths={months} />
           </div>
         )}
@@ -297,7 +299,7 @@ export default function StartStorePage() {
           <button type="button" disabled={!d} onClick={() => void google()} className={`${btnLine} disabled:opacity-50`}>
             <img src="/brand/google.svg" alt="" className="h-5 w-5" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} /> Continue with Google
           </button>
-          <p className="mt-2.5 text-[13px] text-[#6b5160]">5-day free trial, once per Gmail. No payment now.</p>
+          <p className="mt-2.5 text-[13px] text-[#6b5160]">10-day free trial, once per Gmail. No payment now.</p>
         </>,
       ),
     );
@@ -352,7 +354,7 @@ export default function StartStorePage() {
         <div className="space-y-1.5 pt-1">
           {msg && <p className="border-l-4 border-[#e5337f] bg-[#fde3ed] px-3 py-2 text-[13px] font-semibold text-[#b0205f]">{msg}</p>}
           <button type="button" disabled={busy || !d} onClick={() => void create()} className={btnMain}>
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} {choice === 'trial' ? 'START 5-DAY FREE STORE' : `START STORE · THEN PAY ${tk(planPrice)}`}
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} {choice === 'trial' ? 'START 10-DAY FREE STORE' : `START STORE · THEN PAY ${tk(planPrice)}`}
           </button>
           <p className="text-center text-[12px] text-[#6b5160]">Logo, banners, more phones and emails: add later in Settings · <a className="underline" href="/terms.html">Terms</a></p>
         </div>

@@ -83,7 +83,7 @@ export default function DemoAdminPage() {
         {
           is_admin: false, my_staff_stores: [], store_staff_list: [], courier_status: [], get_payment_info: { bkash: '01700000000' },
           // Ask ROSE in the demo: the design shows at once (nothing is saved)
-          store_set_design: (x: { p_design?: Record<string, string> }) => x.p_design || {}, store_undo_design: {},
+          store_set_design: (x: { p_design?: Record<string, string> }) => x.p_design || {}, store_undo_design: {}, store_design_allowed: true,
           // ADD ORDER in the demo: the order shows in the list (nothing is saved)
           admin_add_store_order: (x: Record<string, any>, t: Record<string, any[]>) => {
             const items = (x.p_items || []).map((it: any) => { const p = t.store_products.find((y) => y.id === it.id) || {}; return { id: it.id, name: p.name, price: Number(p.price) || 0, q: it.q, opt: it.opt, img: (p.images || [])[0] || '' }; });

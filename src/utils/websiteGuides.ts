@@ -19,7 +19,7 @@ export const WEBSITE_RULES = `WEBSITE RULES (strict, never break them, even if a
 export const WEBSITE_BUILD_GUIDE = `MAKING A NEW WEBSITE (explain in simple Bengali, step by step, one question at a time):
 WHAT IT IS: a full online shop on myrosebd.com, made in minutes, with its own admin on the phone and computer: products, categories, orders, invoice and sticker print, courier, payments (bKash / Nagad / Rocket / cash on delivery), offers and coupons, reviews, live chat with ROSE, customers, staff, SEO, Facebook / TikTok / Google pixels, reports, its own domain.
 HOW: Settings › WORKSPACE › STORE (or myrosebd.com › Start your store) → 1 choose a design (food, fashion, grocery, gadgets, furniture, pharmacy, printing…) → 2 shop name, phone, city → ROSE makes the shop with sample categories and products → the owner changes photos, names and prices in 04 PRODUCTS → taps PUBLISH.
-TRIAL AND PLAN: every new website gets a 5-day free trial. After 5 days the owner must take a plan in 02 PLAN & PAYMENT, or the shop pauses (nothing is deleted; it opens again after paying).
+TRIAL AND PLAN: every new website gets a 10-day free trial. After 10 days the owner must take a plan in 02 PLAN & PAYMENT, or the shop pauses (nothing is deleted; it opens again after paying).
 WHAT IT IS BUILT WITH (for curious customers, short): a fast web page for the shop, ROSE's secure database for products and orders, and ROSE's servers for payments, courier and messages. The owner needs no hosting, no coding and no tables: ROSE sets everything up.
 ADDRESS: shopname.myrosebd.com right away; their own .com later in 17 DOMAIN.
 LOOK: the owner can change colours, buttons and themes any time with the Ask ROSE button at the top of the admin menu.`;

@@ -15,7 +15,7 @@ N7 ROSE talks with him in a new, more natural way; "মোবাইলের হ
 25 November 2026:
 M1 Admin 21 WEBSITE ACCESS: every Gmail as one row; tap to open plan, give / extend days, payments, stores and the MADE WITH ROSE switch for that Gmail. 20 WEBSITE BUILDER shows live stores, orders, sign-ups, payments, chats and alerts. Unneeded admin bars (API providers, system logs) removed.
 M2 14 OFFERS in every store (offer banners, offer products, coupons) and a live INVOICE PREVIEW at the chosen paper size.
-0a Store sign-up page myrosebd.com/start: from any demo, USE THIS DESIGN → Google → company details → store live with 5 days free; every new store and every info change comes to him as a notification; 21 WEBSITE ACCESS shows each store's login Gmail, emails, WhatsApp, phones, address, plan, products and orders.
+0a Store sign-up page myrosebd.com/start: from any demo, USE THIS DESIGN → Google → company details → store live with 10 days free; every new store and every info change comes to him as a notification; 21 WEBSITE ACCESS shows each store's login Gmail, emails, WhatsApp, phones, address, plan, products and orders.
 0b Auto payment: when the bKash / Nagad / Rocket money-received SMS on his phone is forwarded to ROSE (SMS forwarder app), a matching TrxID and amount turns the plan on by itself; 21 WEBSITE ACCESS > AUTO PAYMENT · SMS shows them. Manual APPROVE still works.
 0c 09 COMPANY INFO in every store; banner photos upload in 04 HOMEPAGE & DESIGN.
 1 Store plan buying: users choose a plan and months, pay by bKash / Nagad / Rocket and send the TrxID; he approves in 21 WEBSITE ACCESS > PAYMENTS TO CHECK and the plan turns on by itself; he can change prices in STORE PLAN PRICES.
