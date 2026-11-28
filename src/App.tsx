@@ -520,6 +520,7 @@ export default function App() {
     volume: settings.volume,
     speechSpeed: settings.speechSpeed,
     buildSystemPrompt: () => buildTiyaSystemPrompt(settings, messages, 'chat', userAge, memories, isOwner),
+    yourName: settings.yourName,
     getHistory: () =>
       messages
         // phone-step cards ("facebook খোলা হচ্ছে…") are left out: seeing them, the model starts writing those lines

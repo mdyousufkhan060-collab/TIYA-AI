@@ -8,6 +8,7 @@ import { pcmStreamPlayer } from '../lib/pcmStream';
 import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
 import { asksCommentReplies, postNumber } from '../lib/replyRequest';
+import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -65,6 +66,8 @@ interface Options {
   volume: number;
   speechSpeed: number;
   buildSystemPrompt: () => string;
+  /** his name as he set it (Settings → Your name): ROSE calls him by it */
+  yourName?: string;
   getHistory: () => Array<{ role: 'user' | 'assistant'; text: string }>;
   onAppend: (role: 'user' | 'assistant', text: string, action?: PhoneAction) => void;
   onCredits?: (voiceLeft: number | null, textLeft: number | null) => void;
@@ -274,7 +277,7 @@ export function usePremiumVoice(opts: Options) {
           const say = speakRef.current;
           if (say) void say('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।').then(() => { if (activeRef.current) listen(); });
           else listen();
-        }, 30000);
+        }, /comments|reply all/i.test(JSON.stringify(action)) ? 270000 : 35000);
       }
       if (!reply || action) {
         // a phone step is running: no voice for the in-between lines (much faster); the words stay in the
@@ -401,7 +404,7 @@ export function usePremiumVoice(opts: Options) {
       optsRef.current.onAppend('user', heard);
       stepsRef.current = 0;
       // time / date / day: the phone's own clock answers at once (quickAnswers.ts), never Google or the AI
-      const qa = quickAnswer(heard);
+      const qa = quickAnswer(heard) || nameCallAnswer(heard, callNameOf(optsRef.current.yourName));
       if (qa) {
         recipeRef.current = null;
         await speakLine(qa);
@@ -429,9 +432,8 @@ export function usePremiumVoice(opts: Options) {
           at: 0,
         };
         void speakLine(
-          no === 1
-            ? 'ঠিক আছে, আপনার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।'
-            : `ঠিক আছে, আপনার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`,
+          okWithName(callNameOf(optsRef.current.yourName)) +
+            (no === 1 ? 'তোমার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।' : `তোমার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`),
         );
         runRecipeStep();
         return;

@@ -15,6 +15,8 @@
  *                              thinking off for voice, streamed Gemini TTS (old one as backup), time of every step logged
  *   src/lib/quickAnswers.ts    time, date, day: answered at once from the phone's clock (never Google, never the AI)
  *   src/lib/replyRequest.ts    "reply to my post/video comments" + which post (দুই নম্বর, দুনামবার, ২য়, second); starts the fixed reply job
+ *   src/lib/nameCall.ts        calls him by name ("ঠিক আছে ইউসুফ, …"); "রোজ" alone → "জি ইউসুফ, আমি আছি…"
+ *   phoneActions waitNativeResult  comment jobs get time: open post 90 s, reply all 4 min (was 20 s → "দেরি হচ্ছে")
  *   usePremiumVoice watchdog   a phone step with no result for 30 s (or 12 steps) → ROSE says so and listens again, never silent
  *   usePremiumVoice wantsWebAnswer + LIVE ANSWER  news, prices, weather, scores: the server's Google search answers and
  *                              ROSE says it on her home screen; a question is never turned into "open Google"
