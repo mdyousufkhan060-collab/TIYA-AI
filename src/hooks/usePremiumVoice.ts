@@ -9,7 +9,7 @@ import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
 import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
-import { asksCommentReplies, postNumber } from '../lib/replyRequest';
+import { asksCommentReplies, goToPostNumber, postNumber } from '../lib/replyRequest';
 import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -400,7 +400,8 @@ export function usePremiumVoice(opts: Options) {
   // FIXED RECIPES: jobs that always go the same way run step by step inside the phone, without asking the AI
   // what to tap (fast and the same for every user). Facebook comment replies: open the newest post's comments,
   // then the phone answers every comment without his reply, live, one by one.
-  const recipeRef = useRef<{ steps: string[]; at: number } | null>(null);
+  const lastGoAt = useRef(0);
+  const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string } | null>(null);
   const lastRecipeAt = useRef(0);
   const lastPostNo = useRef(1);
   const runRecipeStep = useCallback(() => {
@@ -441,7 +442,9 @@ export function usePremiumVoice(opts: Options) {
         // which post: "দুই নম্বর", "২য়", "দ্বিতীয়", "second", "post 2"… (newest when he names none)
         const nth = postNumber(t);
         if (nth) lastPostNo.current = nth;
-        const no = corrects && !nth ? lastPostNo.current : nth || 1;
+        // right after "go to video N", "reply here" means that same video
+        const afterGo = Date.now() - lastGoAt.current < 15 * 60 * 1000;
+        const no = (corrects || afterGo) && !nth ? lastPostNo.current : nth || 1;
         if (!corrects || nth) lastPostNo.current = no;
         recipeRef.current = {
           steps: [no === 1 ? 'open latest post comments' : `open post ${no} comments`, 'reply all comments'],
@@ -451,6 +454,22 @@ export function usePremiumVoice(opts: Options) {
           okWithName(callNameOf(optsRef.current.yourName)) +
             (no === 1 ? 'তোমার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।' : `তোমার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`),
         );
+        runRecipeStep();
+        return;
+      }
+      // "go to video N" only: walk there and stop, then ask him what to do (LOCKED)
+      const goNo = !otherApp ? goToPostNumber(t) : null;
+      if (goNo) {
+        lastRecipeAt.current = Date.now();
+        lastPostNo.current = goNo;
+        lastGoAt.current = Date.now();
+        const nm = callNameOf(optsRef.current.yourName);
+        recipeRef.current = {
+          steps: [`go to post ${goNo}`],
+          at: 0,
+          doneLine: `${nm ? nm + ', ' : ''}আমি তোমার ${goNo} নম্বর ভিডিওর কাছে আছি। এখন কী করবো বলো?`,
+        };
+        void speakLine(okWithName(nm) + `তোমার ${goNo} নম্বর ভিডিওতে যাচ্ছি।`);
         runRecipeStep();
         return;
       }
@@ -485,6 +504,14 @@ export function usePremiumVoice(opts: Options) {
           window.setTimeout(() => {
             if (activeRef.current) runRecipeStep();
           }, 400);
+          return;
+        }
+        // a job with its own fixed last line ("go to video N"): say exactly that and listen
+        if (ok && rc.doneLine) {
+          recipeRef.current = null;
+          void speakLine(rc.doneLine).then(() => {
+            if (activeRef.current) window.setTimeout(() => listen(), 300);
+          });
           return;
         }
         recipeRef.current = null;

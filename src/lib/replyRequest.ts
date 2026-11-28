@@ -38,3 +38,15 @@ export function asksCommentReplies(t: string): boolean {
   // "দুই নম্বর ভিডিওতে রিপ্লাই করে আসো" (no word "comment")
   return post && REPLY.test(s) && !/মেসেজ|message|ইনবক্স|inbox|হোয়াটসঅ্যাপ|whatsapp|মেসেঞ্জার|messenger/.test(s);
 }
+
+/**
+ * LOCKED (owner, Nov 28): "আমার ফেসবুকে ৫ নম্বর ভিডিওতে যাও" (only go there, no reply asked) → the post number;
+ * ROSE walks to that post, stops, and asks him what to do. null = not this request.
+ */
+export function goToPostNumber(t: string): number | null {
+  const s = t.toLowerCase();
+  if (!/ভিডিও|পোস্ট|video|post/.test(s)) return null;
+  if (!/যাও|জাও|যা[ওয়]|ঢুকো|ধুকো|দুকো|ঢোকো|খোলো|খুলো|খুলে|নিয়ে যাও|চলে যাও|go to|open/.test(s)) return null;
+  if (asksCommentReplies(s)) return null;
+  return postNumber(s);
+}
