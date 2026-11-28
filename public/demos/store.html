@@ -1178,7 +1178,7 @@ function start(S, P, liveId) {
   window.applyCoupon = function () {
     var code = (document.getElementById('fCoupon').value || '').trim().toUpperCase(), msg = document.getElementById('cpMsg');
     var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0);
-    var done = function (d, text, ok) { coState.coupon = ok ? code : ''; coState.disc = ok ? d : 0; msg.style.color = ok ? '#16a34a' : '#dc2626'; msg.textContent = text; if (window.__setZone) window.__setZone(); };
+    var done = function (d, text, ok) { if (!ok && /^ROSE-/.test(code)) { try { if (localStorage.getItem('rose_cp_' + (S.slug || id)) === code) localStorage.removeItem('rose_cp_' + (S.slug || id)); } catch (e) {} } coState.coupon = ok ? code : ''; coState.disc = ok ? d : 0; msg.style.color = ok ? '#16a34a' : '#dc2626'; msg.textContent = text; if (window.__setZone) window.__setZone(); };
     if (!code) return done(0, '', false);
     if (!S.live) return done(Math.round(sub * 0.1), 'Demo: 10% off', true);
     sb('rpc/check_store_coupon', { p_slug: S.slug, p_code: code, p_sub: sub }).then(function (r) { done(+r.discount || 0, '✓ ' + code + ': - ' + tk(+r.discount || 0), true); }, function (e) { done(0, e.message, false); });
@@ -1201,6 +1201,9 @@ function start(S, P, liveId) {
     }
     window.__setZone = setZone;
     coState.coupon = ''; coState.disc = 0;
+    // LOCKED (owner, Nov 28 11:30 PM): the ROSE chat discount code goes in by itself
+    var kc = ''; try { kc = localStorage.getItem('rose_cp_' + (S.slug || id)) || ''; } catch (e) {}
+    if (kc && $('fCoupon')) { $('fCoupon').value = kc; setTimeout(function () { if (window.applyCoupon) window.applyCoupon(); }, 300); }
     dv.onchange = function () {
       var di = dv.value === '' ? null : BD[+dv.value];
       ds.innerHTML = '<option value="">' + t('choose') + ' ' + t('district') + '</option>' + (di ? di[2].map(function (d, i) { return '<option value="' + i + '">' + esc(d[0]) + ' · ' + d[1] + '</option>'; }).join('') : '');
@@ -1358,7 +1361,7 @@ function start(S, P, liveId) {
     }).then(function (path) { return sb('rpc/place_store_order_v5', {
       p_slug: S.slug, p_name: O.name, p_phone: O.phone, p_email: O.email, p_division: O.division, p_district: O.district, p_upazila: O.upazila, p_address: O.address,
       p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: O.pay, p_trx: O.trx, p_note: O.pay === 'bank' ? 'Bank ref: ' + O.trx : '', p_proof: path || '', p_coupon: coState.coupon || '', p_pass: pass,
-    }); }).then(function (r) { O.no = r.order_no; O.payState = r.payment_status || ''; if (r.discount) O.disc = +r.discount; if (r.total) { O.total = +r.total; O.del = r.delivery != null ? +r.delivery : O.total - O.sub + (O.disc || 0); } if (r.weight_kg != null) O.kg = +r.weight_kg; track('Purchase', { value: O.total, order: String(O.no), items: st.cart.map(function (c) { return { id: c.id, name: P[c.id].name, price: P[c.id].price, q: c.q }; }) }); finish(); })
+    }); }).then(function (r) { O.no = r.order_no; O.payState = r.payment_status || ''; if (r.discount) O.disc = +r.discount; if (r.total) { O.total = +r.total; O.del = r.delivery != null ? +r.delivery : O.total - O.sub + (O.disc || 0); } if (r.weight_kg != null) O.kg = +r.weight_kg; if (/^ROSE-/.test(O.coupon || '')) { try { localStorage.removeItem('rose_cp_' + (S.slug || id)); } catch (e) {} } track('Purchase', { value: O.total, order: String(O.no), items: st.cart.map(function (c) { return { id: c.id, name: P[c.id].name, price: P[c.id].price, q: c.q }; }) }); finish(); })
       .catch(function (e) { if (b) { b.disabled = false; b.textContent = t('confirm'); } if (!e.quiet) toast(e.message); });
   };
 
@@ -1683,9 +1686,11 @@ function start(S, P, liveId) {
     if (label) { var w = document.createElement('div'); w.className = 'who'; w.textContent = label; cm.appendChild(w); }
     var d = document.createElement('div'); d.className = who; d.textContent = t; cm.appendChild(d); cm.scrollTop = 99999; return d;
   }
+  // LOCKED (owner, Nov 28 11:30 PM): a ROSE discount code from the chat is kept and fills the checkout by itself
+  function keepCode(body) { var m = String(body || '').match(/ROSE-[A-Z0-9]{4,6}/); if (m) { try { localStorage.setItem('rose_cp_' + (S.slug || id), m[0]); } catch (e) {} } }
   function showMsgs(list) {
     (list || []).forEach(function (m) {
-      if (seen[m.id]) return; seen[m.id] = 1; lastAt = m.created_at;
+      if (seen[m.id]) return; seen[m.id] = 1; lastAt = m.created_at; if (m.sender === 'rose') keepCode(m.body);
       if (m.sender === 'customer') say(m.body, 'u'); else say(m.body, 'b', m.sender === 'rose' ? '🌹 ROSE' : S.name);
     });
   }
@@ -1712,7 +1717,7 @@ function start(S, P, liveId) {
     chatCall({ action: 'send', text: t }).then(function (r) {
       if (typing) { typing.remove(); typing = null; }
       if (r && r.error) return say(r.error, 'b');
-      if (r && r.reply) { seen[r.reply.id] = 1; lastAt = r.reply.created_at; say(r.reply.body, 'b', '🌹 ROSE'); }
+      if (r && r.reply) { seen[r.reply.id] = 1; lastAt = r.reply.created_at; keepCode(r.reply.body); say(r.reply.body, 'b', '🌹 ROSE'); }
       else if (r && r.ai === false) say(bn ? 'ধন্যবাদ! আপনার মেসেজ দোকানে পৌঁছেছে, খুব শিগগির উত্তর দেওয়া হবে।' + (S.whatsapp || S.phone ? ' জরুরি হলে WhatsApp: ' + (S.whatsapp || S.phone) : '') : 'Thanks! The shop got your message and will reply soon.' + (S.whatsapp || S.phone ? ' Urgent? WhatsApp ' + (S.whatsapp || S.phone) : ''), 'b', S.name);
     }).catch(function () {
       if (typing) { typing.remove(); typing = null; }

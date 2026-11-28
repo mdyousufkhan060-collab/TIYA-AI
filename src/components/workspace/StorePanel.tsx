@@ -49,7 +49,7 @@ type Prod = {
 type Order = {
   id: string; order_no: number; customer_name: string; phone: string; address: string; area: string;
   items: Array<{ name: string; q: number; price: number; opt?: string; kg?: number }>; weight_kg?: number; total: number; payment_method: string; trx_id: string; status: string; created_at: string; payment_status?: string; pay_proof?: string | null; paid_amount?: number | null;
-  email: string; division: string; district: string; upazila: string; courier: string; tracking: string; note: string; subtotal: number; delivery: number; courier_cost?: number;
+  email: string; division: string; district: string; upazila: string; courier: string; tracking: string; note: string; subtotal: number; delivery: number; courier_cost?: number; discount?: number; coupon?: string;
 };
 export type Demo = {
   name: string; tagline: string; logo: string; type: string; color: string; accent: string; banners: Banner[]; trust: string[];
@@ -1056,7 +1056,7 @@ const OrdersTab: React.FC<{ store: Store; readOnly?: boolean }> = ({ store, read
     const sub = (edit.items || []).reduce((a, i) => a + Number(i.price) * Number(i.q), 0);
     const { error } = await supabase.from('store_orders').update({
       customer_name: String(edit.customer_name).trim(), phone: ph, email: edit.email || '', division: edit.division || '', district: edit.district || '', upazila: edit.upazila || '',
-      address: String(edit.address).trim(), note: edit.note || '', items: edit.items, subtotal: sub, delivery: del, total: sub + del, courier_cost: Number(edit.courier_cost) || 0, updated_at: new Date().toISOString(),
+      address: String(edit.address).trim(), note: edit.note || '', items: edit.items, subtotal: sub, delivery: del, total: Math.max(0, sub + del - (Number(edit.discount) || 0)), courier_cost: Number(edit.courier_cost) || 0, updated_at: new Date().toISOString(),
     }).eq('id', edit.id);
     if (error) return setMsg(error.message);
     setEdit(null); setMsg('Order saved.'); void load();
@@ -1134,6 +1134,13 @@ const OrdersTab: React.FC<{ store: Store; readOnly?: boolean }> = ({ store, read
         <div><p className="text-lg font-bold text-white">{today.length}</p><p className="text-[10.5px] text-slate-400">ORDERS TODAY</p></div>
         <div><p className="text-lg font-bold text-white">{tk(today.reduce((a, o) => a + Number(o.total), 0))}</p><p className="text-[10.5px] text-slate-400">SALES TODAY</p></div>
       </div>
+      {/* LOCKED (owner, Nov 28 11:30 PM): how much discount was given today: ROSE chat codes and the shop's coupons */}
+      {today.some((o) => Number(o.discount) > 0) && (
+        <div className={box + ' grid grid-cols-2 gap-2 text-center'} data-testid="store-today-discounts">
+          <div><p className="text-[15px] font-bold text-emerald-300">{tk(today.filter((o) => /^ROSE-/i.test(o.coupon || '')).reduce((a, o) => a + Number(o.discount || 0), 0))}</p><p className="text-[10.5px] text-slate-400">ROSE CHAT DISCOUNT ({today.filter((o) => /^ROSE-/i.test(o.coupon || '') && Number(o.discount) > 0).length})</p></div>
+          <div><p className="text-[15px] font-bold text-emerald-300">{tk(today.filter((o) => !/^ROSE-/i.test(o.coupon || '')).reduce((a, o) => a + Number(o.discount || 0), 0))}</p><p className="text-[10.5px] text-slate-400">COUPON DISCOUNT ({today.filter((o) => !/^ROSE-/i.test(o.coupon || '') && Number(o.discount) > 0).length})</p></div>
+        </div>
+      )}
       <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
         {['all', ...STATUSES].map((s) => {
           const n = orders.filter((o) => s === 'all' || o.status === s).length;
@@ -1160,6 +1167,11 @@ const OrdersTab: React.FC<{ store: Store; readOnly?: boolean }> = ({ store, read
           <p className="text-[11.5px] text-slate-300">{o.customer_name} · <a className="text-teal-300" href={`tel:${o.phone}`}>{o.phone}</a></p>
           <p className="text-[11px] text-slate-400">{[o.address, o.upazila, o.district, o.division].filter(Boolean).join(', ')} ({o.area})</p>
           <p className="text-[11px] text-slate-300">{o.items.map((i) => `${i.name}${i.opt ? ` (${i.opt})` : ''} ×${i.q}`).join(', ')}{Number(o.weight_kg) > 0 ? ` · ⚖️ ${kgText(Number(o.weight_kg))}` : ''}</p>
+          {Number(o.discount) > 0 && (
+            <p className="text-[11px] font-bold text-emerald-300" data-testid="store-order-discount">
+              🏷️ DISCOUNT − {tk(Number(o.discount))}{o.coupon ? ` · ${o.coupon}` : ''}{/^ROSE-/i.test(o.coupon || '') ? ' · ROSE CHAT' : ''} · Subtotal {tk(Number(o.subtotal) || 0)} + Delivery {tk(Number(o.delivery) || 0)}
+            </p>
+          )}
           <p className="text-[10.5px] text-slate-500">{o.payment_method.toUpperCase()}{o.trx_id ? ` · TrxID ${o.trx_id}` : ''}{o.email ? ` · ${o.email}` : ''} · {new Date(o.created_at).toLocaleString('en-GB')}</p>
           {o.trx_id && (
             <p className="text-[10.5px]">
@@ -2037,7 +2049,7 @@ const OffersWithCoupons: React.FC<{ store: Store; limit: number; onSaved: () => 
 };
 
 const CouponsTab: React.FC<{ store: Store }> = ({ store }) => {
-  type Cp = { id: string; code: string; kind: 'pct' | 'tk'; value: number; min_total: number; max_uses: number; used: number; active: boolean; ends_at: string | null };
+  type Cp = { id: string; code: string; kind: 'pct' | 'tk'; value: number; min_total: number; max_uses: number; used: number; active: boolean; ends_at: string | null; source?: string };
   const [rows, setRows] = useState<Cp[]>([]);
   const [f, setF] = useState({ code: '', kind: 'pct' as 'pct' | 'tk', value: '', min: '', max: '', ends: '' });
   const [msg, setMsg] = useState('');
@@ -2081,7 +2093,7 @@ const CouponsTab: React.FC<{ store: Store }> = ({ store }) => {
       {rows.map((c) => (
         <div key={c.id} className={box + ' flex items-center gap-2'}>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold text-white">{c.code} · {c.kind === 'pct' ? `${c.value}% off` : `${tk(c.value)} off`}</p>
+            <p className="text-[13px] font-bold text-white">{c.code} · {c.kind === 'pct' ? `${c.value}% off` : `${tk(c.value)} off`}{c.source === 'rose' ? ' · 🌹 ROSE CHAT (1 use, 24 h)' : ''}</p>
             <p className="text-[11px] text-slate-400">
               Used {c.used}{c.max_uses ? ` / ${c.max_uses}` : ''}{c.min_total ? ` · min ${tk(c.min_total)}` : ''}{c.ends_at ? ` · until ${new Date(c.ends_at).toLocaleDateString('en-GB')}` : ''}
             </p>

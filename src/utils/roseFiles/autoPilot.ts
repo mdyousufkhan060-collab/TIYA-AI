@@ -9,4 +9,5 @@ DISCOUNT RULES (02): for each product the owner chooses ASK ME, UP TO % , UP TO 
 APPROVALS (03): every discount ask with YES / GIVE LIMIT / NO. INBOX & TODAY (04): customer messages, ROSE replies and discount asks of the last 24 hours, and TAKE OVER = open LIVE CHAT to reply yourself.
 CONNECTIONS (01, owner only): website live chat is ON. Facebook Page comments and Messenger replies on the server turn on in the next step, after ROSE gets Meta approval. WhatsApp Business replies and WhatsApp alerts to the owner come with the WhatsApp Business step (needs a WhatsApp Business number). Never say these two work now.
 STAFF: a MANAGER sees DISCOUNT RULES, APPROVALS and INBOX; moderators and support do not.
-ROSE can never phone the owner; she asks by app notice and e-mail (and WhatsApp after that step).`;
+ROSE can never phone the owner; she asks by app notice and e-mail (and WhatsApp after that step).
+DISCOUNT CODE (LOCKED Nov 28 11:30 PM): an agreed discount becomes a one-time code ROSE-XXXX for that customer (24 hours, one use). It fills the checkout by itself; the order, the invoice ("Discount (ROSE-XXXX · ROSE chat)") and WEBSITE ADMIN › ORDERS show it, with ROSE CHAT DISCOUNT and COUPON DISCOUNT totals for today. The codes also show in OFFERS › COUPONS marked ROSE CHAT.`;

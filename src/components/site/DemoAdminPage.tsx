@@ -73,13 +73,15 @@ export default function DemoAdminPage() {
         const delivery = district === 'Dhaka' ? 60 : 120;
         return {
           id: `ord-${i}`, store_id: store.id, order_no: 1048 - i, customer_name: NAMES[i % NAMES.length], phone: `0171${String(1000000 + i * 7919).slice(-7)}`,
-          email: '', address: `House ${10 + i}, Road ${1 + (i % 9)}`, area: upazila, division: district, district, upazila, items, subtotal, delivery, total: subtotal + delivery,
+          email: '', address: `House ${10 + i}, Road ${1 + (i % 9)}`, area: upazila, division: district, district, upazila, items, subtotal, delivery, total: subtotal + delivery - (i === 0 ? 20 : i === 1 ? 15 : 0),
+          // Nov 28 11:30 PM: sample discounts (a ROSE chat code and a shop coupon) so the demo admin shows them too
+          discount: i === 0 ? 20 : i === 1 ? 15 : 0, coupon: i === 0 ? 'ROSE-4821' : i === 1 ? 'EID15' : '',
           payment_method: i % 4 === 0 ? 'bkash' : 'cod', trx_id: '', status: i < 3 ? 'new' : STATUS[i % STATUS.length], courier: '', tracking: '', note: '',
           created_at: new Date(Date.now() - (i * 1.25 + 0.1) * 864e5).toISOString(),
         };
       });
       (window as any).__roseDemoDb = makeDemoDb(
-        { stores: [store], store_categories: cats, store_customers: [], store_products: prods, store_orders: orders, site_settings: [], store_staff: [], store_reviews: [], store_coupons: [], store_expenses: [],
+        { stores: [store], store_categories: cats, store_customers: [], store_products: prods, store_orders: orders, site_settings: [], store_staff: [], store_reviews: [], store_coupons: [{ id: 'cp-rose', store_id: store.id, code: 'ROSE-4821', kind: 'tk', value: 20, min_total: 0, max_uses: 1, used: 1, active: true, ends_at: new Date(Date.now() + 864e5).toISOString(), source: 'rose', created_at: new Date().toISOString() }], store_expenses: [],
           // AUTO-PILOT (BUSINESS PREMIUM) sample: two rules and three discount asks
           store_autopilot: [{ id: 'ap-1', store_id: store.id, discount_on: true, wait_min: 5, email_on: true, owner_whatsapp: '' }],
           store_discount_rules: prods.slice(0, 2).map((p, i) => ({ id: `dr-${i}`, store_id: store.id, product_id: p.id, max_pct: i ? null : 5, max_tk: i ? 50 : null })),

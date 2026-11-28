@@ -260,7 +260,7 @@ var ROSE_PRINT = (() => {
     </tbody></table>
     <div class="ibot">
       ${pos ? "" : `<div class="ibox"><div class="ibh">\u{1F69A} COURIER INFORMATION</div><p><span>Courier:</span><b>${esc(o.courier ? o.courier.replace(/^\w/, (c) => c.toUpperCase()) : "\u2014")}</b></p><p><span>Status:</span><b>${esc(STATUS[o.status || "new"] || "Pending")}</b></p><p><span>Tracking ID:</span><b>${esc(o.tracking || "\u2014")}</b></p><p><span>Delivery area:</span><b>${o.area === "outside" ? "Outside Dhaka" : o.area === "inside" ? "Inside Dhaka" : esc(o.district || "\u2014")}</b></p>${wt ? `<p><span>Total weight:</span><b>${wt}</b></p>` : ""}</div>`}
-      <div class="ibox"><div class="ibh">\u{1F9FE} BILLING SUMMARY</div><p><span>Subtotal:</span><b>${tk(sub)}</b></p><p><span>Delivery${pos && wt ? ` (${wt})` : ""}:</span><b>${tk(del)}</b></p>${o.discount ? `<p><span>Discount${o.coupon ? ` (${esc(o.coupon)})` : ""}:</span><b>- ${tk(o.discount)}</b></p>` : ""}<p class="gt"><span>GRAND TOTAL:</span><b>${tk(o.total)}</b></p>${isCod(o) ? `<p><span>Collect (COD):</span><b>${tk(o.total)}</b></p>` : ""}</div>
+      <div class="ibox"><div class="ibh">\u{1F9FE} BILLING SUMMARY</div><p><span>Subtotal:</span><b>${tk(sub)}</b></p><p><span>Delivery${pos && wt ? ` (${wt})` : ""}:</span><b>${tk(del)}</b></p>${o.discount ? `<p><span>Discount${o.coupon ? ` (${esc(o.coupon)}${/^ROSE-/i.test(o.coupon) ? " \u00B7 ROSE chat" : ""})` : ""}:</span><b>- ${tk(o.discount)}</b></p>` : ""}<p class="gt"><span>GRAND TOTAL:</span><b>${tk(o.total)}</b></p>${isCod(o) ? `<p><span>Collect (COD):</span><b>${tk(o.total)}</b></p>` : ""}</div>
     </div>
     ${pos ? "" : `<div class="ibot"><div class="ibox"><div class="ibh">\u{1F4DD} NOTES</div><div class="small">${esc(o.note || "\u09AA\u09A3\u09CD\u09AF \u09AC\u09C1\u099D\u09C7 \u09A8\u09BF\u09AF\u09BC\u09C7 \u099A\u09C7\u0995 \u0995\u09B0\u09C7 \u09AA\u09C7\u09AE\u09C7\u09A8\u09CD\u099F \u0995\u09B0\u09AC\u09C7\u09A8\u0964")}</div></div><div class="ibox"><div class="ibh">\u{1F4C4} TERMS & CONDITIONS</div><div class="small">${esc(s.terms || "This is a computer generated invoice. No physical signature required.")}</div></div></div>`}
     ${barcodeSVG(orderCode(st, o), pos ? 7 : 8)}
@@ -294,7 +294,9 @@ var ROSE_PRINT = (() => {
 .ibox p{display:flex;justify-content:space-between;margin:.6mm 0}.ibox p span{color:#475569}.ibox .gt{border-top:1px solid #111;padding-top:1mm;font-size:1.15em}
 .ivc .bc{margin:3mm auto 0;height:8mm;width:55%!important}.ithanks{margin-top:2mm;background:#111;color:#fff;text-align:center;font-weight:800;letter-spacing:.12em;padding:2mm;border-radius:1.5mm}
 .ivc.pos{border:0}.ivc.pos .ih{flex-direction:column;text-align:center}.ivc.pos .igrid{grid-template-columns:1fr 1fr}.ivc.pos .ibot{grid-template-columns:1fr}
-@media screen and (max-width:640px){.ivc.fluid:not(.pos) .ih{flex-direction:column;align-items:stretch}.ivc.fluid:not(.pos) .icards{max-width:none}.ivc.fluid:not(.pos) .igrid{grid-template-columns:1fr 1fr}.ivc.fluid:not(.pos) .ci{grid-column:span 1!important}.ivc.fluid:not(.pos) .ibot{grid-template-columns:1fr}}
+/* LOCKED (owner, Nov 28 11:30 PM): on the screen the invoice uses the width, less white at the sides (print unchanged) */
+@media screen{.ivc.fluid:not(.pos){padding:6mm 7mm!important}}
+@media screen and (max-width:640px){.ivc.fluid:not(.pos){padding:3mm 2.5mm!important}.ivc.fluid:not(.pos) .ih{flex-direction:column;align-items:stretch}.ivc.fluid:not(.pos) .icards{max-width:none}.ivc.fluid:not(.pos) .igrid{grid-template-columns:1fr 1fr}.ivc.fluid:not(.pos) .ci{grid-column:span 1!important}.ivc.fluid:not(.pos) .ibot{grid-template-columns:1fr}}
 .ivpv{background:#cbd5e1;border-radius:10px;padding:10px;overflow:hidden}.ivpg{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25);margin:0 auto;overflow:hidden}.ivpg .ivc{border:0}
 `;
   function invoiceDims(inv) {

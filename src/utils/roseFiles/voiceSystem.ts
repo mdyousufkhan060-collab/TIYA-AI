@@ -23,6 +23,9 @@
  *   LOCKED (Nov 28 11:05 PM, owner): language lock for everyone (src/lib/talkStyle.ts), LANGUAGE_RULES
  *     (roseFiles/languageRules.ts: clean শুদ্ধ বাংলা for dialect writers, dialect or fun talk only on request) and the
  *     admin-only MAYA tone (roseFiles/adminMaya.ts: work switch, one gentle check on sadness, no chasing, no camera).
+ *   LOCKED (Nov 28 11:30 PM, owner): invoice on screen uses the width (print.js padding 3mm phone / 6-7mm computer; print
+ *     unchanged); ROSE chat discount = one-time coupon ROSE-XXXX (_rose_coupon, store_answer_discount, rose-chat v12 disc.ts),
+ *     filled at checkout by itself (store.html keepCode), shown in the invoice and ADMIN › ORDERS (+ today's totals). Do not change.
  *   LOCKED (Nov 28 10:16 PM, owner): AUTO-PILOT (BUSINESS PREMIUM): src/components/workspace/AutoPilot.tsx, admin/AdminAutoPilot.tsx (26), roseFiles/autoPilot.ts,
  *     DB store_autopilot / store_discount_rules / store_discount_requests / store_answer_discount, edge rose-chat (disc.ts) + store-discount (cron every minute). Do not change.
  *   LOCKED (Nov 28 9:30 PM, owner): 12 demo designs in public/demos/stores.js (new: glowbeauty, gadgetzone, noorislamic, boighor, cakehouse with kinds beauty, electronics, islamic, books, cake). Do not change.
