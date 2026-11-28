@@ -27,7 +27,7 @@
   .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .d { position: relative; background: var(--card); border: 1.5px solid var(--line); text-align: left; padding: 0; cursor: pointer; color: var(--ink); display: flex; flex-direction: column; transition: border-color .15s, box-shadow .15s; }
   .d:hover { border-color: var(--pl); }
-  .d .ph { display: block; aspect-ratio: 16 / 10; background: #f9d5e3 center/cover; }
+  .d .ph { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #f9d5e3; }
   .d .nm { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1.5px solid var(--line); }
   .d svg { width: 26px; height: 26px; color: var(--p); flex: none; }
   .d strong { display: block; font-size: 15px; font-weight: 800; line-height: 1.15; }
@@ -82,20 +82,20 @@
 </head>
 <body>
 <div class="page">
-  <a class="back" href="/demos">‹ All designs</a>
+  <a class="back" href="https://www.myrosebd.com/demos">‹ All designs</a>
   <h1>Get your own store</h1>
   <p class="sub">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</p>
 
   <div class="layout">
     <section>
       <div class="step"><b>1</b>Choose a design <span>ডিজাইন বাছুন</span></div>
-      <div class="grid" id="g"></div>
+      <div class="grid" id="g"><button type="button" class="d" data-k="foodbazaar"><img class="ph" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=65&auto=format&fit=crop" alt="FoodBazaar" loading="lazy"><span class="chosen">CHOSEN</span><span class="nm"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 7V6a4 4 0 0 1 8 0v1h3l1 15H4L5 7h3Zm2 0h4V6a2 2 0 0 0-4 0v1Z"/></svg><span><strong>FoodBazaar</strong><small>Food delivery</small></span></span></button><button type="button" class="d" data-k="fashionhub"><img class="ph" src="https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=600&q=65&auto=format&fit=crop" alt="FashionHub" loading="lazy"><span class="chosen">CHOSEN</span><span class="nm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7a2 2 0 1 1 2-2c0 1-2 1.5-2 3v1L2.5 16.5c-.7.6-.3 1.5.6 1.5h17.8c.9 0 1.3-.9.6-1.5L12 9"/></svg><span><strong>FashionHub</strong><small>Clothing</small></span></span></button><button type="button" class="d" data-k="sotadari"><img class="ph" src="https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=600&q=65&auto=format&fit=crop" alt="Sotadari" loading="lazy"><span class="chosen">CHOSEN</span><span class="nm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h3l2.6 12h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg><span><strong>Sotadari</strong><small>Grocery</small></span></span></button><button type="button" class="d" data-k="shopshotoi"><img class="ph" src="https://images.unsplash.com/photo-1770292170233-5d9e235ec739?w=600&q=65&auto=format&fit=crop" alt="ShopShotoi" loading="lazy"><span class="chosen">CHOSEN</span><span class="nm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg><span><strong>ShopShotoi</strong><small>Marketplace</small></span></span></button><button type="button" class="d" data-k="homenest"><img class="ph" src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=65&auto=format&fit=crop" alt="HomeNest" loading="lazy"><span class="chosen">CHOSEN</span><span class="nm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V8a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"/><path d="M2 13a2 2 0 0 1 4 0v2h12v-2a2 2 0 0 1 4 0v5H2v-5ZM5 18v2M19 18v2"/></svg><span><strong>HomeNest</strong><small>Furniture</small></span></span></button><button type="button" class="d" data-k="medicare"><img class="ph" src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&q=65&auto=format&fit=crop" alt="MediCare" loading="lazy"><span class="chosen">CHOSEN</span><span class="nm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-45 12 12)"/><path d="M8.5 8.5l7 7"/></svg><span><strong>MediCare</strong><small>Pharmacy</small></span></span></button><button type="button" class="d on" data-k="printpack"><img class="ph" src="https://images.unsplash.com/photo-1621252756235-7f37e5e5125e?w=600&q=65&auto=format&fit=crop" alt="PrintPack" loading="lazy"><span class="chosen">CHOSEN</span><span class="nm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V3h9l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span><strong>PrintPack</strong><small>Printing &amp; packaging</small></span></span></button></div>
     </section>
 
     <aside class="side">
       <div class="signin">
-        <p class="pick" id="pick"></p>
-        <a class="demo" id="demo" href="#" target="_blank" rel="noopener"></a>
+        <p class="pick" id="pick">Chosen design: <b>PrintPack</b> · Printing &amp; packaging</p>
+        <a class="demo" id="demo" href="https://www.myrosebd.com/demos/store.html?s=printpack" target="_blank" rel="noopener">See the PrintPack demo first</a>
         <div class="step"><b>2</b>Sign in with your company Gmail <span>কোম্পানির জিমেইল দিয়ে লগইন</span></div>
         <button class="g" type="button">
           <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
@@ -123,51 +123,26 @@
           <button type="button"><b>Lifetime website</b><span>… once</span></button>
         </div>
         <button class="start" type="button">START 5-DAY FREE STORE</button>
-        <p class="note" style="text-align:center">Logo, banners, more phones and emails: add later in Settings · <a href="/terms.html">Terms</a></p>
+        <p class="note" style="text-align:center">Logo, banners, more phones and emails: add later in Settings · <a href="https://www.myrosebd.com/terms.html">Terms</a></p>
       </div>
     </aside>
   </div>
 
-  <p class="foot">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a href="/policies.html">Policies</a></p>
+  <p class="foot">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a href="https://www.myrosebd.com/policies.html">Policies</a></p>
 </div>
 <div class="wave"></div>
 
 <div class="rv"><button type="button" class="on" data-v="">Before sign-in</button><button type="button" data-v="f">After sign-in</button></div>
 
-<script src="https://www.myrosebd.com/demos/stores.js"></script>
 <script>
-  var S = window.ROSE_STORES || {}, keys = Object.keys(S);
-  var key = new URLSearchParams(location.search).get('d') || 'printpack';
-  if (!S[key]) key = keys[0];
-  var P = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
-  var ICON = {
-    bag: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 7V6a4 4 0 0 1 8 0v1h3l1 15H4L5 7h3Zm2 0h4V6a2 2 0 0 0-4 0v1Z"/></svg>',
-    hanger: '<svg viewBox="0 0 24 24" ' + P + '><path d="M12 7a2 2 0 1 1 2-2c0 1-2 1.5-2 3v1L2.5 16.5c-.7.6-.3 1.5.6 1.5h17.8c.9 0 1.3-.9.6-1.5L12 9"/></svg>',
-    cart: '<svg viewBox="0 0 24 24" ' + P + '><path d="M2 3h3l2.6 12h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>',
-    sofa: '<svg viewBox="0 0 24 24" ' + P + '><path d="M4 11V8a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"/><path d="M2 13a2 2 0 0 1 4 0v2h12v-2a2 2 0 0 1 4 0v5H2v-5ZM5 18v2M19 18v2"/></svg>',
-    pill: '<svg viewBox="0 0 24 24" ' + P + '><rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-45 12 12)"/><path d="M8.5 8.5l7 7"/></svg>',
-    tag: '<svg viewBox="0 0 24 24" ' + P + '><path d="M3 12V3h9l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
-    box: '<svg viewBox="0 0 24 24" ' + P + '><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>'
-  };
-  var ic = { foodbazaar: 'bag', fashionhub: 'hanger', sotadari: 'cart', shopshotoi: 'box', homenest: 'sofa', medicare: 'pill', printpack: 'tag' };
-  function photo(s) {
-    var p = (s.products || []).filter(function (q) { return q[6]; })[0];
-    var u = p ? String(p[6]) : (s.banners && s.banners[0] && s.banners[0].img) || '';
-    return !u ? '' : /^https?:/.test(u) ? u : 'https://images.unsplash.com/' + u + '?w=600&q=65&auto=format&fit=crop';
-  }
-  function draw() {
-    document.getElementById('g').innerHTML = keys.map(function (k) {
-      var s = S[k], im = photo(s);
-      return '<button type="button" class="d' + (k === key ? ' on' : '') + '" data-k="' + k + '">' +
-        '<span class="ph" style="' + (im ? 'background-image:url(' + im + ')' : '') + '"></span><span class="chosen">CHOSEN</span>' +
-        '<span class="nm">' + ICON[ic[k] || 'bag'] + '<span><strong>' + s.name + '</strong><small>' + s.type + '</small></span></span></button>';
-    }).join('');
-    var s = S[key];
-    document.getElementById('pick').innerHTML = 'Chosen design: <b>' + s.name + '</b> · ' + s.type;
-    var a = document.getElementById('demo'); a.textContent = 'See the ' + s.name + ' demo first'; a.href = '/demos/store.html?s=' + key;
-  }
-  document.getElementById('g').addEventListener('click', function (e) {
-    var b = e.target.closest('.d'); if (!b) return; key = b.getAttribute('data-k'); draw();
+  var D = {"foodbazaar": {"name": "FoodBazaar", "type": "Food delivery"}, "fashionhub": {"name": "FashionHub", "type": "Clothing"}, "sotadari": {"name": "Sotadari", "type": "Grocery"}, "shopshotoi": {"name": "ShopShotoi", "type": "Marketplace"}, "homenest": {"name": "HomeNest", "type": "Furniture"}, "medicare": {"name": "MediCare", "type": "Pharmacy"}, "printpack": {"name": "PrintPack", "type": "Printing & packaging"}};
+  var g = document.getElementById('g');
+  g.addEventListener('click', function (e) {
+    var b = e.target.closest('.d'); if (!b) return;
+    var k = b.getAttribute('data-k');
+    [].forEach.call(g.children, function (x) { x.classList.toggle('on', x === b); });
+    document.getElementById('pick').innerHTML = 'Chosen design: <b>' + D[k].name + '</b> · ' + D[k].type;
+    var a = document.getElementById('demo'); a.textContent = 'See the ' + D[k].name + ' demo first'; a.href = 'https://www.myrosebd.com/demos/store.html?s=' + k;
   });
   document.getElementById('plans').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -179,7 +154,6 @@
       document.body.className = b.getAttribute('data-v');
     };
   });
-  if (keys.length) draw();
 </script>
 </body>
 </html>
