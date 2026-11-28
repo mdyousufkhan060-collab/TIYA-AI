@@ -282,7 +282,7 @@ export function usePremiumVoice(opts: Options) {
           const say = speakRef.current;
           if (say) void say('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।').then(() => { if (activeRef.current) listen(); });
           else listen();
-        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments/i.test(JSON.stringify(action)) ? 100000 : 35000);
+        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments|go to post/i.test(JSON.stringify(action)) ? 100000 : 35000);
       }
       if (!reply || action) {
         // a phone step is running: no voice for the in-between lines (much faster); the words stay in the
