@@ -12,7 +12,7 @@ import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
 import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, asksNextDown, dateWords, numberUnclear, postDate, postNumbersInOrder, saysNo, saysYes } from '../lib/replyRequest';
 import { callNameOf, greetFirst, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { cachedTts, prefetchTts, rememberTts } from '../lib/ttsCache';
-import { asksEnterPage, asksListPages, matchProfile } from '../lib/pageRequest';
+import { asksEnterPage, asksFacebookHome, asksListPages, matchProfile, plainName } from '../lib/pageRequest';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -290,7 +290,7 @@ export function usePremiumVoice(opts: Options) {
           const say = speakRef.current;
           if (say) void say('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।').then(() => { if (activeRef.current) listen(); });
           else listen();
-        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments|go to post|post age|post date|post down|profiles|switch profile/i.test(JSON.stringify(action)) ? 100000 : 35000);
+        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments|go to post|post age|post date|post down|profiles|switch profile|facebook home/i.test(JSON.stringify(action)) ? 100000 : 35000);
       }
       if (!reply || action) {
         // a phone step is running: no voice for the in-between lines (much faster); the words stay in the
@@ -474,6 +474,10 @@ export function usePremiumVoice(opts: Options) {
   /** when he last asked for replies on a video found by age/date: a later "ওটাতে ঢুকো" keeps that wish */
   const lastAgeReplyAt = useRef(0);
   /** his profile + Pages, as Facebook showed them (PageSwitch.kt) */
+  /** the Page ROSE is in now (null = his own profile); ROSE then says 'পেজের', not 'প্রোফাইলের' */
+  const activePageRef = useRef<string | null>(null);
+  /** ROSE just read the Pages and asked 'কোনটাতে ঢুকবো?' */
+  const pageAskAt = useRef(0);
   const profilesRef = useRef<{ names: string[]; at: number }>(
     (() => {
       try {
@@ -503,7 +507,7 @@ export function usePremiumVoice(opts: Options) {
       recipeRef.current = null;
       pendingRef.current = false;
       void speakRef.current?.('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।');
-    }, /reply all/.test(app) ? 930000 : /comments|go to post|post age|post date|post down|profiles|switch profile/.test(app) ? 100000 : 35000);
+    }, /reply all/.test(app) ? 930000 : /comments|go to post|post age|post date|post down|profiles|switch profile|facebook home/.test(app) ? 100000 : 35000);
     return true;
   }, []);
 
@@ -534,9 +538,21 @@ export function usePremiumVoice(opts: Options) {
         const known = Date.now() - profilesRef.current.at < 30 * 24 * 3600 * 1000 ? profilesRef.current.names : [];
         const wantPage = asksEnterPage(t) && /পেজ|পেইজ|page|আইডি|id|প্রোফাইল|profile|লগইন|login|সুইচ|switch/.test(t) && !/ভিডিও|বিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t);
         const named = known.length ? matchProfile(t, known) : null;
-        if (named && (asksEnterPage(t)) && !/ভিডিও|বিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t)) {
+        const justAsked = Date.now() - pageAskAt.current < 5 * 60 * 1000;
+        // "বেরিয়ে হোমে আসো" while the Pages list is open
+        if (justAsked && asksFacebookHome(t)) {
+          pageAskAt.current = 0;
+          recipeRef.current = { steps: ['facebook home'], at: 0, doneLine: `${nm ? nm + ', ' : ''}Facebook-এর হোমে চলে এসেছি। এখন কী করবো বলো?` };
+          await speakLine(`${okWithName(nm)}বের হয়ে হোমে যাচ্ছি।`);
+          if (!activeRef.current) return;
+          runRecipeStep();
+          return;
+        }
+        // right after "কোনটাতে ঢুকবো?" just the name is enough ("ইস্লম বোলছে")
+        if (named && (asksEnterPage(t) || justAsked) && !/ভিডিও|বিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t)) {
+          pageAskAt.current = 0;
           recipeRef.current = { steps: [`switch profile ${named}`], at: 0, page: { want: named } };
-          await speakLine(`${okWithName(nm)}${named}-এ ঢুকছি।`);
+          await speakLine(`${okWithName(nm)}${plainName(named)}-এ ঢুকছি। লগইন হতে একটু সময় লাগবে।`);
           if (!activeRef.current) return;
           runRecipeStep();
           return;
@@ -677,7 +693,7 @@ export function usePremiumVoice(opts: Options) {
           greetFirst(t) + okWithName(callNameOf(optsRef.current.yourName)) +
             (many.length > 1
               ? `আগে ${many[0]} নম্বর ভিডিওর রিপ্লাই শেষ করবো, তারপর ${many.slice(1).join(', ')} নম্বর। সব শেষ হলে তোমাকে জানাবো।`
-              : no === 1 ? 'তোমার প্রোফাইলের সবচেয়ে নতুন (১ নম্বর) ভিডিওর কমেন্টে রিপ্লাই দিচ্ছি।' : `তোমার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`),
+              : `${activePageRef.current ? `তোমার ${activePageRef.current} পেজের` : 'তোমার প্রোফাইলের'} ${no === 1 ? 'সবচেয়ে নতুন (১ নম্বর) ভিডিওর' : `${no} নম্বর পোস্টের`} কমেন্টে রিপ্লাই দিচ্ছি।`),
         );
         runRecipeStep();
         return;
@@ -737,7 +753,7 @@ export function usePremiumVoice(opts: Options) {
           const nm = callNameOf(optsRef.current.yourName);
           const list = (text.match(/PROFILES:\s*([^"\n]+)/) || [])[1];
           if (ok && list) {
-            const names = list.split('|').map((x) => x.trim()).filter(Boolean);
+            const names = list.split('|').map((x) => x.trim()).filter((x) => x && !/^(dismiss|close|back)$/i.test(x));
             profilesRef.current = { names, at: Date.now() };
             try {
               localStorage.setItem('rose_fb_profiles', JSON.stringify(profilesRef.current));
@@ -753,10 +769,11 @@ export function usePremiumVoice(opts: Options) {
               return;
             }
             recipeRef.current = null;
-            const pages = names.slice(1);
+            const pages = names.slice(1).map(plainName);
+            pageAskAt.current = Date.now();
             const line = pages.length
-              ? `${nm ? nm + ', ' : ''}তোমার ${names[0]} আইডির আন্ডারে ${String(pages.length).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)])}টা পেজ আছে: ${pages.join(', ')}। কোনটাতে ঢুকবো?`
-              : `${nm ? nm + ', ' : ''}তোমার ${names[0]} আইডির আন্ডারে কোনো পেজ দেখছি না।`;
+              ? `${nm ? nm + ', ' : ''}তোমার ${plainName(names[0])} আইডির আন্ডারে ${String(pages.length).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)])}টা পেজ আছে: ${pages.join(', ')}। কোনটাতে ঢুকবো?`
+              : `${nm ? nm + ', ' : ''}তোমার ${plainName(names[0])} আইডির আন্ডারে কোনো পেজ দেখছি না।`;
             void speakLine(line).then(() => {
               if (activeRef.current) window.setTimeout(() => listen(), 300);
             });
@@ -765,7 +782,9 @@ export function usePremiumVoice(opts: Options) {
           const sw = (text.match(/SWITCHED:\s*([^"\n]+)/) || [])[1];
           if (ok && sw) {
             recipeRef.current = null;
-            void speakLine(`${nm ? nm + ', ' : ''}আমি ${sw.trim()}-এ ঢুকেছি। এখন কী করবো বলো?`).then(() => {
+            const main = profilesRef.current.names[0];
+            activePageRef.current = main && sw.trim() === main ? null : plainName(sw);
+            void speakLine(`${nm ? nm + ', ' : ''}${plainName(sw)} ${activePageRef.current ? 'পেজে' : 'আইডিতে'} লগইন হয়েছে। এখন কী করবো বলো?`).then(() => {
               if (activeRef.current) window.setTimeout(() => listen(), 300);
             });
             return;

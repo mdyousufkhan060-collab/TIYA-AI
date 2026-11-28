@@ -27,7 +27,8 @@ const BN: Record<string, string> = {
 
 /** a name's consonant sounds: "ISLAM BOLCHE" and "ইসলাম বলছে" both → "slmblc" */
 export function soundOf(text: string): string {
-  let s = text.toLowerCase().normalize('NFC');
+  // page names can come in bold letters (𝐈𝐒𝐋𝐀𝐌 𝐁𝐎𝐋𝐂𝐇𝐄): NFKC makes them plain
+  let s = text.normalize('NFKC').toLowerCase().normalize('NFC');
   s = s.replace(/্য/g, ''); // য-ফলা
   s = s.replace(/\u09A1\u09BC|\u09DC|\u09A2\u09BC|\u09DD/g, 'র').replace(/\u09AF\u09BC|\u09DF/g, ''); // ড় ঢ় → র, য় → (a vowel sound)
   let out = '';
@@ -70,4 +71,14 @@ export function matchProfile(t: string, names: string[]): string | null {
     if (min <= allow && (!best || min < best.score)) best = { name, score: min };
   }
   return best?.name ?? null;
+}
+
+/** how a page name is said and shown: plain letters (𝐈𝐒𝐋𝐀𝐌 → ISLAM) */
+export function plainName(n: string): string {
+  return n.normalize('NFKC').trim();
+}
+
+/** "এখান থেকে বেরিয়ে হোমে আসো" */
+export function asksFacebookHome(t: string): boolean {
+  return /বের হ|বেরিয়ে|বেড়িয়ে|বাইর|হোমে|হোম পেজে|হোমপেজে|home/.test(t.toLowerCase()) && !/ভিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t);
 }
