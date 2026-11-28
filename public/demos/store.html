@@ -1337,8 +1337,9 @@ function start(S, P, liveId) {
           return '';
         }
         if (r.action === 'block' || r.action === 'duplicate') { shieldNote('⛔ ' + esc(msg || ''), true); return ''; }
+        shieldNote('⚠️ ' + (LANG === 'bn' ? 'একটু সমস্যা হয়েছে, আবার Confirm চাপুন।' : 'Something went wrong. Please press Confirm again.'), true);
         return '';
-      }, function () { return ''; });
+      }, function () { shieldNote('⚠️ ' + (LANG === 'bn' ? 'ইন্টারনেট সমস্যা, আবার Confirm চাপুন।' : 'Network problem. Please press Confirm again.'), true); return ''; });
   }
   window.placeOrder = function () {
     var keys = ['name', 'phone', 'addr', 'div', 'dist', 'upz', 'email', 'trx', 'proof'], bad = keys.filter(function (k) { return !check(k); });
