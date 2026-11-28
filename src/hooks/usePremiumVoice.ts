@@ -774,7 +774,22 @@ export function usePremiumVoice(opts: Options) {
       });
     };
     window.addEventListener('rose-user-back', onBack);
-    return () => window.removeEventListener('rose-user-back', onBack);
+    // also when ROSE's screen shows again between two steps of a job (no phone step running at that moment)
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || !activeRef.current) return;
+      if (recipeRef.current && watchRef.current === null) {
+        recipeRef.current = null;
+        const nm = callNameOf(optsRef.current.yourName);
+        void speakLine(`${nm ? nm + ', ' : ''}তুমি আমাকে হোমে নিয়ে এলে, তাই Facebook-এর কাজটা থামিয়ে দিয়েছি। এখন কী করবো বলো?`).then(() => {
+          if (activeRef.current) window.setTimeout(() => listen(), 300);
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('rose-user-back', onBack);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [speakLine, listen]);
 
   /** The app ran a phone action: give ROSE the result so she can say it or take the next step (max 12 steps). */
