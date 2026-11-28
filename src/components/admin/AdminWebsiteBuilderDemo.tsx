@@ -22,6 +22,7 @@ type Alert = { id: string; title: string; body: string; created_at: string };
 const DEMOS: Array<[string, string]> = [
   ['foodbazaar', 'FoodBazaar · food'], ['fashionhub', 'FashionHub · fashion'], ['sotadari', 'Sotadari · grocery'],
   ['shopshotoi', 'ShopShotoi · mixed'], ['homenest', 'HomeNest · furniture'], ['medicare', 'MediCare · pharmacy'], ['printpack', 'PrintPack · labels & packaging'],
+  ['glowbeauty', 'GlowBeauty · beauty'], ['gadgetzone', 'GadgetZone · electronics'], ['noorislamic', 'Noor Islamic · Islamic store'], ['boighor', 'BoiGhor · books'], ['cakehouse', 'CakeHouse · cake & gifts'],
 ];
 const card = 'rounded-xl border border-white/[0.08] bg-[#11151E] p-3';
 const rowCls = 'rounded-lg bg-black/30 p-2';

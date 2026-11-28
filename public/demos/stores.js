@@ -1,4 +1,5 @@
-/* ROSE Store Builder: demo store data. Photos: Unsplash (free under the Unsplash License). */
+/* LOCKED (owner, Nov 28 2026): 12 demo designs. Do not change unless the owner asks.
+   ROSE Store Builder: demo store data. Photos: Unsplash (free under the Unsplash License). */
 window.ROSE_IMG = function (id, w) { return 'https://images.unsplash.com/' + id + '?auto=format&fit=crop&q=70&w=' + (w || 600); };
 window.ROSE_STORES = {
   foodbazaar: {
@@ -183,6 +184,147 @@ window.ROSE_STORES = {
     options: { label: 'Quantity', values: ['100 pcs', '500 pcs', '1000 pcs'] },
     note: 'Send your logo after you order (WhatsApp or e-mail). We send a design proof first and print only after you say OK. Bulk price for 1000+ pieces.',
   },
+  // ---- 5 more designs (owner, Nov 28 2026). Each shop keeps only its own kind of products. ----
+  glowbeauty: {
+    name: 'GlowBeauty', tagline: 'Glow With Confidence', logo: '💄', type: 'Beauty & cosmetics',
+    color: '#db2777', accent: '#fde047', city: 'Dhaka',
+    banners: [
+      { title: 'Makeup & Skincare, 100% Original', badge: 'Up to 40% OFF', icon: '💄', bg: 'linear-gradient(120deg,#fce7f3,#f9a8d4)', img: 'photo-1596462502278-27bfdc403348' },
+      { title: 'Your Daily Skincare Routine', badge: 'Combo save 25%', icon: '🧴', bg: 'linear-gradient(120deg,#fdf2f8,#f472b6)', img: 'photo-1598440947619-2c35fc9aa908' },
+    ],
+    trust: ['✅ 100% original', '🚚 1-2 days in Dhaka', '🔁 Easy return (sealed)', '💬 Skin care advice'],
+    categories: [['Makeup', '💄'], ['Skincare', '🧴'], ['Hair Care', '💇'], ['Fragrance', '🌸'], ['Body Care', '🛁'], ['Combo Offers', '🎁']],
+    sectionTitle: 'Best Sellers',
+    products: [
+      ['Matte Lipstick (Red)', 'Makeup', '💄', 550, 750, '', 'photo-1586495777744-4413f21062fa'],
+      ['Liquid Lipstick 4 Shades', 'Makeup', '💄', 1250, 1600, '', 'photo-1631214499500-2e34edcaccfe'],
+      ['Makeup Brush Set (12 pcs)', 'Makeup', '🖌️', 990, 1450, '', 'photo-1620464003286-a5b0d79f32c2'],
+      ['Everyday Makeup Kit', 'Makeup', '💄', 2450, 3200, '', 'photo-1512496015851-a90fb38ba796'],
+      ['Vitamin C Face Serum 30 ml', 'Skincare', '🧴', 890, 1200, '', 'photo-1608571423902-eed4a5ad8108'],
+      ['Moisturizing Face Cream 50 g', 'Skincare', '🧴', 690, 950, '', 'photo-1585945037805-5fd82c2e60b1'],
+      ['Shampoo & Conditioner Set', 'Hair Care', '💇', 1150, 1500, '', 'photo-1786737554096-4b22c03ad991'],
+      ['Hair Serum 100 ml', 'Hair Care', '💇', 650, 850, '', 'photo-1760895535234-2c39c57cf187'],
+      ['Floral Eau de Parfum 50 ml', 'Fragrance', '🌸', 1890, 2500, '', 'photo-1458538977777-0549b2370168'],
+      ['Oud Perfume 50 ml', 'Fragrance', '🌸', 2290, 2900, '', 'photo-1594035910387-fea47794261f'],
+      ['Body Lotion 200 ml', 'Body Care', '🛁', 450, 600, '', 'photo-1620916566398-39f1143ab7be'],
+      ['Hand & Body Lotion (pump)', 'Body Care', '🛁', 520, 690, '', 'photo-1619451427882-6aaaded0cc61'],
+      ['Skincare Combo (serum + cream + roller)', 'Combo Offers', '🎁', 1990, 2650, '', 'photo-1598440947619-2c35fc9aa908'],
+      ['Makeup Combo Box', 'Combo Offers', '🎁', 2890, 3800, '', 'photo-1631730486572-226d1f595b68'],
+    ],
+    options: { label: 'Shade', values: ['Red', 'Nude', 'Pink', 'Coral'] },
+    note: 'Only original products with batch number and expiry date. Sealed products can be returned within 3 days.',
+  },
+  gadgetzone: {
+    name: 'GadgetZone', tagline: 'Smart Gadgets, Best Price', logo: '📱', type: 'Electronics & gadgets',
+    color: '#1d4ed8', accent: '#facc15', city: 'Dhaka',
+    banners: [
+      { title: 'Wireless Earbuds Big Sale', badge: 'Up to 45% OFF', icon: '🎧', bg: 'linear-gradient(120deg,#dbeafe,#60a5fa)', img: 'photo-1783890848515-c0dc28b25ef2' },
+      { title: 'New Smartphones in Stock', badge: 'EMI from 3 months', icon: '📱', bg: 'linear-gradient(120deg,#e0e7ff,#818cf8)', img: 'photo-1772182137994-4158ac33bddd' },
+    ],
+    trust: ['🛡️ Official warranty', '🚚 1-2 days in Dhaka', '💳 EMI available', '🔁 7-day replacement'],
+    categories: [['Mobile Phones', '📱'], ['Earbuds & Headphones', '🎧'], ['Smart Watches', '⌚'], ['Power Banks', '🔋'], ['Speakers', '🔊'], ['Chargers & Cables', '🔌']],
+    sectionTitle: 'Hot Deals',
+    products: [
+      ['Android Smartphone 6.7" 8/128GB', 'Mobile Phones', '📱', 21990, 24990, '', 'photo-1592890288564-76628a30a657'],
+      ['Budget Smartphone 6.5" 4/64GB', 'Mobile Phones', '📱', 11490, 12990, '', 'photo-1512428559087-560fa5ceab42'],
+      ['5G Smartphone 12/256GB', 'Mobile Phones', '📱', 38990, 42990, '', 'photo-1772182137994-4158ac33bddd'],
+      ['Wireless Earbuds with ANC', 'Earbuds & Headphones', '🎧', 2490, 3990, '', 'photo-1783890848515-c0dc28b25ef2'],
+      ['Bluetooth Sports Earbuds', 'Earbuds & Headphones', '🎧', 1290, 2190, '', 'photo-1606220588913-b3aacb4d2f46'],
+      ['Over-Ear Wireless Headphones', 'Earbuds & Headphones', '🎧', 3290, 4490, '', 'photo-1590658268037-6bf12165a8df'],
+      ['Smart Watch with Calling', 'Smart Watches', '⌚', 3490, 4990, '', 'photo-1580477371194-4593e3c7c6cf'],
+      ['Fitness Band', 'Smart Watches', '⌚', 1890, 2590, '', 'photo-1434494878577-86c23bcb06b9'],
+      ['20000mAh Power Bank', 'Power Banks', '🔋', 2190, 2890, '', 'photo-1760708825913-65a50b3dc39b'],
+      ['10000mAh Slim Power Bank', 'Power Banks', '🔋', 1390, 1790, '', 'photo-1566554738544-d962991c3fee'],
+      ['Portable Bluetooth Speaker', 'Speakers', '🔊', 1990, 2790, '', 'photo-1547052178-7f2c5a20c332'],
+      ['Mini Speaker with Bass', 'Speakers', '🔊', 1490, 1990, '', 'photo-1582978571763-2d039e56f0c3'],
+      ['USB-C Fast Charging Cable 1 m', 'Chargers & Cables', '🔌', 290, 450, '', 'photo-1585995603413-eb35b5f4a50b'],
+    ],
+    options: { label: 'Colour', values: ['Black', 'White', 'Blue'] },
+    note: 'Every gadget comes with the invoice and warranty card. EMI with selected bank cards. Check the parcel before you pay.',
+  },
+  noorislamic: {
+    name: 'Noor Islamic', tagline: 'Everything for Your Deen', logo: '🕌', type: 'Islamic store',
+    color: '#047857', accent: '#fbbf24', city: 'Dhaka',
+    banners: [
+      { title: 'Quran, Tasbih & Attar Gift Sets', badge: 'Ramadan offer', icon: '🕌', bg: 'linear-gradient(120deg,#d1fae5,#34d399)', img: 'photo-1587617425953-9075d28b8c46' },
+      { title: 'Soft Prayer Mats for Every Home', badge: 'Up to 30% OFF', icon: '🧎', bg: 'linear-gradient(120deg,#fef3c7,#fbbf24)', img: 'photo-1600814832809-579119f47045' },
+    ],
+    trust: ['🌸 Alcohol-free attar', '📖 Authentic books', '🚚 All Bangladesh delivery', '🎁 Gift wrapping'],
+    categories: [['Attar', '🌸'], ['Prayer Mats', '🕌'], ['Tasbih', '📿'], ['Islamic Books', '📖'], ['Hijab & Abaya', '🧕'], ['Gift Sets', '🎁']],
+    sectionTitle: 'Popular Items',
+    products: [
+      ['Premium Oud Attar 6 ml', 'Attar', '🌸', 650, 850, '', 'photo-1612784642053-15614e602ed7'],
+      ['Rose Attar 3 ml', 'Attar', '🌸', 250, 350, '', 'photo-1646149757906-e6e9e9a7c77f'],
+      ['Musk Attar Collection (3 bottles)', 'Attar', '🌸', 990, 1350, '', 'photo-1669444699729-f55f7cf9f82b'],
+      ['Velvet Prayer Mat (Jaynamaz)', 'Prayer Mats', '🕌', 1250, 1650, '', 'photo-1600814832809-579119f47045'],
+      ['Soft Floral Prayer Mat', 'Prayer Mats', '🕌', 890, 1200, '', 'photo-1591624298055-3cfb0aa676c5'],
+      ['Wooden Tasbih 99 Beads', 'Tasbih', '📿', 350, 500, '', 'photo-1682761794593-9687dcfd1d1c'],
+      ['Agate Stone Tasbih 33 Beads', 'Tasbih', '📿', 690, 950, '', 'photo-1762328490563-9b9c300fba3e'],
+      ['Al-Quran with Bangla Translation', 'Islamic Books', '📖', 1200, 1500, '', 'photo-1542816417-0983c9c9ad53'],
+      ['Wooden Quran Stand (Rehal)', 'Islamic Books', '📖', 750, 990, '', 'photo-1596125160970-6f02eeba00d3'],
+      ['Hadith Book Set (2 volumes)', 'Islamic Books', '📖', 1450, 1800, '', 'photo-1711986924305-db0fd9807e69'],
+      ['Chiffon Hijab', 'Hijab & Abaya', '🧕', 450, 650, '', 'photo-1626497361649-81cc097e9bfd'],
+      ['Embroidered Abaya', 'Hijab & Abaya', '🧕', 3490, 4290, '', 'photo-1760083545495-b297b1690672'],
+      ['Ramadan Gift Box (Quran + Tasbih + Attar)', 'Gift Sets', '🎁', 2490, 3100, '', 'photo-1587617425953-9075d28b8c46'],
+    ],
+    options: { label: 'Size', values: ['3 ml', '6 ml', '12 ml'] },
+    note: 'All attar is alcohol-free. Books are printed by authentic publishers. Gift wrapping is free on request.',
+  },
+  boighor: {
+    name: 'BoiGhor', tagline: 'Books for Every Reader', logo: '📚', type: 'Books & stationery',
+    color: '#b45309', accent: '#fde68a', city: 'Dhaka',
+    banners: [
+      { title: 'New Books Every Week', badge: 'Up to 30% OFF', icon: '📚', bg: 'linear-gradient(120deg,#fef3c7,#fbbf24)', img: 'photo-1495446815901-a7297e633e8d' },
+      { title: 'Back to School Stationery', badge: 'From 20 Tk', icon: '✏️', bg: 'linear-gradient(120deg,#ffedd5,#fb923c)', img: 'photo-1456735190827-d1262f71b8a3' },
+    ],
+    trust: ['📦 Safe packing', '🚚 All Bangladesh delivery', '🔁 Damaged copy? Free change', '💵 Cash on delivery'],
+    categories: [['Novels', '📕'], ['Academic', '🎓'], ['Self-help', '💡'], ['Children', '🧸'], ['English Books', '📘'], ['Stationery', '✏️']],
+    sectionTitle: 'Best Sellers',
+    products: [
+      ['Bangla Novel Collection (3 books)', 'Novels', '📕', 890, 1200, '', 'photo-1550399105-c4db5fb85c18'],
+      ['Classic Story Book (Hardcover)', 'Novels', '📕', 420, 550, '', 'photo-1513185041617-8ab03f83d6c5'],
+      ['HSC Physics Guide', 'Academic', '🎓', 520, 650, '', 'photo-1610116306796-6fea9f4fae38'],
+      ['SSC Math Practice Book', 'Academic', '🎓', 380, 480, '', 'photo-1457369804613-52c61a468e7d'],
+      ['Self-help: Better Habits', 'Self-help', '💡', 350, 450, '', 'photo-1497633762265-9d179a990aa6'],
+      ['Life Skills Book', 'Self-help', '💡', 320, 400, '', 'photo-1604866830893-c13cafa515d5'],
+      ['Children\'s Picture Book Set (5 books)', 'Children', '🧸', 750, 990, '', 'photo-1781629784120-3c0cc98b233f'],
+      ['English Reading Book (Paperback)', 'English Books', '📘', 450, 590, '', 'photo-1524995997946-a1c2e315a42f'],
+      ['English Grammar & Vocabulary', 'English Books', '📘', 390, 490, '', 'photo-1541963463532-d68292c34b19'],
+      ['Colour Pencil Set (24)', 'Stationery', '✏️', 320, 420, '', 'photo-1568205612837-017257d2310a'],
+      ['Pen & Marker Organizer Set', 'Stationery', '✏️', 450, 590, '', 'photo-1456735190827-d1262f71b8a3'],
+      ['Grid Notebooks (pack of 3)', 'Stationery', '📒', 260, 350, '', 'photo-1787640619073-3dcb10c316c4'],
+    ],
+    options: { label: 'Cover', values: ['Paperback', 'Hardcover'] },
+    note: 'Books are packed in safe boxes. If a copy comes damaged or with missing pages, we change it free.',
+  },
+  cakehouse: {
+    name: 'CakeHouse', tagline: 'Fresh Cakes & Sweet Gifts', logo: '🎂', type: 'Cake & gifts',
+    color: '#e11d48', accent: '#fde047', city: 'Dhaka',
+    banners: [
+      { title: 'Birthday Cakes with Your Name', badge: 'Same day in Dhaka', icon: '🎂', bg: 'linear-gradient(120deg,#ffe4e6,#fb7185)', img: 'photo-1606983340126-99ab4feaa64a' },
+      { title: 'Flowers & Gift Boxes', badge: 'Free card', icon: '💐', bg: 'linear-gradient(120deg,#fce7f3,#f472b6)', img: 'photo-1759420303135-0224b8d9b798' },
+    ],
+    trust: ['🎂 Baked fresh daily', '✍️ Name on the cake free', '🚚 Same day in Dhaka', '💳 bKash / COD'],
+    categories: [['Birthday Cakes', '🎂'], ['Cupcakes', '🧁'], ['Cookies', '🍪'], ['Chocolates', '🍫'], ['Flowers', '💐'], ['Gift Boxes', '🎁']],
+    sectionTitle: 'Popular Cakes',
+    products: [
+      ['Chocolate Birthday Cake (2 lb)', 'Birthday Cakes', '🎂', 1350, 1600, '', 'photo-1606983340126-99ab4feaa64a'],
+      ['Black Forest Cake (2 lb)', 'Birthday Cakes', '🎂', 1450, 1700, '', 'photo-1606890737304-57a1ca8a5b62'],
+      ['Vanilla Berry Cake (2 lb)', 'Birthday Cakes', '🎂', 1290, 1500, '', 'photo-1545696563-af8f6ec2295a'],
+      ['Pink Fondant Cake (3 lb)', 'Birthday Cakes', '🎂', 2490, 2900, '', 'photo-1558301211-0d8c8ddee6ec'],
+      ['Cupcakes Box (6 pcs)', 'Cupcakes', '🧁', 690, 850, '', 'photo-1486427944299-d1955d23e34d'],
+      ['Chocolate Cupcakes (6 pcs)', 'Cupcakes', '🧁', 750, 900, '', 'photo-1640806354740-d47c98c190ea'],
+      ['Chocolate Chip Cookies (12 pcs)', 'Cookies', '🍪', 450, 550, '', 'photo-1499636136210-6f4ee915583e'],
+      ['Butter Cookies Jar (500 g)', 'Cookies', '🍪', 520, 650, '', 'photo-1558961363-fa8fdf82db35'],
+      ['Assorted Chocolate Box', 'Chocolates', '🍫', 1190, 1450, '', 'photo-1767510533183-425731f088a7'],
+      ['Chocolate Bars Gift Pack', 'Chocolates', '🍫', 890, 1100, '', 'photo-1621939514649-280e2ee25f60'],
+      ['Flower Bouquet in a Box', 'Flowers', '💐', 1590, 1900, '', 'photo-1759420303135-0224b8d9b798'],
+      ['Flowers & Gift Box Combo', 'Gift Boxes', '🎁', 2290, 2800, '', 'photo-1759420319818-1a2c8684a584'],
+      ['Wrapped Surprise Gift Box', 'Gift Boxes', '🎁', 1290, 1590, '', 'photo-1549465220-1a8b9238cd48'],
+    ],
+    options: { label: 'Weight', values: ['1 lb', '2 lb', '3 lb'] },
+    note: 'Write the name for the cake and the delivery date and time in the order note. Order before 2 PM for same day delivery in Dhaka.',
+  },
 };
 
 // Each kind of shop shows its own product tabs and info fields (food ≠ medicine ≠ furniture).
@@ -209,6 +351,21 @@ window.ROSE_KINDS = {
   packaging: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Print', 'প্রিন্ট'], ['ship', 'Delivery', 'ডেলিভারি']],
     specs: [['size', 'Size', 'মাপ', 'As in the name'], ['material', 'Paper / material', 'কাগজ / উপকরণ', 'Art paper / kraft, 120-300 GSM'], ['print', 'Print', 'প্রিন্ট', 'Full colour, one side'], ['finish', 'Finish', 'ফিনিশ', 'Matte or glossy'], ['moq', 'Minimum order', 'সর্বনিম্ন অর্ডার', '100 pieces'], ['time', 'Ready in', 'তৈরি হতে', '3-5 working days']],
     ship: ['🎨 Free design proof before printing', '🖨️ Printed in 3-5 working days', '🚚 Delivery all over Bangladesh', '🔁 Wrong print from our side? We print again free'] },
+  beauty: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'How to use', 'ব্যবহার'], ['ship', 'Delivery', 'ডেলিভারি']],
+    specs: [['brand', 'Brand', 'ব্র্যান্ড', 'Original brand'], ['skin', 'Skin / hair type', 'ত্বক / চুলের ধরন', 'All types'], ['size', 'Size', 'পরিমাণ', 'As in the name'], ['use', 'How to use', 'যেভাবে ব্যবহার', 'Apply on clean skin'], ['expiry', 'Expiry', 'মেয়াদ', 'Printed on the pack'], ['origin', 'Made in', 'তৈরি', 'See the pack']],
+    ship: ['✅ 100% original, batch number on the pack', '🚚 1-2 days in Dhaka, 2-4 days outside', '💵 Cash on delivery', '🔁 Sealed product return within 3 days'] },
+  electronics: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Specs', 'স্পেক'], ['ship', 'Warranty', 'ওয়ারেন্টি']],
+    specs: [['brand', 'Brand', 'ব্র্যান্ড', 'Original brand'], ['model', 'Model', 'মডেল', 'Latest model'], ['battery', 'Battery', 'ব্যাটারি', 'See the box'], ['connect', 'Connection', 'সংযোগ', 'Bluetooth 5.3 / USB-C'], ['warranty', 'Warranty', 'ওয়ারেন্টি', '1 year official warranty'], ['box', 'In the box', 'বক্সে যা আছে', 'Product, cable, manual']],
+    ship: ['🛡️ Official warranty with the invoice', '🚚 1-2 days in Dhaka, 2-4 days outside', '💳 EMI with bank cards, cash on delivery', '🔁 7-day replacement if it does not work'] },
+  islamic: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Info', 'তথ্য'], ['ship', 'Delivery', 'ডেলিভারি']],
+    specs: [['material', 'Material', 'উপকরণ', 'As in the name'], ['size', 'Size', 'মাপ', 'Standard'], ['origin', 'Made in', 'তৈরি', 'Bangladesh / Saudi Arabia'], ['note', 'Note', 'নোট', 'Attar is alcohol-free']],
+    ship: ['🎁 Free gift wrapping on request', '🚚 1-2 days in Dhaka, 2-4 days outside', '💵 Cash on delivery', '🔁 Wrong item? We change it free'] },
+  books: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Book info', 'বইয়ের তথ্য'], ['ship', 'Delivery', 'ডেলিভারি']],
+    specs: [['author', 'Author', 'লেখক', 'See the cover'], ['publisher', 'Publisher', 'প্রকাশনী', 'Bangladesh'], ['pages', 'Pages', 'পৃষ্ঠা', '200-300'], ['language', 'Language', 'ভাষা', 'Bangla'], ['cover', 'Cover', 'কভার', 'Paperback']],
+    ship: ['📦 Packed safe in a box', '🚚 1-2 days in Dhaka, 2-5 days outside', '💵 Cash on delivery', '🔁 Damaged copy or missing pages? Free change'] },
+  cake: { tabs: [['desc', 'Details', 'বিবরণ'], ['specs', 'Cake info', 'কেকের তথ্য'], ['ship', 'Delivery', 'ডেলিভারি']],
+    specs: [['weight', 'Weight', 'ওজন', 'As in the name'], ['flavour', 'Flavour', 'ফ্লেভার', 'Chocolate / Vanilla'], ['serves', 'Serves', 'কতজনের', '6-8 people (2 lb)'], ['message', 'Name on cake', 'কেকে নাম', 'Free, write it in the order note'], ['ready', 'Ready in', 'তৈরি হতে', '3-4 hours']],
+    ship: ['🎂 Baked fresh after you order', '🕒 Write the date and time in the order note', '🚚 Same day in Dhaka (order before 2 PM)', '💵 bKash advance or cash on delivery'] },
 };
 // Product options that fit each kind of shop (food has portions, medicine has packs, not clothing sizes)
 (function () {
@@ -225,6 +382,16 @@ window.ROSE_KINDS = {
       quick: { Colour: ['Natural', 'Brown', 'Walnut', 'Black', 'White', 'Grey'], Size: ['Single', 'Semi-double', 'Double', 'King', '2 seater', '3 seater', '5 seater'], Material: ['Segun (teak)', 'Mahogany', 'Oak', 'Board', 'Metal'] } },
     packaging: { labels: ['Quantity', 'Size', 'Finish'], sets: [['Pieces', ['100 pcs', '500 pcs', '1000 pcs']], ['Sticker size', ['1 inch', '2 inch', '3 inch']], ['Bag size', ['Small', 'Medium', 'Large']], ['Finish', ['Matte', 'Glossy']]],
       quick: { Quantity: ['50 pcs', '100 pcs', '200 pcs', '500 pcs', '1000 pcs', '5000 pcs'], Size: ['1 inch', '2 inch', '3 inch', 'A6', 'A5', 'A4', 'Small', 'Medium', 'Large'], Finish: ['Matte', 'Glossy', 'Kraft', 'Lamination'] } },
+    beauty: { labels: ['Shade', 'Size'], sets: [['Lipstick shade', ['Red', 'Nude', 'Pink', 'Coral']], ['Size', ['30 ml', '50 ml', '100 ml']], ['Weight', ['50 g', '100 g', '200 g']]],
+      quick: { Shade: ['Red', 'Nude', 'Pink', 'Coral', 'Brown', 'Light', 'Medium', 'Dark'], Size: ['15 ml', '30 ml', '50 ml', '100 ml', '200 ml', '50 g', '100 g'] } },
+    electronics: { labels: ['Colour', 'Storage', 'Model'], sets: [['Phone storage', ['4/64GB', '8/128GB', '12/256GB']], ['Colour', ['Black', 'White', 'Blue']], ['Power bank', ['10000mAh', '20000mAh']]],
+      quick: { Colour: ['Black', 'White', 'Blue', 'Silver', 'Gold', 'Green'], Storage: ['4/64GB', '6/128GB', '8/128GB', '8/256GB', '12/256GB'], Model: [] } },
+    islamic: { labels: ['Size', 'Colour'], sets: [['Attar', ['3 ml', '6 ml', '12 ml']], ['Hijab / Abaya', ['S', 'M', 'L', 'XL']], ['Colour', ['Green', 'Maroon', 'Navy', 'Black']]],
+      quick: { Size: ['3 ml', '6 ml', '12 ml', '24 ml', 'S', 'M', 'L', 'XL', 'Free size'], Colour: ['Green', 'Maroon', 'Navy', 'Black', 'Beige', 'White'] } },
+    books: { labels: ['Cover', 'Pack'], sets: [['Cover', ['Paperback', 'Hardcover']], ['Pack', ['Single', 'Set of 3', 'Set of 5']]],
+      quick: { Cover: ['Paperback', 'Hardcover'], Pack: ['Single', 'Set of 3', 'Set of 5', '12 pcs', '24 pcs'] } },
+    cake: { labels: ['Weight', 'Flavour'], sets: [['Cake weight', ['1 lb', '2 lb', '3 lb', '4 lb']], ['Pieces', ['6 pcs', '12 pcs', '24 pcs']]],
+      quick: { Weight: ['1 lb', '2 lb', '3 lb', '4 lb', '500 g', '1 kg'], Flavour: ['Chocolate', 'Vanilla', 'Black Forest', 'Red Velvet', 'Strawberry', 'Mango'] } },
     market: { labels: ['Model', 'Colour', 'Storage', 'Size'], sets: [['Phone storage', ['64GB', '128GB', '256GB']], ['Colour', ['Black', 'White', 'Blue']], ['Size', ['S', 'M', 'L', 'XL']]],
       quick: { Model: [], Colour: ['Black', 'White', 'Blue', 'Red', 'Silver', 'Gold'], Storage: ['32GB', '64GB', '128GB', '256GB', '512GB'], Size: ['S', 'M', 'L', 'XL', 'Free size'] } },
   };
@@ -240,8 +407,8 @@ window.ROSE_KG_TEXT = function (kg) { kg = +kg || 0; return kg <= 0 ? '' : kg < 
 // Courier charge: base price up to 1 kg, then a charge for each started extra kg (1.2 kg = 1 extra kg).
 window.ROSE_DEL = function (base, perKg, kg) { kg = +kg || 0; return (+base || 0) + (kg > 1 ? Math.ceil(kg - 1 - 1e-9) * (+perKg || 0) : 0); };
 // Demo weights when a demo product has none (kg)
-window.ROSE_DEMO_KG = { food: 0.6, fashion: 0.4, grocery: 1, pharmacy: 0.05, furniture: 15, market: 0.5, packaging: 1.5 };
-window.ROSE_KIND_OF = { foodbazaar: 'food', fashionhub: 'fashion', sotadari: 'grocery', shopshotoi: 'market', homenest: 'furniture', medicare: 'pharmacy', printpack: 'packaging' };
+window.ROSE_DEMO_KG = { food: 0.6, fashion: 0.4, grocery: 1, pharmacy: 0.05, furniture: 15, market: 0.5, packaging: 1.5, beauty: 0.2, electronics: 0.4, islamic: 0.5, books: 0.5, cake: 1.2 };
+window.ROSE_KIND_OF = { foodbazaar: 'food', fashionhub: 'fashion', sotadari: 'grocery', shopshotoi: 'market', homenest: 'furniture', medicare: 'pharmacy', printpack: 'packaging', glowbeauty: 'beauty', gadgetzone: 'electronics', noorislamic: 'islamic', boighor: 'books', cakehouse: 'cake' };
 
 // Brand logos for payment methods and couriers. Put the official logo files in /public/brand/ with these names
 // (PNG or SVG renamed to .png is fine). Until a file is there, a neat text badge in the brand colour shows instead.

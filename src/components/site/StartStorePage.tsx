@@ -181,6 +181,11 @@ export default function StartStorePage() {
     if (k === 'shopshotoi') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" /><path d="M3 7l9 5 9-5M12 12v10" /></svg>;
     if (k === 'homenest') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M4 11V8a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3" /><path d="M2 13a2 2 0 0 1 4 0v2h12v-2a2 2 0 0 1 4 0v5H2v-5ZM5 18v2M19 18v2" /></svg>;
     if (k === 'medicare') return <svg viewBox="0 0 24 24" className={c} {...SV}><rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-45 12 12)" /><path d="M8.5 8.5l7 7" /></svg>;
+    if (k === 'glowbeauty') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M9 3h6v5H9zM8 8h8v13H8z" /><path d="M9 3l3-1 3 1" /></svg>;
+    if (k === 'gadgetzone') return <svg viewBox="0 0 24 24" className={c} {...SV}><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M11 18h2" /></svg>;
+    if (k === 'noorislamic') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" /><path d="M17 4l.6 1.4L19 6l-1.4.6L17 8l-.6-1.4L15 6l1.4-.6Z" /></svg>;
+    if (k === 'boighor') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z" /></svg>;
+    if (k === 'cakehouse') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M4 21h16v-8H4zM4 16c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 4 0M12 13V9M12 6.5c-1-1-1-2.5 0-3.5 1 1 1 2.5 0 3.5Z" /></svg>;
     if (k === 'printpack') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M3 12V3h9l9 9-9 9-9-9Z" /><circle cx="7.5" cy="7.5" r="1.5" /></svg>;
     return <svg viewBox="0 0 24 24" className={c} fill="currentColor"><path d="M8 7V6a4 4 0 0 1 8 0v1h3l1 15H4L5 7h3Zm2 0h4V6a2 2 0 0 0-4 0v1Z" /></svg>;
   };

@@ -258,7 +258,7 @@ export const Landing: React.FC = () => {
             <p className="mt-4 text-xs text-slate-500">Sign in with Google · No credit card · Works on any phone</p>
             {/* quick facts */}
             <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-2 sm:grid-cols-4">
-              {([['22', 'Languages'], ['12', 'Personalities'], ['7', 'Store designs'], ['24/7', 'Always here']] as Array<[string, string]>).map(([n, l]) => (
+              {([['22', 'Languages'], ['12', 'Personalities'], ['12', 'Store designs'], ['24/7', 'Always here']] as Array<[string, string]>).map(([n, l]) => (
                 <div key={l} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-4">
                   <p className="bg-gradient-to-r from-pink-300 to-teal-300 bg-clip-text text-2xl font-extrabold text-transparent md:text-3xl">{n}</p>
                   <p className="mt-1 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">{l}</p>
@@ -335,7 +335,7 @@ export const Landing: React.FC = () => {
             ))}
           </div>
           <div className="-mx-5 mt-6 flex gap-3 overflow-x-auto px-5 lg:-mx-10 lg:px-10 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {([['foodbazaar', '🍔', 'Food', 'photo-1568901346375-23c9450c58cd'], ['fashionhub', '👕', 'Fashion', 'photo-1521572163474-6864f9cf17ab'], ['sotadari', '🛒', 'Grocery', 'photo-1488459716781-31db52582fe9'], ['shopshotoi', '🛍️', 'Market', 'photo-1788458131906-d0878ba5fa4d'], ['homenest', '🛋️', 'Furniture', 'photo-1583847268964-b28dc8f51f92'], ['medicare', '💊', 'Pharmacy', 'photo-1607874963930-2edecc67a25a'], ['printpack', '📦', 'Packaging', 'photo-1621252756235-7f37e5e5125e']] as Array<[string, string, string, string]>).map(([k, ic, l, ph]) => (
+            {([['foodbazaar', '🍔', 'Food', 'photo-1568901346375-23c9450c58cd'], ['fashionhub', '👕', 'Fashion', 'photo-1521572163474-6864f9cf17ab'], ['sotadari', '🛒', 'Grocery', 'photo-1488459716781-31db52582fe9'], ['shopshotoi', '🛍️', 'Market', 'photo-1788458131906-d0878ba5fa4d'], ['homenest', '🛋️', 'Furniture', 'photo-1583847268964-b28dc8f51f92'], ['medicare', '💊', 'Pharmacy', 'photo-1607874963930-2edecc67a25a'], ['printpack', '📦', 'Packaging', 'photo-1621252756235-7f37e5e5125e'], ['glowbeauty', '💄', 'Beauty', 'photo-1596462502278-27bfdc403348'], ['gadgetzone', '📱', 'Electronics', 'photo-1783890848515-c0dc28b25ef2'], ['noorislamic', '🕌', 'Islamic', 'photo-1587617425953-9075d28b8c46'], ['boighor', '📚', 'Books', 'photo-1495446815901-a7297e633e8d'], ['cakehouse', '🎂', 'Cake & Gifts', 'photo-1606983340126-99ab4feaa64a']] as Array<[string, string, string, string]>).map(([k, ic, l, ph]) => (
               <div key={k} className="w-[64vw] max-w-[300px] shrink-0 overflow-hidden rounded-[10px] border border-white/[0.1] bg-[#0d1117] sm:w-72 lg:w-[300px]">
                 {/* a product photo of that demo shop, so each card shows what the website sells */}
                 <a href={`/demos/store.html?s=${k}`} className="relative block h-44 bg-white/5 lg:h-52">

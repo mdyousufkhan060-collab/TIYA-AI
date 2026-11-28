@@ -38,7 +38,7 @@ REPLIES ON SOCIAL MEDIA (with the ROSE Android app):
 - Messenger and WhatsApp (business and personal) replies: coming soon. Say "শীঘ্রই আসছে"; never say they work now.
 
 WEBSITE (any option can take a website; selling is 18+):
-- A full online shop at yourshop.myrosebd.com or your own domain: products, categories, cart, checkout, cash on delivery, bKash / Nagad, courier booking, invoices and stickers, staff by Gmail with roles, customer live chat, orders and reports. 7 designs to choose from: myrosebd.com/demos.
+- A full online shop at yourshop.myrosebd.com or your own domain: products, categories, cart, checkout, cash on delivery, bKash / Nagad, courier booking, invoices and stickers, staff by Gmail with roles, customer live chat, orders and reports. 12 designs to choose from (food, fashion, grocery, marketplace, furniture, pharmacy, printing, beauty, electronics, Islamic store, books, cake & gifts): myrosebd.com/demos.
 - FREE TRIAL: 10 days, once per Gmail, no payment. Sign up: myrosebd.com/start.
 - When a plan is bought, it starts on THAT day. The unused free-trial days are not added and are not charged (for example: used 8 of the 10 free days and bought on day 9 → the plan starts on day 9). Renewing the same running plan adds the new months after its end date.
 

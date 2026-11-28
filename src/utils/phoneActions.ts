@@ -75,13 +75,18 @@ const SEARCH_SITES: Record<string, { label: string; url: (q: string) => string }
   demo: { label: 'ROSE demo store', url: (q) => `https://www.myrosebd.com/demos/store.html?s=${storeDesign(q)}` },
 };
 
-/** Words about what the user sells -> one of the 7 store designs. */
+/** Words about what the user sells -> one of the 12 store designs. */
 export function storeDesign(q: string): string {
   const t = decodeURIComponent(q || '').toLowerCase();
   if (/medic|pharma|ঔষধ|ওষুধ|ফার্মেসি|medicare/.test(t)) return 'medicare';
+  if (/islam|attar|ittar|আতর|তসবি|তাসবি|জায়নামাজ|জায়নামাজ|হিজাব|বোরকা|আবায়া|কুরআন|কোরআন|ইসলামিক|quran|hijab|abaya|prayer mat|noorislamic/.test(t)) return 'noorislamic';
+  if (/cake|cupcake|cookie|bakery|gift box|flower|কেক|বেকারি|কুকিজ|ফুল|গিফট|উপহার|cakehouse/.test(t)) return 'cakehouse';
+  if (/\bbooks?\b|stationer|notebook|বই|খাতা|কলম|স্টেশনারি|boighor/.test(t)) return 'boighor';
+  if (/cosmetic|makeup|beauty|skin|lipstick|perfume|কসমেটিক|মেকআপ|বিউটি|লিপস্টিক|স্কিন|পারফিউম|glowbeauty/.test(t)) return 'glowbeauty';
+  if (/mobile|phone|gadget|electronic|earbud|headphone|smart ?watch|power ?bank|charger|মোবাইল|ফোন|গ্যাজেট|ইলেকট্রনিক|হেডফোন|চার্জার|gadgetzone/.test(t)) return 'gadgetzone';
   if (/sticker|label|packag|paper bag|print|স্টিকার|লেবেল|প্যাকেজিং|ব্যাগ প্রিন্ট|প্রিন্টিং|printpack/.test(t)) return 'printpack';
   if (/furnit|sofa|bed|table|chair|ফার্নিচার|আসবাব|homenest/.test(t)) return 'homenest';
-  if (/food|restaurant|burger|pizza|biryani|cake|খাবার|রেস্টুরেন্ট|বিরিয়ানি|কেক|foodbazaar/.test(t)) return 'foodbazaar';
+  if (/food|restaurant|burger|pizza|biryani|খাবার|রেস্টুরেন্ট|বিরিয়ানি|foodbazaar/.test(t)) return 'foodbazaar';
   if (/grocer|rice|oil|vegetable|fish|meat|বাজার|মুদি|চাল|তেল|সবজি|মাছ|sotadari/.test(t)) return 'sotadari';
   if (/fashion|cloth|dress|shirt|saree|panjabi|shoe|জামা|কাপড়|শাড়ি|পাঞ্জাবি|জুতা|ফ্যাশন|fashionhub/.test(t)) return 'fashionhub';
   return 'shopshotoi';

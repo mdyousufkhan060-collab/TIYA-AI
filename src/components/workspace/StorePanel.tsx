@@ -147,7 +147,7 @@ export const slugify = (t: string) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 32);
 /** Names that cannot become yourshop.myrosebd.com (site pages, mail, demo stores). */
-export const RESERVED_SLUGS = ['www', 'app', 'api', 'admin', 'mail', 'webmail', 'shop', 'demos', 'demo', 'autodiscover', 'autoconfig', 'ftp', 'cpanel', 'ns1', 'ns2', 'rose', 'help', 'support', 'blog', 'foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare', 'printpack'];
+export const RESERVED_SLUGS = ['www', 'app', 'api', 'admin', 'mail', 'webmail', 'shop', 'demos', 'demo', 'autodiscover', 'autoconfig', 'ftp', 'cpanel', 'ns1', 'ns2', 'rose', 'help', 'support', 'blog', 'foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare', 'printpack', 'glowbeauty', 'gadgetzone', 'noorislamic', 'boighor', 'cakehouse'];
 
 export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; startTab?: 'viewas'; onExit?: () => void }> = ({ userId, forceStoreId, startTab, onExit }) => {
   const [loading, setLoading] = useState(true);

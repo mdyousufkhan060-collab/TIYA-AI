@@ -1,7 +1,7 @@
 // Shared helpers for the shop pages Google reads (no secrets: only the public key, and RLS shows only open shops)
 export const SB_URL = 'https://ukgwipazzjstjkdfaozg.supabase.co';
 export const SB_KEY = 'sb_publishable_CRMgURG899vqIqUIsADWgw_p90ZliES';
-export const DEMOS = ['foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare', 'printpack'];
+export const DEMOS = ['foodbazaar', 'fashionhub', 'sotadari', 'shopshotoi', 'homenest', 'medicare', 'printpack', 'glowbeauty', 'gadgetzone', 'noorislamic', 'boighor', 'cakehouse'];
 const NOT_SHOPS = ['www', 'app', 'api', 'admin', 'mail', 'webmail'];
 
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
