@@ -11,6 +11,7 @@ import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
 import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, asksNextDown, dateWords, numberUnclear, postDate, postNumbersInOrder, saysNo, saysYes } from '../lib/replyRequest';
 import { callNameOf, greetFirst, nameCallAnswer, okWithName } from '../lib/nameCall';
+import { cachedTts, prefetchTts, rememberTts } from '../lib/ttsCache';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -90,6 +91,12 @@ function splitFirst(text: string): string[] {
   return m ? [m[1].trim(), m[2].trim()] : [text];
 }
 
+
+/** the end line of a reply job on a known video (LOCKED wording, owner Nov 28) */
+function endLineFor(label: string, nm: string | null | undefined): string {
+  const lbl = label.replace(/ আগে$/, ' আগের').replace(/(নভেম্বর|ডিসেম্বর|অক্টোবর|সেপ্টেম্বর|জানুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট)$/, '$1ের');
+  return `${nm ? nm + ', ' : ''}${lbl} ভিডিওর সবগুলো কমেন্টের রিপ্লাই কমপ্লিট হয়েছে। এখন আমি কী করবো? তোমার আর কোনো কাজ আছে?`;
+}
 
 export function usePremiumVoice(opts: Options) {
   const [state, setState] = useState<VoiceState>('idle');
@@ -381,8 +388,20 @@ export function usePremiumVoice(opts: Options) {
       const player = pcmStreamPlayer(o.volume ?? 1, o.speechSpeed || 1);
       if (await player.canPlay()) {
         audioRef.current = player as unknown as HTMLAudioElement;
+        // Nov 28: a line she said before (or made ahead) plays at once
+        const kept = await cachedTts(line, o.voiceName);
+        if (kept) {
+          for (const c of kept) player.push(c);
+          voiceCaptions.startTyping(line, player.totalMs());
+          await player.end();
+          audioRef.current = null;
+          voiceCaptions.finishTyping();
+          return;
+        }
         let typingOn = false;
+        const got: string[] = [];
         const st = await premiumTtsStream(line, o.voiceName, (c) => {
+          got.push(c);
           player.push(c);
           if (!typingOn) {
             typingOn = true;
@@ -390,6 +409,7 @@ export function usePremiumVoice(opts: Options) {
           } else voiceCaptions.setTotal(player.totalMs());
         });
         if (st.got > 0) {
+          if (st.ok) rememberTts(line, o.voiceName, got);
           voiceCaptions.setTotal(player.totalMs());
           await player.end();
           audioRef.current = null;
@@ -458,6 +478,8 @@ export function usePremiumVoice(opts: Options) {
     const r = recipeRef.current;
     if (!r || r.at >= r.steps.length) return false;
     const app = r.steps[r.at];
+    // Nov 28 (timing): the line she will say at the end is made now, so it plays the moment the job ends
+    if (app === 'reply all comments' && r.label) prefetchTts(endLineFor(r.label, callNameOf(optsRef.current.yourName)), optsRef.current.voiceName);
     r.at += 1;
     stepsRef.current += 1;
     setState('thinking');
@@ -750,9 +772,8 @@ export function usePremiumVoice(opts: Options) {
           const nm = callNameOf(optsRef.current.yourName);
           const n = (text.match(/([০-৯\d]+)টা কমেন্টে রিপ্লাই দিয়েছি/) || [])[1];
           const sayIt = (text.match(/Say to him by name:\s*([^"\n]+)/) || [])[1];
-          const lbl = (rc.label || '').replace(/ আগে$/, ' আগের').replace(/(নভেম্বর|ডিসেম্বর|অক্টোবর|সেপ্টেম্বর|জানুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট)$/, '$1ের');
-          if (lbl) {
-            void speakLine(`${nm ? nm + ', ' : ''}${lbl} ভিডিওর সবগুলো কমেন্টের রিপ্লাই কমপ্লিট হয়েছে। এখন আমি কী করবো? তোমার আর কোনো কাজ আছে?`).then(() => {
+          if (rc.label) {
+            void speakLine(endLineFor(rc.label, nm)).then(() => {
               if (activeRef.current) window.setTimeout(() => listen(), 300);
             });
             return;
@@ -857,7 +878,7 @@ export function usePremiumVoice(opts: Options) {
       if (r.ok && r.text) void answer(r.text);
       else listen();
     }, (lv) => bargeIn(lv), true, {
-      endMs: 1200,
+      endMs: 1000,
       onPartial: (wav) => {
         const asked = Date.now();
         void premiumStt(wav, optsRef.current.language, true).then((r) => {
