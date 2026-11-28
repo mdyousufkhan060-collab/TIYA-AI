@@ -523,11 +523,11 @@ export function usePremiumVoice(opts: Options) {
       const nearVideo = Date.now() - lastGoAt.current < 15 * 60 * 1000;
       if ((asksNextDown(t) || (!!peN && /নি[চছ]ে|পরের|next|below/.test(t))) && (peN || nearVideo) && postNumber(t) === null && postAgeMinutes(t) === null) {
         pendingEnterRef.current = null;
-        const reply = (peN?.reply ?? false) || asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
+        const reply = asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
         lastRecipeAt.current = Date.now();
         lastGoAt.current = Date.now();
         recipeRef.current = { steps: ['next post down'], at: 0, next: { reply } };
-        await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + 'নিচের ভিডিওতে যাচ্ছি।');
+        await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + (reply ? 'নিচের ভিডিওতে গিয়ে রিপ্লাই দিচ্ছি।' : 'নিচের ভিডিওতে যাচ্ছি।'));
         if (!activeRef.current) return;
         runRecipeStep();
         return;
@@ -682,6 +682,14 @@ export function usePremiumVoice(opts: Options) {
           const m = (text.match(/AGE_NEXT:\s*([^"\n]*)/) || [])[1] || '';
           const [agePart, datePart] = m.split('|').map((x) => (x || '').trim());
           lastGoAt.current = Date.now();
+          // he already said "ওটাতে রিপ্লাই করো" with "নিচেরটায় যাও": go straight in and finish its replies
+          if (rc.next.reply) {
+            recipeRef.current = { steps: ['open comments here', 'reply all comments'], at: 0, label: datePart || agePart };
+            window.setTimeout(() => {
+              if (activeRef.current) runRecipeStep();
+            }, 400);
+            return;
+          }
           pendingEnterRef.current = { reply: true, at: Date.now(), label: datePart || agePart };
           recipeRef.current = null;
           const line = datePart

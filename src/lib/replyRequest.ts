@@ -171,7 +171,7 @@ export function postNumbersInOrder(t: string): number[] {
  */
 export function asksNextDown(t: string): boolean {
   const s = t.toLowerCase();
-  return /নিচের ?(টা|টায়|টাতে|টি|ভিডিও|পোস্ট|বিডিও)|নিচেরটা|নি[চছ]ে ?(যাও|জাও|যান|জান|যা|জা|নামো|নামাও|চলো)|নিচের দিকে|পরের ?(টা|টায়|ভিডিও|পোস্ট)|এর পরের|next (video|post)|below/.test(s);
+  return /নি[চছ]ের ?(টা|টায়|টাতে|টি|ডায়|ভিডিও|পোস্ট|বিডিও)|নি[চছ]েরটা|নি[চছ]ে ?(যাও|জাও|যান|জান|যা|জা|নামো|নামাও|চলো)|নিচের দিকে|পরের ?(টা|টায়|ভিডিও|পোস্ট)|এর পরের|next (video|post)|below/.test(s);
 }
 
 /** his "না" to "এটাতে ঢুকবো?" (without asking for the next one) */
