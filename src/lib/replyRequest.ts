@@ -131,11 +131,14 @@ export function asksReplyHere(t: string): boolean {
 }
 
 /** 4320 → "৩ দিন", 180 → "৩ ঘণ্টা" (how ROSE says back the age he meant) */
-export function ageWords(min: number): string {
+export function ageWords(min: number, heard = ''): string {
   const bn = (n: number) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)]);
   if (min < 60) return `${bn(Math.max(1, min))} মিনিট`;
   if (min < 1440) return `${bn(Math.round(min / 60))} ঘণ্টা`;
-  if (min < 10080) return `${bn(Math.round(min / 1440))} দিন`;
+  // Nov 28 (owner): he said "৯ দিন" and ROSE said "১ সপ্তাহ" — she says it back in HIS unit
+  if (/সপ্তাহ|week/.test(heard) && min >= 10080) return `${bn(Math.round(min / 10080))} সপ্তাহ`;
+  if (/মাস|month/.test(heard) && min >= 43200) return `${bn(Math.round(min / 43200))} মাস`;
+  if (min < 10080 || /দিন|day/.test(heard)) return `${bn(Math.round(min / 1440))} দিন`;
   if (min < 43200) return `${bn(Math.round(min / 10080))} সপ্তাহ`;
   return `${bn(Math.round(min / 43200))} মাস`;
 }
@@ -166,7 +169,7 @@ export function postNumbersInOrder(t: string): number[] {
  */
 export function asksNextDown(t: string): boolean {
   const s = t.toLowerCase();
-  return /নিচের ?(টা|টায়|টাতে|টি|ভিডিও|পোস্ট|বিডিও)|নিচেরটা|নিচে যাও|নিচে নামো|পরের ?(টা|টায়|ভিডিও|পোস্ট)|এর পরের|next (video|post)|below/.test(s);
+  return /নিচের ?(টা|টায়|টাতে|টি|ভিডিও|পোস্ট|বিডিও)|নিচেরটা|নি[চছ]ে ?(যাও|জাও|যান|জান|যা|জা|নামো|নামাও|চলো)|নিচের দিকে|পরের ?(টা|টায়|ভিডিও|পোস্ট)|এর পরের|next (video|post)|below/.test(s);
 }
 
 /** his "না" to "এটাতে ঢুকবো?" (without asking for the next one) */

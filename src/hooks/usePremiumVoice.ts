@@ -504,7 +504,7 @@ export function usePremiumVoice(opts: Options) {
       // his next video below; ROSE says its date and asks again
       const peN = pendingEnterRef.current;
       const nearVideo = Date.now() - lastGoAt.current < 15 * 60 * 1000;
-      if (asksNextDown(t) && (peN || nearVideo) && postNumber(t) === null && postAgeMinutes(t) === null) {
+      if ((asksNextDown(t) || (!!peN && /নি[চছ]ে|পরের|next|below/.test(t))) && (peN || nearVideo) && postNumber(t) === null && postAgeMinutes(t) === null) {
         pendingEnterRef.current = null;
         const reply = (peN?.reply ?? false) || asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
         lastRecipeAt.current = Date.now();
@@ -563,7 +563,7 @@ export function usePremiumVoice(opts: Options) {
         const nm = callNameOf(optsRef.current.yourName);
         const wantsReply = (askedAge && pa!.reply) || asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
         // he hears back exactly the age ROSE understood ("হ্যাঁ, ৪ দিন আগের ভিডিওতে যাচ্ছি"), so a wrong hearing shows at once
-        const said = ageWords(ageMin);
+        const said = ageWords(ageMin, t);
         lastRecipeAt.current = Date.now();
         recipeRef.current = { steps: [`find post age ${ageMin}`], at: 0, age: { min: ageMin, reply: wantsReply, said } };
         await speakLine(`হ্যাঁ ${nm || ''}, ${said} আগের ভিডিওতে যাচ্ছি।`.replace(' ,', ','));
