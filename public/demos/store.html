@@ -336,11 +336,8 @@
   .slide.left { transform: translateX(-100%); }
   .catban { margin: 4px 0 12px; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 6; background: #fff; border: 1px solid var(--line); }
   .catban img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  /* bigger products (Nov 27): computer 3 big cards in a row, phone one big card per row; slim main banner */
-  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-  .card .img { height: 300px; }
-  .card .t { font-size: 16px; }
-  .card .price b { font-size: 20px; }
+  /* products like a real shop (owner, Nov 28): phone 2 cards side by side, computer 4 in a row; slim main banner */
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
   .slider { height: 150px; }
   .slide { padding: 12px 16px; }
   .slide h2 { font-size: clamp(16px, 3.6vw, 26px); margin-bottom: 6px; }
@@ -351,8 +348,7 @@
   .slide .btn { padding: 7px 16px !important; font-size: 13px; }
   @media (max-width: 760px) { .slide .btn { display: none !important; } }
   @media (max-width: 760px) {
-    .grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-    .card .img { height: min(86vw, 380px); }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   }
   .moreload { text-align: center; padding: 14px; color: #64748b; font-size: 13px; }
   #zoomV { position: fixed; inset: 0; z-index: 90; background: #000; touch-action: none; overflow: hidden; display: grid; place-items: center; }
