@@ -57,7 +57,7 @@ export function goToPostNumber(t: string): number | null {
  */
 const NUM_WORDS: [RegExp, number][] = [
   // Whisper often bends them: "চাদ"/"চাইর" = চার, "তিনি" = তিন, "পাচ" = পাঁচ, "দো"/"দু" = দুই
-  [/আধা/, 0.5], [/এক|১/, 1], [/দুই|দু|দো|২/, 2], [/তিন|তিনি|তিনো|৩/, 3], [/চার|চাদ|চাইর|চা্র|৪/, 4], [/পাঁচ|পাচ|৫/, 5], [/ছয়|ছয়|৬/, 6], [/সাত|৭/, 7],
+  [/আধা/, 0.5], [/এক|১/, 1], [/দুই|দু|দো|২/, 2], [/তিন|তিনি|তিনো|৩/, 3], [/চার|চাদ|চাইর|চাপ|চার্|৪/, 4], [/পাঁচ|পাচ|৫/, 5], [/ছয়|ছয়|৬/, 6], [/সাত|৭/, 7],
   [/আট|৮/, 8], [/নয়|৯/, 9], [/দশ|১০/, 10], [/এগারো/, 11], [/বারো/, 12],
 ];
 export function postAgeMinutes(t: string): number | null {
@@ -108,4 +108,10 @@ export function ageWords(min: number): string {
   if (min < 10080) return `${bn(Math.round(min / 1440))} দিন`;
   if (min < 43200) return `${bn(Math.round(min / 10080))} সপ্তাহ`;
   return `${bn(Math.round(min / 43200))} মাস`;
+}
+
+/** he named a time ("… দিন আগের ভিডিও") but ROSE could not hear the number: ask again, never guess */
+export function ageWithoutNumber(t: string): boolean {
+  const s = t.toLowerCase();
+  return postAgeMinutes(s) === null && /(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|মাস|hour|day|week)\s*(আগে|আগের|আগি|আগো|ago)/.test(s) && /ভিডিও|পোস্ট|video|post|রিল/.test(s);
 }

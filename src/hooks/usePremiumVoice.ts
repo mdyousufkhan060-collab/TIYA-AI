@@ -9,7 +9,7 @@ import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
 import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
-import { ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, saysYes } from '../lib/replyRequest';
+import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, saysYes } from '../lib/replyRequest';
 import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -465,6 +465,12 @@ export function usePremiumVoice(opts: Options) {
         await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + (pe.reply ? 'ঢুকে কমেন্টগুলোতে রিপ্লাই দিচ্ছি।' : 'ঢুকছি।'));
         if (!activeRef.current) return;
         runRecipeStep();
+        return;
+      }
+      // a time without a number he could be heard saying ("… দিন আগের ভিডিও"): ask, never send ROSE to a guessed video
+      if (ageWithoutNumber(t)) {
+        await speakLine(`${callNameOf(optsRef.current.yourName) || ''}, কত দিন বা কত ঘণ্টা আগের ভিডিও, সংখ্যাটা আরেকবার বলবে?`.replace(/^, /, ''));
+        if (activeRef.current) listen();
         return;
       }
       // LOCKED (owner, Nov 28): ROSE stopped on a video (by number or by age) a little while ago and he now talks about
