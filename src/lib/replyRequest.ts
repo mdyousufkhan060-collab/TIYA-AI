@@ -78,6 +78,13 @@ export function postAgeMinutes(t: string): number | null {
         if (new RegExp(`^(${re.source})(টা|টি|খানা)?$`).test(w)) { n = v; break outer; }
       }
     }
+    // still nothing: a short bent word right before the unit, by its first sound (Whisper writes পাস/পাশ/পাজ for
+    // পাঁচ, চাদ/চাপ for চার, তিম for তিন …)
+    if (Number.isNaN(n) && words[0] && words[0].length <= 4) {
+      const w = words[0];
+      const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ/, 6], [/^সা/, 7], [/^আট/, 8], [/^ন[য়ও]/, 9], [/^দশ/, 10]];
+      for (const [re, v] of byStart) if (re.test(w)) { n = v; break; }
+    }
   }
   if (Number.isNaN(n)) {
     if (/খানেক/.test(s)) n = 1; // "ঘণ্টাখানেক আগে"

@@ -375,6 +375,37 @@ export function usePremiumVoice(opts: Options) {
     voiceCaptions.waitTyping(line);
     o.onAppend('assistant', line);
     const rate = Math.max(0.75, Math.min(1.35, o.speechSpeed || 1));
+    // fastest first (Nov 28: these lines came late): the streamed voice starts with its first piece, and the words
+    // type along from that moment; the whole-file voice below is only the backup
+    try {
+      const player = pcmStreamPlayer(o.volume ?? 1, o.speechSpeed || 1);
+      if (await player.canPlay()) {
+        audioRef.current = player as unknown as HTMLAudioElement;
+        let typingOn = false;
+        const st = await premiumTtsStream(line, o.voiceName, (c) => {
+          player.push(c);
+          if (!typingOn) {
+            typingOn = true;
+            voiceCaptions.startTyping(line, player.totalMs());
+          } else voiceCaptions.setTotal(player.totalMs());
+        });
+        if (st.got > 0) {
+          voiceCaptions.setTotal(player.totalMs());
+          await player.end();
+          audioRef.current = null;
+          voiceCaptions.finishTyping();
+          return;
+        }
+        player.pause();
+        audioRef.current = null;
+      }
+    } catch {
+      /* the backup below */
+    }
+    if (!activeRef.current) {
+      voiceCaptions.finishTyping();
+      return;
+    }
     try {
       const tts = await premiumTts(line, o.voiceName);
       if (!activeRef.current) {
