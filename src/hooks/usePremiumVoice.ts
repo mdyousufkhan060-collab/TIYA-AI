@@ -449,6 +449,7 @@ export function usePremiumVoice(opts: Options) {
   /** ROSE asked "এটাতে ঢুকবো?" about the closest video: his yes opens it (reply = he asked for replies) */
   const pendingEnterRef = useRef<{ reply: boolean; at: number } | null>(null);
   const pendingNumRef = useRef<{ reply: boolean; at: number } | null>(null);
+  const pendingAgeRef = useRef<{ reply: boolean; at: number } | null>(null);
   const lastRecipeAt = useRef(0);
   const lastPostNo = useRef(1);
   const runRecipeStep = useCallback(() => {
@@ -536,6 +537,7 @@ export function usePremiumVoice(opts: Options) {
       }
       // a time without a number he could be heard saying ("… দিন আগের ভিডিও"): ask, never send ROSE to a guessed video
       if (ageWithoutNumber(t)) {
+        pendingAgeRef.current = { reply: asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t), at: Date.now() };
         await speakLine(`${callNameOf(optsRef.current.yourName) || ''}, কত দিন বা কত ঘণ্টা আগের ভিডিও, সংখ্যাটা আরেকবার বলবে?`.replace(/^, /, ''));
         if (activeRef.current) listen();
         return;
@@ -552,10 +554,14 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       // LOCKED (owner, Nov 28): "আমি ৩ ঘণ্টা আগে যে ভিডিও ছেড়েছি…" → the video of that age
-      const ageMin = /ভিডিও|বিডিও|ভিডিয়ো|ভিডু|পোস্ট|পোষ্ট|video|post|রিল|reel/.test(t) && !/ইউটিউব|youtube|টিকটক|tiktok|ইনস্টা|instagram/.test(t) ? postAgeMinutes(t) : null;
+      // Nov 28: ROSE asked "কত দিন আগের?" → his answer ("নয় দিন আগে") needs no word "ভিডিও"
+      const pa = pendingAgeRef.current;
+      pendingAgeRef.current = null;
+      const askedAge = !!pa && Date.now() - pa.at < 5 * 60 * 1000;
+      const ageMin = (askedAge || /ভিডিও|বিডিও|ভিডিয়ো|ভিডু|পোস্ট|পোষ্ট|video|post|রিল|reel/.test(t)) && !/ইউটিউব|youtube|টিকটক|tiktok|ইনস্টা|instagram/.test(t) ? postAgeMinutes(t) : null;
       if (ageMin !== null) {
         const nm = callNameOf(optsRef.current.yourName);
-        const wantsReply = asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
+        const wantsReply = (askedAge && pa!.reply) || asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
         // he hears back exactly the age ROSE understood ("হ্যাঁ, ৪ দিন আগের ভিডিওতে যাচ্ছি"), so a wrong hearing shows at once
         const said = ageWords(ageMin);
         lastRecipeAt.current = Date.now();
