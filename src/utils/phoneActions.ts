@@ -700,7 +700,7 @@ export async function executePhoneAction(
   if (nativeBridge && typeof nativeBridge.run === 'function') {
     try {
       let rawRes = await nativeBridge.run(actionJson);
-      if (typeof rawRes === 'string' && /"pending"\s*:\s*true/.test(rawRes)) rawRes = await waitNativeResult(rid, /reply all/i.test(actionJson) ? 240000 : /comments/i.test(actionJson) ? 90000 : 20000);
+      if (typeof rawRes === 'string' && /"pending"\s*:\s*true/.test(rawRes)) rawRes = await waitNativeResult(rid, /reply all/i.test(actionJson) ? 900000 : /comments/i.test(actionJson) ? 90000 : 20000);
       let parsed: TiyaNativeResult;
       if (typeof rawRes === 'string') {
         try {
