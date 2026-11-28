@@ -7,6 +7,9 @@
 /** he asks which/how many Pages are under his account */
 export function asksListPages(t: string): boolean {
   const s = t.toLowerCase();
+  // owner (Nov 28 5:33 PM): "পেজের ভিতরে … ভিডিও … কমেন্ট" is a job on the Page he is in now, not the Pages list.
+  // Only "আইডির আন্ডারে / কয়টা পেজ" without a video/comment job is the list.
+  if (/ভিডিও|বিডিও|ভিডু|পোস্ট|কমেন্ট|কমেন|কমন|রিপ্লাই|রিফ্লাই|comment|reply|video/.test(s)) return false;
   // Nov 28: "কয়টা পেজ আছে" came as "কোড়া পেজ আসে" / "কোডে পেজ আসে" (and ROSE opened Quora): any "পেজ … আছে/আসে"
   // about his ID is this question
   if (/পেজ|পেইজ|page/.test(s) && /আছে|আসে|আছ|আচে/.test(s) && /আইডি|আইডিতে|id|আমার|আন্ডার/.test(s) && !/ঢুক|ধুক|দুক|ডুক|ঢোক|যাও|জাও|সুইচ|লগইন/.test(s)) return true;

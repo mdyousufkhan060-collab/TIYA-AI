@@ -763,7 +763,28 @@ export function usePremiumVoice(opts: Options) {
           const nm = callNameOf(optsRef.current.yourName);
           const list = (text.match(/PROFILES:\s*([^"\n]+)/) || [])[1];
           if (ok && list) {
-            const names = list.split('|').map((x) => x.trim()).filter((x) => x && !/^(dismiss|close|back)$/i.test(x));
+            const raw = list.split('|').map((x) => x.trim()).filter((x) => x && !/^(P:)?(dismiss|close|back)$/i.test(x));
+            const names = raw.map((x) => x.replace(/^P:/, ''));
+            // his own ID = the one he had when ROSE first read the list (kept), else the first row that is not a Page;
+            // the first row is where he is NOW (Facebook puts the ✓ one on top)
+            let mainName = '';
+            try {
+              mainName = localStorage.getItem('rose_fb_main') || '';
+            } catch {
+              /* none kept */
+            }
+            const before = profilesRef.current.names[0];
+            if (!mainName || !names.includes(mainName)) mainName = before && names.includes(before) ? before : raw.find((x) => !x.startsWith('P:')) || names[0];
+            if (!/^p:/i.test(raw[names.indexOf(mainName)] || '')) {
+              try {
+                localStorage.setItem('rose_fb_main', mainName);
+              } catch {
+                /* only for now */
+              }
+            }
+            const nowIn = names[0];
+            activePageRef.current = nowIn && nowIn !== mainName ? plainName(nowIn) : null;
+            names.sort((a, b) => (a === mainName ? -1 : b === mainName ? 1 : 0));
             profilesRef.current = { names, at: Date.now() };
             try {
               localStorage.setItem('rose_fb_profiles', JSON.stringify(profilesRef.current));
@@ -781,8 +802,9 @@ export function usePremiumVoice(opts: Options) {
             recipeRef.current = null;
             const pages = names.slice(1).map(plainName);
             pageAskAt.current = Date.now();
+            const where = activePageRef.current ? `তুমি এখন ${activePageRef.current} পেজে আছো। ` : '';
             const line = pages.length
-              ? `${nm ? nm + ', ' : ''}তোমার ${plainName(names[0])} আইডির আন্ডারে ${String(pages.length).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)])}টা পেজ আছে: ${pages.join(', ')}। কোনটাতে ঢুকবো?`
+              ? `${nm ? nm + ', ' : ''}${where}তোমার ${plainName(names[0])} আইডির আন্ডারে ${String(pages.length).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)])}টা পেজ আছে: ${pages.join(', ')}। কোনটাতে ঢুকবো?`
               : `${nm ? nm + ', ' : ''}তোমার ${plainName(names[0])} আইডির আন্ডারে কোনো পেজ দেখছি না।`;
             void speakLine(line).then(() => {
               if (activeRef.current) window.setTimeout(() => listen(), 300);
