@@ -16,6 +16,7 @@
  *   src/lib/quickAnswers.ts    time, date, day: answered at once from the phone's clock (never Google, never the AI)
  *   src/lib/replyRequest.ts    "reply to my post/video comments" + which post (দুই নম্বর, দুনামবার, ২য়, second); starts the fixed reply job
  *   LOCKED go to video N: replyRequest.goToPostNumber → "go to post N" → stops there → "আমি তোমার N নম্বর ভিডিওর কাছে আছি। এখন কী করবো বলো?"; "reply here" after it = that same video
+ *   LOCKED video by age: replyRequest.postAgeMinutes ("৩ ঘণ্টা আগে") → "find post age <min>" (Android PostByTime.kt) → exact: go on / ask; closest: "এটাতে ঢুকবো?" → yes → "open comments here" (+ reply all)
  *   src/lib/nameCall.ts        calls him by name ("ঠিক আছে ইউসুফ, …"); "রোজ" alone → "জি ইউসুফ, আমি আছি…"
  *   LOCKED CLEAR WORDS: tiya-premium callStt keeps unsure Bengali words (no more broken sentences); when Whisper is
  *                              unsure, Gemini listens once more (max 7 s). usePremiumVoice: an answer with no words

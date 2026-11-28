@@ -9,7 +9,7 @@ import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
 import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
-import { asksCommentReplies, goToPostNumber, postNumber } from '../lib/replyRequest';
+import { asksCommentReplies, goToPostNumber, postAgeMinutes, postNumber, saysYes } from '../lib/replyRequest';
 import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -282,7 +282,7 @@ export function usePremiumVoice(opts: Options) {
           const say = speakRef.current;
           if (say) void say('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।').then(() => { if (activeRef.current) listen(); });
           else listen();
-        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments|go to post/i.test(JSON.stringify(action)) ? 100000 : 35000);
+        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments|go to post|post age/i.test(JSON.stringify(action)) ? 100000 : 35000);
       }
       if (!reply || action) {
         // a phone step is running: no voice for the in-between lines (much faster); the words stay in the
@@ -401,7 +401,9 @@ export function usePremiumVoice(opts: Options) {
   // what to tap (fast and the same for every user). Facebook comment replies: open the newest post's comments,
   // then the phone answers every comment without his reply, live, one by one.
   const lastGoAt = useRef(0);
-  const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string } | null>(null);
+  const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string; age?: { min: number; reply: boolean; said: string } } | null>(null);
+  /** ROSE asked "এটাতে ঢুকবো?" about the closest video: his yes opens it (reply = he asked for replies) */
+  const pendingEnterRef = useRef<{ reply: boolean; at: number } | null>(null);
   const lastRecipeAt = useRef(0);
   const lastPostNo = useRef(1);
   const runRecipeStep = useCallback(() => {
@@ -420,7 +422,7 @@ export function usePremiumVoice(opts: Options) {
       recipeRef.current = null;
       pendingRef.current = false;
       void speakRef.current?.('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।');
-    }, /reply all/.test(app) ? 930000 : /comments|go to post/.test(app) ? 100000 : 35000);
+    }, /reply all/.test(app) ? 930000 : /comments|go to post|post age/.test(app) ? 100000 : 35000);
     return true;
   }, []);
 
@@ -438,6 +440,33 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       const t = heard.toLowerCase();
+      // LOCKED (owner, Nov 28): his yes to "এটাতে ঢুকবো?" opens that video's comments (and replies if he asked)
+      const pe = pendingEnterRef.current;
+      pendingEnterRef.current = null;
+      if (pe && Date.now() - pe.at < 5 * 60 * 1000 && saysYes(t)) {
+        lastRecipeAt.current = Date.now();
+        lastGoAt.current = Date.now();
+        recipeRef.current = pe.reply
+          ? { steps: ['open comments here', 'reply all comments'], at: 0 }
+          : { steps: ['open comments here'], at: 0, doneLine: 'কমেন্ট খুলেছি। এখন কী করবো বলো?' };
+        await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + (pe.reply ? 'ঢুকে কমেন্টগুলোতে রিপ্লাই দিচ্ছি।' : 'ঢুকছি।'));
+        if (!activeRef.current) return;
+        runRecipeStep();
+        return;
+      }
+      // LOCKED (owner, Nov 28): "আমি ৩ ঘণ্টা আগে যে ভিডিও ছেড়েছি…" → the video of that age
+      const ageMin = /ভিডিও|পোস্ট|video|post|রিল|reel/.test(t) && !/ইউটিউব|youtube|টিকটক|tiktok|ইনস্টা|instagram/.test(t) ? postAgeMinutes(t) : null;
+      if (ageMin !== null) {
+        const nm = callNameOf(optsRef.current.yourName);
+        const wantsReply = asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
+        const said = (t.match(/[০-৯\d]+\s*(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|মাস)|(এক|দুই|তিন|চার|পাঁচ|ছয়|সাত|আট|নয়|দশ)\s*(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|মাস)/) || [''])[0] || 'ওই সময়ের';
+        lastRecipeAt.current = Date.now();
+        recipeRef.current = { steps: [`find post age ${ageMin}`], at: 0, age: { min: ageMin, reply: wantsReply, said } };
+        await speakLine(okWithName(nm) + `তোমার ${said} আগের ভিডিওটা খুঁজছি।`);
+        if (!activeRef.current) return;
+        runRecipeStep();
+        return;
+      }
       // comment replies: any "reply to the comments" request (Facebook is the default, no need to say it), and a
       // correction right after one ("that's someone else's video", "wrong place", "my post") starts it again
       // from his own profile
@@ -456,7 +485,8 @@ export function usePremiumVoice(opts: Options) {
         const no = (corrects || afterGo) && !nth ? lastPostNo.current : nth || 1;
         if (!corrects || nth) lastPostNo.current = no;
         recipeRef.current = {
-          steps: [no === 1 ? 'open latest post comments' : `open post ${no} comments`, 'reply all comments'],
+          // right after he was taken to a video: the comments of THAT video on the screen, no walking back to the top
+          steps: [afterGo && !nth ? 'open comments here' : no === 1 ? 'open latest post comments' : `open post ${no} comments`, 'reply all comments'],
           at: 0,
         };
         // LOCKED (owner, Nov 28): she says it FIRST, then the phone starts (not Facebook first, words later)
@@ -515,6 +545,32 @@ export function usePremiumVoice(opts: Options) {
           window.setTimeout(() => {
             if (activeRef.current) runRecipeStep();
           }, 400);
+          return;
+        }
+        // the video found by its age: exact → go on (or ask what to do); closest → ask "এটাতে ঢুকবো?"
+        if (ok && rc.age) {
+          const nm = callNameOf(optsRef.current.yourName);
+          const found = (text.match(/AGE_(EXACT|CLOSEST):\s*([^"\n]+?)(["\n]|$)/) || []) as string[];
+          const exact = found[1] === 'EXACT';
+          const ageText = (found[2] || '').trim();
+          lastGoAt.current = Date.now();
+          if (exact && rc.age.reply) {
+            recipeRef.current = { steps: ['open comments here', 'reply all comments'], at: 0 };
+            window.setTimeout(() => {
+              if (activeRef.current) runRecipeStep();
+            }, 400);
+            return;
+          }
+          recipeRef.current = null;
+          let line: string;
+          if (exact) line = `${nm ? nm + ', ' : ''}তোমার ${ageText} পোস্ট করা ভিডিওর কাছে আছি। এখন কী করবো বলো?`;
+          else {
+            pendingEnterRef.current = { reply: rc.age.reply, at: Date.now() };
+            line = `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said} আগের কোনো ভিডিও পাইনি। সবচেয়ে কাছের ভিডিওটা ${ageText} পোস্ট করা। এটাতে ঢুকবো?`;
+          }
+          void speakLine(line).then(() => {
+            if (activeRef.current) window.setTimeout(() => listen(), 300);
+          });
           return;
         }
         // a job with its own fixed last line ("go to video N"): say exactly that and listen

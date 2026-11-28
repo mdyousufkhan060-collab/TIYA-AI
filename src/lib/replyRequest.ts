@@ -50,3 +50,34 @@ export function goToPostNumber(t: string): number | null {
   if (asksCommentReplies(s)) return null;
   return postNumber(s);
 }
+
+/**
+ * LOCKED (owner, Nov 28): "আমি ৩ ঘণ্টা আগে যে ভিডিও ছেড়েছি" → minutes ago (180). null = no age said.
+ * Units: মিনিট, ঘণ্টা/ঘন্টা, দিন, সপ্তাহ, মাস (and English). Numbers in Bangla digits, English digits or words.
+ */
+const NUM_WORDS: [RegExp, number][] = [
+  [/আধা/, 0.5], [/এক|১/, 1], [/দুই|দু|২/, 2], [/তিন|৩/, 3], [/চার|৪/, 4], [/পাঁচ|৫/, 5], [/ছয়|৬/, 6], [/সাত|৭/, 7],
+  [/আট|৮/, 8], [/নয়|৯/, 9], [/দশ|১০/, 10], [/এগারো/, 11], [/বারো/, 12],
+];
+export function postAgeMinutes(t: string): number | null {
+  const s = t.toLowerCase().replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d)));
+  if (!/আগে|ago|আগের/.test(s)) return null;
+  const unit = s.match(/(মিনিট|minute|min\b|ঘণ্টা|ঘন্টা|ঘন্টে|hour|hr\b|দিন|day|সপ্তাহ|week|মাস|month)/);
+  if (!unit) return null;
+  const mult = /মিনিট|minute|min/.test(unit[1]) ? 1 : /ঘণ্টা|ঘন্টা|ঘন্টে|hour|hr/.test(unit[1]) ? 60 : /দিন|day/.test(unit[1]) ? 1440 : /সপ্তাহ|week/.test(unit[1]) ? 10080 : 43200;
+  const before = s.slice(0, unit.index);
+  const d = before.match(/(\d{1,3})\s*$/) || before.match(/(\d{1,3})\D{0,6}$/);
+  let n = d ? Number(d[1]) : NaN;
+  if (Number.isNaN(n)) {
+    const tail = before.slice(-14);
+    for (const [re, v] of NUM_WORDS) if (re.test(tail)) { n = v; break; }
+  }
+  if (Number.isNaN(n)) n = 1; // "ঘণ্টাখানেক আগে"
+  return Math.round(n * mult);
+}
+
+/** his yes to "এটাতে ঢুকবো?" */
+export function saysYes(t: string): boolean {
+  return /^(হ্যাঁ|হা|হুম|হ্যা|জি|জ্বি|ঠিক আছে|ok|okay|yes|ঢুকো|ঢোকো|ধুকো|দুকো|করো|দাও|চলো)/.test(t.trim().toLowerCase()) ||
+    /হ্যাঁ|ঢুকো|ঢোকো|ধুকো|ওটাতেই|ওইটাতে|এটাতেই/.test(t);
+}
