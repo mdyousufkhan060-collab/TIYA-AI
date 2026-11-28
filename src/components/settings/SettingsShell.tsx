@@ -54,10 +54,14 @@ import {
   Globe,
   AtSign,
   ToggleRight,
+  Star,
+  MessageSquareText,
 } from 'lucide-react';
 
 /** Small logo for each bar, picked from its title (shown next to the number). */
 const BAR_ICONS: Array<[RegExp, React.ElementType, string]> = [
+  [/SITE REVIEWS/, Star, '#fbbf24'],
+  [/ADMIN SMS/, MessageSquareText, '#22d3ee'],
   [/^WEBSITE ADMIN$/, MonitorCog, '#14b8a6'],
   [/^MY SHOP$/, ShoppingBag, '#22c55e'],
   [/^CUSTOMER VIEW$/, Eye, '#38bdf8'],

@@ -39,6 +39,13 @@ export const AdminSiteReviews: React.FC = () => {
   const waiting = list.filter((r) => !r.approved).length;
   return (
     <div className="space-y-2">
+      <div className="rounded-xl border border-white/[0.08] bg-[#11151E] p-3">
+        <p className="text-[12.5px] font-bold text-white">Reviews about ROSE on myrosebd.com</p>
+        <p className="mt-1 text-[11.5px] leading-relaxed text-slate-400">
+          People who use ROSE write a review (stars and a few words) at the bottom of the myrosebd.com home page. A new review comes here as WAITING and shows on the website only after you tap APPROVE. You can reply, hide it again or delete it. Shop product reviews are not here; they are in each shop's admin › REVIEWS.
+        </p>
+        <a href="https://www.myrosebd.com/#reviews" target="_blank" rel="noreferrer" className="mt-2 inline-block text-[11.5px] font-bold text-teal-300 underline">See the reviews part of the website</a>
+      </div>
       <div className="grid grid-cols-2 gap-1.5">
         {(['waiting', 'live'] as const).map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)} className={`h-10 rounded-lg border text-[11px] font-bold ${tab === t ? 'border-teal-400/60 bg-teal-500/15 text-teal-200' : 'border-white/10 text-slate-400'}`}>
