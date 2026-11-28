@@ -68,6 +68,15 @@ interface Options {
   onCredits?: (voiceLeft: number | null, textLeft: number | null) => void;
 }
 
+/** A question about the world right now (news, prices, weather, scores), not a phone job */
+export function wantsWebAnswer(t: string): boolean {
+  const s = t.toLowerCase();
+  const info = /খবর|সংবাদ|নিউজ|news|হেডলাইন|headline|আপডেট|update|সর্বশেষ|latest|আজকে কী হয়েছে|কী ঘটেছে|আবহাওয়া|weather|তাপমাত্রা|বৃষ্টি হবে|স্কোর|score|কে জিতেছে|ম্যাচ|দাম কত|এখনকার দাম|রেট কত|ডলারের দাম|সোনার দাম|শেয়ার বাজার|stock price|exchange rate|নির্বাচন|election|যুদ্ধ/.test(s);
+  // "open YouTube news", "play the news video" stay phone jobs
+  const phone = /খোলো|খুলো|ওপেন|open|চালাও|প্লে|play|ভিডিও|video|ইউটিউবে|ফেসবুকে|কল দাও|মেসেজ/.test(s);
+  return info && !phone;
+}
+
 /** Splits a reply into its first sentence and the rest (the first one is spoken while the rest is still being made) */
 function splitFirst(text: string): string[] {
   const m = text.match(/^([\s\S]{12,160}?[।!?.](?:\s|$))([\s\S]{8,})$/);
@@ -206,6 +215,9 @@ export function usePremiumVoice(opts: Options) {
         .getHistory()
         .slice(-12)
         .map((h) => ({ role: h.role, content: h.text }));
+      // news, prices, weather, scores… are answered by the server's Google search and SAID by ROSE here;
+      // the phone never opens Google or Chrome for them (that left her scrolling pages and saying nothing)
+      const web = !note && wantsWebAnswer(input);
       const res = await premiumChat(
         [
           {
@@ -213,6 +225,7 @@ export function usePremiumVoice(opts: Options) {
             content:
               o.buildSystemPrompt() +
               '\n\nVOICE MODE: reply in 1-3 short spoken sentences, no lists, no markdown, never write tool names or JSON in the words.' +
+              '\nQUESTIONS ARE NOT PHONE TASKS: for news, facts, prices, weather or anything to look up, never open Google, Chrome or a browser on the phone and never scroll pages; answer him yourself in words.' +
               '\nPHONE ACTIONS: use the trigger_phone_action tool for every phone task (open an app, screen items, tap item <n>, scroll, type, ' +
               'read screen, comments, calls, messages). After a tool, the app sends the result as "[App result]"; read it and call the next ' +
               'step yourself until the task is done, one step at a time. Never say a step is done before its result says so.' +
@@ -220,9 +233,12 @@ export function usePremiumVoice(opts: Options) {
               'then use "screen items" / "tap item <n>" inside it. Never use "read screen" or "screen items" while ROSE itself (com.myrosebd.rose) is on the screen.',
           },
           ...history,
+          ...(web
+            ? [{ role: 'system' as const, content: 'LIVE ANSWER: Google search results are available to you now. Answer his question yourself from them, in his language, in 3-5 short spoken sentences (for news: the 3-4 most important items, with the day; numbers spoken naturally). Do not open any app or website, do not tell him to check Google. If the search has nothing clear, say that briefly.' }]
+            : []),
           { role: 'user', content: note ? `[App result, not his words] ${input}` : input },
         ],
-        { forVoice: true, maxTokens: 300, tools: [phoneActionToolDeclaration()] },
+        web ? { forVoice: true, maxTokens: 500, live: true } : { forVoice: true, maxTokens: 300, tools: [phoneActionToolDeclaration()] },
       );
       if (!activeRef.current) return;
       if (typeof res.voiceLeft === 'number' || typeof res.textLeft === 'number') {

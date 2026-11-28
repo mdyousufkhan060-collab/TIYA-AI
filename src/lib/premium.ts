@@ -18,7 +18,7 @@ export interface PremiumChatResult {
  */
 export async function premiumChat(
   messages: PremiumChatMessage[],
-  opts: { forVoice?: boolean; maxTokens?: number; tools?: Array<Record<string, unknown>> } = {},
+  opts: { forVoice?: boolean; maxTokens?: number; tools?: Array<Record<string, unknown>>; live?: boolean } = {},
 ): Promise<PremiumChatResult> {
   try {
     const { data, error } = await supabase.functions.invoke('tiya-premium', {
@@ -26,6 +26,7 @@ export async function premiumChat(
         action: 'chat',
         messages,
         forVoice: Boolean(opts.forVoice),
+        live: Boolean(opts.live),
         maxTokens: opts.maxTokens || 1024,
         ...(opts.tools?.length ? { tools: opts.tools } : {}),
       },
