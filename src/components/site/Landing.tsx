@@ -251,6 +251,9 @@ export const Landing: React.FC = () => {
               <a href="/demos" className={btnGhost}>
                 Online store demos
               </a>
+              <a href="https://imtiazcreative.com/" target="_blank" rel="noopener noreferrer" className={btnGhost}>
+                Developer Portfolio
+              </a>
             </div>
             <p className="mt-4 text-xs text-slate-500">Sign in with Google · No credit card · Works on any phone</p>
             {/* quick facts */}
