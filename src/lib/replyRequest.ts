@@ -171,6 +171,9 @@ export function postNumbersInOrder(t: string): number[] {
  */
 export function asksNextDown(t: string): boolean {
   const s = t.toLowerCase();
+  // Nov 28: Whisper writes it many ways ("আরনিচ জাও", "নিছে টাই জাও"): any নিচ/নিছ with a go-word = the next video,
+  // unless he is talking about comments further down
+  if (/নি[চছ]/.test(s) && /যাও|জাও|যান|জান|চলো|নামো|নামাও|যাইও|যা[\s।,]|জা[\s।,]|যা$|জা$/.test(s) && !/কমেন্ট|কমন|comment|আরো আছে|আরও আছে/.test(s)) return true;
   return /নি[চছ]ের ?(টা|টায়|টাতে|টি|ডায়|ভিডিও|পোস্ট|বিডিও)|নি[চছ]েরটা|নি[চছ]ে ?(যাও|জাও|যান|জান|যা|জা|নামো|নামাও|চলো)|নিচের দিকে|পরের ?(টা|টায়|ভিডিও|পোস্ট)|এর পরের|next (video|post)|below/.test(s);
 }
 

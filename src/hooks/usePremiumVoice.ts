@@ -521,7 +521,7 @@ export function usePremiumVoice(opts: Options) {
       // his next video below; ROSE says its date and asks again
       const peN = pendingEnterRef.current;
       const nearVideo = Date.now() - lastGoAt.current < 15 * 60 * 1000;
-      if ((asksNextDown(t) || (!!peN && /নি[চছ]ে|পরের|next|below/.test(t))) && (peN || nearVideo) && postNumber(t) === null && postAgeMinutes(t) === null) {
+      if ((asksNextDown(t) || (!!peN && /নি[চছ]|পরের|next|below/.test(t))) && (peN || nearVideo) && postNumber(t) === null && postAgeMinutes(t) === null) {
         pendingEnterRef.current = null;
         const reply = asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
         lastRecipeAt.current = Date.now();
@@ -533,7 +533,8 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       if (peN && saysNo(t)) {
-        pendingEnterRef.current = null;
+        // keep the question open: "নিচেরটায় যাও" right after still works
+        pendingEnterRef.current = { ...peN, at: Date.now() };
         await speakLine(`ঠিক আছে${callNameOf(optsRef.current.yourName) ? ' ' + callNameOf(optsRef.current.yourName) : ''}, ঢুকছি না। নিচের ভিডিও দেখতে চাইলে বলো "নিচেরটায় যাও", নইলে বলো কী করবো।`);
         if (activeRef.current) listen();
         return;
