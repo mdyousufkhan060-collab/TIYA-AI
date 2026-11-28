@@ -16,6 +16,8 @@
  *   src/lib/quickAnswers.ts    time, date, day: answered at once from the phone's clock (never Google, never the AI)
  *   src/lib/replyRequest.ts    "reply to my post/video comments" + which post (দুই নম্বর, দুনামবার, ২য়, second); starts the fixed reply job
  *   LOCKED go to video N: replyRequest.goToPostNumber → "go to post N" → stops there → "আমি তোমার N নম্বর ভিডিওর কাছে আছি। এখন কী করবো বলো?"; "reply here" after it = that same video
+ *   LOCKED (Nov 28 9:10 PM, owner, FINAL): BUSINESS PREMIUM = PERSONAL · STUDENT + 1,500 Tk (1m 3,000 · 3m 5,500 · 6m 7,000 · 9m 9,500 · 12m 12,000),
+ *     only Business changes the website design; same CONDITIONS (src/utils/planConditions.ts) for every plan. Do not change.
  *   LOCKED (Nov 28 8:36 PM, owner): website plans + ROSE PLANS GUIDE: src/utils/storePlans.ts, liveStorePrices.ts, roseFiles/plansGuide.ts,
  *     DB store_plan_totals / store_plan_price / start_website_trial (10 days) / _approve_store_payment (plan starts on the purchase day) /
  *     store_design_allowed (only BUSINESS PREMIUM changes the design). Do not change.
