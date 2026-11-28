@@ -12,7 +12,7 @@ import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
 import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, asksNextDown, dateWords, numberUnclear, postDate, postNumbersInOrder, saysNo, saysYes } from '../lib/replyRequest';
 import { callNameOf, greetFirst, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { cachedTts, prefetchTts, rememberTts } from '../lib/ttsCache';
-import { asksEnterPage, asksFacebookHome, asksFeedScroll, asksListPages, asksOpenFacebookOnly, matchProfile, plainName } from '../lib/pageRequest';
+import { asksEnterPage, asksFacebookHome, asksFeedScroll, asksPhoneHome, asksListPages, asksOpenFacebookOnly, matchProfile, plainName } from '../lib/pageRequest';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -531,6 +531,20 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       let t = heard.toLowerCase();
+      // Nov 28 (owner): "হোম স্ক্রিনে চলে আসো" = the phone's home screen; ROSE goes, says so, and stays (no AI, never back
+      // into Facebook)
+      if (asksPhoneHome(t)) {
+        pendingEnterRef.current = null;
+        feedAt.current = 0;
+        lastGoAt.current = 0;
+        const nmP = callNameOf(optsRef.current.yourName);
+        recipeRef.current = { steps: [], at: 0, doneLine: `${nmP ? nmP + ', ' : ''}ফোনের হোম স্ক্রিনে চলে এসেছি। এখন কী করবো বলো?` };
+        await speakLine(`${okWithName(nmP)}হোম স্ক্রিনে যাচ্ছি।`);
+        if (!activeRef.current) return;
+        setState('thinking');
+        optsRef.current.onAppend('assistant', '', { action: 'go_home' } as PhoneAction);
+        return;
+      }
       // Nov 28 (owner): "তুমি তোমার হোমপেজে আসো" during a Facebook job = Facebook's Home (never the phone's home, never the AI)
       if (asksFacebookHome(t) && (Date.now() - lastGoAt.current < 30 * 60 * 1000 || Date.now() - pageAskAt.current < 10 * 60 * 1000 || pendingEnterRef.current)) {
         pendingEnterRef.current = null;

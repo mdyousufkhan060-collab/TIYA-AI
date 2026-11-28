@@ -99,3 +99,8 @@ export function asksFeedScroll(t: string): boolean {
   const s = t.toLowerCase();
   return /স্ক্রল|স্ক্রোল|স্কল|scroll|নি[চছ]ে|পরের|next/.test(s) && !/কমেন্ট|রিপ্লাই|নম্বর|দিন আগে|দিন আগের/.test(s);
 }
+
+/** "হোম স্ক্রিনে চলে আসো" (Whisper: "হুমিস্কিনে") = the PHONE's home screen, not Facebook's Home */
+export function asksPhoneHome(t: string): boolean {
+  return /(হো|হু)মি?\s?স্?ক্?র?ি?ন|home\s?screen|ফোনের হোম/.test(t.toLowerCase());
+}
