@@ -7,6 +7,7 @@ import { fadePcm } from '../lib/pcmFade';
 import { pcmStreamPlayer } from '../lib/pcmStream';
 import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
+import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
 import { asksCommentReplies, postNumber } from '../lib/replyRequest';
 import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
@@ -101,6 +102,7 @@ export function usePremiumVoice(opts: Options) {
   const micRef = useRef<QuietMic | null>(null);
   const stop = useCallback(() => {
     activeRef.current = false;
+    stopPhoneSpeak();
     micRef.current?.close();
     micRef.current = null;
     try {
@@ -324,9 +326,15 @@ export function usePremiumVoice(opts: Options) {
         // an action is running: its result restarts the talk; otherwise listen for him
         if (activeRef.current && !pendingRef.current) listen();
       };
+      let played = false;
       const play = async (i: number): Promise<void> => {
         if (!activeRef.current) return;
         if (i >= jobs.length) {
+          // LOCKED: no server sound at all → the phone's own voice says it (phoneVoice.ts); she is never silent
+          if (!played) {
+            voiceCaptions.startTyping(reply, Math.round((reply.length * 75) / Math.max(0.75, o.speechSpeed || 1)));
+            await phoneSpeak(reply, LANG_CODE[o.language] || 'bn-BD', o.speechSpeed || 1, o.volume ?? 1);
+          }
           voiceCaptions.finishTyping();
           next();
           return;
@@ -346,7 +354,7 @@ export function usePremiumVoice(opts: Options) {
         await new Promise<void>((done) => {
           a.onended = () => done();
           a.onerror = () => done();
-          a.play().catch(() => done());
+          a.play().then(() => { played = true; }).catch(() => done());
         });
         URL.revokeObjectURL(url);
         await play(i + 1);
@@ -363,7 +371,12 @@ export function usePremiumVoice(opts: Options) {
     o.onAppend('assistant', line);
     try {
       const tts = await premiumTts(line, o.voiceName);
-      if (!activeRef.current || !tts.ok || !tts.audio) return;
+      if (!activeRef.current) return;
+      // LOCKED: no server sound → the phone's own voice (phoneVoice.ts)
+      if (!tts.ok || !tts.audio) {
+        await phoneSpeak(line, LANG_CODE[o.language] || 'bn-BD', o.speechSpeed || 1, o.volume ?? 1);
+        return;
+      }
       const url = pcmToWavUrl(tts.audio);
       const a = new Audio(url);
       a.volume = Math.max(0, Math.min(1, o.volume ?? 1));

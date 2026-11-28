@@ -5,6 +5,7 @@
 // and every step logs how long it took. STT writes only the main speaker (no TV, traffic, far voices).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ttsFailed, ttsModelsFor, ttsUsable } from "./ttsGuard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -211,8 +212,9 @@ async function callTts(model: string, text: string, voiceName: string, languageC
   const voice = FEMALE.has(voiceName) ? voiceName : "Leda";
   let last = "Gemini key missing";
   for (const key of keyList("GEMINI_API_KEY")) {
-    // fast, stable 3.8 Flash-Lite TTS first; the old preview model is slow and busy at times
-    for (const m of [...new Set(["gemini-3.8-flash-lite-tts", model, "gemini-2.5-flash-preview-tts"])]) {
+    if (!ttsUsable(key, "*")) continue;
+    // every voice model this key can use now, best first (ttsGuard.ts skips the ones out of quota)
+    for (const m of await ttsModelsFor(key, model)) {
       const r = await post(`${GEMINI}/models/${encodeURIComponent(m)}:generateContent`, { "Content-Type": "application/json", "x-goog-api-key": key }, {
         contents: [{ parts: [{ text }] }],
         generationConfig: {
@@ -223,12 +225,13 @@ async function callTts(model: string, text: string, voiceName: string, languageC
             ...(languageCode ? { languageCode } : {}),
           },
         },
-      }, 25000);
+      }, /preview/.test(m) ? 12000 : 20000);
       const raw = r.d?.candidates?.[0]?.content?.parts?.find((p: any) => p?.inlineData)?.inlineData?.data;
       const audio = raw ? wavToPcm(String(raw)) || raw : raw;
       if (r.ok && audio) return { audio, model: m, voice };
       last = `TTS ${m} ${r.status}: ${r.d?.error?.message || "no audio"}`;
       console.error(last);
+      ttsFailed(key, m, r.status, String(r.d?.error?.message || ""));
       if (r.status === 401 || r.status === 403) break;
     }
   }
@@ -239,7 +242,8 @@ async function callTts(model: string, text: string, voiceName: string, languageC
 async function ttsStream(model: string, text: string, voiceName: string, languageCode: string, onChunk: (pcmB64: string) => void) {
   const voice = FEMALE.has(voiceName) ? voiceName : "Leda";
   for (const key of keyList("GEMINI_API_KEY")) {
-    for (const m of [...new Set(["gemini-3.8-flash-lite-tts", model])]) {
+    if (!ttsUsable(key, "*")) continue;
+    for (const m of (await ttsModelsFor(key, model)).filter((x) => !/preview/.test(x))) {
       const r = await fetch(`${GEMINI}/models/${encodeURIComponent(m)}:streamGenerateContent?alt=sse`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": key },
@@ -249,7 +253,13 @@ async function ttsStream(model: string, text: string, voiceName: string, languag
         }),
         signal: AbortSignal.timeout(25000),
       }).catch(() => null);
-      if (!r || !r.ok || !r.body) { console.error(`tts stream ${m} ${r?.status}`); continue; }
+      if (!r || !r.ok || !r.body) {
+        const msg = r ? await r.text().catch(() => "") : "";
+        console.error(`tts stream ${m} ${r?.status}`);
+        ttsFailed(key, m, r?.status || 0, msg);
+        if (r?.status === 401 || r?.status === 403) break;
+        continue;
+      }
       const reader = r.body.getReader();
       const dec = new TextDecoder();
       let buf = "";

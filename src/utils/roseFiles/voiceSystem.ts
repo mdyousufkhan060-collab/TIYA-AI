@@ -16,6 +16,9 @@
  *   src/lib/quickAnswers.ts    time, date, day: answered at once from the phone's clock (never Google, never the AI)
  *   src/lib/replyRequest.ts    "reply to my post/video comments" + which post (দুই নম্বর, দুনামবার, ২য়, second); starts the fixed reply job
  *   src/lib/nameCall.ts        calls him by name ("ঠিক আছে ইউসুফ, …"); "রোজ" alone → "জি ইউসুফ, আমি আছি…"
+ *   LOCKED NEVER SILENT: supabase/functions/tiya-premium/ttsGuard.ts (skips a voice model/key that is out of Google quota
+ *                              or broken, tries every TTS model the key has) + src/lib/phoneVoice.ts and Android
+ *                              RoseSpeak.kt (the phone's own voice says the words when the server gives no sound)
  *   phoneActions waitNativeResult  comment jobs get time: open post 90 s, reply all 4 min (was 20 s → "দেরি হচ্ছে")
  *   usePremiumVoice watchdog   a phone step with no result for 30 s (or 12 steps) → ROSE says so and listens again, never silent
  *   usePremiumVoice wantsWebAnswer + LIVE ANSWER  news, prices, weather, scores: the server's Google search answers and
