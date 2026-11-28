@@ -17,7 +17,9 @@ export function quickAnswer(text: string, now = new Date()): string | null {
   const t = text.toLowerCase();
   // another place's time ("আমেরিকায় এখন কয়টা বাজে") is not the phone's clock
   if (/আমেরিকা|লন্ডন|দুবাই|সৌদি|ইরান|ভারত|কানাডা|জাপান|america|london|dubai|usa|uk|saudi|india|canada|japan|new york/.test(t)) return null;
-  const askTime = /কয়টা বাজে|কটা বাজে|কয়টা বাজতেছে|কয়টা বাজছে|কতটা বাজে|সময় কত|কত বাজে|টাইম কত|what time|time is it|current time/.test(t);
+  // Nov 28: his voice can come out garbled ("অখন বাজে করেটা"): any short question with বাজে + a time word counts
+  const garbled = t.length < 70 && /বাজে|বাজতেছে|বাজছে|বাজতাছে/.test(t) && /(কয়|কই|ক|কো|কে|কত|করে|কয়ে)\s?টা|এখন|অখন|এহন|কত/.test(t) && !/গান|মিউজিক|music|বাজাও|বাজিয়ে/.test(t);
+  const askTime = garbled || /কয়টা বাজে|কটা বাজে|কয়টা বাজতেছে|কয়টা বাজছে|কতটা বাজে|সময় কত|কত বাজে|টাইম কত|what time|time is it|current time/.test(t);
   const askDay = /আজ কী বার|আজকে কী বার|আজ কি বার|আজকে কি বার|কোন বার|what day/.test(t);
   const askDate = /কত তারিখ|তারিখ কত|আজকের তারিখ|what date|today's date|date today/.test(t);
   if (!askTime && !askDay && !askDate) return null;

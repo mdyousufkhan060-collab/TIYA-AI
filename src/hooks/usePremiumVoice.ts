@@ -7,6 +7,7 @@ import { fadePcm } from '../lib/pcmFade';
 import { pcmStreamPlayer } from '../lib/pcmStream';
 import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
+import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
 import { asksCommentReplies, postNumber } from '../lib/replyRequest';
 import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
@@ -231,6 +232,8 @@ export function usePremiumVoice(opts: Options) {
           ...(web
             ? [{ role: 'system' as const, content: 'LIVE ANSWER: Google search results are available to you now. Answer his question yourself from them, in his language, in 3-5 short spoken sentences (for news: the 3-4 most important items, with the day; numbers spoken naturally). Do not open any app or website, do not tell him to check Google. If the search has nothing clear, say that briefly.' }]
             : []),
+          // the real clock right next to his words, so the model never makes up a time (Nov 28: said "রাত ১টা" at 11 AM)
+          { role: 'system', content: localTimeLine() },
           { role: 'user', content: note ? `[App result, not his words] ${input}` : input },
         ],
         web ? { forVoice: true, maxTokens: 500, live: true } : { forVoice: true, maxTokens: 300, tools: [phoneActionToolDeclaration()] },
