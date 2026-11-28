@@ -124,15 +124,24 @@ export function localTimeLine(): string {
 
 function ownerTimeContext(recentMessages: ChatMessage[]): string {
   const time = localTimeLine();
-  const userMsgs = recentMessages.filter((m) => m.role === 'user' && typeof m.timestamp === 'number');
+  // in voice the new message is already in the list: anything from the last 20 seconds is that new message
+  const userMsgs = recentMessages.filter((m) => m.role === 'user' && typeof m.timestamp === 'number' && Date.now() - (m.timestamp as number) > 20000);
   // the prompt is built before the new message is added, so the last one is his previous message
   const prev = userMsgs[userMsgs.length - 1];
   let gap = 'this is the first talk today';
+  let back = '';
+  const clock = (t: number) => new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   if (prev?.timestamp) {
     const mins = Math.round((Date.now() - prev.timestamp) / 60000);
     gap = mins < 60 ? `${mins} minutes` : mins < 60 * 48 ? `${Math.round(mins / 60)} hours` : `${Math.round(mins / 1440)} days`;
+    // he came back after 30+ minutes: ROSE notices it once, with the real times (talkWithAdmin: WHEN HE COMES BACK)
+    if (mins >= 30) {
+      const today = new Date().toDateString();
+      const first = userMsgs.find((m) => new Date(m.timestamp as number).toDateString() === today);
+      back = ` RETURN AFTER A GAP: his last message was at ${clock(prev.timestamp)}${mins >= 60 * 20 ? ' (an earlier day)' : ''}${first && first !== prev ? `, his first message today was at ${clock(first.timestamp as number)}` : ''}, and now it is ${clock(Date.now())} (${gap} later).`;
+    }
   }
-  return `Current local time: ${time} Time since his last message: ${gap}.`;
+  return `Current local time: ${time} Time since his last message: ${gap}.${back}`;
 }
 
 export function resolveEffectivePersona(
