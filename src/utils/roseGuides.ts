@@ -13,6 +13,7 @@ import { WHATS_NEW_ADMIN } from './roseFiles/whatsNew';
 import { WHATS_NEW_USER } from './roseFiles/whatsNewUser';
 import { plansFile } from './roseFiles/plansAndModes';
 import { STORE_BUILDER } from './roseFiles/storeBuilder';
+import { ORDER_SHIELD } from './roseFiles/orderShield';
 import { premiumFile } from './roseFiles/premiumPlan';
 import { refreshLivePrices } from './roseFiles/livePrices';
 
@@ -25,7 +26,7 @@ const WANTS_STORE = /website|ওয়েবসাইট|ওয়েব|store|s
 const WANTS_NEW = /new|নতুন|update|আপডেট|added|যোগ/i;
 
 export function getRoseGuide(mode: string | null | undefined, isAdmin: boolean, recentText = ''): string {
-  if (isAdmin) return [WHATS_NEW_ADMIN, COMMON, ACTIONS, ADMIN, BUSINESS, STUDENT, PERSONAL, plansFile(), premiumFile(), STORE_BUILDER].join('\n\n');
+  if (isAdmin) return [WHATS_NEW_ADMIN, COMMON, ACTIONS, ADMIN, BUSINESS, STUDENT, PERSONAL, plansFile(), premiumFile(), STORE_BUILDER, ORDER_SHIELD].join('\n\n');
   const own = mode === 'business' ? BUSINESS : mode === 'student' ? STUDENT : PERSONAL;
   const t = recentText || '';
   // without any recent text (first message) keep everything, so nothing is missing
@@ -37,6 +38,7 @@ export function getRoseGuide(mode: string | null | undefined, isAdmin: boolean, 
     all || WANTS_PLANS.test(t) ? plansFile() : 'PLANS, PREMIUM, STORE: ask ROSE about plans, prices, Premium or a website and the details come.',
     all || WANTS_PLANS.test(t) ? premiumFile() : '',
     all || WANTS_STORE.test(t) || mode === 'business' ? STORE_BUILDER : '',
+    all || WANTS_STORE.test(t) || mode === 'business' || /ফেক|fake|ব্লক|block|shield|শিল্ড|ডুপ্লিকেট|duplicate|otp|ওটিপি/i.test(t) ? ORDER_SHIELD : '',
     all || WANTS_NEW.test(t) ? WHATS_NEW_USER : '',
     'You may explain every mode and plan to anyone, but only DO the tools of this user\'s own mode. Never describe the Admin panel to normal users.',
   ].filter(Boolean).join('\n\n');

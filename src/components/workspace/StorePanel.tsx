@@ -9,6 +9,7 @@ import { AdminBrandPage } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
 import { DomainAccess } from './DomainAccess';
 import { AddOrderForm } from './AddOrderForm';
+import { OrderShieldTab } from './OrderShieldTab';
 import { CategoryEditor } from './CategoryEditor';
 import { AddCustomerForm, type CustRow } from './AddCustomerForm';
 import { INVOICE_SIZES, PRINT_CSS, invoiceDims, kgText, invoicePreviewHTML, STICKER_SIZES, printOrders, stickerHTML, stickerSize, type PrintOrder, type PrintSettings } from '../../utils/storePrint';
@@ -153,7 +154,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create' | 'viewas'>(startTab || 'home');
+  const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'shield' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create' | 'viewas'>(startTab || 'home');
   const [roles, setRoles] = useState<Record<string, string>>({});
   // WEBSITE ADMIN look: light by default, the ☀️/🌙 button switches (kept on this device)
   const [light, setLight] = useState(() => { try { return localStorage.getItem('rose_admin_theme') !== 'dark'; } catch { return true; } });
@@ -284,6 +285,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
             [true, 'dashboard', 'DASHBOARD', '📊', '#1d4ed8', 'TODAY'],
             [c('owner') && !isAdmin, 'plan', 'PLAN & PAYMENT', '⭐', '#f59e0b', access ? `${STORE_PLANS[access.plan]?.label || access.plan} · ${new Date(access.ends_at).toLocaleDateString('en-GB')}` : 'BUY'],
             [c('orders'), 'orders', 'ORDERS', '🧾', '#7c3aed', ''],
+            [c('ordersWrite'), 'shield', 'ORDER SHIELD', '🛡️', '#dc2626', 'FAKE ORDERS'],
             [c('products') || c('productsView'), 'products', 'PRODUCTS', '📦', '#0d9488', ''],
             [c('categories'), 'categories', 'CATEGORIES', '🗂️', '#ca8a04', ''],
             [c('design'), 'design', 'HOMEPAGE, BANNERS & DESIGN', '🎨', '#db2777', 'BANNERS'],
@@ -475,6 +477,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
         {tab === 'print' && <DeliveryTab store={store} part="print" onSaved={() => void load()} />}
         {tab === 'seo' && <SeoTab store={store} onSaved={() => void load()} />}
         {tab === 'orders' && <OrdersTab store={store} readOnly={!can('ordersWrite')} />}
+        {tab === 'shield' && <OrderShieldTab store={store} />}
         {tab === 'products' && <ProductsTab store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} canEdit={can('products')} canDelete={myRole === 'owner'} addSignal={addSignal} />}
         {tab === 'categories' && <CategoriesTab store={store} />}
         {tab === 'design' && <DesignTab store={store} onSaved={() => void load()} />}

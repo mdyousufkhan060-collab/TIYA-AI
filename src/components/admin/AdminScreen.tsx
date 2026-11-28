@@ -35,6 +35,7 @@ import { TeamChecklist } from '../settings/TeamChecklist';
 import { AdminVideosPage, AdminGuidePage } from './AdminGuideVideos';
 import { AdminWebsiteBuilderDemo } from './AdminWebsiteBuilderDemo';
 import { AdminWebsiteAccessPage } from './AdminWebsiteAccessPage';
+import { AdminSmsPage } from './AdminSmsPage';
 import { AdminBrandCard, AdminBrandPage, AdminSiteSwitchesPage } from './AdminBrandPage';
 import { AdminSiteReviews } from './AdminSiteReviews';
 import { AdminDeletionRequestsPage, AdminOverviewTiles } from './AdminSystemPages';
@@ -72,7 +73,8 @@ type AdminView =
   | 'site_switches'
   | 'ai_key'
   | 'support_id'
-  | 'site_reviews';
+  | 'site_reviews'
+  | 'admin_sms';
 
 interface AdminScreenProps {
   settings: TiyaSettings;
@@ -703,6 +705,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               ai_key: '02 AI Key & Billing',
               support_id: '23 Support ID',
               site_reviews: '24 Site Reviews',
+              admin_sms: '25 Admin SMS',
               guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
@@ -758,6 +761,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="22" title="SITE SWITCHES" value="ROSE BRANDING" tone={activeView === 'site_switches' ? 'accent' : 'default'} onClick={() => go('site_switches')} testId="admin-bar-site-switches" />
             <SettingsBar badge="23" title="SUPPORT ID" value="OPEN A SHOP" tone={activeView === 'support_id' ? 'accent' : 'default'} onClick={() => go('support_id')} testId="admin-bar-support-id" />
             <SettingsBar badge="24" title="SITE REVIEWS" value="MYROSEBD.COM" tone={activeView === 'site_reviews' ? 'accent' : 'default'} onClick={() => go('site_reviews')} testId="admin-bar-site-reviews" />
+            <SettingsBar badge="25" title="ADMIN SMS" value="MY OWN SMS" tone={activeView === 'admin_sms' ? 'accent' : 'default'} onClick={() => go('admin_sms')} testId="admin-bar-admin-sms" />
           </div>
   );
 
@@ -863,6 +867,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'videos' && <AdminVideosPage />}
         {view === 'website_builder' && <AdminWebsiteBuilderDemo />}
         {view === 'website_access' && <AdminWebsiteAccessPage />}
+        {view === 'admin_sms' && <AdminSmsPage />}
         {view === 'brand' && <AdminBrandPage />}
         {view === 'site_switches' && <AdminSiteSwitchesPage />}
         {view === 'ai_key' && <AdminAiKeyPage />}

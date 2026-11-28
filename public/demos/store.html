@@ -1175,7 +1175,8 @@ function start(S, P, liveId) {
       st.cart.map(function (c) { var p = P[c.id]; return '<div class="row"><span class="e" style="width:48px;height:48px;overflow:hidden;border-radius:10px;font-size:26px">' + (p.img ? '<img src="' + p.img + '" alt="" style="width:48px;height:48px;object-fit:cover">' : p.e) + '</span><div style="flex:1;font-size:13px"><b>' + esc(p.name) + '</b><div style="color:#64748b">' + esc(c.opt) + ' × ' + c.q + (itemKg(c.id, c.opt) > 0 ? ' · ⚖️ ' + kgT(itemKg(c.id, c.opt) * c.q) : '') + '</div></div><b style="font-size:14px">' + tk(p.price * c.q) + '</b></div>'; }).join('') +
       '<div style="display:flex;gap:6px;margin:12px 0"><input id="fCoupon" placeholder="' + t('coupon') + '" style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:10px"><button class="btn alt" style="width:auto" onclick="applyCoupon()">' + t('apply') + '</button></div><p id="cpMsg" class="small" style="margin:-6px 2px 8px"></p>' +
       '<div class="tot">' + (cartKg() > 0 ? '<div><span>⚖️ ' + t('totWeight') + '</span><b>' + kgT(cartKg()) + '</b></div>' : '') + '<div><span>' + t('subtotal') + '</span><b>' + tk(sub) + '</b></div><div><span>' + t('delCharge') + '</span><b id="dl">–</b></div><div id="dcRow" hidden><span>Discount</span><b id="dc" style="color:#16a34a"></b></div><div class="big"><span>' + t('total') + '</span><b id="tot">' + tk(sub) + '</b></div></div>' +
-      '<button class="btn hideM" id="placeBtn" style="margin-top:12px;padding:14px;font-size:16px" onclick="placeOrder()">' + t('confirm') + '</button><p id="placeMsg" class="small">🔒 ' + (S.live ? 'Your details go only to this shop.' : 'Demo store: no real order is made.') + '</p></div></div></div>';
+      '<input id="fWebsite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">' +
+      '<div id="shieldMsg"></div><button class="btn hideM" id="placeBtn" style="margin-top:12px;padding:14px;font-size:16px" onclick="placeOrder()">' + t('confirm') + '</button><p id="placeMsg" class="small">🔒 ' + (S.live ? 'Your details go only to this shop.' : 'Demo store: no real order is made.') + '</p></div></div></div>';
   }
   // coupon: the shop's server checks the code; the same check runs again when the order is placed
   window.applyCoupon = function () {
@@ -1187,6 +1188,7 @@ function start(S, P, liveId) {
     sb('rpc/check_store_coupon', { p_slug: S.slug, p_code: code, p_sub: sub }).then(function (r) { done(+r.discount || 0, '✓ ' + code + ': - ' + tk(+r.discount || 0), true); }, function (e) { done(0, e.message, false); });
   };
   function bindCheckout() {
+    window.__coStart = Date.now();
     var sub = st.cart.reduce(function (a, c) { return a + P[c.id].price * c.q; }, 0);
     var $ = function (x) { return document.getElementById(x); };
     showBar('<div class="bbp show"><div><small>' + t('total') + '</small><b id="bbTot" style="font-size:18px;color:#dc2626">' + tk(sub) + '</b></div></div><button class="btn" style="flex:1.4" onclick="placeOrder()">' + t('confirm') + '</button>', 'cob');
@@ -1277,6 +1279,67 @@ function start(S, P, liveId) {
       img.src = url;
     });
   }
+  // ---------------- ORDER SHIELD (fake / duplicate / robot orders) ----------------
+  // a device number made from this browser (kept on the phone), the time the form took, a hidden field only robots
+  // fill; the shop's server decides: allow, SMS code, advance payment, or stop
+  function shieldDevice() {
+    var k = 'rose_dev', id = '';
+    try { id = localStorage.getItem(k) || ''; if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem(k, id); } } catch (e) {}
+    var n = navigator, sc = screen || {}, txt = [n.userAgent, n.language, n.platform, n.hardwareConcurrency, n.deviceMemory, sc.width + 'x' + sc.height, sc.colorDepth, (Intl.DateTimeFormat().resolvedOptions() || {}).timeZone].join('|');
+    try { var c = document.createElement('canvas'), x = c.getContext('2d'); x.textBaseline = 'top'; x.font = '14px Arial'; x.fillStyle = '#f60'; x.fillRect(1, 1, 60, 20); x.fillStyle = '#069'; x.fillText('ROSE ✓ ১২৩', 2, 2); txt += '|' + c.toDataURL().slice(-60); } catch (e) {}
+    var h = 5381; for (var i = 0; i < txt.length; i++) h = ((h << 5) + h + txt.charCodeAt(i)) >>> 0;
+    return 'd' + h.toString(36) + '-' + id.slice(0, 10);
+  }
+  function shieldCall(body) {
+    return fetch(SB_URL + '/functions/v1/store-shield', { method: 'POST', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json(); });
+  }
+  function shieldNote(html, warn) { var m = document.getElementById('shieldMsg'); if (m) { m.innerHTML = html ? '<div class="note ' + (warn ? 'warn' : '') + '" style="margin:10px 0">' + html + '</div>' : ''; if (html) m.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
+  // SMS code popup: resolves with the pass, or '' when the buyer closes it
+  function shieldOtp(check, end) {
+    return new Promise(function (done) {
+      var m = document.getElementById('otpM');
+      if (!m) { m = document.createElement('div'); m.className = 'modal'; m.id = 'otpM'; document.body.appendChild(m); }
+      m.hidden = false;
+      m.innerHTML = '<div class="mbox"><button class="mx" id="otpX">✕</button><h3 style="margin:0 0 6px">📱 ' + (LANG === 'bn' ? 'মোবাইলে কোড পাঠানো হয়েছে' : 'Code sent to your phone') + '</h3>' +
+        '<p class="small" style="margin:0 0 12px">' + (LANG === 'bn' ? 'শেষে ' + end + ' নম্বরে SMS গেছে। ৬ সংখ্যার কোডটি লিখুন।' : 'An SMS went to the number ending ' + end + '. Type the 6-digit code.') + '</p>' +
+        '<input id="otpIn" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;font-size:22px;letter-spacing:8px;text-align:center">' +
+        '<em class="err" id="otpE" style="display:block;min-height:18px"></em><button class="btn" id="otpOk" style="margin-top:6px">' + (LANG === 'bn' ? 'কনফার্ম' : 'Confirm') + '</button>' +
+        '<button class="btn alt" id="otpRe" style="margin-top:8px">' + (LANG === 'bn' ? 'আবার কোড পাঠান' : 'Send the code again') + '</button></div>';
+      var $ = function (x) { return document.getElementById(x); }, close = function (v) { m.hidden = true; done(v); };
+      $('otpX').onclick = function () { close(''); };
+      $('otpRe').onclick = function () { $('otpE').textContent = '…'; shieldCall({ action: 'otp_send', check: check }).then(function (r) { $('otpE').textContent = r.ok ? (LANG === 'bn' ? 'নতুন কোড গেছে' : 'New code sent') : (LANG === 'bn' ? 'আর কোড পাঠানো যাবে না, দোকানে কল করুন' : 'No more codes. Please call the shop.'); }); };
+      $('otpOk').onclick = function () {
+        var code = ($('otpIn').value || '').replace(/\D/g, '');
+        if (code.length !== 6) { $('otpE').textContent = LANG === 'bn' ? '৬ সংখ্যার কোড লিখুন' : 'Type the 6-digit code'; return; }
+        $('otpOk').disabled = true;
+        shieldCall({ action: 'otp_verify', check: check, code: code }).then(function (r) {
+          $('otpOk').disabled = false;
+          if (r.ok) return close(r.pass);
+          $('otpE').textContent = r.error === 'wrong' ? (LANG === 'bn' ? 'কোড মেলেনি' : 'Wrong code') : (LANG === 'bn' ? 'কোডের সময় শেষ, আবার পাঠান' : 'Code expired, send again');
+        }, function () { $('otpOk').disabled = false; });
+      };
+      setTimeout(function () { var i = $('otpIn'); if (i) i.focus(); }, 200);
+    });
+  }
+  // returns a pass for the order, or '' (the reason is shown on the page)
+  function shieldCheck(O) {
+    return shieldCall({ action: 'check', slug: S.slug, phone: O.phone, email: O.email, name: O.name, address: O.address, device: shieldDevice(),
+      ms: window.__coStart ? Date.now() - window.__coStart : 0, trap: (document.getElementById('fWebsite') || {}).value || '', total: O.total, payment: O.pay })
+      .then(function (r) {
+        shieldNote('');
+        if (r.action === 'allow') return r.pass || '';
+        if (r.action === 'otp') return shieldOtp(r.check, r.phone_end || '');
+        var msg = LANG === 'bn' ? r.message_bn : r.message_en;
+        if (r.action === 'advance') {
+          if (O.pay !== 'cod') return r.pass || '';
+          shieldNote('💳 ' + esc(msg || '') + (r.advance ? ' <b>(' + tk(+r.advance) + ')</b>' : '') + '<br><small>' + (LANG === 'bn' ? 'নিচে bKash বা Nagad বেছে নিয়ে আবার Confirm চাপুন।' : 'Choose bKash or Nagad below and press Confirm again.') + '</small>', true);
+          var pays = document.getElementById('pays'); if (pays) pays.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return '';
+        }
+        if (r.action === 'block' || r.action === 'duplicate') { shieldNote('⛔ ' + esc(msg || ''), true); return ''; }
+        return '';
+      }, function () { return ''; });
+  }
   window.placeOrder = function () {
     var keys = ['name', 'phone', 'addr', 'div', 'dist', 'upz', 'email', 'trx', 'proof'], bad = keys.filter(function (k) { return !check(k); });
     if (bad.length) { var w = document.getElementById('w_' + bad[0]); if (w) { w.scrollIntoView({ behavior: 'smooth', block: 'center' }); var i = w.querySelector('input,select,textarea'); if (i) setTimeout(function () { i.focus(); }, 300); } toast(LANG === 'bn' ? 'লাল দাগ দেওয়া ঘরগুলো ঠিক করুন' : 'Please fix the fields in red'); return; }
@@ -1290,11 +1353,16 @@ function start(S, P, liveId) {
     if (!S.live) { O.no = 1025 + myOrders().length; return finish(); }
     var b = document.getElementById('placeBtn'); if (b) { b.disabled = true; b.textContent = 'Placing…'; }
     var pf = document.getElementById('fProof'), file = /bkash|nagad|rocket/.test(O.pay) && pf && pf.files ? pf.files[0] : null;
-    uploadProof(file).then(function (path) { return sb('rpc/place_store_order_v4', {
+    var pass = '';
+    shieldCheck(O).then(function (ps) {
+      pass = ps;
+      if (!pass) { var e = new Error(''); e.quiet = true; throw e; }
+      return uploadProof(file);
+    }).then(function (path) { return sb('rpc/place_store_order_v5', {
       p_slug: S.slug, p_name: O.name, p_phone: O.phone, p_email: O.email, p_division: O.division, p_district: O.district, p_upazila: O.upazila, p_address: O.address,
-      p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: O.pay, p_trx: O.trx, p_note: O.pay === 'bank' ? 'Bank ref: ' + O.trx : '', p_proof: path || '', p_coupon: coState.coupon || '',
+      p_items: st.cart.map(function (c) { return { id: P[c.id].uuid, q: c.q, opt: c.opt }; }), p_payment: O.pay, p_trx: O.trx, p_note: O.pay === 'bank' ? 'Bank ref: ' + O.trx : '', p_proof: path || '', p_coupon: coState.coupon || '', p_pass: pass,
     }); }).then(function (r) { O.no = r.order_no; O.payState = r.payment_status || ''; if (r.discount) O.disc = +r.discount; if (r.total) { O.total = +r.total; O.del = r.delivery != null ? +r.delivery : O.total - O.sub + (O.disc || 0); } if (r.weight_kg != null) O.kg = +r.weight_kg; track('Purchase', { value: O.total, order: String(O.no), items: st.cart.map(function (c) { return { id: c.id, name: P[c.id].name, price: P[c.id].price, q: c.q }; }) }); finish(); })
-      .catch(function (e) { if (b) { b.disabled = false; b.textContent = t('confirm'); } toast(e.message); });
+      .catch(function (e) { if (b) { b.disabled = false; b.textContent = t('confirm'); } if (!e.quiet) toast(e.message); });
   };
 
   // ---------------- payment check after the order (ROSE matches the money SMS) ----------------
@@ -1507,7 +1575,7 @@ function start(S, P, liveId) {
     about: ['About us', S.live ? S.name + ': ' + S.tagline : S.name + ' is a demo store made with ROSE Store Builder. A real store writes its own story here.'],
     contact: ['Contact', 'Phone, e-mail, address and map. Live chat is at the bottom right.'],
     return: ['Return policy', 'Example: return or exchange within 7 days with the invoice. Each store writes its own rules.'],
-    privacy: ['Privacy policy', 'How the store uses customer data. ROSE gives every store a ready template.'],
+    privacy: ['Privacy policy', 'How the store uses customer data. ROSE gives every store a ready template. Fake-order protection: when you place an order, the shop keeps your IP address, a device code made by your browser and the order time, only to stop fake, duplicate and robot orders. Risky orders may be asked for an SMS code or an advance payment.'],
     terms: ['Terms', 'Store terms and conditions.'],
   };
 

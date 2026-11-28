@@ -11,6 +11,32 @@ const NAMES = ['Rahim Uddin', 'Nusrat Jahan', 'Karim Ahmed', 'Sadia Islam', 'Tan
 const PLACES = [['Dhaka', 'Mirpur'], ['Dhaka', 'Uttara'], ['Chattogram', 'Panchlaish'], ['Gazipur', 'Tongi'], ['Sylhet', 'Zindabazar'], ['Khulna', 'Sonadanga']];
 const STATUS = ['delivered', 'delivered', 'delivered', 'shipped', 'confirmed', 'new', 'packed', 'cancelled'];
 
+function demoShield() {
+  const settings: Record<string, any> = {
+    on: true, one_per_hours: 24, max_per_hour: 3, otp: 'risky', advance: true, advance_amount: 150, otp_score: 40, block_score: 80, network: true, courier: true,
+    courier_min: 60, vpn: false, foreign_cod: true, max_cod: 5000, speed: true, trap: true, trusted: true,
+    block_msg_bn: 'দুঃখিত, এই অর্ডারটি নেওয়া যাচ্ছে না। দোকানে কল করুন।', block_msg_en: "Sorry, this order can't be placed. Please call the shop.",
+  };
+  const ago = (m: number) => new Date(Date.now() - m * 60000).toISOString();
+  const checks = [
+    { id: 'c1', at: ago(12), phone: '01712345321', email: '', name: 'Test Asdf', ip: '103.92.84.10', device: 'd9x2k1-a7f3', country: 'BD', total: 7400, payment: 'cod', risk: 100, action: 'block', reasons: ['4 orders from this phone/device in an hour', 'name looks fake'], order_no: null, reviewed: '' },
+    { id: 'c2', at: ago(45), phone: '01998765840', email: '', name: 'Rakib Hasan', ip: '37.111.200.4', device: 'd3kq81-b2c9', country: 'BD', total: 2350, payment: 'cod', risk: 61, action: 'advance', reasons: ['ROSE shops: 3 delivered, 6 returned/cancelled'], order_no: null, reviewed: '' },
+    { id: 'c3', at: ago(90), phone: '01811223344', email: '', name: 'Sumaiya Akter', ip: '103.4.145.2', device: 'd71mmz-c4d1', country: 'BD', total: 1290, payment: 'cod', risk: 45, action: 'otp_ok', reasons: ['form filled too fast'], order_no: 1047, reviewed: '' },
+    { id: 'c4', at: ago(160), phone: '01755501234', email: '', name: 'Jamal Uddin', ip: '45.12.1.9', device: 'd0a8f2-e9e1', country: 'US', total: 3100, payment: 'cod', risk: 75, action: 'duplicate', reasons: ['an order from this phone or Gmail is still running'], order_no: null, reviewed: '' },
+  ];
+  const blocks: any[] = [{ id: 'b1', kind: 'phone', value: '01700011122', reason: 'returned 4 times', shared: true, added_by: 'demo@myrosebd.com', created_at: ago(3000) }];
+  return {
+    shield_get: () => ({ settings, sms: { provider: 'alpha', has_key: true, key_end: 'ab12', sender_id: '' }, courier: false, today: { blocked: 7, otp: 3, advance: 2, checked: 41 }, boss: true }),
+    shield_checks: (a: { p_all?: boolean }) => (a.p_all ? checks : checks.filter((c) => c.risk > 0)),
+    shield_blocklist: () => blocks,
+    shield_save: (a: { p_settings?: Record<string, any> }) => Object.assign(settings, a.p_settings || {}),
+    shield_block: (a: Record<string, any>) => { blocks.unshift({ id: 'b' + Date.now(), kind: a.p_kind, value: a.p_value, reason: a.p_reason || '', shared: a.p_shared !== false, added_by: 'demo@myrosebd.com', created_at: new Date().toISOString() }); return { ok: true }; },
+    shield_unblock: (a: { p_id?: string }) => { const i = blocks.findIndex((b) => b.id === a.p_id); if (i >= 0) blocks.splice(i, 1); return null; },
+    shield_review: (a: { p_id?: string; p_mark?: string }) => { const c = checks.find((x) => x.id === a.p_id); if (c) c.reviewed = a.p_mark || ''; return null; },
+    store_sms_save: null,
+  };
+}
+
 export default function DemoAdminPage() {
   const key = (new URLSearchParams(window.location.search).get('s') || 'fashionhub').replace(/[^a-z0-9-]/gi, '');
   const [ready, setReady] = useState<'' | 'ok' | 'missing'>('');
@@ -86,6 +112,8 @@ export default function DemoAdminPage() {
               months: Object.values(months).sort((x, y) => (x.mon < y.mon ? -1 : 1)),
             };
           },
+          // ORDER SHIELD in the demo: sample risky orders and a blocklist (nothing is saved)
+          ...demoShield(),
           my_website_access: { email: 'demo@myrosebd.com', plan: 'business', ends_at: new Date(Date.now() + 365 * 864e5).toISOString(), products_limit: 1000, staff_limit: 5, stores_limit: 1 },
         },
       );
