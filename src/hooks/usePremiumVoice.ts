@@ -473,7 +473,7 @@ export function usePremiumVoice(opts: Options) {
         lastRecipeAt.current = Date.now();
         lastGoAt.current = Date.now();
         recipeRef.current = { steps: ['open comments here', 'reply all comments'], at: 0 };
-        await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + 'এই ভিডিওর কমেন্টগুলো দেখে রিপ্লাই দিচ্ছি।');
+        await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + 'এই ভিডিওর বাকি কমেন্টগুলো দেখে রিপ্লাই দিচ্ছি।');
         if (!activeRef.current) return;
         runRecipeStep();
         return;
@@ -509,6 +509,8 @@ export function usePremiumVoice(opts: Options) {
         const afterGo = Date.now() - lastGoAt.current < 15 * 60 * 1000;
         const no = (corrects || afterGo) && !nth ? lastPostNo.current : nth || 1;
         if (!corrects || nth) lastPostNo.current = no;
+        // after this job, "নিচে আরো আছে দেখো" means these same comments
+        lastGoAt.current = Date.now();
         recipeRef.current = {
           // right after he was taken to a video: the comments of THAT video on the screen, no walking back to the top
           steps: [afterGo && !nth ? 'open comments here' : no === 1 ? 'open latest post comments' : `open post ${no} comments`, 'reply all comments'],

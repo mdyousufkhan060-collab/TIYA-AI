@@ -95,7 +95,9 @@ export function saysYes(t: string): boolean {
 /** right after ROSE stopped on a video: "দেখো রিপ্লাই বাকি আছে কিনা, রিপ্লাই দাও" (any reply / comment talk) = that video */
 export function asksReplyHere(t: string): boolean {
   const s = t.toLowerCase();
-  return REPLY.test(s) || (/কমেন্ট|কমেন|কমন|comment/.test(s) && /দেখো|চেক|check|করো|দাও|খুল/.test(s));
+  // "নিচে আরো আছে দেখো" / "আরো বাকি আছে" right after a reply job = go on with the same comments
+  return REPLY.test(s) || (/কমেন্ট|কমেন|কমন|comment/.test(s) && /দেখো|চেক|check|করো|দাও|খুল/.test(s)) ||
+    /আরো ?আছে|আরও ?আছে|আরোআসে|আরো আসে|বাকি আছে|বাকি রয়ে|নিচে আরো|নিচে আরও|নিচে দেখো/.test(s);
 }
 
 /** 4320 → "৩ দিন", 180 → "৩ ঘণ্টা" (how ROSE says back the age he meant) */
