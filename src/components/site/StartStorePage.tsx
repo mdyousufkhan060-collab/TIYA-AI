@@ -10,9 +10,6 @@ import { livePrice, useLiveStorePrices } from '../../utils/liveStorePrices';
  * Google sign-in with the company Gmail → company details → 5-day free trial starts → the store is live.
  */
 const KEY = 'rose_start_store';
-const input = 'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-1.5 text-[13.5px] text-white placeholder:text-slate-500';
-const lbl = 'block text-[12px] font-bold text-slate-200';
-const bn = 'ml-1 font-normal text-slate-400';
 const DISTRICTS = ['Dhaka', 'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogura', 'Brahmanbaria', 'Chandpur', 'Chapainawabganj', 'Chattogram', 'Chuadanga', "Cox's Bazar", 'Cumilla', 'Dinajpur', 'Faridpur', 'Feni', 'Gaibandha', 'Gazipur', 'Gopalganj', 'Habiganj', 'Jamalpur', 'Jashore', 'Jhalokati', 'Jhenaidah', 'Joypurhat', 'Khagrachhari', 'Khulna', 'Kishoreganj', 'Kurigram', 'Kushtia', 'Lakshmipur', 'Lalmonirhat', 'Madaripur', 'Magura', 'Manikganj', 'Meherpur', 'Moulvibazar', 'Munshiganj', 'Mymensingh', 'Naogaon', 'Narail', 'Narayanganj', 'Narsingdi', 'Natore', 'Netrokona', 'Nilphamari', 'Noakhali', 'Pabna', 'Panchagarh', 'Patuakhali', 'Pirojpur', 'Rajbari', 'Rajshahi', 'Rangamati', 'Rangpur', 'Satkhira', 'Shariatpur', 'Sherpur', 'Sirajganj', 'Sunamganj', 'Sylhet', 'Tangail', 'Thakurgaon'];
 const phoneOk = (p: string) => /^01[3-9]\d{8}$/.test(p);
 
@@ -145,185 +142,221 @@ export default function StartStorePage() {
     }
   };
 
-  const shell = (body: React.ReactNode, sub = true) => (
-    <div className="h-[100dvh] overflow-y-auto overscroll-y-contain bg-[#07090D] px-4 py-3 pb-10 text-white md:px-8 md:py-3">
-      <div className="mx-auto max-w-[1500px] space-y-2.5 md:space-y-3">
-        <a href="/demos" className="text-[12px] font-bold text-teal-300">‹ All designs</a>
-        <h1 className="text-xl font-extrabold md:flex md:items-baseline md:gap-3 md:text-2xl">Get your own store {sub && <span className="block text-[13px] font-semibold text-slate-400 md:text-[15px]">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</span>}</h1>
+  // LOCKED (owner, Nov 28 2026 8:14 PM): pink, square-corner /start design approved from the review file
+  // (public/demos/start-preview.html). Full width on every screen, no dark side edges. Do not change unless the owner asks.
+  const shell = (body: React.ReactNode) => (
+    <div className="flex h-[100dvh] w-full flex-col overflow-y-auto overscroll-y-contain bg-[#fde8f0] text-[#3b0a24] [&_*]:rounded-none" style={{ fontFamily: 'Poppins, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", sans-serif' }}>
+      <div className="w-full flex-1 bg-[linear-gradient(180deg,#fbd3e3_0,#fde8f0_260px)] px-[clamp(14px,3vw,48px)] pt-[18px]">
+        <a href="/demos" className="text-[13px] font-bold text-[#e5337f]">‹ All designs</a>
+        <h1 className="mb-0.5 mt-2 text-[clamp(24px,3vw,38px)] font-extrabold tracking-tight text-[#6d0f3f]">Get your own store</h1>
+        <p className="mb-4 text-[clamp(14px,1.4vw,17px)] font-semibold text-[#e5337f]">নিজের অনলাইন দোকান খুলুন · ৫ দিন ফ্রি</p>
         {body}
-        <p className="pt-2 text-center text-[11px] text-slate-500">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a className="underline" href="/policies.html">Policies</a></p>
+        <p className="mt-7 pb-3.5 text-center text-[12.5px] text-[#6b5160]">ROSE · myrosebd.com · Help: WhatsApp 01719188777 · <a className="underline" href="/policies.html">Policies</a></p>
       </div>
+      <div className="h-16 w-full shrink-0 bg-[linear-gradient(90deg,#6d0f3f,#b0205f_60%,#6d0f3f)] [clip-path:polygon(0_55%,18%_30%,40%_50%,62%_20%,82%_45%,100%_25%,100%_100%,0_100%)]" />
     </div>
   );
+  const step = (n: number, t: string, b: string) => (
+    <p className="mb-3 mt-1 flex items-center gap-2.5 text-[15px] font-semibold">
+      <b className="grid h-7 w-7 shrink-0 place-items-center bg-[#6d0f3f] text-[14px] text-white">{n}</b>
+      <span>{t} <span className="font-medium text-[#6b5160]">{b}</span></span>
+    </p>
+  );
+  const panel = 'border-[1.5px] border-[#f3b8cf] bg-[#fff6f9] p-[18px] shadow-[0_10px_28px_rgba(109,15,63,0.08)] lg:p-[26px]';
 
-  if (!ready) return shell(<Loader2 className="h-6 w-6 animate-spin text-teal-300" />);
+  if (!ready) return shell(<Loader2 className="h-6 w-6 animate-spin text-[#e5337f]" />);
 
   const photo = (x: Demo) => {
     const p = (x.products || []).find((q) => q[6]);
     const u = p ? String(p[6]) : '';
-    return !u ? '' : /^https?:/.test(u) ? u : `https://images.unsplash.com/${u}?w=480&q=60&auto=format&fit=crop`;
+    return !u ? '' : /^https?:/.test(u) ? u : `https://images.unsplash.com/${u}?w=600&q=65&auto=format&fit=crop`;
   };
-  // bigger design cards with a photo of what that shop sells (2 per row on phones and computers)
+  const SV = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const icon = (k: string) => {
+    const c = 'h-[26px] w-[26px] shrink-0 text-[#e5337f]';
+    if (k === 'fashionhub') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M12 7a2 2 0 1 1 2-2c0 1-2 1.5-2 3v1L2.5 16.5c-.7.6-.3 1.5.6 1.5h17.8c.9 0 1.3-.9.6-1.5L12 9" /></svg>;
+    if (k === 'sotadari') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M2 3h3l2.6 12h11L21 7H6.2" /><circle cx="9" cy="19.5" r="1.5" /><circle cx="17" cy="19.5" r="1.5" /></svg>;
+    if (k === 'shopshotoi') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" /><path d="M3 7l9 5 9-5M12 12v10" /></svg>;
+    if (k === 'homenest') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M4 11V8a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3" /><path d="M2 13a2 2 0 0 1 4 0v2h12v-2a2 2 0 0 1 4 0v5H2v-5ZM5 18v2M19 18v2" /></svg>;
+    if (k === 'medicare') return <svg viewBox="0 0 24 24" className={c} {...SV}><rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-45 12 12)" /><path d="M8.5 8.5l7 7" /></svg>;
+    if (k === 'printpack') return <svg viewBox="0 0 24 24" className={c} {...SV}><path d="M3 12V3h9l9 9-9 9-9-9Z" /><circle cx="7.5" cy="7.5" r="1.5" /></svg>;
+    return <svg viewBox="0 0 24 24" className={c} fill="currentColor"><path d="M8 7V6a4 4 0 0 1 8 0v1h3l1 15H4L5 7h3Zm2 0h4V6a2 2 0 0 0-4 0v1Z" /></svg>;
+  };
+  // design cards: 2 a row on phones, 3 on tablets, as many as fit on computers (fills the screen)
   const designs = (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] lg:gap-3.5 min-[1800px]:grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
       {Object.entries(demos).map(([k, x]) => (
-        <button key={k} type="button" onClick={() => { setKey(k); localStorage.setItem(KEY, k); }} className={`overflow-hidden rounded-xl border text-left transition ${key === k ? 'border-teal-400 ring-2 ring-teal-400/40' : 'border-white/10 hover:border-white/30'}`}>
-          <span className="relative block h-24 bg-white/5 md:h-28">
-            {photo(x) ? <img src={photo(x)} alt="" loading="lazy" className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-4xl">{x.logo}</span>}
-            {key === k && <span className="absolute right-1.5 top-1.5 rounded-full bg-teal-500 px-2 py-0.5 text-[10px] font-bold text-white">CHOSEN</span>}
-          </span>
-          <span className="flex items-center gap-2 bg-[#0d1016] px-2.5 py-2">
-            <span className="text-xl">{x.logo}</span>
+        <button key={k} type="button" onClick={() => { setKey(k); localStorage.setItem(KEY, k); }} className={`relative flex flex-col bg-[#fff6f9] text-left transition ${key === k ? 'border-[3px] border-[#e5337f] shadow-[0_8px_22px_rgba(229,51,127,0.25)]' : 'border-[1.5px] border-[#f3b8cf] hover:border-[#f472a8]'}`}>
+          {photo(x) ? <img src={photo(x)} alt={x.name} loading="lazy" className="aspect-[16/10] w-full bg-[#f9d5e3] object-cover" /> : <span className="grid aspect-[16/10] w-full place-items-center bg-[#f9d5e3] text-4xl">{x.logo}</span>}
+          {key === k && <span className="absolute right-2 top-2 bg-[#e5337f] px-2 py-1 text-[11px] font-extrabold tracking-wider text-white">CHOSEN</span>}
+          <span className="flex items-center gap-2.5 border-t-[1.5px] border-[#f3b8cf] px-3 py-2.5">
+            {icon(k)}
             <span className="min-w-0">
-              <span className="block truncate text-[13px] font-bold">{x.name}</span>
-              <span className="block truncate text-[11px] text-slate-400">{x.type}</span>
+              <span className="block truncate text-[15px] font-extrabold leading-tight">{x.name}</span>
+              <span className="block truncate text-[12.5px] text-[#6b5160]">{x.type}</span>
             </span>
           </span>
         </button>
       ))}
     </div>
   );
+  const twoCol = (left: React.ReactNode, right: React.ReactNode) => (
+    <div className="grid gap-[22px] lg:grid-cols-[minmax(0,1fr)_clamp(360px,32vw,560px)] lg:items-start lg:gap-[clamp(20px,2.5vw,44px)]">
+      <section>{left}</section>
+      <aside className={`${panel} lg:sticky lg:top-[18px]`}>{right}</aside>
+    </div>
+  );
 
   const planPrice = choice === 'lifetime' ? lifePrice : choice === 'monthly' ? livePrice(live[tier], months) : 0;
+  const on = 'border-[3px] border-[#e5337f] bg-[#fde3ed]';
+  const off = 'border-[1.5px] border-[#f3b8cf] bg-white';
   const plans = (
     <div className="space-y-2">
-      <p className={lbl}>Choose a plan</p>
+      {step(3, 'Choose a plan', 'প্ল্যান বাছুন')}
       <div className="grid gap-2 sm:grid-cols-3">
         {([
           ['trial', '5-day free trial', '0 Tk · pay later'],
           ['monthly', 'Monthly plan', `from ${tk(live.starter)} / month`],
           ['lifetime', 'Lifetime website', `${tk(lifePrice)} once`],
         ] as Array<['trial' | 'monthly' | 'lifetime', string, string]>).map(([k, t, sub]) => (
-          <button key={k} type="button" onClick={() => setChoice(k)} className={`rounded-xl border p-3 text-left ${choice === k ? (k === 'lifetime' ? 'border-amber-400 bg-amber-500/10' : 'border-teal-400 bg-teal-500/10') : 'border-white/10 bg-black/30'}`}>
-            <span className="block text-[13.5px] font-extrabold">{t}</span>
-            <span className={`block text-[12px] ${k === 'lifetime' ? 'text-amber-300' : 'text-teal-300'}`}>{sub}</span>
+          <button key={k} type="button" onClick={() => setChoice(k)} className={`p-[11px] text-left ${choice === k ? on : off}`}>
+            <span className="block text-[14px] font-bold">{t}</span>
+            <span className="block text-[12px] font-semibold text-[#e5337f]">{sub}</span>
           </button>
         ))}
       </div>
       {choice === 'monthly' && (
-        <div className="space-y-2 rounded-xl border border-white/10 bg-black/20 p-3">
+        <div className="space-y-2 border-[1.5px] border-[#f3b8cf] bg-white p-3">
           <div className="grid grid-cols-3 gap-1.5">
             {(['starter', 'pro', 'business'] as StorePlanId[]).map((p) => (
-              <button key={p} type="button" onClick={() => setTier(p)} className={`rounded-lg border px-2 py-2 text-center ${tier === p ? 'border-teal-400 bg-teal-500/10' : 'border-white/10'}`}>
-                <span className="block text-[12px] font-bold">{STORE_PLANS[p].label}</span>
-                <span className="block text-[11px] text-slate-400">{tk(live[p])}/mo</span>
+              <button key={p} type="button" onClick={() => setTier(p)} className={`px-2 py-2 text-center ${tier === p ? on : off}`}>
+                <span className="block text-[12.5px] font-bold">{STORE_PLANS[p].label}</span>
+                <span className="block text-[11px] text-[#6b5160]">{tk(live[p])}/mo</span>
               </button>
             ))}
           </div>
           <div className="grid grid-cols-5 gap-1">
             {STORE_DURATIONS.map((x) => (
-              <button key={x.months} type="button" onClick={() => setMonths(x.months)} className={`rounded-lg border py-1.5 text-center ${months === x.months ? 'border-teal-400 bg-teal-500/10' : 'border-white/10'}`}>
+              <button key={x.months} type="button" onClick={() => setMonths(x.months)} className={`py-1.5 text-center ${months === x.months ? on : off}`}>
                 <span className="block text-[12.5px] font-bold">{x.months} mo</span>
-                <span className="block text-[10px] text-amber-300">{x.off ? `-${x.off}%` : ' '}</span>
+                <span className="block text-[10px] font-semibold text-[#e5337f]">{x.off ? `-${x.off}%` : ' '}</span>
               </button>
             ))}
           </div>
-          <p className="text-right text-[14px] font-extrabold text-amber-300">{STORE_PLANS[tier].label} · {months} months = {tk(planPrice)}</p>
+          <p className="text-right text-[14px] font-extrabold text-[#6d0f3f]">{STORE_PLANS[tier].label} · {months} months = {tk(planPrice)}</p>
         </div>
       )}
       {choice === 'lifetime' && (
-        <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">
-          <p className="text-[13px] font-extrabold text-amber-200">Lifetime website · {tk(lifePrice)} one-time</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-amber-50/90"><b>Terms:</b> {lifetimeTerms(lifePrice)}</p>
+        <div className="border-[1.5px] border-[#e5337f] bg-[#fde3ed] p-3">
+          <p className="text-[13.5px] font-extrabold text-[#6d0f3f]">Lifetime website · {tk(lifePrice)} one-time</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-[#3b0a24]"><b>Terms:</b> {lifetimeTerms(lifePrice)}</p>
         </div>
       )}
       {needPay && choice !== 'trial' && <BuyPlan startPlan={choice === 'lifetime' ? 'lifetime' : tier} startMonths={months} />}
     </div>
   );
+  const btnMain = 'flex h-[52px] w-full items-center justify-center gap-2 bg-[#6d0f3f] text-[15px] font-extrabold tracking-wide text-white hover:bg-[#8a1450] disabled:opacity-60';
+  const btnLine = 'flex h-[52px] w-full items-center justify-center gap-2 border-2 border-[#6d0f3f] bg-white text-[15px] font-extrabold text-[#6d0f3f] hover:bg-[#6d0f3f] hover:text-white';
 
   if (done)
     return shell(
-      <div className="space-y-3 rounded-2xl border border-emerald-400/50 bg-emerald-500/10 p-4">
-        <p className="text-lg font-extrabold text-emerald-300">Your store is live! 🎉</p>
-        <a href={done.url} target="_blank" rel="noreferrer" className="block break-all text-[15px] font-bold text-white underline">{done.url.replace(/^https?:\/\//, '')}</a>
-        {done.ends && <p className="text-[13px] text-slate-200">Free until {new Date(done.ends).toLocaleDateString('en-GB')}. After that choose 3, 6, 9, 12 or 24 months to keep it open.</p>}
+      <div className={`${panel} mx-auto max-w-[760px] space-y-3`}>
+        <p className="text-xl font-extrabold text-[#6d0f3f]">Your store is live! 🎉</p>
+        <a href={done.url} target="_blank" rel="noreferrer" className="block break-all text-[16px] font-bold text-[#e5337f] underline">{done.url.replace(/^https?:\/\//, '')}</a>
+        {done.ends && <p className="text-[13.5px] text-[#3b0a24]">Free until {new Date(done.ends).toLocaleDateString('en-GB')}. After that choose 3, 6, 9, 12 or 24 months to keep it open.</p>}
         {choice !== 'trial' && (
-          <div className="space-y-2 rounded-xl border border-amber-400/40 bg-black/30 p-3">
-            <p className="text-[14px] font-extrabold text-amber-300">Now pay for your {choice === 'lifetime' ? 'LIFETIME website' : `${STORE_PLANS[tier].label} plan (${months} months)`}: {tk(planPrice)}</p>
-            <p className="text-[12px] text-slate-300">Your store is already open with the 5-day trial. When the payment is checked, your plan starts by itself.</p>
+          <div className="space-y-2 border-[1.5px] border-[#e5337f] bg-[#fde3ed] p-3">
+            <p className="text-[14px] font-extrabold text-[#6d0f3f]">Now pay for your {choice === 'lifetime' ? 'LIFETIME website' : `${STORE_PLANS[tier].label} plan (${months} months)`}: {tk(planPrice)}</p>
+            <p className="text-[12.5px] text-[#3b0a24]">Your store is already open with the 5-day trial. When the payment is checked, your plan starts by itself.</p>
             <BuyPlan startPlan={choice === 'lifetime' ? 'lifetime' : tier} startMonths={months} />
           </div>
         )}
-        <a href={done.url} target="_blank" rel="noreferrer" className="flex h-11 items-center justify-center rounded-xl bg-white text-[13px] font-bold text-black">OPEN MY STORE</a>
-        <a href="/app" className="flex h-11 items-center justify-center rounded-xl bg-teal-600 text-[13px] font-bold">MANAGE: PRODUCTS · ORDERS · PLAN</a>
-        <p className="text-[12px] text-slate-300">To change the name, phone, address, logo or banners later: myrosebd.com/app → sign in with this Gmail → Settings → WORKSPACE → MY DETAILS (name, phone, address) and WEBSITE ADMIN → HOMEPAGE & DESIGN (logo, banners). Or on your shop: Account → Store admin.</p>
+        <a href={done.url} target="_blank" rel="noreferrer" className={btnLine}>OPEN MY STORE</a>
+        <a href="/app" className={btnMain}>MANAGE: PRODUCTS · ORDERS · PLAN</a>
+        <p className="text-[12.5px] text-[#6b5160]">To change the name, phone, address, logo or banners later: myrosebd.com/app → sign in with this Gmail → Settings → WORKSPACE → MY DETAILS (name, phone, address) and WEBSITE ADMIN → HOMEPAGE & DESIGN (logo, banners). Or on your shop: Account → Store admin.</p>
       </div>,
     );
 
+  const chosenLine = d && (
+    <>
+      <p className="mb-3.5 border-l-4 border-[#e5337f] bg-[#fde3ed] px-3 py-2.5 text-[14px]">Chosen design: <b className="text-[#6d0f3f]">{d.name}</b> · {d.type}</p>
+      <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="mb-4 inline-block text-[14px] font-semibold text-[#e5337f] underline">See the {d.name} demo first</a>
+    </>
+  );
+
   if (!email)
     return shell(
-      <div className="space-y-4">
-        <p className="text-[13px] text-slate-300">1 · Choose a design <span className={bn}>ডিজাইন বাছুন</span></p>
-        {designs}
-        {d && <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="text-[12px] text-teal-300 underline">See the {d.name} demo first</a>}
-        <p className="text-[13px] text-slate-300">2 · Sign in with your company Gmail <span className={bn}>কোম্পানির জিমেইল দিয়ে লগইন</span></p>
-        <button type="button" disabled={!d} onClick={() => void google()} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-white text-[14px] font-bold text-black disabled:opacity-50">
-          <img src="/brand/google.svg" alt="" className="h-5 w-5" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} /> Continue with Google
-        </button>
-        <p className="text-[12px] text-slate-400">5-day free trial, once per Gmail. No payment now.</p>
-      </div>,
+      twoCol(
+        <>
+          {step(1, 'Choose a design', 'ডিজাইন বাছুন')}
+          {designs}
+        </>,
+        <>
+          {chosenLine}
+          {step(2, 'Sign in with your company Gmail', 'কোম্পানির জিমেইল দিয়ে লগইন')}
+          <button type="button" disabled={!d} onClick={() => void google()} className={`${btnLine} disabled:opacity-50`}>
+            <img src="/brand/google.svg" alt="" className="h-5 w-5" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} /> Continue with Google
+          </button>
+          <p className="mt-2.5 text-[13px] text-[#6b5160]">5-day free trial, once per Gmail. No payment now.</p>
+        </>,
+      ),
     );
 
   if (existing)
     return shell(
-      <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-        <p className="text-[14px]">You already have a store: <b>{existing.name}</b></p>
-        <a href={`/shop/${existing.slug}`} className="flex h-11 items-center justify-center rounded-xl bg-white text-[13px] font-bold text-black">OPEN MY SHOP</a>
-        <a href="/app?open=store" className="flex h-11 items-center justify-center rounded-xl bg-teal-600 text-[13px] font-bold">STORE ADMIN</a>
-        <p className="text-[12px] text-slate-400">Signed in as {email}. More stores need the BUSINESS plan.</p>
+      <div className={`${panel} mx-auto max-w-[760px] space-y-3`}>
+        <p className="text-[15px]">You already have a store: <b className="text-[#6d0f3f]">{existing.name}</b></p>
+        <a href={`/shop/${existing.slug}`} className={btnLine}>OPEN MY SHOP</a>
+        <a href="/app?open=store" className={btnMain}>STORE ADMIN</a>
+        <p className="text-[12.5px] text-[#6b5160]">Signed in as {email}. More stores need the BUSINESS plan.</p>
       </div>,
     );
 
+  const inp = 'mt-1.5 block w-full border-[1.5px] border-[#f3b8cf] bg-white px-3 py-2.5 text-[14.5px] text-[#3b0a24] placeholder:text-[#b08a9c] focus:border-[#e5337f] focus:outline-none';
+  const lab = 'block text-[13px] font-bold text-[#6d0f3f]';
   return shell(
-    <div className="grid gap-4 md:grid-cols-[minmax(320px,420px)_1fr] md:items-start md:gap-6 xl:grid-cols-[520px_1fr]">
-      <div className="space-y-2 md:sticky md:top-4 md:mt-12">
-        <p className={lbl}>Choose a design</p>
+    twoCol(
+      <>
+        {step(1, 'Choose a design', 'ডিজাইন বাছুন')}
         {designs}
-        {d && (
-          <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="block text-center text-[12px] text-teal-300 underline">
-            See {d.name} demo ↗
-          </a>
-        )}
-      </div>
-      <div className="space-y-2">
-      <p className="text-center text-[17px] font-extrabold text-teal-300 md:text-[24px]">নিজের অনলাইন দোকান খুলুন <span className="text-amber-300">· ৫ দিন ফ্রি</span></p>
+        {d && <a href={`/demos/store.html?s=${key}`} target="_blank" rel="noreferrer" className="mt-3 inline-block text-[14px] font-semibold text-[#e5337f] underline">See the {d.name} demo first ↗</a>}
+      </>,
       <div
-        className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:p-4"
+        className="space-y-2.5"
         onFocusCapture={(e) => {
           const t = e.target as HTMLElement;
           if (!/^(INPUT|TEXTAREA)$/.test(t.tagName) || (t as HTMLInputElement).type === 'file') return;
           window.setTimeout(() => t.scrollIntoView({ block: 'center', behavior: 'smooth' }), 280);
         }}
       >
-        <div className="grid grid-cols-2 gap-2">
-          <label className={lbl}>Company name (English) *
-            <input className={input + ' mt-1'} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Rahim Fashion" /></label>
-          <label className={lbl}>Company name (Bangla)
-            <input className={input + ' mt-1'} value={f.nameBn} onChange={(e) => set('nameBn', e.target.value)} placeholder="রহিম ফ্যাশন" /></label>
+        {step(2, 'Your company details', 'কোম্পানির তথ্য')}
+        <div className="grid grid-cols-2 gap-2.5">
+          <label className={lab}>Company name (English) *
+            <input className={inp} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Rahim Fashion" /></label>
+          <label className={lab}>Company name (Bangla)
+            <input className={inp} value={f.nameBn} onChange={(e) => set('nameBn', e.target.value)} placeholder="রহিম ফ্যাশন" /></label>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <label className={lbl}>Phone / WhatsApp *
-            <input className={input + ' mt-1'} value={f.whatsapp} onChange={(e) => set('whatsapp', e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" placeholder="01XXXXXXXXX" /></label>
-          <label className={lbl}>District *
-            <select className={input + ' mt-1'} value={DISTRICTS.includes(f.city) ? f.city : 'Dhaka'} onChange={(e) => set('city', e.target.value)}>
-              {DISTRICTS.map((x) => <option key={x} value={x} className="bg-[#0d1016]">{x}</option>)}
+        <div className="grid grid-cols-2 gap-2.5">
+          <label className={lab}>Phone / WhatsApp *
+            <input className={inp} value={f.whatsapp} onChange={(e) => set('whatsapp', e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" placeholder="01XXXXXXXXX" /></label>
+          <label className={lab}>District *
+            <select className={inp} value={DISTRICTS.includes(f.city) ? f.city : 'Dhaka'} onChange={(e) => set('city', e.target.value)}>
+              {DISTRICTS.map((x) => <option key={x} value={x}>{x}</option>)}
             </select></label>
         </div>
-        <label className={lbl}>Address <span className="font-normal text-slate-500">(optional)</span>
-          <input className={input + ' mt-1'} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area" /></label>
-        <label className={lbl}>Web address *
-          <span className="mt-1 flex items-center gap-1"><input className={input} value={f.slug || slugify(f.name)} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="rahim-fashion" /><span className="shrink-0 text-[12px] text-slate-400">.myrosebd.com</span></span></label>
+        <label className={lab}>Address <span className="font-normal text-[#6b5160]">(optional)</span>
+          <input className={inp} value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="House, road, area" /></label>
+        <label className={lab}>Web address *
+          <span className="flex items-center gap-1.5"><input className={inp} value={f.slug || slugify(f.name)} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="rahim-fashion" /><span className="mt-1.5 shrink-0 text-[13px] font-normal text-[#6b5160]">.myrosebd.com</span></span></label>
         {plans}
-        <div className="space-y-1 pt-1 md:sticky md:bottom-0 md:-mx-4 md:bg-[#0d1016]/95 md:px-4 md:py-2 md:backdrop-blur">
-          {msg && <p className="text-[13px] text-rose-300">{msg}</p>}
-          <button type="button" disabled={busy || !d} onClick={() => void create()} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 text-[14px] font-extrabold text-black disabled:opacity-60">
+        <div className="space-y-1.5 pt-1">
+          {msg && <p className="border-l-4 border-[#e5337f] bg-[#fde3ed] px-3 py-2 text-[13px] font-semibold text-[#b0205f]">{msg}</p>}
+          <button type="button" disabled={busy || !d} onClick={() => void create()} className={btnMain}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} {choice === 'trial' ? 'START 5-DAY FREE STORE' : `START STORE · THEN PAY ${tk(planPrice)}`}
           </button>
-          <p className="text-center text-[11px] text-slate-500">Logo, banners, more phones and emails: add later in Settings · <a className="underline" href="/terms.html">Terms</a></p>
+          <p className="text-center text-[12px] text-[#6b5160]">Logo, banners, more phones and emails: add later in Settings · <a className="underline" href="/terms.html">Terms</a></p>
         </div>
-      </div>
-      </div>
-    </div>,
-    false,
+      </div>,
+    ),
   );
 }
