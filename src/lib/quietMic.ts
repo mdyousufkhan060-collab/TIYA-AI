@@ -47,7 +47,7 @@ export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?:
       pre = [];
       return;
     }
-    const loud = rms > Math.max(0.018, floor * 3);
+    const loud = rms > Math.max(0.02, floor * 3.2);
     if (!talking) {
       floor = floor * 0.95 + rms * 0.05;
       pre.push(data);
@@ -73,7 +73,17 @@ export async function openQuietMic(onSpeech: (wavB64: string) => void, onLevel?:
       onSpeech(toWav16k(parts, rate));
     }
   };
-  src.connect(proc);
+  // only the voice band reaches ROSE: the low rumble of cars, fans and TV bass (under 120 Hz) and the hiss above
+  // 4 kHz are cut before ROSE listens, so loudness means a person talking, not the room
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 120;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 4000;
+  src.connect(hp);
+  hp.connect(lp);
+  lp.connect(proc);
   proc.connect(ctx.destination);
 
   return {
