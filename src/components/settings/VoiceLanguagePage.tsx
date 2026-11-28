@@ -149,7 +149,7 @@ export const VoiceLanguagePage: React.FC<VoiceLanguagePageProps> = ({
       const dialect = BENGALI_DIALECTS.find((d) => d.id === settings.bengaliDialect);
       const text =
         settings.language === 'Bengali'
-          ? dialect?.sample || 'হ্যালো, আমি টিয়া।'
+          ? dialect?.sample || 'হ্যালো, আমি রোজ।'
           : `Hello, I am ROSE.`;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = settings.language === 'Bengali' ? 'bn-BD' : languageCode(settings.language);

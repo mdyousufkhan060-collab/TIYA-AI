@@ -16,6 +16,7 @@ import { asksEnterPage, asksFacebookHome, asksFeedScroll, asksPhoneHome, asksLis
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
+import { catchTalkStyle } from '../lib/talkStyle';
 
 /**
  * ROSE PREMIUM voice (no API key on the phone).
@@ -295,7 +296,8 @@ export function usePremiumVoice(opts: Options) {
       if (!reply || action) {
         // a phone step is running: no voice for the in-between lines (much faster); the words stay in the
         // chat, and ROSE speaks once the job is done. Without an action: listen again.
-        if (!action && activeRef.current) listen();
+        // LOCKED (owner, Nov 28 11:05 PM): ROSE keeps her ears open while the phone works, so his words are never lost
+        if (activeRef.current) listen();
         return;
       }
       setState('speaking');
@@ -514,13 +516,47 @@ export function usePremiumVoice(opts: Options) {
       pendingRef.current = false;
       void speakRef.current?.('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।');
     }, /reply all/.test(app) ? 930000 : /switch profile|facebook home|list my profiles/.test(app) ? 40000 : /comments|go to post|post age|post date|post down/.test(app) ? 100000 : 35000);
+    // LOCKED (owner, Nov 28 11:05 PM): she still hears him while the job runs (answer() keeps it short then)
+    if (activeRef.current) window.setTimeout(() => listen(), 200);
     return true;
-  }, []);
+  }, [listen]);
+  /** his words heard while a phone job ran: answered right after the job's last line */
+  const laterRef = useRef('');
+  const toldLaterRef = useRef(false);
+  const answerRef = useRef<((h: string) => Promise<void>) | null>(null);
+  const resumeAfterJob = () => {
+    toldLaterRef.current = false;
+    const q = laterRef.current;
+    laterRef.current = '';
+    if (!activeRef.current) return;
+    if (q) void answerRef.current?.(q);
+    else listen();
+  };
 
   const answer = useCallback(
     async (heard: string) => {
       micRef.current?.setListening(false);
       optsRef.current.onAppend('user', heard);
+      // LOCKED (owner, Nov 28 11:05 PM): "নোয়াখালীর ভাষায় বলো" etc. is kept for every reply until he changes it
+      const style = catchTalkStyle(heard);
+      // a phone job is running (Facebook replies…): never start a second job; answer him short and keep working
+      if (watchRef.current !== null || pendingRef.current) {
+        const nmB = callNameOf(optsRef.current.yourName);
+        const tb = heard.toLowerCase();
+        if (style) {
+          await speakLine(`ঠিক আছে${nmB ? ' ' + nmB : ''}, এখন থেকে ${style} কথা বলবো।`);
+        } else if (/থামো|থামাও|থাম|বন্ধ করো|স্টপ|stop|কেটে দাও|রাখো/.test(tb)) {
+          await speakLine(`${nmB ? nmB + ', ' : ''}এখনই থামাতে ভাসমান রোজ বলটায় একবার চাপ দাও, সাথে সাথে থেমে যাবে।`);
+        } else if (heard.trim().length >= 4) {
+          laterRef.current = heard;
+          if (!toldLaterRef.current) {
+            toldLaterRef.current = true;
+            await speakLine(`শুনেছি${nmB ? ' ' + nmB : ''}। হাতের কাজটা শেষ করেই তোমার কথার উত্তর দিচ্ছি।`);
+          }
+        }
+        if (activeRef.current) listen();
+        return;
+      }
       stepsRef.current = 0;
       // time / date / day: the phone's own clock answers at once (quickAnswers.ts), never Google or the AI
       const qa = quickAnswer(heard) || nameCallAnswer(heard, callNameOf(optsRef.current.yourName));
@@ -770,6 +806,7 @@ export function usePremiumVoice(opts: Options) {
     },
     [runTurn, runRecipeStep, speakLine, listen],
   );
+  answerRef.current = answer;
   speakRef.current = speakLine;
 
   // Nov 28 (owner): he tapped the floating ball and came back to ROSE while she was working in Facebook → stop the
@@ -838,7 +875,7 @@ export function usePremiumVoice(opts: Options) {
           const nmF = callNameOf(optsRef.current.yourName);
           const who = owner ? `${plainName(owner)}-এর পোস্ট` : 'পরের পোস্ট';
           void speakLine(`${nmF ? nmF + ', ' : ''}${who}${caption ? `: ${caption.slice(0, 80)}` : ''}। আরো নিচে যাবো?`).then(() => {
-            if (activeRef.current) window.setTimeout(() => listen(), 300);
+            if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
           });
           return;
         }
@@ -848,7 +885,7 @@ export function usePremiumVoice(opts: Options) {
           lastGoAt.current = Date.now();
           const nm = callNameOf(optsRef.current.yourName);
           void speakLine(`${nm ? nm + ', ' : ''}এই ভিডিওতে কোনো কমেন্ট নেই, তাই কিছু লিখিনি। এখন কী করবো? চাইলে নিচের ভিডিওতে যেতে পারি।`).then(() => {
-            if (activeRef.current) window.setTimeout(() => listen(), 300);
+            if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
           });
           return;
         }
@@ -907,7 +944,7 @@ export function usePremiumVoice(opts: Options) {
               ? `${nm ? nm + ', ' : ''}${where}তোমার ${plainName(names[0])} আইডির আন্ডারে ${String(pages.length).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)])}টা পেজ আছে: ${pages.join(', ')}। কোনটাতে ঢুকবো?`
               : `${nm ? nm + ', ' : ''}তোমার ${plainName(names[0])} আইডির আন্ডারে কোনো পেজ দেখছি না।`;
             void speakLine(line).then(() => {
-              if (activeRef.current) window.setTimeout(() => listen(), 300);
+              if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
             });
             return;
           }
@@ -920,7 +957,7 @@ export function usePremiumVoice(opts: Options) {
             window.setTimeout(() => {
               if (!activeRef.current) return;
               void speakLine(`${nm ? nm + ', ' : ''}${plainName(sw)} ${activePageRef.current ? 'পেজে' : 'আইডিতে'} লগইন হয়েছে। এখন কী করবো বলো?`).then(() => {
-                if (activeRef.current) window.setTimeout(() => listen(), 300);
+                if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
               });
             }, 7000);
             return;
@@ -949,7 +986,7 @@ export function usePremiumVoice(opts: Options) {
             ? `${nm ? nm + ', ' : ''}নিচের ভিডিওতে এসেছি, এখানে তারিখ লেখা আছে ${datePart}। এটাতে ঢুকবো?`
             : `${nm ? nm + ', ' : ''}আমি নিচের ভিডিওতে এসেছি। এখানে কিছু করতে হবে? ঢুকবো?`;
           void speakLine(line).then(() => {
-            if (activeRef.current) window.setTimeout(() => listen(), 300);
+            if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
           });
           return;
         }
@@ -984,7 +1021,7 @@ export function usePremiumVoice(opts: Options) {
               : `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said.endsWith('তারিখের') ? rc.age.said : rc.age.said + ' আগের'} কোনো ভিডিও পাইনি। সবচেয়ে কাছের ভিডিওটা ${ageText} পোস্ট করা। এটাতে ঢুকবো?`;
           }
           void speakLine(line).then(() => {
-            if (activeRef.current) window.setTimeout(() => listen(), 300);
+            if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
           });
           return;
         }
@@ -992,7 +1029,7 @@ export function usePremiumVoice(opts: Options) {
         if (ok && rc.doneLine) {
           recipeRef.current = null;
           void speakLine(rc.doneLine).then(() => {
-            if (activeRef.current) window.setTimeout(() => listen(), 300);
+            if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
           });
           return;
         }
@@ -1005,7 +1042,7 @@ export function usePremiumVoice(opts: Options) {
           const sayIt = (text.match(/Say to him by name:\s*([^"\n]+)/) || [])[1];
           if (rc.label) {
             void speakLine(endLineFor(rc.label, nm)).then(() => {
-              if (activeRef.current) window.setTimeout(() => listen(), 300);
+              if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
             });
             return;
           }
@@ -1014,7 +1051,7 @@ export function usePremiumVoice(opts: Options) {
             (n ? `${n}টা কমেন্টে রিপ্লাই দিয়েছি। ` : /বাকি ছিল না/.test(text) ? 'নতুন কোনো কমেন্ট বাকি ছিল না। ' : '') +
             (sayIt ? sayIt.trim() : 'এখন আর কী করবো বলো?');
           void speakLine(line).then(() => {
-            if (activeRef.current) window.setTimeout(() => listen(), 300);
+            if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
           });
           return;
         }
@@ -1023,7 +1060,7 @@ export function usePremiumVoice(opts: Options) {
         if (!ok) {
           const why = text.replace(/^.*?(FAILED|ERROR)[:\s-]*/i, '').split('\n')[0].slice(0, 160).trim();
           void speakLine(why || 'কাজটা শেষ করতে পারিনি।').then(() => {
-            if (activeRef.current) window.setTimeout(() => listen(), 300);
+            if (activeRef.current) window.setTimeout(resumeAfterJob, 300);
           });
           return;
         }

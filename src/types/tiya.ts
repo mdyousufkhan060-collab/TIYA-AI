@@ -99,16 +99,16 @@ export interface BengaliDialectInfo {
 }
 
 export const BENGALI_DIALECTS: BengaliDialectInfo[] = [
-  { id: 'Standard', label: 'Standard Bangla', native: 'শুদ্ধ বাংলা', hint: 'standard (shuddho/promito) Bangladeshi Bengali', sample: 'হ্যালো, আমি টিয়া। আপনার কণ্ঠ একদম ঠিক আছে।' },
-  { id: 'Dhaka', label: 'Dhaka', native: 'ঢাকাইয়া', hint: 'Old Dhaka (Dhakaiya/Kutti) dialect, e.g. "কিবা আছেন?", "হাছা কইতাছি", "কইবার লাগছি"', sample: 'আমি টিয়া, আপনের কণ্ঠ এক্কেরে ঠিক আছে, বুঝছেন নি?' },
-  { id: 'Chattogram', label: 'Chattogram', native: 'চাটগাঁইয়া', hint: 'Chittagonian (Chatgaiya) dialect, e.g. "কেন আছন?", "গম আছি", "ন জানি", "অনেরে"', sample: 'আঁই টিয়া, অনর গলার আবাজ এক্কেবারে গম আছে।' },
-  { id: 'Noakhali', label: 'Noakhali', native: 'নোয়াখাইল্লা', hint: 'Noakhali dialect, e.g. "কিয়া করেন?", "হেতে", "আঁই", "কইচ্ছি", "বেজ্ঞুন"', sample: 'আঁই টিয়া, আন্নের গলা এক্কেরে ঠিক আছে।' },
-  { id: 'Sylhet', label: 'Sylhet', native: 'সিলেটি', hint: 'Sylheti dialect, e.g. "কিতা খবর?", "বালা আছি", "কিতা কররায়?", "আফনে"', sample: 'আমি টিয়া, আফনার আওয়াজ একদম বালা আছে।' },
-  { id: 'Rajshahi', label: 'Rajshahi', native: 'রাজশাহীর ভাষা', hint: 'Rajshahi (Barind) dialect, e.g. "কী করছিস গো?", "হামি", "যাছি", "খাছি"', sample: 'হামি টিয়া, তোমার গলা এক্কেবারে ঠিক আছে গো।' },
-  { id: 'Khulna', label: 'Khulna', native: 'খুলনার ভাষা', hint: 'Khulna/Jessore dialect, e.g. "কী কত্তিছ?", "যাতিছি", "খাতিছি", "কতিছি"', sample: 'আমি টিয়া, তুমার গলা একদম ঠিক আছে, কতিছি।' },
-  { id: 'Barishal', label: 'Barishal', native: 'বরিশাইল্লা', hint: 'Barishal dialect, e.g. "কেমন আছো গো?", "হেয়া", "মুই", "করছ্যা", "যাইবা"', sample: 'মুই টিয়া, তোমার গলা এক্কেরে ঠিক আছে।' },
-  { id: 'Rangpur', label: 'Rangpur', native: 'রংপুরিয়া', hint: 'Rangpuri dialect, e.g. "কেমন আছেন বাহে?", "মুই", "কোনটে", "কাইল", "বাহে"', sample: 'মুই টিয়া বাহে, তোমার গলা একদম ঠিক আছে।' },
-  { id: 'Mymensingh', label: 'Mymensingh', native: 'ময়মনসিংহের ভাষা', hint: 'Mymensingh dialect, e.g. "কিতা করুইন?", "আমরার", "যাইতাছি", "হুনছুইন?"', sample: 'আমি টিয়া, আফনের গলা এক্কেরে ঠিক আছে, হুনছুইন?' },
+  { id: 'Standard', label: 'Standard Bangla', native: 'শুদ্ধ বাংলা', hint: 'standard (shuddho/promito) Bangladeshi Bengali', sample: 'হ্যালো, আমি রোজ। আপনার কণ্ঠ একদম ঠিক আছে।' },
+  { id: 'Dhaka', label: 'Dhaka', native: 'পুরান ঢাকার ভাষা', hint: 'Old Dhaka (Dhakaiya/Kutti) dialect, e.g. "কিবা আছেন?", "হাছা কইতাছি", "কইবার লাগছি"', sample: 'আমি রোজ, আপনের কণ্ঠ এক্কেরে ঠিক আছে, বুঝছেন নি?' },
+  { id: 'Chattogram', label: 'Chattogram', native: 'চট্টগ্রামের ভাষা', hint: 'Chittagonian (Chatgaiya) dialect, e.g. "কেন আছন?", "গম আছি", "ন জানি", "অনেরে"', sample: 'আঁই রোজ, অনর গলার আবাজ এক্কেবারে গম আছে।' },
+  { id: 'Noakhali', label: 'Noakhali', native: 'নোয়াখালীর ভাষা', hint: 'Noakhali dialect, e.g. "কিয়া করেন?", "হেতে", "আঁই", "কইচ্ছি", "বেজ্ঞুন"', sample: 'আঁই রোজ, আন্নের গলা এক্কেরে ঠিক আছে।' },
+  { id: 'Sylhet', label: 'Sylhet', native: 'সিলেটের ভাষা', hint: 'Sylheti dialect, e.g. "কিতা খবর?", "বালা আছি", "কিতা কররায়?", "আফনে"', sample: 'আমি রোজ, আফনার আওয়াজ একদম বালা আছে।' },
+  { id: 'Rajshahi', label: 'Rajshahi', native: 'রাজশাহীর ভাষা', hint: 'Rajshahi (Barind) dialect, e.g. "কী করছিস গো?", "হামি", "যাছি", "খাছি"', sample: 'হামি রোজ, তোমার গলা এক্কেবারে ঠিক আছে গো।' },
+  { id: 'Khulna', label: 'Khulna', native: 'খুলনার ভাষা', hint: 'Khulna/Jessore dialect, e.g. "কী কত্তিছ?", "যাতিছি", "খাতিছি", "কতিছি"', sample: 'আমি রোজ, তুমার গলা একদম ঠিক আছে, কতিছি।' },
+  { id: 'Barishal', label: 'Barishal', native: 'বরিশালের ভাষা', hint: 'Barishal dialect, e.g. "কেমন আছো গো?", "হেয়া", "মুই", "করছ্যা", "যাইবা"', sample: 'মুই রোজ, তোমার গলা এক্কেরে ঠিক আছে।' },
+  { id: 'Rangpur', label: 'Rangpur', native: 'রংপুরের ভাষা', hint: 'Rangpuri dialect, e.g. "কেমন আছেন বাহে?", "মুই", "কোনটে", "কাইল", "বাহে"', sample: 'মুই রোজ বাহে, তোমার গলা একদম ঠিক আছে।' },
+  { id: 'Mymensingh', label: 'Mymensingh', native: 'ময়মনসিংহের ভাষা', hint: 'Mymensingh dialect, e.g. "কিতা করুইন?", "আমরার", "যাইতাছি", "হুনছুইন?"', sample: 'আমি রোজ, আফনের গলা এক্কেরে ঠিক আছে, হুনছুইন?' },
 ];
 
 /** The assistant's name is fixed and cannot be changed by users. */

@@ -17,6 +17,12 @@
  *   src/lib/replyRequest.ts    "reply to my post/video comments" + which post (দুই নম্বর, দুনামবার, ২য়, second); starts the fixed reply job
  *   LOCKED go to video N: replyRequest.goToPostNumber → "go to post N" → stops there → "আমি তোমার N নম্বর ভিডিওর কাছে আছি। এখন কী করবো বলো?"; "reply here" after it = that same video
  *   LOCKED (Nov 28 10:47 PM, owner): edge rose-chat AI uses the Admin 02 keys + Admin 05 text model (fallback gemini-3.8-flash, then Groq gpt-oss-120b). Do not change.
+ *   LOCKED (Nov 28 11:05 PM, owner): ears stay open during phone jobs (runTurn/runRecipeStep listen); while a job runs
+ *     answer() never starts a second job: a language/dialect ask is saved and confirmed, a stop word points to the ball,
+ *     anything else is kept (laterRef) and answered right after the job's last line (resumeAfterJob). Do not change.
+ *   LOCKED (Nov 28 11:05 PM, owner): language lock for everyone (src/lib/talkStyle.ts), LANGUAGE_RULES
+ *     (roseFiles/languageRules.ts: clean শুদ্ধ বাংলা for dialect writers, dialect or fun talk only on request) and the
+ *     admin-only MAYA tone (roseFiles/adminMaya.ts: work switch, one gentle check on sadness, no chasing, no camera).
  *   LOCKED (Nov 28 10:16 PM, owner): AUTO-PILOT (BUSINESS PREMIUM): src/components/workspace/AutoPilot.tsx, admin/AdminAutoPilot.tsx (26), roseFiles/autoPilot.ts,
  *     DB store_autopilot / store_discount_rules / store_discount_requests / store_answer_discount, edge rose-chat (disc.ts) + store-discount (cron every minute). Do not change.
  *   LOCKED (Nov 28 9:30 PM, owner): 12 demo designs in public/demos/stores.js (new: glowbeauty, gadgetzone, noorislamic, boighor, cakehouse with kinds beauty, electronics, islamic, books, cake). Do not change.
