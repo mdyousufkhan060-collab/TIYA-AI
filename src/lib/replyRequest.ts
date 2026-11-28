@@ -44,7 +44,9 @@ const GLUED = /(?:^|\s)([^\sন]\S{0,4}?)(?:ম্বা?র|মবা?র|ন�
 /** he said some "নম্বর" but ROSE could not hear which number → she must ask, never guess the newest video */
 export function numberUnclear(t: string): boolean {
   const s = t.toLowerCase();
-  return postNumber(s) === null && (new RegExp(NUM_WORD).test(s) || /ম্বা?র|মবা?র/.test(s));
+  // a month ("নভেম্বর", "নাউম্বর") is not a "নম্বর" (Nov 28: "১৯ নভেম্বর" made ROSE ask for a number)
+  const noMonths = s.replace(/\S*(নভে|নভম|নাউম|নবেম|নোভেম|ডিসে|সেপ্টে)\S*/g, ' ');
+  return postNumber(noMonths) === null && (new RegExp(NUM_WORD).test(noMonths) || /ম্বা?র|মবা?র/.test(noMonths));
 }
 
 const REPLY = /রিপ্লাই|রিফ্লাই|রিপলাই|রিপ্লে|রিপ্লায়|রিপ্লাইয়|reply/;
@@ -175,4 +177,41 @@ export function asksNextDown(t: string): boolean {
 /** his "না" to "এটাতে ঢুকবো?" (without asking for the next one) */
 export function saysNo(t: string): boolean {
   return /^(না|নাহ|নো|no)(?=$|[\s,।!.])/.test(t.trim().toLowerCase());
+}
+
+/** Bangla month names as Whisper writes them (নভেম্বর often comes as নাউম্বর / নভম্বর) → month 1–12 */
+const MONTHS_BN: [RegExp, number][] = [
+  [/জানু|january|jan\b/, 1], [/ফেব্রু|february|feb\b/, 2], [/মার্চ|march/, 3], [/এপ্রিল|april/, 4], [/(^|\s)মে(\s|$)|\bmay\b/, 5],
+  [/জুন|june/, 6], [/জুলাই|july/, 7], [/আগস্ট|অগাস্ট|august/, 8], [/সেপ্টে|september/, 9], [/অক্টো|october/, 10],
+  [/নভে|নভম|নাউম|নবেম|নোভেম|november|nov\b/, 11], [/ডিসে|december|dec\b/, 12],
+];
+/** day words 1–31 (longest first), plus bent first sounds ("উন্নিষ্ট" = উনিশ) */
+const DAY_WORDS: [RegExp, number][] = [
+  [/^(ঊ|উ)নত্রিশ/, 29], [/^একত্রিশ/, 31], [/^(ত্রিশ|তিরিশ)/, 30], [/^আঠাশ/, 28], [/^সাতাশ/, 27], [/^ছাব্বিশ/, 26], [/^প[ঁ]?চিশ/, 25],
+  [/^চব্বিশ/, 24], [/^তেইশ/, 23], [/^বাইশ/, 22], [/^একুশ/, 21], [/^(বিশ|কুড়ি)/, 20], [/^(ঊ|উ)ন/, 19], [/^আঠা?রো/, 18],
+  [/^সতেরো/, 17], [/^ষোল/, 16], [/^পনেরো/, 15], [/^চৌদ্দ/, 14], [/^তেরো/, 13], [/^বারো/, 12], [/^এগারো/, 11], [/^দশ/, 10],
+  [/^নয়|^নয়/, 9], [/^আট/, 8], [/^সাত/, 7], [/^ছয়|^ছয়/, 6], [/^পাঁচ|^পাচ/, 5], [/^চার/, 4], [/^তিন/, 3], [/^দুই/, 2], [/^এক/, 1],
+];
+/**
+ * Nov 28 (owner): "১৯ নভেম্বর যেটা আছে ওটাতে ঢুকো", "উনিশ নভেম্বরের ভিডিও" → { day: 19, month: 11 }. null = no date.
+ */
+export function postDate(t: string): { day: number; month: number } | null {
+  const s = t.toLowerCase().replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d)));
+  const words = s.split(/[\s,।!?]+/).filter(Boolean);
+  for (let i = 0; i < words.length; i++) {
+    const m = MONTHS_BN.find(([re]) => re.test(words[i]));
+    if (!m) continue;
+    const before = words[i - 1] || '';
+    const after = words[i + 1] || '';
+    let day = Number((before.match(/^(\d{1,2})/) || after.match(/^(\d{1,2})/) || [])[1]);
+    if (!day) for (const [re, v] of DAY_WORDS) if (re.test(before)) { day = v; break; }
+    if (day >= 1 && day <= 31) return { day, month: m[1] };
+  }
+  return null;
+}
+
+export function dateWords(d: { day: number; month: number }): string {
+  const bn = (n: number) => String(n).replace(/\d/g, (x) => '০১২৩৪৫৬৭৮৯'[Number(x)]);
+  const names = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+  return `${bn(d.day)} ${names[d.month - 1]}`;
 }

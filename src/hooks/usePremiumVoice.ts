@@ -9,7 +9,7 @@ import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
 import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
-import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, asksNextDown, numberUnclear, postNumbersInOrder, saysNo, saysYes } from '../lib/replyRequest';
+import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, asksNextDown, dateWords, numberUnclear, postDate, postNumbersInOrder, saysNo, saysYes } from '../lib/replyRequest';
 import { callNameOf, greetFirst, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -282,7 +282,7 @@ export function usePremiumVoice(opts: Options) {
           const say = speakRef.current;
           if (say) void say('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।').then(() => { if (activeRef.current) listen(); });
           else listen();
-        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments|go to post|post age|post down/i.test(JSON.stringify(action)) ? 100000 : 35000);
+        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments|go to post|post age|post date|post down/i.test(JSON.stringify(action)) ? 100000 : 35000);
       }
       if (!reply || action) {
         // a phone step is running: no voice for the in-between lines (much faster); the words stay in the
@@ -450,6 +450,8 @@ export function usePremiumVoice(opts: Options) {
   const pendingEnterRef = useRef<{ reply: boolean; at: number } | null>(null);
   const pendingNumRef = useRef<{ reply: boolean; at: number } | null>(null);
   const pendingAgeRef = useRef<{ reply: boolean; at: number } | null>(null);
+  /** when he last asked for replies on a video found by age/date: a later "ওটাতে ঢুকো" keeps that wish */
+  const lastAgeReplyAt = useRef(0);
   const lastRecipeAt = useRef(0);
   const lastPostNo = useRef(1);
   const runRecipeStep = useCallback(() => {
@@ -468,7 +470,7 @@ export function usePremiumVoice(opts: Options) {
       recipeRef.current = null;
       pendingRef.current = false;
       void speakRef.current?.('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।');
-    }, /reply all/.test(app) ? 930000 : /comments|go to post|post age|post down/.test(app) ? 100000 : 35000);
+    }, /reply all/.test(app) ? 930000 : /comments|go to post|post age|post date|post down/.test(app) ? 100000 : 35000);
     return true;
   }, []);
 
@@ -492,6 +494,21 @@ export function usePremiumVoice(opts: Options) {
       if (pn && Date.now() - pn.at < 5 * 60 * 1000) {
         const k = postNumber(t) ?? postNumber(t + ' নম্বর');
         if (k) t = `${k} নম্বর ভিডিও ` + (pn.reply ? 'কমেন্টে রিপ্লাই দাও' : 'তে যাও');
+      }
+      // Nov 28 (owner): a video by its DATE ("১৯ নভেম্বর যেটা আছে ওটাতে ঢুকো") → find that date on his profile; he
+      // named it himself, so on that date ROSE goes in (replies if he asked for replies now or before)
+      const dt = /ইউটিউব|youtube|টিকটক|tiktok/.test(t) ? null : postDate(t);
+      if (dt && (/ভিডিও|বিডিও|পোস্ট|video|post|ঢুক|ধুক|দুক|ডুক|ঢোক|যাও|জাও|খোলো|দেখো/.test(t) || pendingEnterRef.current)) {
+        const peD = pendingEnterRef.current;
+        pendingEnterRef.current = null;
+        const reply = (peD?.reply ?? false) || Date.now() - lastAgeReplyAt.current < 15 * 60 * 1000 || asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
+        const said = dateWords(dt);
+        lastRecipeAt.current = Date.now();
+        recipeRef.current = { steps: [`find post date ${dt.day} ${dt.month}`], at: 0, age: { min: 0, reply, said: said + ' তারিখের' } };
+        await speakLine(`${okWithName(callNameOf(optsRef.current.yourName))}${said} তারিখের ভিডিওতে যাচ্ছি।`);
+        if (!activeRef.current) return;
+        runRecipeStep();
+        return;
       }
       // he said a number but it came through broken: ask, never go to a guessed (or the newest) video
       if (numberUnclear(t) && /ভিডিও|বিডিও|ভিডিয়ো|পোস্ট|পোষ্ট|video|post|ম্বা?র/.test(t)) {
@@ -566,6 +583,7 @@ export function usePremiumVoice(opts: Options) {
         const said = ageWords(ageMin, t);
         lastRecipeAt.current = Date.now();
         recipeRef.current = { steps: [`find post age ${ageMin}`], at: 0, age: { min: ageMin, reply: wantsReply, said } };
+        if (wantsReply) lastAgeReplyAt.current = Date.now();
         await speakLine(`হ্যাঁ ${nm || ''}, ${said} আগের ভিডিওতে যাচ্ছি।`.replace(' ,', ','));
         if (!activeRef.current) return;
         runRecipeStep();
@@ -697,8 +715,8 @@ export function usePremiumVoice(opts: Options) {
           else {
             pendingEnterRef.current = { reply: rc.age.reply, at: Date.now() };
             line = datePart
-              ? `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said} আগের লেখা কোনো ভিডিও নেই। এখানে দিন বা সপ্তাহ লেখা নেই, তারিখ লেখা আছে ${datePart}। এটাতে ঢুকবো?`
-              : `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said} আগের কোনো ভিডিও পাইনি। সবচেয়ে কাছের ভিডিওটা ${ageText} পোস্ট করা। এটাতে ঢুকবো?`;
+              ? `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said.endsWith('তারিখের') ? rc.age.said : rc.age.said + ' আগের'} লেখা কোনো ভিডিও নেই। এখানে দিন বা সপ্তাহ লেখা নেই, তারিখ লেখা আছে ${datePart}। এটাতে ঢুকবো?`
+              : `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said.endsWith('তারিখের') ? rc.age.said : rc.age.said + ' আগের'} কোনো ভিডিও পাইনি। সবচেয়ে কাছের ভিডিওটা ${ageText} পোস্ট করা। এটাতে ঢুকবো?`;
           }
           void speakLine(line).then(() => {
             if (activeRef.current) window.setTimeout(() => listen(), 300);
