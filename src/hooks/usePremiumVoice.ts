@@ -666,6 +666,22 @@ export function usePremiumVoice(opts: Options) {
           });
           return;
         }
+        // Nov 28: the reply job ended ("সব রিপ্লাই কমপ্লিট … Say to him by name: …"): ROSE says that line herself at
+        // once. Before, it went through the AI first and he waited a long time after Facebook closed.
+        if (ok && /সব রিপ্লাই কমপ্লিট/.test(text) && rc.at >= rc.steps.length) {
+          recipeRef.current = null;
+          const nm = callNameOf(optsRef.current.yourName);
+          const n = (text.match(/([০-৯\d]+)টা কমেন্টে রিপ্লাই দিয়েছি/) || [])[1];
+          const sayIt = (text.match(/Say to him by name:\s*([^"\n]+)/) || [])[1];
+          const line =
+            `${nm ? nm + ', ' : ''}সব রিপ্লাই কমপ্লিট। ` +
+            (n ? `${n}টা কমেন্টে রিপ্লাই দিয়েছি। ` : /বাকি ছিল না/.test(text) ? 'নতুন কোনো কমেন্ট বাকি ছিল না। ' : '') +
+            (sayIt ? sayIt.trim() : 'এখন আর কী করবো বলো?');
+          void speakLine(line).then(() => {
+            if (activeRef.current) window.setTimeout(() => listen(), 300);
+          });
+          return;
+        }
         recipeRef.current = null;
         // a step of the fixed job failed: say what happened and stop — no guessing taps on other people's posts
         if (!ok) {
