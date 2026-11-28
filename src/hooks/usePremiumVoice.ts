@@ -445,9 +445,9 @@ export function usePremiumVoice(opts: Options) {
   // what to tap (fast and the same for every user). Facebook comment replies: open the newest post's comments,
   // then the phone answers every comment without his reply, live, one by one.
   const lastGoAt = useRef(0);
-  const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string; age?: { min: number; reply: boolean; said: string }; next?: { reply: boolean } } | null>(null);
+  const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string; age?: { min: number; reply: boolean; said: string }; next?: { reply: boolean }; label?: string } | null>(null);
   /** ROSE asked "এটাতে ঢুকবো?" about the closest video: his yes opens it (reply = he asked for replies) */
-  const pendingEnterRef = useRef<{ reply: boolean; at: number } | null>(null);
+  const pendingEnterRef = useRef<{ reply: boolean; at: number; label?: string } | null>(null);
   const pendingNumRef = useRef<{ reply: boolean; at: number } | null>(null);
   const pendingAgeRef = useRef<{ reply: boolean; at: number } | null>(null);
   /** when he last asked for replies on a video found by age/date: a later "ওটাতে ঢুকো" keeps that wish */
@@ -501,7 +501,7 @@ export function usePremiumVoice(opts: Options) {
       if (dt && (/ভিডিও|বিডিও|পোস্ট|video|post|ঢুক|ধুক|দুক|ডুক|ঢোক|যাও|জাও|খোলো|দেখো/.test(t) || pendingEnterRef.current)) {
         const peD = pendingEnterRef.current;
         pendingEnterRef.current = null;
-        const reply = (peD?.reply ?? false) || Date.now() - lastAgeReplyAt.current < 15 * 60 * 1000 || asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
+        const reply = true; // owner: a video he names to enter = go in and finish its replies
         const said = dateWords(dt);
         lastRecipeAt.current = Date.now();
         recipeRef.current = { steps: [`find post date ${dt.day} ${dt.month}`], at: 0, age: { min: 0, reply, said: said + ' তারিখের' } };
@@ -544,10 +544,9 @@ export function usePremiumVoice(opts: Options) {
       if (pe && Date.now() - pe.at < 5 * 60 * 1000 && saysYes(t)) {
         lastRecipeAt.current = Date.now();
         lastGoAt.current = Date.now();
-        recipeRef.current = pe.reply
-          ? { steps: ['open comments here', 'reply all comments'], at: 0 }
-          : { steps: ['open comments here'], at: 0, doneLine: 'কমেন্ট খুলেছি। এখন কী করবো বলো?' };
-        await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + (pe.reply ? 'ঢুকে কমেন্টগুলোতে রিপ্লাই দিচ্ছি।' : 'ঢুকছি।'));
+        // owner (Nov 28 4:07 PM): "ঢুকো" = go in and finish all its replies, then tell him
+        recipeRef.current = { steps: ['open comments here', 'reply all comments'], at: 0, label: pe.label };
+        await speakLine(okWithName(callNameOf(optsRef.current.yourName)) + 'ঢুকে কমেন্টগুলোতে রিপ্লাই দিচ্ছি।');
         if (!activeRef.current) return;
         runRecipeStep();
         return;
@@ -683,7 +682,7 @@ export function usePremiumVoice(opts: Options) {
           const m = (text.match(/AGE_NEXT:\s*([^"\n]*)/) || [])[1] || '';
           const [agePart, datePart] = m.split('|').map((x) => (x || '').trim());
           lastGoAt.current = Date.now();
-          pendingEnterRef.current = { reply: rc.next.reply, at: Date.now() };
+          pendingEnterRef.current = { reply: true, at: Date.now(), label: datePart || agePart };
           recipeRef.current = null;
           const line = datePart
             ? `${nm ? nm + ', ' : ''}নিচের ভিডিওতে এসেছি। এখানে দিন বা সপ্তাহ লেখা নেই, তারিখ লেখা আছে ${datePart}। এটাতে ঢুকবো?`
@@ -703,7 +702,7 @@ export function usePremiumVoice(opts: Options) {
           const ageText = datePart ? `${datePart} তারিখে` : agePart;
           lastGoAt.current = Date.now();
           if (exact && rc.age.reply) {
-            recipeRef.current = { steps: ['open comments here', 'reply all comments'], at: 0 };
+            recipeRef.current = { steps: ['open comments here', 'reply all comments'], at: 0, label: datePart || agePart };
             window.setTimeout(() => {
               if (activeRef.current) runRecipeStep();
             }, 400);
@@ -711,9 +710,13 @@ export function usePremiumVoice(opts: Options) {
           }
           recipeRef.current = null;
           let line: string;
-          if (exact) line = `${nm ? nm + ', ' : ''}তোমার ${ageText} পোস্ট করা ভিডিওর কাছে আছি। এখন কী করবো বলো?`;
+          if (exact) {
+            // his "ঢুকো" / "হ্যাঁ" next = go in and reply (never to the AI)
+            pendingEnterRef.current = { reply: true, at: Date.now(), label: datePart || agePart };
+            line = `${nm ? nm + ', ' : ''}তোমার ${ageText} পোস্ট করা ভিডিওর কাছে আছি। এখন কী করবো বলো?`;
+          }
           else {
-            pendingEnterRef.current = { reply: rc.age.reply, at: Date.now() };
+            pendingEnterRef.current = { reply: true, at: Date.now(), label: datePart || agePart };
             line = datePart
               ? `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said.endsWith('তারিখের') ? rc.age.said : rc.age.said + ' আগের'} লেখা কোনো ভিডিও নেই। এখানে দিন বা সপ্তাহ লেখা নেই, তারিখ লেখা আছে ${datePart}। এটাতে ঢুকবো?`
               : `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said.endsWith('তারিখের') ? rc.age.said : rc.age.said + ' আগের'} কোনো ভিডিও পাইনি। সবচেয়ে কাছের ভিডিওটা ${ageText} পোস্ট করা। এটাতে ঢুকবো?`;
@@ -738,6 +741,13 @@ export function usePremiumVoice(opts: Options) {
           const nm = callNameOf(optsRef.current.yourName);
           const n = (text.match(/([০-৯\d]+)টা কমেন্টে রিপ্লাই দিয়েছি/) || [])[1];
           const sayIt = (text.match(/Say to him by name:\s*([^"\n]+)/) || [])[1];
+          const lbl = (rc.label || '').replace(/ আগে$/, ' আগের').replace(/(নভেম্বর|ডিসেম্বর|অক্টোবর|সেপ্টেম্বর|জানুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট)$/, '$1ের');
+          if (lbl) {
+            void speakLine(`${nm ? nm + ', ' : ''}${lbl} ভিডিওর সবগুলো কমেন্টের রিপ্লাই কমপ্লিট হয়েছে। এখন আমি কী করবো? তোমার আর কোনো কাজ আছে?`).then(() => {
+              if (activeRef.current) window.setTimeout(() => listen(), 300);
+            });
+            return;
+          }
           const line =
             `${nm ? nm + ', ' : ''}সব রিপ্লাই কমপ্লিট। ` +
             (n ? `${n}টা কমেন্টে রিপ্লাই দিয়েছি। ` : /বাকি ছিল না/.test(text) ? 'নতুন কোনো কমেন্ট বাকি ছিল না। ' : '') +
