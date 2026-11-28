@@ -159,3 +159,17 @@ export function postNumbersInOrder(t: string): number[] {
   }
   return out;
 }
+
+/**
+ * Nov 28 (owner): "এটা না, নিচেরটায় যাও", "নিচের ভিডিওটা দেখো", "পরের ভিডিওতে যাও" → his next video below the one
+ * ROSE is on. ROSE goes there, says its date/age and asks "এটাতে ঢুকবো?".
+ */
+export function asksNextDown(t: string): boolean {
+  const s = t.toLowerCase();
+  return /নিচের ?(টা|টায়|টাতে|টি|ভিডিও|পোস্ট|বিডিও)|নিচেরটা|নিচে যাও|নিচে নামো|পরের ?(টা|টায়|ভিডিও|পোস্ট)|এর পরের|next (video|post)|below/.test(s);
+}
+
+/** his "না" to "এটাতে ঢুকবো?" (without asking for the next one) */
+export function saysNo(t: string): boolean {
+  return /^(না|নাহ|নো|no)(?=$|[\s,।!.])/.test(t.trim().toLowerCase());
+}
