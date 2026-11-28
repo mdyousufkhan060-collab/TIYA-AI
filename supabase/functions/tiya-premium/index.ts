@@ -154,6 +154,9 @@ async function callGemini(model: string, messages: Msg[], maxTokens: number, tem
 // so a TV or traffic sound does not become words. Gemini is the backup.
 const WHISPER_LANG: Record<string, string> = { bengali: "bn", bangla: "bn", english: "en", hindi: "hi", urdu: "ur", arabic: "ar" };
 async function whisperStt(audio: string, language: string): Promise<string | null> {
+  return (await whisperFull(audio, language))?.text ?? null;
+}
+async function whisperFull(audio: string, language: string): Promise<{ text: string; conf: number } | null> {
   const keys = keyList("GROQ_API_KEY");
   if (!keys.length) return null;
   const bytes = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0));
@@ -166,15 +169,20 @@ async function whisperStt(audio: string, language: string): Promise<string | nul
       fd.append("response_format", "verbose_json");
       fd.append("temperature", "0");
       if (lang) fd.append("language", lang);
-      if (lang === "bn") fd.append("prompt", "বাংলায় কথা। রোজ, ফেসবুক, কমেন্ট, রিপ্লাই, ইউটিউব।");
+      if (lang === "bn") fd.append("prompt", "বাংলায় কথা। রোজ, ইউসুফ, ফেসবুক, কমেন্ট, রিপ্লাই, ভিডিও, পোস্ট, ইউটিউব, ওয়েবসাইট, আপডেট, প্রিমিয়াম, সেটিংস।");
       const r = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: fd, signal: AbortSignal.timeout(8000) });
       if (!r.ok) { console.error(`whisper ${r.status}: ${(await r.text()).slice(0, 160)}`); continue; }
       const d = await r.json();
       const segs: any[] = Array.isArray(d?.segments) ? d.segments : [];
-      const kept = segs.length
-        ? segs.filter((g) => Number(g?.no_speech_prob ?? 0) < 0.6 && Number(g?.avg_logprob ?? 0) > -1.2).map((g) => String(g?.text || "")).join(" ")
-        : String(d?.text || "");
-      return kept.replace(/\s+/g, " ").trim();
+      // Nov 28: Bengali words are often "unsure" (logprob -1 to -1.6), and the old filter cut them out, so his sentence
+      // came broken. Now only real noise is dropped: very likely no speech AND unsure, or extremely unsure.
+      const keep = segs.filter((g) => {
+        const ns = Number(g?.no_speech_prob ?? 0), lp = Number(g?.avg_logprob ?? 0);
+        return !((ns > 0.6 && lp < -0.8) || lp < -2.2);
+      });
+      const kept = segs.length ? keep.map((g) => String(g?.text || "")).join(" ") : String(d?.text || "");
+      const conf = keep.length ? keep.reduce((a, g) => a + Number(g?.avg_logprob ?? 0), 0) / keep.length : 0;
+      return { text: kept.replace(/\s+/g, " ").trim(), conf };
     } catch (e) {
       console.error(`whisper error ${String((e as Error)?.message || e).slice(0, 120)}`);
     }
@@ -183,8 +191,24 @@ async function whisperStt(audio: string, language: string): Promise<string | nul
 }
 
 async function callStt(audio: string, language: string) {
-  const fast = await whisperStt(audio, language);
-  if (fast !== null) return fast;
+  const w = await whisperFull(audio, language);
+  const fast = w ? w.text : null;
+  const lastWhisperConf = w ? w.conf : 0;
+  // Whisper was sure, or heard nothing: done. Unsure (garbled Bengali): Gemini listens once more (max 7 s),
+  // its words are used when it answers, else Whisper's.
+  if (fast !== null && (!fast || lastWhisperConf > -0.7)) return fast;
+  if (fast !== null) {
+    const better = await Promise.race([
+      geminiStt(audio, language, 6500).catch(() => null),
+      new Promise<null>((r) => setTimeout(() => r(null), 7000)),
+    ]);
+    console.log(`stt unsure (${lastWhisperConf.toFixed(2)}): ${better ? "gemini" : "whisper"}`);
+    return better || fast;
+  }
+  return await geminiStt(audio, language, 20000);
+}
+
+async function geminiStt(audio: string, language: string, ms: number): Promise<string> {
   let last = "Gemini key missing";
   for (const key of keyList("GEMINI_API_KEY")) {
     for (const m of ["gemini-3.5-flash-lite", "gemini-flash-lite-latest"]) {
@@ -197,7 +221,7 @@ async function callStt(audio: string, language: string) {
           ],
         }],
         generationConfig: { temperature: 0, maxOutputTokens: 300 },
-      }, 20000);
+      }, ms);
       const text = (r?.d?.candidates?.[0]?.content?.parts || []).filter((p: any) => !p?.thought).map((p: any) => p?.text || "").join("").trim();
       if (r?.ok) return text;
       last = `STT ${m} ${r?.status}: ${r?.d?.error?.message || "empty"}`;
