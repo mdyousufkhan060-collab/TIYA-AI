@@ -412,6 +412,15 @@ export function usePremiumVoice(opts: Options) {
     stepsRef.current += 1;
     setState('thinking');
     optsRef.current.onAppend('assistant', '', { action: 'open_app', app } as PhoneAction);
+    // a fixed job's step gets the same never-stuck watch as any phone step, with enough time for it
+    clearWatch();
+    watchRef.current = window.setTimeout(() => {
+      watchRef.current = null;
+      if (!activeRef.current) return;
+      recipeRef.current = null;
+      pendingRef.current = false;
+      void speakRef.current?.('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।');
+    }, /reply all/.test(app) ? 930000 : /comments|go to post/.test(app) ? 100000 : 35000);
     return true;
   }, []);
 
