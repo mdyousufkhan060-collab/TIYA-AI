@@ -9,7 +9,7 @@ import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
 import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
-import { asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, saysYes } from '../lib/replyRequest';
+import { ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, saysYes } from '../lib/replyRequest';
 import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -371,21 +371,33 @@ export function usePremiumVoice(opts: Options) {
   /** A short line said aloud while a phone job runs (it does not start listening afterwards) */
   const speakLine = useCallback(async (line: string) => {
     const o = optsRef.current;
+    // LOCKED (owner, Nov 28): her words type themselves in the chat together with her voice, never all at once first
+    voiceCaptions.waitTyping(line);
     o.onAppend('assistant', line);
+    const rate = Math.max(0.75, Math.min(1.35, o.speechSpeed || 1));
     try {
       const tts = await premiumTts(line, o.voiceName);
-      if (!activeRef.current) return;
+      if (!activeRef.current) {
+        voiceCaptions.finishTyping();
+        return;
+      }
       // LOCKED: no server sound → the phone's own voice (phoneVoice.ts)
       if (!tts.ok || !tts.audio) {
+        voiceCaptions.startTyping(line, Math.round((line.length * 75) / rate));
         await phoneSpeak(line, LANG_CODE[o.language] || 'bn-BD', o.speechSpeed || 1, o.volume ?? 1);
+        voiceCaptions.finishTyping();
         return;
       }
       const url = pcmToWavUrl(tts.audio);
       const a = new Audio(url);
       a.volume = Math.max(0, Math.min(1, o.volume ?? 1));
-      a.playbackRate = Math.max(0.75, Math.min(1.35, o.speechSpeed || 1));
+      a.playbackRate = rate;
       audioRef.current = a;
       await new Promise<void>((done) => {
+        a.onplaying = () => {
+          const ms = Number.isFinite(a.duration) && a.duration > 0 ? (a.duration * 1000) / rate : (line.length * 70) / rate;
+          voiceCaptions.startTyping(line, Math.round(ms));
+        };
         a.onended = () => done();
         a.onerror = () => done();
         a.play().catch(() => done());
@@ -394,6 +406,7 @@ export function usePremiumVoice(opts: Options) {
     } catch {
       /* the job goes on without the voice */
     }
+    voiceCaptions.finishTyping();
   }, []);
 
   const pendingRef = useRef(false);
@@ -470,10 +483,11 @@ export function usePremiumVoice(opts: Options) {
       if (ageMin !== null) {
         const nm = callNameOf(optsRef.current.yourName);
         const wantsReply = asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
-        const said = (t.match(/[০-৯\d]+\s*(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|মাস)|(এক|দুই|তিন|চার|পাঁচ|ছয়|সাত|আট|নয়|দশ)\s*(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|মাস)/) || [''])[0] || 'ওই সময়ের';
+        // he hears back exactly the age ROSE understood ("হ্যাঁ, ৪ দিন আগের ভিডিওতে যাচ্ছি"), so a wrong hearing shows at once
+        const said = ageWords(ageMin);
         lastRecipeAt.current = Date.now();
         recipeRef.current = { steps: [`find post age ${ageMin}`], at: 0, age: { min: ageMin, reply: wantsReply, said } };
-        await speakLine(okWithName(nm) + `তোমার ${said} আগের ভিডিওটা খুঁজছি।`);
+        await speakLine(`হ্যাঁ ${nm || ''}, ${said} আগের ভিডিওতে যাচ্ছি।`.replace(' ,', ','));
         if (!activeRef.current) return;
         runRecipeStep();
         return;

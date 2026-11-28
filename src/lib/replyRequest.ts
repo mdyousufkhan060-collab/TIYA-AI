@@ -56,12 +56,13 @@ export function goToPostNumber(t: string): number | null {
  * Units: মিনিট, ঘণ্টা/ঘন্টা, দিন, সপ্তাহ, মাস (and English). Numbers in Bangla digits, English digits or words.
  */
 const NUM_WORDS: [RegExp, number][] = [
-  [/আধা/, 0.5], [/এক|১/, 1], [/দুই|দু|২/, 2], [/তিন|৩/, 3], [/চার|৪/, 4], [/পাঁচ|৫/, 5], [/ছয়|৬/, 6], [/সাত|৭/, 7],
+  // Whisper often bends them: "চাদ"/"চাইর" = চার, "তিনি" = তিন, "পাচ" = পাঁচ, "দো"/"দু" = দুই
+  [/আধা/, 0.5], [/এক|১/, 1], [/দুই|দু|দো|২/, 2], [/তিন|তিনি|তিনো|৩/, 3], [/চার|চাদ|চাইর|চা্র|৪/, 4], [/পাঁচ|পাচ|৫/, 5], [/ছয়|ছয়|৬/, 6], [/সাত|৭/, 7],
   [/আট|৮/, 8], [/নয়|৯/, 9], [/দশ|১০/, 10], [/এগারো/, 11], [/বারো/, 12],
 ];
 export function postAgeMinutes(t: string): number | null {
   const s = t.toLowerCase().replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d)));
-  if (!/আগে|ago|আগের/.test(s)) return null;
+  if (!/আগে|আগের|আগি|আগো|আগা|ago/.test(s)) return null;
   const unit = s.match(/(মিনিট|minute|min\b|ঘণ্টা|ঘন্টা|ঘন্টে|hour|hr\b|দিন|day|সপ্তাহ|week|মাস|month)/);
   if (!unit) return null;
   const mult = /মিনিট|minute|min/.test(unit[1]) ? 1 : /ঘণ্টা|ঘন্টা|ঘন্টে|hour|hr/.test(unit[1]) ? 60 : /দিন|day/.test(unit[1]) ? 1440 : /সপ্তাহ|week/.test(unit[1]) ? 10080 : 43200;
@@ -78,7 +79,10 @@ export function postAgeMinutes(t: string): number | null {
       }
     }
   }
-  if (Number.isNaN(n)) n = 1; // "ঘণ্টাখানেক আগে"
+  if (Number.isNaN(n)) {
+    if (/খানেক/.test(s)) n = 1; // "ঘণ্টাখানেক আগে"
+    else return null; // no number heard: not guessed (Nov 28: a guess sent ROSE to the wrong video)
+  }
   return Math.round(n * mult);
 }
 
@@ -92,4 +96,14 @@ export function saysYes(t: string): boolean {
 export function asksReplyHere(t: string): boolean {
   const s = t.toLowerCase();
   return REPLY.test(s) || (/কমেন্ট|কমেন|কমন|comment/.test(s) && /দেখো|চেক|check|করো|দাও|খুল/.test(s));
+}
+
+/** 4320 → "৩ দিন", 180 → "৩ ঘণ্টা" (how ROSE says back the age he meant) */
+export function ageWords(min: number): string {
+  const bn = (n: number) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)]);
+  if (min < 60) return `${bn(Math.max(1, min))} মিনিট`;
+  if (min < 1440) return `${bn(Math.round(min / 60))} ঘণ্টা`;
+  if (min < 10080) return `${bn(Math.round(min / 1440))} দিন`;
+  if (min < 43200) return `${bn(Math.round(min / 10080))} সপ্তাহ`;
+  return `${bn(Math.round(min / 43200))} মাস`;
 }
