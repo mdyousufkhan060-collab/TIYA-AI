@@ -7,7 +7,10 @@
 /** he asks which/how many Pages are under his account */
 export function asksListPages(t: string): boolean {
   const s = t.toLowerCase();
-  return (/পেজ|পেইজ|পেজে|page/.test(s) && /কটা|কয়টা|কয়টা|কতগুলো|কত গুলো|কি কি|কী কী|কোন কোন|লিস্ট|list|আন্ডারে|আন্ডার|নিচে কি|দেখাও|বলো/.test(s)) ||
+  // Nov 28: "কয়টা পেজ আছে" came as "কোড়া পেজ আসে" / "কোডে পেজ আসে" (and ROSE opened Quora): any "পেজ … আছে/আসে"
+  // about his ID is this question
+  if (/পেজ|পেইজ|page/.test(s) && /আছে|আসে|আছ|আচে/.test(s) && /আইডি|আইডিতে|id|আমার|আন্ডার/.test(s) && !/ঢুক|ধুক|দুক|ডুক|ঢোক|যাও|জাও|সুইচ|লগইন/.test(s)) return true;
+  return (/পেজ|পেইজ|পেজে|page/.test(s) && /কটা|কোড়া|কোরা|কোডে|কোটা|কতটা|কয়টা|কয়টা|কতগুলো|কত গুলো|কি কি|কী কী|কোন কোন|লিস্ট|list|আন্ডারে|আন্ডার|নিচে কি|দেখাও|বলো/.test(s)) ||
     /আইডির (আন্ডারে|নিচে|ভিতরে) (কি|কী|কয়|কত)/.test(s);
 }
 
