@@ -473,6 +473,8 @@ export function usePremiumVoice(opts: Options) {
   const pendingAgeRef = useRef<{ reply: boolean; at: number } | null>(null);
   /** when he last asked for replies on a video found by age/date: a later "ওটাতে ঢুকো" keeps that wish */
   const lastAgeReplyAt = useRef(0);
+  /** ROSE could not find the exact day he named and is stepping down video by video */
+  const ageAskAt = useRef(0);
   /** his profile + Pages, as Facebook showed them (PageSwitch.kt) */
   /** the Page ROSE is in now (null = his own profile); ROSE then says 'পেজের', not 'প্রোফাইলের' */
   const activePageRef = useRef<string | null>(null);
@@ -525,6 +527,17 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       let t = heard.toLowerCase();
+      // Nov 28 (owner): "তুমি তোমার হোমপেজে আসো" during a Facebook job = Facebook's Home (never the phone's home, never the AI)
+      if (asksFacebookHome(t) && (Date.now() - lastGoAt.current < 30 * 60 * 1000 || Date.now() - pageAskAt.current < 10 * 60 * 1000 || pendingEnterRef.current)) {
+        pendingEnterRef.current = null;
+        pageAskAt.current = 0;
+        const nmH = callNameOf(optsRef.current.yourName);
+        recipeRef.current = { steps: ['facebook home'], at: 0, doneLine: `${nmH ? nmH + ', ' : ''}Facebook-এর হোমে চলে এসেছি। এখন কী করবো বলো?` };
+        await speakLine(`${okWithName(nmH)}Facebook-এর হোমে যাচ্ছি।`);
+        if (!activeRef.current) return;
+        runRecipeStep();
+        return;
+      }
       // Nov 28: ROSE asked "কত নম্বর ভিডিও?" → his answer ("৫ নম্বর", "পাঁচ") finishes the first order
       const pn = pendingNumRef.current;
       pendingNumRef.current = null;
@@ -842,9 +855,12 @@ export function usePremiumVoice(opts: Options) {
           }
           pendingEnterRef.current = { reply: true, at: Date.now(), label: datePart || agePart };
           recipeRef.current = null;
-          const line = datePart
-            ? `${nm ? nm + ', ' : ''}নিচের ভিডিওতে এসেছি। এখানে দিন বা সপ্তাহ লেখা নেই, তারিখ লেখা আছে ${datePart}। এটাতে ঢুকবো?`
-            : `${nm ? nm + ', ' : ''}নিচের ভিডিওতে এসেছি, এটা ${agePart || 'এর পরের'} পোস্ট করা। এটাতে ঢুকবো?`;
+          // owner (Nov 28 6:08 PM): only while ROSE is still looking for the day he named does she say the date of each
+          // video; after a plain "নিচে যাও" she just says she is on the next video
+          const looking = Date.now() - ageAskAt.current < 10 * 60 * 1000;
+          const line = looking && datePart
+            ? `${nm ? nm + ', ' : ''}নিচের ভিডিওতে এসেছি, এখানে তারিখ লেখা আছে ${datePart}। এটাতে ঢুকবো?`
+            : `${nm ? nm + ', ' : ''}আমি নিচের ভিডিওতে এসেছি। এখানে কিছু করতে হবে? ঢুকবো?`;
           void speakLine(line).then(() => {
             if (activeRef.current) window.setTimeout(() => listen(), 300);
           });
@@ -875,6 +891,7 @@ export function usePremiumVoice(opts: Options) {
           }
           else {
             pendingEnterRef.current = { reply: true, at: Date.now(), label: datePart || agePart };
+            ageAskAt.current = Date.now(); // still looking for the day he named: the next videos say their dates
             line = datePart
               ? `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said.endsWith('তারিখের') ? rc.age.said : rc.age.said + ' আগের'} লেখা কোনো ভিডিও নেই। এখানে দিন বা সপ্তাহ লেখা নেই, তারিখ লেখা আছে ${datePart}। এটাতে ঢুকবো?`
               : `${nm ? nm + ', ' : ''}ঠিক ${rc.age.said.endsWith('তারিখের') ? rc.age.said : rc.age.said + ' আগের'} কোনো ভিডিও পাইনি। সবচেয়ে কাছের ভিডিওটা ${ageText} পোস্ট করা। এটাতে ঢুকবো?`;

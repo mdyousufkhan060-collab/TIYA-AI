@@ -83,5 +83,6 @@ export function plainName(n: string): string {
 
 /** "এখান থেকে বেরিয়ে হোমে আসো" */
 export function asksFacebookHome(t: string): boolean {
-  return /বের হ|বেরিয়ে|বেড়িয়ে|বাইর|হোমে|হোম পেজে|হোমপেজে|home/.test(t.toLowerCase()) && !/ভিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t);
+  // Nov 28: Whisper writes হোমপেজ as "হুম্পে", "হুম পেজ", "হোম পেজ"
+  return /বের হ|বেরিয়ে|বেড়িয়ে|বাইর|হোমে|হো?ু?ম[্ ]?পে|home/.test(t.toLowerCase()) && !/ভিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t);
 }
