@@ -69,8 +69,14 @@ export function postAgeMinutes(t: string): number | null {
   const d = before.match(/(\d{1,3})\s*$/) || before.match(/(\d{1,3})\D{0,6}$/);
   let n = d ? Number(d[1]) : NaN;
   if (Number.isNaN(n)) {
-    const tail = before.slice(-14);
-    for (const [re, v] of NUM_WORDS) if (re.test(tail)) { n = v; break; }
+    // the number word right before the unit, as a whole word ("তিন দিন"), never a piece of another word
+    // (Nov 28: "একটু … তিন দিন" was read as 1 day because "এক" was found first)
+    const words = before.trim().split(/[\s,।]+/).slice(-3).reverse();
+    outer: for (const w of words) {
+      for (const [re, v] of NUM_WORDS) {
+        if (new RegExp(`^(${re.source})(টা|টি|খানা)?$`).test(w)) { n = v; break outer; }
+      }
+    }
   }
   if (Number.isNaN(n)) n = 1; // "ঘণ্টাখানেক আগে"
   return Math.round(n * mult);
