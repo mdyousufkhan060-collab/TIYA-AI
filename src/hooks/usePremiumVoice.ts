@@ -12,6 +12,7 @@ import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
 import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, asksNextDown, dateWords, numberUnclear, postDate, postNumbersInOrder, saysNo, saysYes } from '../lib/replyRequest';
 import { callNameOf, greetFirst, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { cachedTts, prefetchTts, rememberTts } from '../lib/ttsCache';
+import { asksEnterPage, asksListPages, matchProfile } from '../lib/pageRequest';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -289,7 +290,7 @@ export function usePremiumVoice(opts: Options) {
           const say = speakRef.current;
           if (say) void say('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।').then(() => { if (activeRef.current) listen(); });
           else listen();
-        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments|go to post|post age|post date|post down/i.test(JSON.stringify(action)) ? 100000 : 35000);
+        }, /reply all/i.test(JSON.stringify(action)) ? 930000 : /comments|go to post|post age|post date|post down|profiles|switch profile/i.test(JSON.stringify(action)) ? 100000 : 35000);
       }
       if (!reply || action) {
         // a phone step is running: no voice for the in-between lines (much faster); the words stay in the
@@ -465,13 +466,23 @@ export function usePremiumVoice(opts: Options) {
   // what to tap (fast and the same for every user). Facebook comment replies: open the newest post's comments,
   // then the phone answers every comment without his reply, live, one by one.
   const lastGoAt = useRef(0);
-  const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string; age?: { min: number; reply: boolean; said: string }; next?: { reply: boolean }; label?: string } | null>(null);
+  const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string; age?: { min: number; reply: boolean; said: string }; next?: { reply: boolean }; label?: string; page?: { want: string } } | null>(null);
   /** ROSE asked "এটাতে ঢুকবো?" about the closest video: his yes opens it (reply = he asked for replies) */
   const pendingEnterRef = useRef<{ reply: boolean; at: number; label?: string } | null>(null);
   const pendingNumRef = useRef<{ reply: boolean; at: number } | null>(null);
   const pendingAgeRef = useRef<{ reply: boolean; at: number } | null>(null);
   /** when he last asked for replies on a video found by age/date: a later "ওটাতে ঢুকো" keeps that wish */
   const lastAgeReplyAt = useRef(0);
+  /** his profile + Pages, as Facebook showed them (PageSwitch.kt) */
+  const profilesRef = useRef<{ names: string[]; at: number }>(
+    (() => {
+      try {
+        return JSON.parse(localStorage.getItem('rose_fb_profiles') || '') || { names: [], at: 0 };
+      } catch {
+        return { names: [], at: 0 };
+      }
+    })(),
+  );
   const lastRecipeAt = useRef(0);
   const lastPostNo = useRef(1);
   const runRecipeStep = useCallback(() => {
@@ -492,7 +503,7 @@ export function usePremiumVoice(opts: Options) {
       recipeRef.current = null;
       pendingRef.current = false;
       void speakRef.current?.('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।');
-    }, /reply all/.test(app) ? 930000 : /comments|go to post|post age|post date|post down/.test(app) ? 100000 : 35000);
+    }, /reply all/.test(app) ? 930000 : /comments|go to post|post age|post date|post down|profiles|switch profile/.test(app) ? 100000 : 35000);
     return true;
   }, []);
 
@@ -516,6 +527,28 @@ export function usePremiumVoice(opts: Options) {
       if (pn && Date.now() - pn.at < 5 * 60 * 1000) {
         const k = postNumber(t) ?? postNumber(t + ' নম্বর');
         if (k) t = `${k} নম্বর ভিডিও ` + (pn.reply ? 'কমেন্টে রিপ্লাই দাও' : 'তে যাও');
+      }
+      // Nov 28 (owner): Pages under his account — list them, or go into one he names
+      {
+        const nm = callNameOf(optsRef.current.yourName);
+        const known = Date.now() - profilesRef.current.at < 30 * 24 * 3600 * 1000 ? profilesRef.current.names : [];
+        const wantPage = asksEnterPage(t) && /পেজ|পেইজ|page|আইডি|id|প্রোফাইল|profile|লগইন|login|সুইচ|switch/.test(t) && !/ভিডিও|বিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t);
+        const named = known.length ? matchProfile(t, known) : null;
+        if (named && (asksEnterPage(t)) && !/ভিডিও|বিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t)) {
+          recipeRef.current = { steps: [`switch profile ${named}`], at: 0, page: { want: named } };
+          await speakLine(`${okWithName(nm)}${named}-এ ঢুকছি।`);
+          if (!activeRef.current) return;
+          runRecipeStep();
+          return;
+        }
+        if (asksListPages(t) || (wantPage && !known.length)) {
+          // he named a page before ROSE knew the list: read the list first, then go in
+          recipeRef.current = { steps: ['list my profiles'], at: 0, page: { want: asksListPages(t) ? '' : t } };
+          await speakLine(`${okWithName(nm)}${asksListPages(t) ? 'তোমার আইডির আন্ডারের পেজগুলো দেখছি।' : 'পেজটা খুঁজে ঢুকছি।'}`);
+          if (!activeRef.current) return;
+          runRecipeStep();
+          return;
+        }
       }
       // Nov 28 (owner): a video by its DATE ("১৯ নভেম্বর যেটা আছে ওটাতে ঢুকো") → find that date on his profile; he
       // named it himself, so on that date ROSE goes in (replies if he asked for replies now or before)
@@ -698,6 +731,45 @@ export function usePremiumVoice(opts: Options) {
             if (activeRef.current) runRecipeStep();
           }, 400);
           return;
+        }
+        // Nov 28 (owner): his profile + Pages were read, or ROSE went into one
+        if (rc.page) {
+          const nm = callNameOf(optsRef.current.yourName);
+          const list = (text.match(/PROFILES:\s*([^"\n]+)/) || [])[1];
+          if (ok && list) {
+            const names = list.split('|').map((x) => x.trim()).filter(Boolean);
+            profilesRef.current = { names, at: Date.now() };
+            try {
+              localStorage.setItem('rose_fb_profiles', JSON.stringify(profilesRef.current));
+            } catch {
+              /* only kept for this visit */
+            }
+            const wanted = rc.page.want ? matchProfile(rc.page.want, names) : null;
+            if (wanted) {
+              recipeRef.current = { steps: [`switch profile ${wanted}`], at: 0, page: { want: wanted } };
+              window.setTimeout(() => {
+                if (activeRef.current) runRecipeStep();
+              }, 400);
+              return;
+            }
+            recipeRef.current = null;
+            const pages = names.slice(1);
+            const line = pages.length
+              ? `${nm ? nm + ', ' : ''}তোমার ${names[0]} আইডির আন্ডারে ${String(pages.length).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)])}টা পেজ আছে: ${pages.join(', ')}। কোনটাতে ঢুকবো?`
+              : `${nm ? nm + ', ' : ''}তোমার ${names[0]} আইডির আন্ডারে কোনো পেজ দেখছি না।`;
+            void speakLine(line).then(() => {
+              if (activeRef.current) window.setTimeout(() => listen(), 300);
+            });
+            return;
+          }
+          const sw = (text.match(/SWITCHED:\s*([^"\n]+)/) || [])[1];
+          if (ok && sw) {
+            recipeRef.current = null;
+            void speakLine(`${nm ? nm + ', ' : ''}আমি ${sw.trim()}-এ ঢুকেছি। এখন কী করবো বলো?`).then(() => {
+              if (activeRef.current) window.setTimeout(() => listen(), 300);
+            });
+            return;
+          }
         }
         // Nov 28 (owner): ROSE went to the next video below → say its date (or age) and ask "এটাতে ঢুকবো?"
         if (ok && rc.next) {
