@@ -45,6 +45,7 @@ WEBSITE (any option can take a website; selling is 18+):
 WEBSITE PRICES WITH ROSE:
 - PERSONAL · STUDENT: ${row('starter')}.
 - BUSINESS PREMIUM: the same + ${taka(extra)} once per plan, because it is premium quality: ${MONTHS.map((m) => `${m}m ${taka(p('business', m))}`).join(' · ')}.
+- BUSINESS PREMIUM also gets AUTO-PILOT: ROSE replies to customers by herself and follows DISCOUNT RULES, asking the owner only above the limit (details: the AUTO-PILOT file).
 - ONLY BUSINESS PREMIUM can change the website's colours, layout, buttons and festival themes (Ask ROSE in the shop admin). PERSONAL and STUDENT websites keep the chosen design; it is locked and cannot be changed.
 - LIFETIME WEBSITE: ${taka(st.lifetime)} once (separate one-time choice).
 - LIFETIME FREE SERVICE (on every website): no more charges unless the owner asks for a big change. After 12 months, only the yearly hosting and domain fee is paid (domain: .com ${taka(1800)}, .com.bd ${taka(1500)}, .bd ${taka(2200)} a year).

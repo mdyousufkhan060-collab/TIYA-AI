@@ -37,6 +37,7 @@ import { AdminWebsiteBuilderDemo } from './AdminWebsiteBuilderDemo';
 import { AdminWebsiteAccessPage } from './AdminWebsiteAccessPage';
 import { AdminSmsPage } from './AdminSmsPage';
 import { AdminBrandCard, AdminBrandPage, AdminSiteSwitchesPage } from './AdminBrandPage';
+import { AdminAutoPilot } from './AdminAutoPilot';
 import { AdminSiteReviews } from './AdminSiteReviews';
 import { AdminDeletionRequestsPage, AdminOverviewTiles } from './AdminSystemPages';
 import { AdminAiKeyPage } from './AdminAiKeyPage';
@@ -71,6 +72,7 @@ type AdminView =
   | 'website_access'
   | 'brand'
   | 'site_switches'
+  | 'autopilot'
   | 'ai_key'
   | 'support_id'
   | 'site_reviews'
@@ -706,6 +708,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
               support_id: '23 Support ID',
               site_reviews: '24 Site Reviews',
               admin_sms: '25 Admin SMS',
+              autopilot: '26 Auto-pilot',
               guide: '00 Admin Guide',
             } as Record<string, string>
           )[view] || 'Admin';
@@ -762,6 +765,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
             <SettingsBar badge="23" title="SUPPORT ID" value="OPEN A SHOP" tone={activeView === 'support_id' ? 'accent' : 'default'} onClick={() => go('support_id')} testId="admin-bar-support-id" />
             <SettingsBar badge="24" title="SITE REVIEWS" value="MYROSEBD.COM" tone={activeView === 'site_reviews' ? 'accent' : 'default'} onClick={() => go('site_reviews')} testId="admin-bar-site-reviews" />
             <SettingsBar badge="25" title="ADMIN SMS" value="MY OWN SMS" tone={activeView === 'admin_sms' ? 'accent' : 'default'} onClick={() => go('admin_sms')} testId="admin-bar-admin-sms" />
+            <SettingsBar badge="26" title="AUTO-PILOT" value="ALL BUSINESSES" tone={activeView === 'autopilot' ? 'accent' : 'default'} onClick={() => go('autopilot')} testId="admin-bar-autopilot" />
           </div>
   );
 
@@ -870,6 +874,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         {view === 'admin_sms' && <AdminSmsPage />}
         {view === 'brand' && <AdminBrandPage />}
         {view === 'site_switches' && <AdminSiteSwitchesPage />}
+        {view === 'autopilot' && <AdminAutoPilot />}
         {view === 'ai_key' && <AdminAiKeyPage />}
         {view === 'support_id' && <AdminSupportOpen />}
         {view === 'site_reviews' && <AdminSiteReviews />}

@@ -79,11 +79,28 @@ export default function DemoAdminPage() {
         };
       });
       (window as any).__roseDemoDb = makeDemoDb(
-        { stores: [store], store_categories: cats, store_customers: [], store_products: prods, store_orders: orders, site_settings: [], store_staff: [], store_reviews: [], store_coupons: [], store_expenses: [] },
+        { stores: [store], store_categories: cats, store_customers: [], store_products: prods, store_orders: orders, site_settings: [], store_staff: [], store_reviews: [], store_coupons: [], store_expenses: [],
+          // AUTO-PILOT (BUSINESS PREMIUM) sample: two rules and three discount asks
+          store_autopilot: [{ id: 'ap-1', store_id: store.id, discount_on: true, wait_min: 5, email_on: true, owner_whatsapp: '' }],
+          store_discount_rules: prods.slice(0, 2).map((p, i) => ({ id: `dr-${i}`, store_id: store.id, product_id: p.id, max_pct: i ? null : 5, max_tk: i ? 50 : null })),
+          store_discount_requests: prods.slice(0, 3).map((p, i) => {
+            const pr = Number(p.price) || 0;
+            return { id: `dq-${i}`, store_id: store.id, product_id: p.id, product_name: p.name, price: pr, asked_price: Math.round(pr * (i === 2 ? 0.7 : 0.85)), limit_price: i < 2 ? pr - (i ? 50 : Math.floor(pr * 0.05)) : null, status: i === 1 ? 'approved' : 'pending', answer_price: i === 1 ? Math.round(pr * 0.85) : null, decided_via: i === 1 ? 'app' : null, emailed_at: null, created_at: new Date(Date.now() - (i + 1) * 9e5).toISOString() };
+          }),
+          rose_chat: [] },
         {
           is_admin: false, my_staff_stores: [], store_staff_list: [], courier_status: [], get_payment_info: { bkash: '01700000000' },
           // Ask ROSE in the demo: the design shows at once (nothing is saved)
           store_set_design: (x: { p_design?: Record<string, string> }) => x.p_design || {}, store_undo_design: {}, store_design_allowed: true,
+          store_autopilot_allowed: true,
+          store_answer_discount: (x: { p_id?: string; p_decision?: string }, t: Record<string, any[]>) => {
+            const r = (t.store_discount_requests || []).find((y) => y.id === x.p_id);
+            if (!r || r.status !== 'pending') return { ok: false, message: 'Already answered' };
+            r.status = x.p_decision === 'yes' ? 'approved' : x.p_decision === 'limit' ? 'limit' : 'rejected';
+            r.answer_price = x.p_decision === 'yes' ? r.asked_price : x.p_decision === 'limit' ? r.limit_price : r.price;
+            r.decided_via = 'app';
+            return { ok: true, status: r.status, price: r.answer_price };
+          },
           // ADD ORDER in the demo: the order shows in the list (nothing is saved)
           admin_add_store_order: (x: Record<string, any>, t: Record<string, any[]>) => {
             const items = (x.p_items || []).map((it: any) => { const p = t.store_products.find((y) => y.id === it.id) || {}; return { id: it.id, name: p.name, price: Number(p.price) || 0, q: it.q, opt: it.opt, img: (p.images || [])[0] || '' }; });

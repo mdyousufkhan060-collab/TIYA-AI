@@ -6,6 +6,7 @@ import { WEBSITE_DESIGN_GUIDE, WEBSITE_RULES } from '../../utils/websiteGuides';
 import { SettingsBar } from '../settings/SettingsShell';
 import { SELL_PLANS, STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { livePrice, useLiveStorePrices } from '../../utils/liveStorePrices';
+import { AutoPilotTab } from './AutoPilot';
 import { PLAN_CONDITIONS } from '../../utils/planConditions';
 import { AdminBrandPage } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
@@ -156,7 +157,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [demos, setDemos] = useState<Record<string, Demo>>({});
-  const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'shield' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'offers' | 'create' | 'viewas'>(startTab || 'home');
+  const [tab, setTab] = useState<'home' | 'dashboard' | 'orders' | 'shield' | 'products' | 'categories' | 'design' | 'customers' | 'reviews' | 'payments' | 'delivery' | 'print' | 'seo' | 'domain' | 'staff' | 'rose' | 'plan' | 'company' | 'reports' | 'expenses' | 'pixels' | 'chat' | 'autopilot' | 'offers' | 'create' | 'viewas'>(startTab || 'home');
   const [roles, setRoles] = useState<Record<string, string>>({});
   // WEBSITE ADMIN look: light by default, the ☀️/🌙 button switches (kept on this device)
   const [light, setLight] = useState(() => { try { return localStorage.getItem('rose_admin_theme') !== 'dark'; } catch { return true; } });
@@ -271,7 +272,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
   const myRole = previewRole || realRole;
   // what each staff role may open (the server enforces the same rules)
   const ROLE_AREAS: Record<string, string[]> = {
-    manager: ['orders', 'ordersWrite', 'chat', 'products', 'categories', 'design', 'marketing', 'reviews', 'coupons', 'customers'],
+    manager: ['orders', 'ordersWrite', 'chat', 'autopilot', 'products', 'categories', 'design', 'marketing', 'reviews', 'coupons', 'customers'],
     moderator: ['orders', 'products', 'reviews', 'customers'],
     support: ['orders', 'productsView', 'chat', 'customers'],
   };
@@ -295,6 +296,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
             [c('coupons'), 'offers', 'OFFERS & COUPONS', '🏷️', '#ea580c', ''],
             [c('reviews'), 'reviews', 'REVIEWS', '⭐', '#eab308', ''],
             [c('chat'), 'chat', 'LIVE CHAT', '💬', '#059669', 'ROSE'],
+            [c('autopilot'), 'autopilot', 'AUTO-PILOT', '🤖', '#be185d', isAdmin || access?.plan === 'business' ? 'BUSINESS' : '🔒 BUSINESS'],
             [r === 'owner', 'payments', 'PAYMENTS', '💳', '#4f46e5', ''],
             [c('design'), 'delivery', 'DELIVERY & COURIER', '🚚', '#b45309', ''],
             [c('ordersWrite'), 'print', 'INVOICE & STICKER', '🏷️', '#e11d48', 'PRINT'],
@@ -493,6 +495,7 @@ export const StorePanel: React.FC<{ userId: string; forceStoreId?: string; start
         {tab === 'expenses' && <ExpensesTab store={store} />}
         {tab === 'pixels' && <PixelsTab store={store} onSaved={() => void load()} />}
         {tab === 'chat' && <StoreChatTab store={store} />}
+        {tab === 'autopilot' && <AutoPilotTab store={store} owner={myRole === 'owner'} onUpgrade={() => setTab(isAdmin ? 'home' : 'plan')} onOpenChat={() => setTab('chat')} />}
         {tab === 'offers' && <OffersWithCoupons store={store} limit={isAdmin ? 100000 : access?.products_limit || 50} onSaved={() => void load()} />}
       </div>
     );

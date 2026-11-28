@@ -76,6 +76,7 @@ const GUIDE: Array<[string, string, string, string]> = [
   ['20', 'website_builder', 'WEBSITE BUILDER', 'Full website history: all stores, all orders, sign-ups & plans, payments, live chats, store alerts, demo stores.'],
   ['21', 'website_access', 'WEBSITE ACCESS', 'Every Gmail in one list: tap one to see its plan, give or extend a plan, Made with ROSE switch, its stores and payments.'],
   ['22', 'site_switches', 'SITE SWITCHES', 'Made with ROSE master switch, ROSE support cards, APK / Play / Microsoft Store download links.'],
+  ['26', 'autopilot', 'AUTO-PILOT', 'Every BUSINESS PREMIUM shop: discount rules, discount asks waiting, OPEN the shop admin as the owner sees it, discounts ON / OFF.'],
 ];
 
 /** Admin > 00 ADMIN GUIDE: what every admin bar is for. */
