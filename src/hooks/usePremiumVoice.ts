@@ -10,7 +10,7 @@ import { quickAnswer } from '../lib/quickAnswers';
 import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
 import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, postNumbersInOrder, saysYes } from '../lib/replyRequest';
-import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
+import { callNameOf, greetFirst, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -559,7 +559,7 @@ export function usePremiumVoice(opts: Options) {
         };
         // LOCKED (owner, Nov 28): she says it FIRST, then the phone starts (not Facebook first, words later)
         await speakLine(
-          okWithName(callNameOf(optsRef.current.yourName)) +
+          greetFirst(t) + okWithName(callNameOf(optsRef.current.yourName)) +
             (many.length > 1
               ? `আগে ${many[0]} নম্বর ভিডিওর রিপ্লাই শেষ করবো, তারপর ${many.slice(1).join(', ')} নম্বর। সব শেষ হলে তোমাকে জানাবো।`
               : no === 1 ? 'তোমার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।' : `তোমার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`),
@@ -579,7 +579,7 @@ export function usePremiumVoice(opts: Options) {
           at: 0,
           doneLine: `${nm ? nm + ', ' : ''}আমি তোমার ${goNo} নম্বর ভিডিওর কাছে আছি। এখন কী করবো বলো?`,
         };
-        await speakLine(okWithName(nm) + `তোমার ${goNo} নম্বর ভিডিওতে যাচ্ছি।`);
+        await speakLine(greetFirst(t) + okWithName(nm) + `তোমার ${goNo} নম্বর ভিডিওতে যাচ্ছি।`);
         if (!activeRef.current) return;
         runRecipeStep();
         return;
@@ -690,16 +690,25 @@ export function usePremiumVoice(opts: Options) {
    * The phone's echo cancelling keeps her own voice low in the mic; only a clearly louder voice for ~0.4 s counts.
    */
   const bargeRef = useRef(0);
+  const echoRef = useRef({ since: 0, avg: 0 });
   const bargeIn = (lv: number) => {
     const a = audioRef.current as unknown as { paused?: boolean; ended?: boolean; pause?: () => void; dispatchEvent?: (e: Event) => boolean } | null;
     const playing = Boolean(a && !a.paused && !a.ended);
     if (!playing || !activeRef.current) {
       bargeRef.current = 0;
+      echoRef.current = { since: 0, avg: 0 };
       return;
     }
-    if (lv > 0.55) bargeRef.current += 1;
+    // Nov 28: her own voice coming back into the mic stopped her after a few words. Now ROSE learns how loud her own
+    // voice sounds in the mic while she talks, ignores the first 0.8 s, and only a voice clearly louder than her own
+    // (2.5×, and loud) for about half a second counts as him cutting in.
+    const now = Date.now();
+    if (!echoRef.current.since) echoRef.current = { since: now, avg: lv };
+    echoRef.current.avg = echoRef.current.avg * 0.9 + lv * 0.1;
+    if (now - echoRef.current.since < 800) return;
+    if (lv > 0.6 && lv > echoRef.current.avg * 2.5) bargeRef.current += 1;
     else bargeRef.current = Math.max(0, bargeRef.current - 1);
-    if (bargeRef.current < 5) return;
+    if (bargeRef.current < 6) return;
     bargeRef.current = 0;
     try {
       a?.pause?.();

@@ -22,3 +22,8 @@ export function nameCallAnswer(heard: string, name: string): string | null {
   if (!/^(এই |হ্যালো |hello |hey |ও )?(রোজ|রোস|rose|roz)( শুনছো| শুনছ| আছো| আছ| কোথায়| are you there)?$/.test(s)) return null;
   return name ? `জি ${name}, আমি আছি। বলো, আমি তোমার কথা শুনছি।` : 'জি, আমি আছি। বলো, শুনছি।';
 }
+
+/** he asked "কেমন আছো?" together with a job: ROSE answers that first, then says what she will do */
+export function greetFirst(heard: string): string {
+  return /কেমন ?আছ|কেমনাছ|কেমন আসো|how are you/i.test(heard) ? 'আলহামদুলিল্লাহ ভালো আছি। ' : '';
+}

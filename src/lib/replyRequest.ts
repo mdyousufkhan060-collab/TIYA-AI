@@ -23,6 +23,13 @@ export function postNumber(t: string): number | null {
     [new RegExp(`ষষ্ঠ|sixth|6th|ছয়\\s*${NUM_WORD}`), 6],
   ];
   for (const [re, n] of words) if (re.test(s)) return n;
+  // a bent number word right before নম্বর/নাম্বার, by its first sound ("চান নম্বর" = 4, "পাস নাম্বার" = 5)
+  const bent = s.match(new RegExp(`(\\S{1,4})\\s*${NUM_WORD}`));
+  if (bent) {
+    const w = bent[1];
+    const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ/, 6], [/^সা/, 7], [/^আট/, 8], [/^ন[য়ও]/, 9], [/^দশ/, 10]];
+    for (const [re, n] of byStart) if (re.test(w)) return n;
+  }
   return null;
 }
 
@@ -46,7 +53,7 @@ export function asksCommentReplies(t: string): boolean {
 export function goToPostNumber(t: string): number | null {
   const s = t.toLowerCase();
   if (!/ভিডিও|পোস্ট|video|post/.test(s)) return null;
-  if (!/যাও|জাও|যা[ওয়]|ঢুকো|ধুকো|দুকো|ঢোকো|খোলো|খুলো|খুলে|নিয়ে যাও|চলে যাও|go to|open/.test(s)) return null;
+  if (!/যাও|জাও|যা[ওয়]|ঢুকো|ধুকো|দুকো|ঢোকো|ঢুকে|ধুকে|দুকে|খোলো|খুলো|খুলে|নিয়ে যাও|চলে যাও|দেখো|go to|open/.test(s)) return null;
   if (asksCommentReplies(s)) return null;
   return postNumber(s);
 }

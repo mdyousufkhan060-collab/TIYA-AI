@@ -79,7 +79,7 @@ export async function openQuietMic(
       opts.onPartial(toWav16k(chunks, rate));
     }
     // he stopped for a moment (or talked very long): that is one sentence
-    if (quietFor > endMs || spokeFor > 20000) {
+    if (quietFor > endMs || spokeFor > 45000) {
       const parts = chunks;
       talking = false;
       chunks = [];
