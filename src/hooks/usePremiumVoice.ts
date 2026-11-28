@@ -551,7 +551,7 @@ export function usePremiumVoice(opts: Options) {
         // right after "কোনটাতে ঢুকবো?" just the name is enough ("ইস্লম বোলছে")
         if (named && (asksEnterPage(t) || justAsked) && !/ভিডিও|বিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t)) {
           pageAskAt.current = 0;
-          recipeRef.current = { steps: [`switch profile ${named}`], at: 0, page: { want: named } };
+          recipeRef.current = { steps: [`switch profile ${plainName(named)}`], at: 0, page: { want: named } };
           await speakLine(`${okWithName(nm)}${plainName(named)}-এ ঢুকছি। লগইন হতে একটু সময় লাগবে।`);
           if (!activeRef.current) return;
           runRecipeStep();
@@ -762,7 +762,7 @@ export function usePremiumVoice(opts: Options) {
             }
             const wanted = rc.page.want ? matchProfile(rc.page.want, names) : null;
             if (wanted) {
-              recipeRef.current = { steps: [`switch profile ${wanted}`], at: 0, page: { want: wanted } };
+              recipeRef.current = { steps: [`switch profile ${plainName(wanted)}`], at: 0, page: { want: wanted } };
               window.setTimeout(() => {
                 if (activeRef.current) runRecipeStep();
               }, 400);
@@ -783,7 +783,7 @@ export function usePremiumVoice(opts: Options) {
           if (ok && sw) {
             recipeRef.current = null;
             const main = profilesRef.current.names[0];
-            activePageRef.current = main && sw.trim() === main ? null : plainName(sw);
+            activePageRef.current = main && plainName(sw) === plainName(main) ? null : plainName(sw);
             void speakLine(`${nm ? nm + ', ' : ''}${plainName(sw)} ${activePageRef.current ? 'পেজে' : 'আইডিতে'} লগইন হয়েছে। এখন কী করবো বলো?`).then(() => {
               if (activeRef.current) window.setTimeout(() => listen(), 300);
             });
