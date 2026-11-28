@@ -124,3 +124,17 @@ export function ageWithoutNumber(t: string): boolean {
   const s = t.toLowerCase();
   return postAgeMinutes(s) === null && /(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|মাস|hour|day|week)\s*(আগে|আগের|আগি|আগো|ago)/.test(s) && /ভিডিও|বিডিও|ভিডিয়ো|পোস্ট|video|post|রিল/.test(s);
 }
+
+/**
+ * LOCKED (owner, Nov 28): several videos in one order — "৪ নম্বর ভিডিওর রিপ্লাই শেষ করে তারপর ৫ নম্বরে যাও" →
+ * [4, 5] in the order he said them. One number → [n]. None → [].
+ */
+export function postNumbersInOrder(t: string): number[] {
+  const parts = t.split(/তারপর|তারপরে|এরপর|এরপরে|পরে|পরবর্তীতে|আবার|then|after that|,|।/);
+  const out: number[] = [];
+  for (const p of parts) {
+    const n = postNumber(p);
+    if (n && !out.includes(n)) out.push(n);
+  }
+  return out;
+}

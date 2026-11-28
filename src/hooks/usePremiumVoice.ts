@@ -9,7 +9,7 @@ import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
 import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
-import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, saysYes } from '../lib/replyRequest';
+import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, postNumbersInOrder, saysYes } from '../lib/replyRequest';
 import { callNameOf, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -548,15 +548,21 @@ export function usePremiumVoice(opts: Options) {
         if (!corrects || nth) lastPostNo.current = no;
         // after this job, "নিচে আরো আছে দেখো" means these same comments
         lastGoAt.current = Date.now();
+        // several videos in one order ("৪ নম্বর … তারপর ৫ নম্বর"): one after the other, each fully done
+        const many = postNumbersInOrder(t);
         recipeRef.current = {
           // right after he was taken to a video: the comments of THAT video on the screen, no walking back to the top
-          steps: [afterGo && !nth ? 'open comments here' : no === 1 ? 'open latest post comments' : `open post ${no} comments`, 'reply all comments'],
+          steps: many.length > 1
+            ? many.flatMap((k) => [`open post ${k} comments`, 'reply all comments'])
+            : [afterGo && !nth ? 'open comments here' : no === 1 ? 'open latest post comments' : `open post ${no} comments`, 'reply all comments'],
           at: 0,
         };
         // LOCKED (owner, Nov 28): she says it FIRST, then the phone starts (not Facebook first, words later)
         await speakLine(
           okWithName(callNameOf(optsRef.current.yourName)) +
-            (no === 1 ? 'তোমার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।' : `তোমার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`),
+            (many.length > 1
+              ? `আগে ${many[0]} নম্বর ভিডিওর রিপ্লাই শেষ করবো, তারপর ${many.slice(1).join(', ')} নম্বর। সব শেষ হলে তোমাকে জানাবো।`
+              : no === 1 ? 'তোমার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।' : `তোমার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`),
         );
         runRecipeStep();
         return;
