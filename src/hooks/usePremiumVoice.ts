@@ -9,7 +9,7 @@ import { voiceCaptions } from '../lib/voiceCaptions';
 import { quickAnswer } from '../lib/quickAnswers';
 import { localTimeLine } from '../utils/prompts';
 import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
-import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, postNumbersInOrder, saysYes } from '../lib/replyRequest';
+import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, numberUnclear, postNumbersInOrder, saysYes } from '../lib/replyRequest';
 import { callNameOf, greetFirst, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
@@ -448,6 +448,7 @@ export function usePremiumVoice(opts: Options) {
   const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string; age?: { min: number; reply: boolean; said: string } } | null>(null);
   /** ROSE asked "এটাতে ঢুকবো?" about the closest video: his yes opens it (reply = he asked for replies) */
   const pendingEnterRef = useRef<{ reply: boolean; at: number } | null>(null);
+  const pendingNumRef = useRef<{ reply: boolean; at: number } | null>(null);
   const lastRecipeAt = useRef(0);
   const lastPostNo = useRef(1);
   const runRecipeStep = useCallback(() => {
@@ -483,7 +484,21 @@ export function usePremiumVoice(opts: Options) {
         if (activeRef.current) listen();
         return;
       }
-      const t = heard.toLowerCase();
+      let t = heard.toLowerCase();
+      // Nov 28: ROSE asked "কত নম্বর ভিডিও?" → his answer ("৫ নম্বর", "পাঁচ") finishes the first order
+      const pn = pendingNumRef.current;
+      pendingNumRef.current = null;
+      if (pn && Date.now() - pn.at < 5 * 60 * 1000) {
+        const k = postNumber(t) ?? postNumber(t + ' নম্বর');
+        if (k) t = `${k} নম্বর ভিডিও ` + (pn.reply ? 'কমেন্টে রিপ্লাই দাও' : 'তে যাও');
+      }
+      // he said a number but it came through broken: ask, never go to a guessed (or the newest) video
+      if (numberUnclear(t) && /ভিডিও|বিডিও|ভিডিয়ো|পোস্ট|পোষ্ট|video|post|ম্বা?র/.test(t)) {
+        pendingNumRef.current = { reply: asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t), at: Date.now() };
+        await speakLine(`${callNameOf(optsRef.current.yourName) || ''}, কত নম্বর ভিডিও বললে, ঠিক বুঝিনি। নম্বরটা আরেকবার বলবে?`.replace(/^, /, ''));
+        if (activeRef.current) listen();
+        return;
+      }
       // LOCKED (owner, Nov 28): his yes to "এটাতে ঢুকবো?" opens that video's comments (and replies if he asked)
       const pe = pendingEnterRef.current;
       pendingEnterRef.current = null;
@@ -562,7 +577,7 @@ export function usePremiumVoice(opts: Options) {
           greetFirst(t) + okWithName(callNameOf(optsRef.current.yourName)) +
             (many.length > 1
               ? `আগে ${many[0]} নম্বর ভিডিওর রিপ্লাই শেষ করবো, তারপর ${many.slice(1).join(', ')} নম্বর। সব শেষ হলে তোমাকে জানাবো।`
-              : no === 1 ? 'তোমার শেষ পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।' : `তোমার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`),
+              : no === 1 ? 'তোমার প্রোফাইলের সবচেয়ে নতুন (১ নম্বর) ভিডিওর কমেন্টে রিপ্লাই দিচ্ছি।' : `তোমার প্রোফাইলের ${no} নম্বর পোস্টের কমেন্টে রিপ্লাই দিচ্ছি।`),
         );
         runRecipeStep();
         return;

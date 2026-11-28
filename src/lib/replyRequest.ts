@@ -30,7 +30,21 @@ export function postNumber(t: string): number | null {
     const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ/, 6], [/^সা/, 7], [/^আট/, 8], [/^ন[য়ও]/, 9], [/^দশ/, 10]];
     for (const [re, n] of byStart) if (re.test(w)) return n;
   }
+  // Nov 28: the number glued into নম্বর ("পাস্তম্বার" = পাঁচ নম্বর, "চান্নাম্বার" = চার নম্বর): by its first sound
+  const glued = s.match(GLUED);
+  if (glued) {
+    const byStart: [RegExp, number][] = [[/^দু|^দো/, 2], [/^তি/, 3], [/^চা/, 4], [/^পা/, 5], [/^ছ/, 6], [/^সা/, 7], [/^আট/, 8], [/^দশ/, 10]];
+    for (const [re, n] of byStart) if (re.test(glued[1])) return n;
+  }
   return null;
+}
+
+const GLUED = /(?:^|\s)([^\sন]\S{0,4}?)(?:ম্বা?র|মবা?র|নাম্বা?র)/;
+
+/** he said some "নম্বর" but ROSE could not hear which number → she must ask, never guess the newest video */
+export function numberUnclear(t: string): boolean {
+  const s = t.toLowerCase();
+  return postNumber(s) === null && (new RegExp(NUM_WORD).test(s) || /ম্বা?র|মবা?র/.test(s));
 }
 
 const REPLY = /রিপ্লাই|রিফ্লাই|রিপলাই|রিপ্লে|রিপ্লায়|রিপ্লাইয়|reply/;
