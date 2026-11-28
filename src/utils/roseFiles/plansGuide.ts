@@ -5,6 +5,7 @@
  * Prices come live from the database (store_plan_totals), so if the admin changes a price ROSE says the new one.
  */
 import { livePrices, taka } from './livePrices';
+import { PLAN_CONDITIONS } from '../planConditions';
 
 const MONTHS = [1, 3, 6, 9, 12];
 
@@ -47,5 +48,7 @@ WEBSITE PRICES WITH ROSE:
 - ONLY BUSINESS PREMIUM can change the website's colours, layout, buttons and festival themes (Ask ROSE in the shop admin). PERSONAL and STUDENT websites keep the chosen design; it is locked and cannot be changed.
 - LIFETIME WEBSITE: ${taka(st.lifetime)} once (separate one-time choice).
 - LIFETIME FREE SERVICE (on every website): no more charges unless the owner asks for a big change. Only the yearly hosting and domain fee is paid each year (domain: .com ${taka(1800)}, .com.bd ${taka(1500)}, .bd ${taka(2200)} a year).
+- CONDITIONS (the CONDITIONS button on the plan pages; tell them when asked about domain, hosting, renewal or conditions):
+${PLAN_CONDITIONS.map((c, i) => `  ${i + 1} ${c}`).join('\n')}
 - To buy or renew: myrosebd.com/start or the shop admin > PLAN & PAYMENT: choose the plan and months, Send Money by bKash / Nagad / Rocket, write the sender number and TrxID. It turns on by itself when the payment matches; the admin sees it with its start date and renew date.`;
 }

@@ -6,6 +6,7 @@ import { WEBSITE_DESIGN_GUIDE, WEBSITE_RULES } from '../../utils/websiteGuides';
 import { SettingsBar } from '../settings/SettingsShell';
 import { SELL_PLANS, STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { livePrice, useLiveStorePrices } from '../../utils/liveStorePrices';
+import { PLAN_CONDITIONS } from '../../utils/planConditions';
 import { AdminBrandPage } from '../admin/AdminBrandPage';
 import { StoreChatTab } from './RoseChatInbox';
 import { DomainAccess } from './DomainAccess';
@@ -531,6 +532,7 @@ export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPla
   const [pay, setPay] = useState<{ bkash?: string; nagad?: string; rocket?: string }>({});
   const [plan, setPlan] = useState<StorePlanId | 'lifetime'>(startPlan === 'lifetime' || SELL_PLANS.includes(startPlan as StorePlanId) ? (startPlan as StorePlanId) : 'starter');
   const live = useLiveStorePrices();
+  const [cond, setCond] = useState(false);
   const [months, setMonths] = useState(STORE_DURATIONS.some((d) => d.months === startMonths) ? (startMonths as number) : 1);
   const [method, setMethod] = useState<'bKash' | 'Nagad' | 'Rocket'>('bKash');
   const [sender, setSender] = useState('');
@@ -605,6 +607,12 @@ export const BuyPlan: React.FC<{ current?: Access; onPaid?: () => void; startPla
           ))}
         </div>}
         <p className="text-[11px] leading-snug text-slate-300"><b className="text-white">Lifetime free service:</b> no more charges unless you ask for a big change. Only the yearly hosting and domain fee is paid each year.</p>
+        <button type="button" onClick={() => setCond((v) => !v)} className="text-[11.5px] font-bold tracking-wide text-teal-300 underline">CONDITIONS {cond ? '▾' : '›'}</button>
+        {cond && (
+          <ol className="list-decimal space-y-1 border border-white/10 bg-black/30 py-2 pl-6 pr-2 text-[11px] leading-snug text-slate-200">
+            {PLAN_CONDITIONS.map((c) => <li key={c}>{c}</li>)}
+          </ol>
+        )}
         <div className="flex items-center border border-amber-400/40 bg-amber-500/10 p-2">
           <span className="flex-1 text-[12px] text-amber-100">{life ? 'LIFETIME WEBSITE · one-time' : `${STORE_PLANS[plan as StorePlanId]?.label} · ${months} months`}</span>
           <span className="text-[17px] font-extrabold text-amber-300">{tk(total)}</span>

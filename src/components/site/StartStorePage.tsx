@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { BuyPlan, lifetimeTerms, RESERVED_SLUGS, loadDemos, slugify, uploadImage, type Demo } from '../workspace/StorePanel';
 import { BUSINESS_EXTRA, SELL_PLANS, STORE_DURATIONS, STORE_PLANS, tk, type StorePlanId } from '../../utils/storePlans';
 import { livePrice, useLiveStorePrices } from '../../utils/liveStorePrices';
+import { PLAN_CONDITIONS } from '../../utils/planConditions';
 
 /**
  * myrosebd.com/start?d=foodbazaar — take a demo store as your own:
@@ -46,6 +47,7 @@ export default function StartStorePage() {
   const live = useLiveStorePrices();
   const lifePrice = live.lifetime;
   const [needPay, setNeedPay] = useState(false);
+  const [cond, setCond] = useState(false);
 
   useEffect(() => {
     document.title = 'Get your store · ROSE';
@@ -254,6 +256,12 @@ export default function StartStorePage() {
         </div>
       )}
       <p className="border-l-4 border-[#e5337f] bg-[#fde3ed] px-3 py-2 text-[12px] leading-relaxed text-[#3b0a24]"><b className="text-[#6d0f3f]">Lifetime free service:</b> no more charges unless you ask for a big change. Only the yearly hosting and domain fee is paid each year. BUSINESS PREMIUM can change the website's colours and layout; PERSONAL · STUDENT websites keep the chosen design.</p>
+      <button type="button" onClick={() => setCond((v) => !v)} className="text-[12.5px] font-extrabold tracking-wide text-[#6d0f3f] underline">CONDITIONS {cond ? '▾' : '›'}</button>
+      {cond && (
+        <ol className="list-decimal space-y-1 border-[1.5px] border-[#f3b8cf] bg-white py-2.5 pl-7 pr-3 text-[12px] leading-relaxed text-[#3b0a24]">
+          {PLAN_CONDITIONS.map((c) => <li key={c}>{c}</li>)}
+        </ol>
+      )}
       {needPay && choice !== 'trial' && <BuyPlan startPlan={choice === 'lifetime' ? 'lifetime' : tier} startMonths={months} />}
     </div>
   );
