@@ -93,9 +93,9 @@ export function postAgeMinutes(t: string): number | null {
     if (/পরশু/.test(s)) return 2880;
   }
   if (!/আগে|আগের|আগি|আগো|আগা|ago/.test(s)) return null;
-  const unit = s.match(/(মিনিট|minute|min\b|ঘণ্টা|ঘন্টা|ঘন্টে|hour|hr\b|দিন|day|সপ্তাহ|week|মাস|month)/);
+  const unit = s.match(/(মিনিট|minute|min\b|ঘণ্টা|ঘন্টা|ঘন্টে|hour|hr\b|দিন|day|সপ্তাহ|সপ্তা|শপ্তা|শাপতা|শাপ্তা|সাপতা|সাপ্তা|সপতা|হপ্তা|সাপ্তাহ|শপ্তাহ|week|মাস|month)/);
   if (!unit) return null;
-  const mult = /মিনিট|minute|min/.test(unit[1]) ? 1 : /ঘণ্টা|ঘন্টা|ঘন্টে|hour|hr/.test(unit[1]) ? 60 : /দিন|day/.test(unit[1]) ? 1440 : /সপ্তাহ|week/.test(unit[1]) ? 10080 : 43200;
+  const mult = /মিনিট|minute|min/.test(unit[1]) ? 1 : /ঘণ্টা|ঘন্টা|ঘন্টে|hour|hr/.test(unit[1]) ? 60 : /দিন|day/.test(unit[1]) ? 1440 : /সপ্তাহ|সপ্তা|শপ্তা|শাপতা|শাপ্তা|সাপতা|সাপ্তা|সপতা|হপ্তা|সাপ্তাহ|শপ্তাহ|week/.test(unit[1]) ? 10080 : 43200;
   const before = s.slice(0, unit.index);
   const d = before.match(/(\d{1,3})\s*$/) || before.match(/(\d{1,3})\D{0,6}$/);
   let n = d ? Number(d[1]) : NaN;
@@ -145,7 +145,7 @@ export function ageWords(min: number, heard = ''): string {
   if (min < 60) return `${bn(Math.max(1, min))} মিনিট`;
   if (min < 1440) return `${bn(Math.round(min / 60))} ঘণ্টা`;
   // Nov 28 (owner): he said "৯ দিন" and ROSE said "১ সপ্তাহ" — she says it back in HIS unit
-  if (/সপ্তাহ|week/.test(heard) && min >= 10080) return `${bn(Math.round(min / 10080))} সপ্তাহ`;
+  if (/সপ্তাহ|সপ্তা|শপ্তা|শাপতা|শাপ্তা|সাপতা|সাপ্তা|সপতা|হপ্তা|সাপ্তাহ|শপ্তাহ|week/.test(heard) && min >= 10080) return `${bn(Math.round(min / 10080))} সপ্তাহ`;
   if (/মাস|month/.test(heard) && min >= 43200) return `${bn(Math.round(min / 43200))} মাস`;
   if (min < 10080 || /দিন|day/.test(heard)) return `${bn(Math.round(min / 1440))} দিন`;
   if (min < 43200) return `${bn(Math.round(min / 10080))} সপ্তাহ`;
@@ -155,7 +155,7 @@ export function ageWords(min: number, heard = ''): string {
 /** he named a time ("… দিন আগের ভিডিও") but ROSE could not hear the number: ask again, never guess */
 export function ageWithoutNumber(t: string): boolean {
   const s = t.toLowerCase();
-  return postAgeMinutes(s) === null && /(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|মাস|hour|day|week)\s*(আগে|আগের|আগি|আগো|ago)/.test(s) && /ভিডিও|বিডিও|ভিডিয়ো|পোস্ট|video|post|রিল/.test(s);
+  return postAgeMinutes(s) === null && /(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|সপ্তা|শপ্তা|শাপতা|শাপ্তা|সাপতা|সাপ্তা|সপতা|হপ্তা|সাপ্তাহ|শপ্তাহ|মাস|hour|day|week)\s*(আগে|আগের|আগি|আগো|ago)/.test(s) && /ভিডিও|বিডিও|ভিডিয়ো|পোস্ট|video|post|রিল/.test(s);
 }
 
 /**
