@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase';
 
 export type PremiumChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
@@ -135,6 +135,52 @@ export async function premiumTts(
     return { ok: true, audio: String(data.audio) };
   } catch {
     return { ok: false, message: 'নেট সংযোগে সমস্যা।' };
+  }
+}
+
+/**
+ * ROSE PREMIUM voice, streamed: each piece of sound (24 kHz PCM, base64) is handed to onChunk as soon as it arrives.
+ * ok=false with got=0 means nothing came; the caller then uses premiumTts.
+ */
+export async function premiumTtsStream(text: string, voiceName: string, onChunk: (pcmB64: string) => void): Promise<{ ok: boolean; got: number }> {
+  let got = 0;
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) return { ok: false, got };
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/tiya-premium`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, apikey: SUPABASE_PUBLISHABLE_KEY },
+      body: JSON.stringify({ action: 'tts_stream', text: text.slice(0, 3000), voiceName }),
+    });
+    if (!r.ok || !r.body) return { ok: false, got };
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).trim();
+        buf = buf.slice(i + 1);
+        if (!line) continue;
+        try {
+          const j = JSON.parse(line);
+          if (j.a) {
+            got++;
+            onChunk(String(j.a));
+          }
+          if (j.error) return { ok: got > 0, got };
+        } catch {
+          /* half a line */
+        }
+      }
+    }
+    return { ok: got > 0, got };
+  } catch {
+    return { ok: got > 0, got };
   }
 }
 

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LanguageOption, VoiceState } from '../types/tiya';
-import { premiumChat, premiumStt, premiumTts, type PremiumChatMessage } from '../lib/premium';
+import { premiumTtsStream, premiumChat, premiumStt, premiumTts, type PremiumChatMessage } from '../lib/premium';
 import { openQuietMic, type QuietMic } from '../lib/quietMic';
 import { isVoiceMuted } from '../lib/voiceMute';
 import { fadePcm } from '../lib/pcmFade';
+import { pcmStreamPlayer } from '../lib/pcmStream';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -253,8 +254,24 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       setState('speaking');
-      // faster start: the first sentence is made into voice on its own (short = quick) while the rest is made at
-      // the same time, then they play one after the other
+      // fastest: the voice is streamed and starts playing with its first piece (about 0.7 s after the server starts)
+      const player = pcmStreamPlayer(o.volume ?? 1, o.speechSpeed || 1);
+      audioRef.current = player as unknown as HTMLAudioElement;
+      const streamed = (await player.canPlay()) ? await premiumTtsStream(reply, o.voiceName, (c) => player.push(c)) : { ok: false, got: 0 };
+      if (!activeRef.current) {
+        player.pause();
+        return;
+      }
+      if (streamed.got > 0) {
+        await player.end();
+        audioRef.current = null;
+        if (activeRef.current && !pendingRef.current) listen();
+        return;
+      }
+      player.pause();
+      audioRef.current = null;
+      // stream did not work: the first sentence is made into voice on its own (short = quick) while the rest is
+      // made at the same time, then they play one after the other
       const parts = splitFirst(reply);
       const jobs = parts.map((p) => premiumTts(p, o.voiceName));
       const next = () => {

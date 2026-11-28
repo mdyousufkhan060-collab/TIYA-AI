@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { resolveAuthRedirectUrl } from '../utils/authRedirect';
 
-const SUPABASE_URL = 'https://ukgwipazzjstjkdfaozg.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_CRMgURG899vqIqUIsADWgw_p90ZliES';
+export const SUPABASE_URL = 'https://ukgwipazzjstjkdfaozg.supabase.co';
+export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_CRMgURG899vqIqUIsADWgw_p90ZliES';
 const SUPABASE_PROJECT_MARKER_KEY = 'tiya_supabase_project_ref';
 const SUPABASE_PROJECT_REF = 'ukgwipazzjstjkdfaozg';
 
