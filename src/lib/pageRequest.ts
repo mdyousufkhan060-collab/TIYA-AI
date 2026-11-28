@@ -86,3 +86,16 @@ export function asksFacebookHome(t: string): boolean {
   // Nov 28: Whisper writes হোমপেজ as "হুম্পে", "হুম পেজ", "হোম পেজ"
   return /বের হ|বেরিয়ে|বেড়িয়ে|বাইর|হোমে|হো?ু?ম[্ ]?পে|home/.test(t.toLowerCase()) && !/ভিডিও|পোস্ট|কমেন্ট|রিপ্লাই/.test(t);
 }
+
+/** "ফেসবুকে ঢুকো" — only open Facebook (no video, comment, page or post job in the sentence) */
+export function asksOpenFacebookOnly(t: string): boolean {
+  const s = t.toLowerCase();
+  return /ফেসবুক|ফেইসবুক|facebook/.test(s) && /ঢুক|ধুক|দুক|ডুক|ঢোক|যাও|জাও|খোলো|খুলো|ওপেন|open|চলো/.test(s) &&
+    !/ভিডিও|বিডিও|পোস্ট|কমেন্ট|কমেন|রিপ্লাই|পেজ|পেইজ|আইডির আন্ডারে|মেসেজ|নোটিফিকেশন|স্ক্রল|নিচে/.test(s);
+}
+
+/** "নিচে স্ক্রল করো", "ভিডিওগুলো স্ক্রল করো", "পরেরটা দেখাও" while just browsing Facebook */
+export function asksFeedScroll(t: string): boolean {
+  const s = t.toLowerCase();
+  return /স্ক্রল|স্ক্রোল|স্কল|scroll|নি[চছ]ে|পরের|next/.test(s) && !/কমেন্ট|রিপ্লাই|নম্বর|দিন আগে|দিন আগের/.test(s);
+}

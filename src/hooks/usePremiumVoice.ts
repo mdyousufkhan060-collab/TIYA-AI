@@ -12,7 +12,7 @@ import { phoneSpeak, stopPhoneSpeak } from '../lib/phoneVoice';
 import { ageWithoutNumber, ageWords, asksCommentReplies, asksReplyHere, goToPostNumber, postAgeMinutes, postNumber, asksNextDown, dateWords, numberUnclear, postDate, postNumbersInOrder, saysNo, saysYes } from '../lib/replyRequest';
 import { callNameOf, greetFirst, nameCallAnswer, okWithName } from '../lib/nameCall';
 import { cachedTts, prefetchTts, rememberTts } from '../lib/ttsCache';
-import { asksEnterPage, asksFacebookHome, asksListPages, matchProfile, plainName } from '../lib/pageRequest';
+import { asksEnterPage, asksFacebookHome, asksFeedScroll, asksListPages, asksOpenFacebookOnly, matchProfile, plainName } from '../lib/pageRequest';
 import { phoneActionToolDeclaration } from '../lib/clientApi';
 import { extractActionFromText, validatePhoneAction } from '../utils/phoneActions';
 import type { PhoneAction } from '../types/tiya';
@@ -466,7 +466,7 @@ export function usePremiumVoice(opts: Options) {
   // what to tap (fast and the same for every user). Facebook comment replies: open the newest post's comments,
   // then the phone answers every comment without his reply, live, one by one.
   const lastGoAt = useRef(0);
-  const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string; age?: { min: number; reply: boolean; said: string }; next?: { reply: boolean }; label?: string; page?: { want: string } } | null>(null);
+  const recipeRef = useRef<{ steps: string[]; at: number; doneLine?: string; age?: { min: number; reply: boolean; said: string }; next?: { reply: boolean }; label?: string; page?: { want: string }; feed?: boolean } | null>(null);
   /** ROSE asked "এটাতে ঢুকবো?" about the closest video: his yes opens it (reply = he asked for replies) */
   const pendingEnterRef = useRef<{ reply: boolean; at: number; label?: string } | null>(null);
   const pendingNumRef = useRef<{ reply: boolean; at: number } | null>(null);
@@ -477,6 +477,8 @@ export function usePremiumVoice(opts: Options) {
   const ageAskAt = useRef(0);
   /** a phone step was running when he came back: its late answer is ignored */
   const dropNextResultRef = useRef(false);
+  /** he only opened Facebook to look around (not his own videos): 'নিচে' then means the next post of the feed */
+  const feedAt = useRef(0);
   /** his profile + Pages, as Facebook showed them (PageSwitch.kt) */
   /** the Page ROSE is in now (null = his own profile); ROSE then says 'পেজের', not 'প্রোফাইলের' */
   const activePageRef = useRef<string | null>(null);
@@ -537,6 +539,25 @@ export function usePremiumVoice(opts: Options) {
         recipeRef.current = { steps: ['facebook home'], at: 0, doneLine: `${nmH ? nmH + ', ' : ''}Facebook-এর হোমে চলে এসেছি। এখন কী করবো বলো?` };
         await speakLine(`${okWithName(nmH)}Facebook-এর হোমে যাচ্ছি।`);
         if (!activeRef.current) return;
+        runRecipeStep();
+        return;
+      }
+      // Nov 28 (owner, LOCKED): "ফেসবুকে ঢুকো" = open Facebook and say so — no scrolling, no other job
+      if (asksOpenFacebookOnly(t)) {
+        feedAt.current = Date.now();
+        lastGoAt.current = 0;
+        pendingEnterRef.current = null;
+        const nmF = callNameOf(optsRef.current.yourName);
+        recipeRef.current = { steps: ['facebook'], at: 0, doneLine: `${nmF ? nmF + ', ' : ''}দেখো, আমি Facebook-এ ঢুকেছি। এখন কী করবো বলো?` };
+        await speakLine(`${okWithName(nmF)}Facebook-এ ঢুকছি।`);
+        if (!activeRef.current) return;
+        runRecipeStep();
+        return;
+      }
+      // just browsing Facebook: "নিচে স্ক্রল করো" = one post down, and ROSE says whose post it is
+      if (Date.now() - feedAt.current < 30 * 60 * 1000 && Date.now() - lastGoAt.current > 2 * 60 * 1000 && asksFeedScroll(t)) {
+        feedAt.current = Date.now();
+        recipeRef.current = { steps: ['feed next'], at: 0, feed: true };
         runRecipeStep();
         return;
       }
@@ -742,9 +763,8 @@ export function usePremiumVoice(opts: Options) {
   useEffect(() => {
     const onBack = () => {
       if (!activeRef.current) return;
-      const busy = !!recipeRef.current || watchRef.current !== null;
-      if (!busy) return;
-      if (watchRef.current !== null) dropNextResultRef.current = true;
+      // the phone was in the middle of a job (that is when the phone sends this): drop its late answer, always talk
+      dropNextResultRef.current = true;
       clearWatch();
       recipeRef.current = null;
       pendingRef.current = false;
@@ -782,6 +802,17 @@ export function usePremiumVoice(opts: Options) {
       const rc = recipeRef.current;
       if (rc) {
         const ok = /SUCCESS/.test(text) && !/খুঁজে পাইনি|পারিনি|could not/i.test(text);
+        if (ok && rc.feed) {
+          recipeRef.current = null;
+          feedAt.current = Date.now();
+          const [owner, caption] = ((text.match(/FEED:\s*([^"\n]*)/) || [])[1] || '').split('|').map((x) => (x || '').trim());
+          const nmF = callNameOf(optsRef.current.yourName);
+          const who = owner ? `${plainName(owner)}-এর পোস্ট` : 'পরের পোস্ট';
+          void speakLine(`${nmF ? nmF + ', ' : ''}${who}${caption ? `: ${caption.slice(0, 80)}` : ''}। আরো নিচে যাবো?`).then(() => {
+            if (activeRef.current) window.setTimeout(() => listen(), 300);
+          });
+          return;
+        }
         // Nov 28 (owner): the video has no comments → stop, say it, wait ("নিচের ভিডিওতে যাও" works next)
         if (/NO_COMMENTS/.test(text)) {
           recipeRef.current = null;
