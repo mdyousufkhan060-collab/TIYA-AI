@@ -507,7 +507,7 @@ export function usePremiumVoice(opts: Options) {
       recipeRef.current = null;
       pendingRef.current = false;
       void speakRef.current?.('ফোনের কাজটা আটকে গেছে, আর এগোতে পারিনি। আবার বলুন, আমি শুনছি।');
-    }, /reply all/.test(app) ? 930000 : /comments|go to post|post age|post date|post down|profiles|switch profile|facebook home/.test(app) ? 100000 : 35000);
+    }, /reply all/.test(app) ? 930000 : /switch profile|facebook home|list my profiles/.test(app) ? 40000 : /comments|go to post|post age|post date|post down/.test(app) ? 100000 : 35000);
     return true;
   }, []);
 
@@ -784,9 +784,13 @@ export function usePremiumVoice(opts: Options) {
             recipeRef.current = null;
             const main = profilesRef.current.names[0];
             activePageRef.current = main && plainName(sw) === plainName(main) ? null : plainName(sw);
-            void speakLine(`${nm ? nm + ', ' : ''}${plainName(sw)} ${activePageRef.current ? 'পেজে' : 'আইডিতে'} লগইন হয়েছে। এখন কী করবো বলো?`).then(() => {
-              if (activeRef.current) window.setTimeout(() => listen(), 300);
-            });
+            // Facebook needs a few seconds to open that page: wait without touching anything, then say it
+            window.setTimeout(() => {
+              if (!activeRef.current) return;
+              void speakLine(`${nm ? nm + ', ' : ''}${plainName(sw)} ${activePageRef.current ? 'পেজে' : 'আইডিতে'} লগইন হয়েছে। এখন কী করবো বলো?`).then(() => {
+                if (activeRef.current) window.setTimeout(() => listen(), 300);
+              });
+            }, 7000);
             return;
           }
         }
