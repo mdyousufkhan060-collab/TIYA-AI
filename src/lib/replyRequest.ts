@@ -57,7 +57,7 @@ export function goToPostNumber(t: string): number | null {
  */
 const NUM_WORDS: [RegExp, number][] = [
   // Whisper often bends them: "চাদ"/"চাইর" = চার, "তিনি" = তিন, "পাচ" = পাঁচ, "দো"/"দু" = দুই
-  [/আধা/, 0.5], [/এক|১/, 1], [/দুই|দু|দো|২/, 2], [/তিন|তিনি|তিনো|৩/, 3], [/চার|চাদ|চাইর|চাপ|চার্|৪/, 4], [/পাঁচ|পাচ|৫/, 5], [/ছয়|ছয়|৬/, 6], [/সাত|৭/, 7],
+  [/আধা/, 0.5], [/এক|১/, 1], [/দুই|দু|দো|২/, 2], [/তিন|তিনি|তিনো|৩/, 3], [/চার|চাদ|চাইর|চাপ|চার্|৪/, 4], [/পাঁচ|পাচ|পাজ|পাছ|পাঁছ|৫/, 5], [/ছয়|ছয়|৬/, 6], [/সাত|৭/, 7],
   [/আট|৮/, 8], [/নয়|৯/, 9], [/দশ|১০/, 10], [/এগারো/, 11], [/বারো/, 12],
 ];
 export function postAgeMinutes(t: string): number | null {
@@ -95,6 +95,8 @@ export function saysYes(t: string): boolean {
 /** right after ROSE stopped on a video: "দেখো রিপ্লাই বাকি আছে কিনা, রিপ্লাই দাও" (any reply / comment talk) = that video */
 export function asksReplyHere(t: string): boolean {
   const s = t.toLowerCase();
+  // "না, এখানে আর বাকি নাই" is not a reply job
+  if (/বাকি নাই|বাকি নেই|আর নাই|আর নেই|শেষ হয়ে গেছে|^না[,\s]/.test(s)) return false;
   // "নিচে আরো আছে দেখো" / "আরো বাকি আছে" right after a reply job = go on with the same comments
   return REPLY.test(s) || (/কমেন্ট|কমেন|কমন|comment/.test(s) && /দেখো|চেক|check|করো|দাও|খুল/.test(s)) ||
     /আরো ?আছে|আরও ?আছে|আরোআসে|আরো আসে|বাকি আছে|বাকি রয়ে|নিচে আরো|নিচে আরও|নিচে দেখো/.test(s);
@@ -113,5 +115,5 @@ export function ageWords(min: number): string {
 /** he named a time ("… দিন আগের ভিডিও") but ROSE could not hear the number: ask again, never guess */
 export function ageWithoutNumber(t: string): boolean {
   const s = t.toLowerCase();
-  return postAgeMinutes(s) === null && /(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|মাস|hour|day|week)\s*(আগে|আগের|আগি|আগো|ago)/.test(s) && /ভিডিও|পোস্ট|video|post|রিল/.test(s);
+  return postAgeMinutes(s) === null && /(মিনিট|ঘণ্টা|ঘন্টা|দিন|সপ্তাহ|মাস|hour|day|week)\s*(আগে|আগের|আগি|আগো|ago)/.test(s) && /ভিডিও|বিডিও|ভিডিয়ো|পোস্ট|video|post|রিল/.test(s);
 }

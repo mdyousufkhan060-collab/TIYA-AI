@@ -485,7 +485,7 @@ export function usePremiumVoice(opts: Options) {
         return;
       }
       // LOCKED (owner, Nov 28): "আমি ৩ ঘণ্টা আগে যে ভিডিও ছেড়েছি…" → the video of that age
-      const ageMin = /ভিডিও|পোস্ট|video|post|রিল|reel/.test(t) && !/ইউটিউব|youtube|টিকটক|tiktok|ইনস্টা|instagram/.test(t) ? postAgeMinutes(t) : null;
+      const ageMin = /ভিডিও|বিডিও|ভিডিয়ো|ভিডু|পোস্ট|পোষ্ট|video|post|রিল|reel/.test(t) && !/ইউটিউব|youtube|টিকটক|tiktok|ইনস্টা|instagram/.test(t) ? postAgeMinutes(t) : null;
       if (ageMin !== null) {
         const nm = callNameOf(optsRef.current.yourName);
         const wantsReply = asksCommentReplies(t) || /রিপ্লাই|রিফ্লাই|reply|উত্তর/.test(t);
@@ -648,6 +648,35 @@ export function usePremiumVoice(opts: Options) {
     [runTurn, runRecipeStep, speakLine, listen],
   );
 
+  /**
+   * LOCKED (owner, Nov 28): if he starts talking while ROSE is speaking, she stops at once and listens to him.
+   * The phone's echo cancelling keeps her own voice low in the mic; only a clearly louder voice for ~0.4 s counts.
+   */
+  const bargeRef = useRef(0);
+  const bargeIn = (lv: number) => {
+    const a = audioRef.current as unknown as { paused?: boolean; ended?: boolean; pause?: () => void; dispatchEvent?: (e: Event) => boolean } | null;
+    const playing = Boolean(a && !a.paused && !a.ended);
+    if (!playing || !activeRef.current) {
+      bargeRef.current = 0;
+      return;
+    }
+    if (lv > 0.55) bargeRef.current += 1;
+    else bargeRef.current = Math.max(0, bargeRef.current - 1);
+    if (bargeRef.current < 5) return;
+    bargeRef.current = 0;
+    try {
+      a?.pause?.();
+      a?.dispatchEvent?.(new Event('ended'));
+    } catch {
+      /* ignore */
+    }
+    stopPhoneSpeak();
+    voiceCaptions.finishTyping();
+    audioRef.current = null;
+    micRef.current?.setListening(true);
+    setState('listening');
+  };
+
   const start = useCallback(() => {
     if (activeRef.current) return;
     setErrorText('');
@@ -666,7 +695,7 @@ export function usePremiumVoice(opts: Options) {
       if (!activeRef.current) return;
       if (r.ok && r.text) void answer(r.text);
       else listen();
-    }, undefined, true, {
+    }, (lv) => bargeIn(lv), true, {
       endMs: 1200,
       onPartial: (wav) => {
         const asked = Date.now();
